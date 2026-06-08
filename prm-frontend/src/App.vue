@@ -55,7 +55,7 @@
             <el-menu-item index="/dpr/auth/wizard">⭐ 一事一议授权申请(一站式)</el-menu-item>
             <el-menu-item index="/dpr/auth/batch-wizard">⭐ 批量授权申请(一站式)</el-menu-item>
             <!-- 过程:清单/校验/查询/审核 -->
-            <el-menu-item index="/dpr/auth/batch-list">批量授权清单(表6)</el-menu-item>
+            <el-menu-item index="/dpr/auth/batch-list">批量授权清单</el-menu-item>
             <el-menu-item index="/dpr/auth/compliance">合规校验管理</el-menu-item>
             <el-menu-item index="/dpr/auth/history">申请历史查询</el-menu-item>
             <el-menu-item index="/dpr/auth/review">授权审核提交</el-menu-item>

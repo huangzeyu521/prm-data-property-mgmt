@@ -33,7 +33,7 @@
       <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, prev, pager, next"
         :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" />
     </div>
-    <el-dialog v-model="dlg" title="新增批量授权清单(表6)" width="500px" align-center>
+    <el-dialog v-model="dlg" title="新增批量授权清单" width="500px" align-center>
       <el-form :model="form" label-width="80px">
         <el-form-item label="年度"><el-input v-model="form.listYear" placeholder="如 2026" /></el-form-item>
         <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" /></el-form-item>
