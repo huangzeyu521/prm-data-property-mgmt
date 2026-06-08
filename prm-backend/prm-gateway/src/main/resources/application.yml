@@ -1,0 +1,38 @@
+server:
+  port: 9000
+
+spring:
+  application:
+    name: prm-gateway
+  cloud:
+    nacos:
+      server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+      discovery:
+        enabled: ${NACOS_ENABLED:true}
+        namespace: ${NACOS_NS:prm}
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        - id: dpr-ledger-service
+          uri: lb://dpr-ledger-service
+          predicates:
+            - Path=/api/dpr/ledger/**,/api/dpr/monitor/**
+        - id: dpr-confirm-service
+          uri: lb://dpr-confirm-service
+          predicates:
+            - Path=/api/dpr/confirm/**
+        - id: dpr-authorize-service
+          uri: lb://dpr-authorize-service
+          predicates:
+            - Path=/api/dpr/auth/**
+    sentinel:
+      transport:
+        dashboard: ${SENTINEL_ADDR:127.0.0.1:8080}
+      scg:
+        fallback:
+          mode: response
+          response-status: 429
+          response-body: '{"code":429,"msg":"请求过于频繁,请稍后重试","data":null}'

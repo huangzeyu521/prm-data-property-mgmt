@@ -1,0 +1,126 @@
+package com.csg.prm.common.ai;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Primary;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestClient;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 大瓦特 AI 网关 —— 基于阿里云百炼 qwen3-max(OpenAI 兼容接口)的真实实现,模拟大瓦特 AI 平台。
+ * 仅当 prm.ai.provider=qwen 时启用并 @Primary 覆盖本地桩;调用失败/超时自动回退 {@link LocalDawatAiGateway}。
+ * 密钥仅从环境变量(prm.ai.api-key -> ${DASHSCOPE_API_KEY})读取,绝不硬编码。
+ */
+@Component
+@Primary
+@ConditionalOnProperty(name = "prm.ai.provider", havingValue = "qwen")
+public class QwenDawatAiGateway implements DawatAiGateway {
+
+    private static final Logger log = LoggerFactory.getLogger(QwenDawatAiGateway.class);
+
+    private final LocalDawatAiGateway fallback;
+    private final RestClient client;
+    private final String model;
+    private final String apiKey;
+
+    public QwenDawatAiGateway(LocalDawatAiGateway fallback,
+                              @Value("${prm.ai.base-url:https://dashscope.aliyuncs.com/compatible-mode/v1}") String baseUrl,
+                              @Value("${prm.ai.model:qwen3-max}") String model,
+                              @Value("${prm.ai.api-key:}") String apiKey) {
+        this.fallback = fallback;
+        this.model = model;
+        this.apiKey = apiKey;
+        this.client = RestClient.builder().baseUrl(baseUrl).build();
+        if (!StringUtils.hasText(apiKey)) {
+            log.warn("[大瓦特AI] prm.ai.provider=qwen 但 api-key 为空(未设置 DASHSCOPE_API_KEY),将回退本地桩");
+        } else {
+            log.info("[大瓦特AI] 已启用 qwen 实现,model={}", model);
+        }
+    }
+
+    @Override
+    public OcrOwnership recognizeOwnership(String fileUrl) {
+        try {
+            String c = chat("你是数据确权权属识别助手。依据权属证明材料名称/URL 推断权属要素。",
+                    "材料:" + fileUrl + "\n仅输出JSON,字段:assetName(资产名称),rightHolder(权属人),"
+                            + "rightType(数据持有权/数据加工使用权/数据产品经营权),respDept(责任部门),"
+                            + "confidence(0-1小数),rawText(简要说明)。不要输出多余文本。");
+            return QwenResponseParser.ownership(c);
+        } catch (RuntimeException e) {
+            log.warn("[大瓦特AI] recognizeOwnership 调用失败,回退本地桩: {}", e.getMessage());
+            return fallback.recognizeOwnership(fileUrl);
+        }
+    }
+
+    @Override
+    public ConflictResult detectConflict(String assetId, String rightHolder, String rightType) {
+        try {
+            String c = chat("你是数据权属冲突检测助手,排查重复确权与权属边界重叠。",
+                    "资产ID:" + assetId + ",权属人:" + rightHolder + ",权属类型:" + rightType
+                            + "\n仅输出JSON,字段:hasConflict(true/false),riskLevel(低/中/高),"
+                            + "conflicts(字符串数组),suggestion(处置建议)。不要输出多余文本。");
+            return QwenResponseParser.conflict(c);
+        } catch (RuntimeException e) {
+            log.warn("[大瓦特AI] detectConflict 调用失败,回退本地桩: {}", e.getMessage());
+            return fallback.detectConflict(assetId, rightHolder, rightType);
+        }
+    }
+
+    @Override
+    public AuthIntent recognizeAuthIntent(String text) {
+        try {
+            String c = chat("你是数据授权意图识别助手,从自然语言申请抽取授权要素。",
+                    "申请:" + text + "\n仅输出JSON,字段:granteeOrg(被授权方),"
+                            + "rightType(数据持有权/数据加工使用权/数据产品经营权),scenario(场景),scope(范围),"
+                            + "mode(一事一议/批量),suggestion(建议),confidence(0-1小数)。不要输出多余文本。");
+            return QwenResponseParser.intent(c);
+        } catch (RuntimeException e) {
+            log.warn("[大瓦特AI] recognizeAuthIntent 调用失败,回退本地桩: {}", e.getMessage());
+            return fallback.recognizeAuthIntent(text);
+        }
+    }
+
+    @Override
+    public RagAnswer ask(String question) {
+        try {
+            String c = chat("你是中国南方电网数据确权授权业务助手,依据《数据确权授权业务指导书》(附录F)"
+                            + "及三权分置、先确后授等原则作答,务必专业准确。",
+                    "问题:" + question + "\n仅输出JSON,字段:answer(回答),"
+                            + "citations(引用条目字符串数组,如\"附录F 4.1\"),confidence(0-1小数)。不要输出多余文本。");
+            return QwenResponseParser.rag(c);
+        } catch (RuntimeException e) {
+            log.warn("[大瓦特AI] ask 调用失败,回退本地桩: {}", e.getMessage());
+            return fallback.ask(question);
+        }
+    }
+
+    private String chat(String system, String user) {
+        if (!StringUtils.hasText(apiKey)) {
+            throw new IllegalStateException("DASHSCOPE_API_KEY 未配置");
+        }
+        Map<String, Object> body = Map.of(
+                "model", model,
+                "temperature", 0.2,
+                "messages", List.of(
+                        Map.of("role", "system", "content", system),
+                        Map.of("role", "user", "content", user)));
+        JsonNode resp = client.post()
+                .uri("/chat/completions")
+                .header("Authorization", "Bearer " + apiKey)
+                .header("Content-Type", "application/json")
+                .body(body)
+                .retrieve()
+                .body(JsonNode.class);
+        if (resp == null || !resp.has("choices") || resp.path("choices").isEmpty()) {
+            throw new IllegalStateException("Qwen 响应无 choices");
+        }
+        return resp.path("choices").get(0).path("message").path("content").asText();
+    }
+}

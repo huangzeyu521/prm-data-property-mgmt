@@ -1,0 +1,29 @@
+# 开发环境:H2(MySQL 兼容模式),关闭 Nacos/Seata 外部依赖,便于本地独立运行。
+spring:
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:prm_dpr;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: ""
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/h2/schema.sql
+      data-locations: classpath:db/h2/data.sql
+      continue-on-error: true
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+      config:
+        import-check:
+          enabled: false
+    discovery:
+      enabled: false
+
+prm:
+  db-type: MYSQL
+
+# 关闭分布式事务(本地无 Seata Server)
+seata:
+  enabled: false

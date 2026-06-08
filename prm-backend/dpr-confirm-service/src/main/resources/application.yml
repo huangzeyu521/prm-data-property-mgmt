@@ -1,0 +1,55 @@
+server:
+  port: 9102
+
+spring:
+  application:
+    name: dpr-confirm-service
+  profiles:
+    active: dev
+  # 真实文件上传(#1):单文件 500MB、批量请求整体 2GB(≤50 个)
+  servlet:
+    multipart:
+      max-file-size: 500MB
+      max-request-size: 2GB
+
+mybatis-plus:
+  global-config:
+    db-config:
+      logic-delete-field: delFlag
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  configuration:
+    map-underscore-to-camel-case: true
+
+prm:
+  db-type: MYSQL
+  # 真实文件上传(#1)本地存储目录;生产以对象存储(OBS/MinIO)网关覆盖
+  storage:
+    dir: ${PRM_STORAGE_DIR:/app/_ait_storage}
+  # P0-① 台账回写:默认关闭(本地桩,离线/测试);PRM_LEDGER_WB=true 启用 HTTP 回写台账服务
+  ledger:
+    writeback-enabled: ${PRM_LEDGER_WB:false}
+    writeback-url: ${PRM_LEDGER_URL:http://host.docker.internal:9101}
+  # 大瓦特 AI 接入(⑨):provider=stub 用本地规则桩(默认,离线);provider=qwen 接阿里云百炼 qwen3-max
+  ai:
+    provider: ${PRM_AI_PROVIDER:stub}
+    base-url: ${PRM_AI_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
+    model: ${QWEN_MODEL_NAME:qwen3-max}
+    api-key: ${DASHSCOPE_API_KEY:}
+  # P2 流程编排引擎:state-machine=声明式状态机(默认,离线);camunda=Camunda7 BPMN(需 -Pcamunda 构建)
+  workflow:
+    engine: ${PRM_WORKFLOW:state-machine}
+
+# Camunda 7 配置(仅 -Pcamunda 构建时 starter 在类路径才生效,否则被忽略)
+camunda:
+  bpm:
+    database:
+      schema-update: true
+    auto-deployment-enabled: true
+    # 关闭 Web 应用与 REST,仅作为嵌入式流程引擎
+    webapp:
+      enabled: false
+
+logging:
+  level:
+    com.csg.prm: debug

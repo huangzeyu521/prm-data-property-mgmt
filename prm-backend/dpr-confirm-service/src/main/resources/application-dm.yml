@@ -1,0 +1,29 @@
+# 信创生产 profile:达梦 DM8(以 -Pdm 构建 + --spring.profiles.active=dm 启用)
+# 表结构由 DBA/迁移工具按达梦方言建立(sql.init.mode=never,不自动执行 H2 schema)
+spring:
+  datasource:
+    driver-class-name: dm.jdbc.driver.DmDriver
+    url: ${DM_URL:jdbc:dm://localhost:5236}
+    username: ${DM_USER:SYSDBA}
+    password: ${DM_PWD:SYSDBA}
+  sql:
+    init:
+      mode: never
+  cloud:
+    nacos:
+      discovery:
+        enabled: true
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+      config:
+        import-check:
+          enabled: false
+prm:
+  db-type: DM
+  # 大瓦特 AI 生产可切真实平台:provider=qwen + DASHSCOPE_API_KEY(密钥经 KMS/环境注入)
+  ai:
+    provider: ${PRM_AI_PROVIDER:stub}
+    base-url: ${PRM_AI_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
+    model: ${QWEN_MODEL_NAME:qwen3-max}
+    api-key: ${DASHSCOPE_API_KEY:}
+seata:
+  enabled: ${SEATA_ENABLED:false}

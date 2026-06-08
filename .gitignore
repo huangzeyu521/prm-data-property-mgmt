@@ -1,0 +1,28 @@
+# ===== 用户指定排除 =====
+materials/
+tool-materials/
+智能确权辅助工具-功能列表.xlsx
+
+# ===== 构建产物 =====
+**/target/
+**/node_modules/
+**/dist/
+.m2/
+
+# ===== 日志 / 运行态 =====
+*.log
+output/
+
+# ===== 本地配置 / 密钥(切勿提交) =====
+.claude/
+**/.env
+**/.env.local
+*.local.yml
+application-local.yml
+
+# ===== IDE / OS =====
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,39 @@
+# 生产环境(信创):达梦 DM8 + Nacos + Sentinel + Seata。需引入达梦 JDBC 驱动后启用。
+spring:
+  datasource:
+    driver-class-name: dm.jdbc.driver.DmDriver
+    url: jdbc:dm://127.0.0.1:5236/PRM_DPR
+    username: ${DM_USER:PRM_DPR}
+    password: ${DM_PWD:}
+  sql:
+    init:
+      mode: never
+  cloud:
+    nacos:
+      server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+      discovery:
+        enabled: true
+        namespace: ${NACOS_NS:prm}
+      config:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+        file-extension: yaml
+        namespace: ${NACOS_NS:prm}
+    sentinel:
+      transport:
+        dashboard: ${SENTINEL_ADDR:127.0.0.1:8080}
+  config:
+    import:
+      - optional:nacos:dpr-authorize-service.yaml
+
+prm:
+  db-type: DM
+
+seata:
+  enabled: true
+  application-id: dpr-authorize-service
+  tx-service-group: prm_tx_group
+  registry:
+    type: nacos
+    nacos:
+      server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+      namespace: ${NACOS_NS:prm}

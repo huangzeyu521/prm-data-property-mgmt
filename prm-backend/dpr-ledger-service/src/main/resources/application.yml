@@ -1,0 +1,32 @@
+server:
+  port: 9101
+
+spring:
+  application:
+    name: dpr-ledger-service
+  profiles:
+    active: dev
+
+# MyBatis-Plus 全局配置
+mybatis-plus:
+  global-config:
+    db-config:
+      logic-delete-field: delFlag
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  configuration:
+    map-underscore-to-camel-case: true
+
+# 分页方言:dev/test=MYSQL(H2),prod=DM(达梦)。见各 profile 覆盖。
+prm:
+  db-type: MYSQL
+  # P0-② 跨域聚合(资产360 / 统一待办):默认关闭(本地空桩,离线/单测仅台账本地数据);
+  # PRM_AGG=true 时经 HTTP 跨服务读取确权/授权,实现一屏贯通。
+  aggregate:
+    enabled: ${PRM_AGG:false}
+    confirm-url: ${PRM_CONFIRM_URL:http://host.docker.internal:9102}
+    auth-url: ${PRM_AUTH_URL:http://host.docker.internal:9103}
+
+logging:
+  level:
+    com.csg.prm: debug

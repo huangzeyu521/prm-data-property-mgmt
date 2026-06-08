@@ -1,0 +1,126 @@
+package com.csg.prm.authorize;
+
+import com.csg.prm.authorize.entity.AuthApply;
+import com.csg.prm.authorize.entity.AuthCert;
+import com.csg.prm.authorize.service.AuthApplyService;
+import com.csg.prm.authorize.service.AuthCertService;
+import com.csg.prm.common.exception.BizException;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * 数据授权全流程集成测试:草稿 -> 提交(先确后授校验) -> 审批通过 -> 自动生成授权证书;
+ * 以及冻结熔断、必填(必须引用权益卡片)、驳回等路径。
+ */
+@SpringBootTest
+@ActiveProfiles("test")
+class AuthFlowTest {
+
+    @Autowired
+    private AuthApplyService applyService;
+    @Autowired
+    private AuthCertService certService;
+
+    private AuthApply draft(String assetId, String name, String cardId) {
+        AuthApply a = new AuthApply();
+        a.setAuthMode(AuthApply.MODE_SPECIAL);
+        a.setAssetId(assetId);
+        a.setAssetName(name);
+        a.setEquityCardId(cardId);
+        a.setGranteeOrg("广州供电局");
+        a.setRightType("数据加工使用权");
+        a.setScenario("电力金融征信");
+        a.setScope("全字段");
+        return a;
+    }
+
+    @Test
+    void special_flow_five_level_should_generate_cert() {
+        String id = applyService.saveDraft(draft("DA-AUTH-001", "客户用电信息表", "EC-PRA-VALID01"));
+        applyService.submit(id);
+        // 专项五级:合规->业务->主管->经理->副总->已生效
+        assertEquals(AuthApply.STATUS_COMPLIANCE, applyService.getById(id).getStatus());
+        assertNull(applyService.approve(id)); // 合规->业务
+        assertEquals(AuthApply.STATUS_BUSINESS, applyService.getById(id).getStatus());
+        assertNull(applyService.approve(id)); // 业务->主管
+        assertEquals(AuthApply.STATUS_MANAGER, applyService.getById(id).getStatus());
+        assertNull(applyService.approve(id)); // 主管->经理
+        assertEquals(AuthApply.STATUS_DIRECTOR, applyService.getById(id).getStatus());
+        assertNull(applyService.approve(id)); // 经理->副总
+        assertEquals(AuthApply.STATUS_VP, applyService.getById(id).getStatus());
+        String certId = applyService.approve(id); // 副总->已生效(发证)
+        assertNotNull(certId, "终审通过应自动生成授权证书");
+        assertEquals(AuthApply.STATUS_EFFECTIVE, applyService.getById(id).getStatus());
+
+        AuthCert cert = certService.getById(certId);
+        assertNotNull(cert.getCertNo());
+        assertEquals("DA-AUTH-001", cert.getAssetId());
+        assertEquals(AuthCert.STATUS_EFFECTIVE, cert.getCertStatus());
+    }
+
+    @Test
+    void batch_flow_three_level_should_generate_cert() {
+        AuthApply a = draft("DA-AUTH-005", "批量授权表", "EC-PRA-VALID05");
+        a.setAuthMode(AuthApply.MODE_BATCH);
+        String id = applyService.saveDraft(a);
+        applyService.submit(id);
+        // 批量三级:合规->数字化部认定->领导小组->已生效
+        assertEquals(AuthApply.STATUS_COMPLIANCE, applyService.getById(id).getStatus());
+        assertNull(applyService.approve(id)); // 合规->数字化部认定
+        assertEquals(AuthApply.STATUS_DEPT, applyService.getById(id).getStatus());
+        assertNull(applyService.approve(id)); // 数字化部认定->领导小组
+        assertEquals(AuthApply.STATUS_LEADERSHIP, applyService.getById(id).getStatus());
+        String certId = applyService.approve(id); // 领导小组->已生效
+        assertNotNull(certId, "领导小组批准应自动生成授权证书");
+        assertEquals(AuthApply.STATUS_EFFECTIVE, applyService.getById(id).getStatus());
+    }
+
+    @Test
+    void submit_should_block_when_card_frozen_or_unconfirmed() {
+        // 引用冻结卡片(FROZEN 前缀)模拟"未确权/冻结"
+        String id = applyService.saveDraft(draft("DA-AUTH-002", "冻结资产表", "FROZEN-CARD-1"));
+        BizException ex = assertThrows(BizException.class, () -> applyService.submit(id));
+        assertTrue(ex.getMessage().contains("先确后授"), "应被先确后授规则拦截");
+    }
+
+    @Test
+    void draft_should_require_equity_card() {
+        AuthApply bad = draft("DA-AUTH-003", "缺卡片表", null);
+        assertThrows(BizException.class, () -> applyService.saveDraft(bad));
+    }
+
+    @Test
+    void operation_right_must_be_in_open_catalog() {
+        // 经营权 + 资产不在对外开放目录(NONOPEN 前缀)-> 提交被拦截
+        AuthApply bad = draft("NONOPEN-OP-1", "未开放经营资产", "EC-OK-OP");
+        bad.setRightType("数据产品经营权");
+        String id = applyService.saveDraft(bad);
+        BizException ex = assertThrows(BizException.class, () -> applyService.submit(id));
+        assertTrue(ex.getMessage().contains("对外开放目录"), "经营权应受对外开放目录约束");
+
+        // 经营权 + 资产在对外开放目录 -> 正常进入合规审核
+        AuthApply ok = draft("DA-OP-OK", "已开放经营资产", "EC-OK-OP2");
+        ok.setRightType("数据产品经营权");
+        String id2 = applyService.saveDraft(ok);
+        applyService.submit(id2);
+        assertEquals(AuthApply.STATUS_COMPLIANCE, applyService.getById(id2).getStatus());
+    }
+
+    @Test
+    void reject_should_set_status() {
+        String id = applyService.saveDraft(draft("DA-AUTH-004", "待驳回表", "EC-PRA-VALID02"));
+        applyService.submit(id);
+        applyService.reject(id, "授权范围超出确权边界");
+        AuthApply a = applyService.getById(id);
+        assertEquals(AuthApply.STATUS_REJECTED, a.getStatus());
+        assertEquals("授权范围超出确权边界", a.getRejectReason());
+    }
+}

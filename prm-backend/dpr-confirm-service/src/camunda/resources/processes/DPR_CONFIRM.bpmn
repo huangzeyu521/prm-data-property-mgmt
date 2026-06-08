@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  targetNamespace="http://csg.com/prm/dpr"
+                  id="defs_dpr_confirm">
+  <!--
+    数据确权审批流程(对齐附录F 八节点的审批链:合规审核50 -> 主管复核60 -> 经理终审70 -> 制卡完成80)。
+    用户任务 name 即业务状态串,与 FlowDefinitions.DPR_CONFIRM 一一对应;business key = 确权申请ID。
+  -->
+  <bpmn:process id="DPR_CONFIRM" name="数据确权审批" isExecutable="true" camunda:historyTimeToLive="P180D">
+    <bpmn:startEvent id="start" name="提交确权">
+      <bpmn:outgoing>f0</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="f0" sourceRef="start" targetRef="t_compliance"/>
+
+    <bpmn:userTask id="t_compliance" name="合规审核中" camunda:candidateGroups="COMPLIANCE">
+      <bpmn:incoming>f0</bpmn:incoming>
+      <bpmn:outgoing>f1</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="f1" sourceRef="t_compliance" targetRef="t_manager"/>
+
+    <bpmn:userTask id="t_manager" name="主管复核中" camunda:candidateGroups="SUPERVISOR">
+      <bpmn:incoming>f1</bpmn:incoming>
+      <bpmn:outgoing>f2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="f2" sourceRef="t_manager" targetRef="t_director"/>
+
+    <bpmn:userTask id="t_director" name="经理终审中" camunda:candidateGroups="MANAGER">
+      <bpmn:incoming>f2</bpmn:incoming>
+      <bpmn:outgoing>f3</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="f3" sourceRef="t_director" targetRef="end"/>
+
+    <bpmn:endEvent id="end" name="已完成">
+      <bpmn:incoming>f3</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

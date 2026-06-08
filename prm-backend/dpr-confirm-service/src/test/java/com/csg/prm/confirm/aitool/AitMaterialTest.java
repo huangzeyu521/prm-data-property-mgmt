@@ -1,0 +1,87 @@
+package com.csg.prm.confirm.aitool;
+
+import com.csg.prm.confirm.aitool.entity.AitCompare;
+import com.csg.prm.confirm.aitool.entity.AitMaterial;
+import com.csg.prm.confirm.aitool.entity.AitParseResult;
+import com.csg.prm.confirm.aitool.service.AitMaterialService;
+import com.csg.prm.confirm.entity.ConfirmApply;
+import com.csg.prm.confirm.service.ConfirmApplyService;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * 智能确权辅助工具 M1 材料智能解析测试:上传→解析要素抽取→印章→术语匹配→与确权表单比对。
+ */
+@SpringBootTest
+@ActiveProfiles("test")
+class AitMaterialTest {
+
+    @Autowired
+    private AitMaterialService aitService;
+    @Autowired
+    private ConfirmApplyService applyService;
+
+    @Test
+    void upload_parse_extract_and_compare() {
+        // 先建一笔确权申请(供比对)
+        ConfirmApply apply = new ConfirmApply();
+        apply.setAssetId("DA-AIT-1");
+        apply.setAssetName("客户用电信息表");
+        apply.setRightType("数据持有权");
+        apply.setRightHolder("广东电网");
+        String applyId = applyService.saveDraft(apply);
+
+        AitMaterial m = new AitMaterial();
+        m.setFileName("客户用电信息表-确权证明-盖章.pdf");
+        m.setApplyId(applyId);
+        m.setSizeKb(2048L);
+        m.setContent("权利主体广东电网,数据持有权,有效期3年,授权范围约定字段,自行生产,已盖章");
+        String id = aitService.upload(m);
+
+        AitMaterial saved = aitService.page(new com.csg.prm.common.query.PageQuery(), null, null, applyId)
+                .getRecords().get(0);
+        assertEquals("PDF", saved.getFileType());
+        assertNotNull(saved.getFileHash());
+        assertEquals(AitMaterial.PARSE_PENDING, saved.getParseStatus());
+
+        aitService.parse(id);
+        AitParseResult r = aitService.getParse(id);
+        assertEquals("数据持有权", r.getRightType());
+        assertEquals("有效", r.getSealValid(), "盖章材料应识别印章有效");
+        assertTrue(r.getConfidence() > 0.9);
+        assertNotNull(r.getRightSubject());
+
+        // 术语库匹配:持有权为标准术语
+        List<AitMaterialService.TermSuggestion> terms = aitService.termCheck(id);
+        assertTrue(terms.get(0).standard());
+
+        // 与表单比对:权利主体/类型一致;授权范围表单缺失
+        List<AitCompare> cmp = aitService.compares(id);
+        assertEquals(4, cmp.size());
+        AitCompare rtype = cmp.stream().filter(c -> "权利类型".equals(c.getField())).findFirst().orElseThrow();
+        assertEquals(AitCompare.DIFF_MATCH, rtype.getDiffType());
+        AitCompare scope = cmp.stream().filter(c -> "授权范围".equals(c.getField())).findFirst().orElseThrow();
+        assertEquals(AitCompare.DIFF_MISSING, scope.getDiffType());
+    }
+
+    @Test
+    void parse_extracts_operation_right_and_sensitive() {
+        AitMaterial m = new AitMaterial();
+        m.setFileName("充电桩运营数据-经营授权.pdf");
+        m.setContent("数据产品经营权,对外经营,涉及个人信息隐私,交易采购");
+        String id = aitService.upload(m);
+        aitService.parse(id);
+        AitParseResult r = aitService.getParse(id);
+        assertEquals("数据产品经营权", r.getRightType());
+        assertEquals("个人信息", r.getSensitiveType());
+        assertEquals("交易采购", r.getDataSource());
+    }
+}

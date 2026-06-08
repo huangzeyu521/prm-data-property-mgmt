@@ -1,0 +1,55 @@
+/* 设计令牌 —— 依据《数研院 WEB 用户界面设计规范 V1.0》与《界面高压线》。
+   字体:中文微软雅黑/英文 Arial;主按钮蓝;最小字号 12px。 */
+:root {
+  --prm-font-family: "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
+  --prm-color-primary: #2f6bff;     /* 主按钮蓝 */
+  --prm-color-text: #1f2329;
+  --prm-color-text-secondary: #646a73;
+  --prm-color-border: #dfe2e8;
+  --prm-color-bg: #f5f6f8;
+  --prm-font-size-base: 14px;
+  --prm-font-size-min: 12px;
+  --prm-space-sm: 8px;
+  --prm-space-md: 16px;
+  --prm-space-lg: 24px;
+  --el-color-primary: var(--prm-color-primary);
+}
+
+html, body, #app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--prm-font-family);
+  font-size: var(--prm-font-size-base);
+  color: var(--prm-color-text);
+  background: var(--prm-color-bg);
+}
+
+/* 必填红星固定在文字标签左侧(高压线第六条) */
+.el-form-item.is-required:not(.is-no-asterisk) > .el-form-item__label:before {
+  color: #f5222d;
+}
+
+/* 工作区最大化、统一间距 */
+.prm-page {
+  padding: var(--prm-space-md);
+}
+.prm-query-bar {
+  background: #fff;
+  padding: var(--prm-space-md);
+  border-radius: 4px;
+  margin-bottom: var(--prm-space-md);
+}
+.prm-table-card {
+  background: #fff;
+  padding: var(--prm-space-md);
+  border-radius: 4px;
+}
+/* 列表下方注释,左对齐、非红色、以"注:"开头(高压线第十条) */
+.prm-table-note {
+  margin-top: var(--prm-space-sm);
+  color: var(--prm-color-text-secondary);
+  font-size: var(--prm-font-size-min);
+}

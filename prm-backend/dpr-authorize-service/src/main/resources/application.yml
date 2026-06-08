@@ -1,0 +1,28 @@
+server:
+  port: 9103
+
+spring:
+  application:
+    name: dpr-authorize-service
+  profiles:
+    active: dev
+
+mybatis-plus:
+  global-config:
+    db-config:
+      logic-delete-field: delFlag
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  configuration:
+    map-underscore-to-camel-case: true
+
+prm:
+  db-type: MYSQL
+  # P0-① 台账回写:默认关闭(本地桩,离线/测试);PRM_LEDGER_WB=true 启用 HTTP 回写台账服务
+  ledger:
+    writeback-enabled: ${PRM_LEDGER_WB:false}
+    writeback-url: ${PRM_LEDGER_URL:http://host.docker.internal:9101}
+
+logging:
+  level:
+    com.csg.prm: debug
