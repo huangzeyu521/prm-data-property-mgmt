@@ -222,6 +222,43 @@ INSERT INTO IM_AUTH_CERT_TEMPLATE (CEC_TEMPLATE_ID,CEC_TEMPLATE_NAME,CEC_TEMPLAT
 ('ATPL-002','专项授权-数据产品经营权证书模板','v1','专项授权证书','数据产品经营权','生效中',NOW(),0),
 ('ATPL-003','批量授权-数据加工使用权证书模板','v1','批量授权证书','数据加工使用权','生效中',NOW(),0);
 
+-- ============ F-03 授权 P1 专项表(指引/申请模板/应用场景/协议模板库/备案) ============
+-- 授权指引(5,含历史版本 + isLatest)
+INSERT INTO IM_AUTH_GUIDANCE (CEC_GUIDANCE_ID,CEC_TITLE,CEC_GUIDANCE_TYPE,CEC_VERSION,CEC_PUBLISHER,CEC_PUBLISH_DATE,CEC_FILE_URL,CEC_IS_LATEST,CEC_CONTENT,CEC_CREATE_TIME,CEC_DEL_FLAG) VALUES
+('AG-000','数据授权申请操作指引','申请步骤','v1','数字化部',DATE_ADD(NOW(), INTERVAL -2 MONTH),'/files/授权操作指引_v1.pdf',0,'旧版操作指引',DATE_ADD(NOW(), INTERVAL -2 MONTH),0),
+('AG-001','数据授权申请操作指引','申请步骤','v2','数字化部',NOW(),'/files/授权操作指引.pdf',1,'第一步:在授权目录选择数据;第二步:填报授权申请(被授权方/用途/期限);第三步:上传材料并提交合规审核;第四步:签订协议并领取权益证书。',NOW(),0),
+('AG-002','数据对外授权管理政策文件','政策文件','v1','公司总部',NOW(),'/files/对外授权政策.pdf',1,'依"三权分置",取得数据产品经营权的单位对外提供数据须签协议并向数字化部备案。',NOW(),0),
+('AG-003','数据授权申请流程图','流程图','v1','数字化部',NOW(),'/files/授权流程图.png',1,'目录选数据 → 填报申请 → 合规审核 → 签订协议 → 发放证书 → 对外备案',NOW(),0),
+('AG-004','数据授权常见问答(FAQ)','常见问答','v1','数字化部',NOW(),'/files/授权FAQ.pdf',1,'Q:授权与确权区别?A:先确权后授权,授权范围不得超过确权边界。Q:授权期限?A:按协议约定,到期需重新申请。',NOW(),0);
+
+-- 授权申请表单模板(3,字段配置 JSON)
+INSERT INTO IM_AUTH_APPLY_TEMPLATE (CEC_TEMPLATE_ID,CEC_TEMPLATE_NAME,CEC_AUTH_TYPE,CEC_FIELDS_JSON,CEC_FLOW_DESC,CEC_TEMPLATE_VERSION,CEC_TEMPLATE_STATUS,CEC_REMARK,CEC_CREATE_TIME,CEC_DEL_FLAG) VALUES
+('AAT-001','独占授权申请表单模板','独占','[{"name":"grantee","label":"被授权方","type":"文本","required":true,"rule":"非空"},{"name":"scope","label":"授权范围","type":"多行文本","required":true,"rule":"不得超出确权边界"},{"name":"term","label":"独占期限","type":"日期","required":true,"rule":"不超过确权有效期"},{"name":"exclusive","label":"排他性声明","type":"多行文本","required":false,"rule":""}]','填报申请 → 合规审核 → 主管审批 → 签订独占协议 → 发证','v1','生效中','独占授权:同一数据同期仅授一方',NOW(),0),
+('AAT-002','共享授权申请表单模板','共享','[{"name":"grantee","label":"被授权方","type":"文本","required":true,"rule":"非空"},{"name":"scope","label":"共享范围","type":"多行文本","required":true,"rule":"不得超出确权边界"},{"name":"term","label":"共享期限","type":"日期","required":true,"rule":"不超过确权有效期"},{"name":"resharable","label":"再共享限制","type":"下拉","required":true,"rule":"允许/禁止"}]','填报申请 → 合规审核 → 签订共享协议 → 发证','v1','生效中','共享授权:可多方共享使用',NOW(),0),
+('AAT-003','委托授权申请表单模板','委托','[{"name":"consignor","label":"委托方","type":"文本","required":true,"rule":"非空"},{"name":"trustee","label":"受托方","type":"文本","required":true,"rule":"非空"},{"name":"matters","label":"委托事项","type":"多行文本","required":true,"rule":"明确处理目的"},{"name":"term","label":"委托期限","type":"日期","required":true,"rule":""},{"name":"dataReq","label":"数据处理要求","type":"多行文本","required":true,"rule":"符合安全合规"}]','填报申请 → 合规审核 → 签订委托处理协议 → 发证','v1','生效中','委托处理:受托方按约定处理数据',NOW(),0);
+
+-- 应用场景(5)
+INSERT INTO IM_AUTH_SCENARIO (CEC_SCENARIO_ID,CEC_SCENARIO_NAME,CEC_CATEGORY,CEC_DESCRIPTION,CEC_REASON_TEMPLATE,CEC_SCENARIO_STATUS,CEC_CREATE_TIME,CEC_DEL_FLAG) VALUES
+('SC-001','内部经营分析','内部分析','本单位内部经营/运营数据统计与分析,不对外提供','用于本单位内部经营分析,数据不出域、不对外提供,使用范围限于授权部门。','生效中',NOW(),0),
+('SC-002','对外数据服务','对外服务','向取得经营权的外部单位提供数据产品/服务','为对外提供数据产品/服务,被授权方仅在约定范围内使用,不得再授权或超范围使用。','生效中',NOW(),0),
+('SC-003','联合建模','联合建模','与合作方在隐私计算/可信环境下联合建模','用于与合作方在隐私计算环境联合建模,原始数据不出域,仅交换模型/结果。','生效中',NOW(),0),
+('SC-004','监管报送','监管报送','按行政监管要求向监管机构报送数据','应行政监管要求报送数据,使用范围限于监管报送目的,符合相关法规。','生效中',NOW(),0),
+('SC-005','科研合作','对外服务','向高校/科研机构提供脱敏数据用于科研','用于科研合作,提供脱敏数据,仅限约定科研课题使用,到期销毁。','停用',NOW(),0);
+
+-- 协议模板库(5)
+INSERT INTO IM_AUTH_AGREEMENT_TEMPLATE (CEC_TEMPLATE_ID,CEC_TEMPLATE_NAME,CEC_AUTH_TYPE,CEC_PURPOSE,CEC_TEMPLATE_CONTENT,CEC_TEMPLATE_VERSION,CEC_TEMPLATE_STATUS,CEC_CREATE_TIME,CEC_DEL_FLAG) VALUES
+('AGT-001','运营授权协议(附录D)','运营','对外服务','甲乙双方就数据产品经营权授权达成协议:授权范围、期限、再授权限制、违约责任、数据安全义务等;对外提供数据须备案。','v1','生效中',NOW(),0),
+('AGT-002','数据使用授权协议','独占','内部分析','被授权方在约定范围内使用数据,不得超范围、不得对外提供,到期销毁或归还。','v1','生效中',NOW(),0),
+('AGT-003','数据共享协议','共享','联合建模','多方共享数据用于联合建模,原始数据不出域,仅交换模型/结果,各方承担同等安全义务。','v1','生效中',NOW(),0),
+('AGT-004','数据委托处理协议','委托','对外服务','委托方委托受托方处理数据,明确处理目的/方式/期限,受托方不得留存或另作他用。','v1','生效中',NOW(),0),
+('AGT-005','旧版运营授权协议','运营','对外服务','早期模板,已停用。','v1','停用',NOW(),0);
+
+-- 对外经营权授权备案(3,附录G)
+INSERT INTO IM_AUTH_FILING (CEC_FILING_ID,CEC_FILING_NO,CEC_AGREEMENT_ID,CEC_APPLY_ID,CEC_FILING_ORG,CEC_GRANTEE_ORG,CEC_RIGHT_TYPE,CEC_FILING_STATUS,CEC_FILING_TIME,CEC_CREATE_TIME,CEC_DEL_FLAG) VALUES
+('BA-001','BA-20260601001','AG-001','AA-001','广东电网','广州供电局','数据加工使用权','已备案',NOW(),NOW(),0),
+('BA-002','BA-20260601002','AG-002','AA-004','广东电网综能公司','广东电网综能公司','数据产品经营权','待备案',NULL,NOW(),0),
+('BA-003','BA-20260601003',NULL,'AA-005','贵州电网','贵州电网','数据加工使用权','待备案',NULL,NOW(),0);
+
 -- =====================================================================
--- 完。29 张表均含测试数据。
+-- 完。34 张表均含测试数据。
 -- =====================================================================
