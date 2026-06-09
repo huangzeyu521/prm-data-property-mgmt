@@ -17,10 +17,14 @@
         <el-table-column prop="parseStatus" label="解析状态" width="100" align="center">
           <template #default="{ row }"><el-tag :type="stTag(row.parseStatus)">{{ row.parseStatus }}</el-tag></template>
         </el-table-column>
-        <el-table-column label="解析进度" width="160" align="center">
+        <el-table-column label="解析进度" width="180" align="center">
           <template #default="{ row }">
             <el-progress :percentage="row.progress || 0"
               :status="row.parseStatus==='成功'?'success':(row.parseStatus==='失败'?'exception':undefined)" />
+            <div v-if="row.parseStatus==='解析中'" style="font-size:11px;color:#909399;margin-top:2px">{{ stageText(row.progress) }}</div>
+            <el-tooltip v-else-if="row.parseStatus==='失败' && row.failReason" :content="row.failReason" placement="top">
+              <div style="font-size:11px;color:#f56c6c;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ row.failReason }}</div>
+            </el-tooltip>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="260" fixed="right">
@@ -114,6 +118,12 @@ const viewDlg = ref(false); const parse = ref(null); const terms = ref([]); cons
 function stTag(s) { return { 成功: 'success', 失败: 'danger', 解析中: 'warning', 待解析: 'info' }[s] || 'info' }
 function diffTag(d) { return { 一致: 'success', 不一致: 'danger', 缺失: 'warning' }[d] || 'info' }
 function fmtSize(kb) { if (!kb) return '-'; return kb >= 1024 ? (kb / 1024).toFixed(1) + ' MB' : kb + ' KB' }
+function stageText(p) {
+  if ((p || 0) >= 90) return '表单比对…'
+  if ((p || 0) >= 65) return '要素入库…'
+  if ((p || 0) >= 35) return '要素抽取…'
+  return '开始解析…'
+}
 
 async function load() {
   loading.value = true
@@ -168,14 +178,14 @@ function pollProgress(materialId) {
     try {
       const m = await aitProgress(materialId)
       const row = rows.value.find(x => x.materialId === materialId)
-      if (row) { row.progress = m.progress; row.parseStatus = m.parseStatus }
+      if (row) { row.progress = m.progress; row.parseStatus = m.parseStatus; row.failReason = m.failReason }
       if (m.parseStatus === '成功' || m.parseStatus === '失败') {
         clearInterval(timer)
         ElMessage[m.parseStatus === '成功' ? 'success' : 'error'](
           m.parseStatus === '成功' ? '解析完成' : ('解析失败:' + (m.failReason || '')))
       }
     } catch (e) { clearInterval(timer) }
-  }, 800)
+  }, 350)
 }
 function onExport(row) {
   window.open(aitParseExportUrl(row.materialId), '_blank')

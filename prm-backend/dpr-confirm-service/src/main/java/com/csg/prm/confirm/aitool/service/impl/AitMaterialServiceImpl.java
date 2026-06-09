@@ -167,43 +167,110 @@ public class AitMaterialServiceImpl implements AitMaterialService {
         return fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase();
     }
 
+    /** 解析超时上限(秒):守卫真实 AI 解析(大瓦特/Qwen)耗时;本地解析瞬时不触发。 */
+    private static final long PARSE_TIMEOUT_SEC = 60L;
+    /** 异步各阶段间停顿(ms):让 0–100% 进度条对轮询可见地逐级走动。 */
+    private static final long STAGE_PAUSE_MS = 240L;
+    /** 可抽取正文的格式;抽取为空判定文件损坏/无法解析。 */
+    private static final Set<String> TEXT_FORMATS = Set.of("pdf", "doc", "docx");
+
     @Override
-    @Transactional
     public void parse(String materialId) {
-        AitMaterial m = require(materialId);
-        try {
-            AiToolParseGateway.ParsedElements e = parseGateway.parse(m.getFileName(), m.getContent());
-            AitParseResult r = saveResult(materialId, e);
-            if (StringUtils.hasText(m.getApplyId())) {
-                compareWithForm(r, m.getApplyId());
-            }
-            updateStatus(materialId, AitMaterial.PARSE_SUCCESS, 100, null);
-        } catch (RuntimeException ex) {
-            updateStatus(materialId, AitMaterial.PARSE_FAILED, 100, "解析异常:" + ex.getMessage());
-            throw new BizException("材料解析失败:" + ex.getMessage());
-        }
+        // 不加 @Transactional:失败时各状态/进度独立提交,避免抛异常回滚掉"失败"状态(否则停留"待解析")。
+        runParse(materialId, false);
     }
 
     /**
-     * 异步解析:分阶段提交进度(各步独立提交,前端可轮询到中间态),失败记录原因。
+     * 异步解析(#2):分阶段提交进度(各步独立提交,前端轮询到 10→35→65→90→100 渐进),
+     * 失败按 格式不支持 / 文件损坏 / 解析超时 分类记录原因。
      * 不加 @Transactional —— 让每步进度/结果写入独立提交,保证进度对轮询实时可见。
      */
     @Override
     @Async
     public void submitParse(String materialId) {
-        updateStatus(materialId, AitMaterial.PARSE_RUNNING, 10, null);
+        runParse(materialId, true);
+    }
+
+    private void runParse(String materialId, boolean async) {
+        AitMaterial m = require(materialId);
         try {
-            AitMaterial m = require(materialId);
-            AiToolParseGateway.ParsedElements e = parseGateway.parse(m.getFileName(), m.getContent());
-            updateStatus(materialId, AitMaterial.PARSE_RUNNING, 55, null);
+            tick(materialId, async, 10);   // 开始
+            // 文件损坏检测:PDF/Word 正文抽取为空 → 损坏或纯图片(需OCR),无法解析
+            if (TEXT_FORMATS.contains(extOf(m.getFileName())) && !StringUtils.hasText(m.getContent())) {
+                throw new ParseBrokenException("文件损坏或无法解析正文:未能从 " + inferType(m.getFileName())
+                        + " 提取到文字,可能文件损坏或为纯图片扫描件(需 OCR)");
+            }
+            tick(materialId, async, 35);   // 解析中(要素抽取)
+            AiToolParseGateway.ParsedElements e = parseWithTimeout(m.getFileName(), m.getContent());
+            tick(materialId, async, 65);   // 要素抽取完成
             AitParseResult r = saveResult(materialId, e);
             if (StringUtils.hasText(m.getApplyId())) {
                 compareWithForm(r, m.getApplyId());
             }
+            tick(materialId, async, 90);   // 表单比对完成
             updateStatus(materialId, AitMaterial.PARSE_SUCCESS, 100, null);
         } catch (RuntimeException ex) {
-            updateStatus(materialId, AitMaterial.PARSE_FAILED, 100, "解析异常:" + ex.getMessage());
+            String reason = classifyFailure(m, ex);
+            updateStatus(materialId, AitMaterial.PARSE_FAILED, 100, reason);
+            if (!async) {
+                throw new BizException("材料解析失败:" + reason);
+            }
         }
+    }
+
+    private void tick(String materialId, boolean async, int pct) {
+        updateStatus(materialId, AitMaterial.PARSE_RUNNING, pct, null);
+        if (async) {
+            try {
+                Thread.sleep(STAGE_PAUSE_MS);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+
+    /** 解析超时守卫:超过上限取消并抛超时;解析包(PDFBox/POI 等)异常透传以判损坏。 */
+    private AiToolParseGateway.ParsedElements parseWithTimeout(String fileName, String content) {
+        java.util.concurrent.CompletableFuture<AiToolParseGateway.ParsedElements> f =
+                java.util.concurrent.CompletableFuture.supplyAsync(() -> parseGateway.parse(fileName, content));
+        try {
+            return f.get(PARSE_TIMEOUT_SEC, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (java.util.concurrent.TimeoutException te) {
+            f.cancel(true);
+            throw new ParseTimeoutException("解析超时(超过 " + PARSE_TIMEOUT_SEC + " 秒),请重试或更换更清晰的材料");
+        } catch (java.util.concurrent.ExecutionException ee) {
+            Throwable c = ee.getCause();
+            if (c instanceof RuntimeException re) {
+                throw re;
+            }
+            throw new ParseBrokenException("文件损坏或无法解析:" + (c == null ? "未知错误" : c.getMessage()));
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            throw new ParseTimeoutException("解析被中断");
+        }
+    }
+
+    /** 失败原因分类(#2):格式不支持 / 文件损坏 / 解析超时 / 其他。 */
+    private String classifyFailure(AitMaterial m, RuntimeException ex) {
+        if (ex instanceof ParseTimeoutException) {
+            return ex.getMessage();
+        }
+        String ext = extOf(m.getFileName());
+        if (!ALLOWED_EXT.contains(ext)) {
+            return "格式不支持:仅支持 PDF/Word/JPG/PNG(当前 ." + ext + ")";
+        }
+        if (ex instanceof ParseBrokenException) {
+            return ex.getMessage();
+        }
+        return "文件损坏或无法解析:" + (ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage());
+    }
+
+    private static final class ParseTimeoutException extends RuntimeException {
+        ParseTimeoutException(String msg) { super(msg); }
+    }
+
+    private static final class ParseBrokenException extends RuntimeException {
+        ParseBrokenException(String msg) { super(msg); }
     }
 
     @Override

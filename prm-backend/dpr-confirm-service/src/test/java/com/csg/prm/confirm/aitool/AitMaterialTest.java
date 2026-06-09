@@ -124,4 +124,19 @@ class AitMaterialTest {
         assertThrows(BizException.class, () -> controller.uploadBatch(tooMany, null),
                 "单次批量超过 50 个应拒绝");
     }
+
+    /** #2 失败原因分类:PDF 抽取不到正文(损坏/纯图)→ 解析失败,原因归类为"文件损坏/无法解析"。 */
+    @Test
+    void parse_classifies_broken_file_when_text_empty() {
+        byte[] garbage = new byte[120 * 1024]; // 非有效 PDF,上传时抽取不到正文 → content 为空
+        String id = aitService.uploadBinary("损坏的确权证明.pdf", garbage, null, null);
+
+        assertThrows(BizException.class, () -> aitService.parse(id), "无法解析的文件应抛出失败");
+        AitMaterial m = aitService.getMaterial(id);
+        assertEquals(AitMaterial.PARSE_FAILED, m.getParseStatus());
+        assertEquals(100, m.getProgress());
+        assertNotNull(m.getFailReason());
+        assertTrue(m.getFailReason().contains("损坏") || m.getFailReason().contains("无法解析"),
+                "失败原因应分类为 文件损坏/无法解析,实际:" + m.getFailReason());
+    }
 }
