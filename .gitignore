@@ -32,3 +32,6 @@ Thumbs.db
 /.[a-z].json
 /.[a-z][a-z].json
 /.[a-z][a-z][a-z].json
+
+# ===== 打包导出产物(源文件已入库,zip 为派生物) =====
+*.zip
