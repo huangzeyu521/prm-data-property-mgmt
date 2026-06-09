@@ -29,26 +29,17 @@ docker exec prm-mysql sh -c 'mysql -uroot -proot < /sql/02_data.sql'
 
 ## 后端对接 MySQL（从 H2/达梦切换）
 
-模块用 `prm.db-type` 切换分页方言、零改代码。对接 MySQL 三步：
+MySQL 数据源已内置在各服务的 **`application-prod.yml`**（`jdbc:mysql://mysql:3306/prm_dpr`，账号走环境变量 `MYSQL_USER`/`MYSQL_PWD`，分页方言 `prm.db-type=MYSQL`）。三步即可跑在 MySQL 上：
 
-1. **加 JDBC 驱动**（各 `dpr-*-service/pom.xml`，prod 用达梦时则用达梦驱动）：
-   ```xml
-   <dependency>
-     <groupId>com.mysql</groupId><artifactId>mysql-connector-j</artifactId>
-   </dependency>
+1. **打包时带上 MySQL 驱动**（`-Pmysql` 激活各 `dpr-*-service/pom.xml` 内的 `mysql` profile，把 `mysql-connector-j` 打入可执行 jar；达梦则用 `-Pdm`）：
+   ```bash
+   mvn -B clean package -DskipTests -Pmysql
    ```
-2. **新增 `application-mysql.yml`**（每个服务，端口各自 9101/9102/9103）：
-   ```yaml
-   spring:
-     datasource:
-       url: jdbc:mysql://localhost:3306/prm_dpr?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai
-       username: root
-       password: root
-       driver-class-name: com.mysql.cj.jdbc.Driver
-   prm:
-     db-type: MYSQL          # MyBatis-Plus 分页方言走 MySQL
-   ```
-3. **以 mysql profile 启动**：`--spring.profiles.active=mysql`（或 `SPRING_PROFILES_ACTIVE=mysql`）。
+   > 注：`mysql`/`dm` profile 必须声明在**各 service pom**（父 pom 的 profile 依赖不会注入子模块），本仓库已就位。
+2. **先建库表**：`mysql -u root -p prm_dpr < 01_schema.sql && mysql -u root -p prm_dpr < 02_data.sql`（`application-prod.yml` 中 `sql.init.mode=never`，不自动建表）。
+3. **以 prod profile 启动**：`SPRING_PROFILES_ACTIVE=prod`（按需用 `MYSQL_USER`/`MYSQL_PWD`、并把数据源 host `mysql` 指向实际地址）。
+
+> 实测（2026-06-09）：`-Pmysql` 打的三 jar 均含 `BOOT-INF/lib/mysql-connector-j-8.3.0.jar`；以 prod profile 连真实 MySQL 8.0（HikariPool 经 `com.mysql.cj.jdbc` 建连）后，台账/确权/授权各端点 200、种子数据正确。
 
 > 逻辑删除：`CEC_DEL_FLAG`（0=正常,1=已删），MyBatis-Plus 全局过滤已配置，查询自动带 `CEC_DEL_FLAG=0`。
 

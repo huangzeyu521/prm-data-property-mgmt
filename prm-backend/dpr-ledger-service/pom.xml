@@ -68,6 +68,32 @@
         </dependency>
     </dependencies>
 
+    <!-- MySQL 驱动:以 -Pmysql 激活(配合 SPRING_PROFILES_ACTIVE=prod)。父 pom 的同名 profile
+         依赖不会注入子模块,故在各 service pom 内声明,确保驱动打入可执行 jar。 -->
+    <profiles>
+        <profile>
+            <id>mysql</id>
+            <dependencies>
+                <dependency>
+                    <groupId>com.mysql</groupId>
+                    <artifactId>mysql-connector-j</artifactId>
+                    <version>${mysql.version}</version>
+                </dependency>
+            </dependencies>
+        </profile>
+        <!-- 信创达梦 DM8 驱动:以 -Pdm 激活(配合 SPRING_PROFILES_ACTIVE=dm)。需内网 Nexus 提供驱动。 -->
+        <profile>
+            <id>dm</id>
+            <dependencies>
+                <dependency>
+                    <groupId>com.dameng</groupId>
+                    <artifactId>DmJdbcDriver18</artifactId>
+                    <version>8.1.3.62</version>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
+
     <build>
         <plugins>
             <plugin>
