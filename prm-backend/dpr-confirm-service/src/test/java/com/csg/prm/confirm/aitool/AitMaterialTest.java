@@ -58,10 +58,17 @@ class AitMaterialTest {
 
         aitService.parse(id);
         AitParseResult r = aitService.getParse(id);
+        // #3 全 5 类要素抽取:主体/客体/类型/期限/授权范围 + 置信度
+        assertNotNull(r.getRightSubject(), "应抽取权利主体");
+        assertNotNull(r.getRightObject(), "应抽取权利客体");
+        assertTrue(r.getRightObject().contains("客户用电信息表"), "权利客体应来自文件名,实际:" + r.getRightObject());
         assertEquals("数据持有权", r.getRightType());
-        assertEquals("有效", r.getSealValid(), "盖章材料应识别印章有效");
+        assertEquals("3年", r.getRightTerm());
+        assertEquals("约定字段", r.getAuthScope());
         assertTrue(r.getConfidence() > 0.9);
-        assertNotNull(r.getRightSubject());
+        assertEquals("有效", r.getSealValid(), "盖章材料应识别印章有效");
+        // 低置信度(桩 0.92 < 0.95)→ 标"需人工复核"
+        assertEquals("需人工复核", r.getReviewStatus(), "置信度低于 0.95 应标需人工复核,实际:" + r.getReviewStatus());
 
         // 术语库匹配:持有权为标准术语
         List<AitMaterialService.TermSuggestion> terms = aitService.termCheck(id);

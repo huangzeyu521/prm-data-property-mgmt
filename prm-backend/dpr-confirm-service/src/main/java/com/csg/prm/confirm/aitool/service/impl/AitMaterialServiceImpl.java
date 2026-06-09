@@ -51,6 +51,8 @@ public class AitMaterialServiceImpl implements AitMaterialService {
     /** 单文件大小下限 100KB、上限 500MB(#1) */
     private static final long MIN_BYTES = 100L * 1024;
     private static final long MAX_BYTES = 500L * 1024 * 1024;
+    /** 抽取置信度阈值(#3 对齐可研"准确率≥95%"):低于则标"需人工复核"。 */
+    private static final double CONFIDENCE_THRESHOLD = 0.95;
 
     private final AitMaterialMapper materialMapper;
     private final AitParseResultMapper parseMapper;
@@ -292,6 +294,8 @@ public class AitMaterialServiceImpl implements AitMaterialService {
         r.setSealValid(e.sealValid());
         r.setSealDesc(e.sealDesc());
         r.setConfidence(e.confidence());
+        // 置信度 ≥ 阈值(对齐可研"准确率≥95%")→ 自动通过;否则需人工复核
+        r.setReviewStatus(e.confidence() >= CONFIDENCE_THRESHOLD ? "自动通过" : "需人工复核");
         parseMapper.delete(new LambdaQueryWrapper<AitParseResult>().eq(AitParseResult::getMaterialId, materialId));
         parseMapper.insert(r);
         return r;

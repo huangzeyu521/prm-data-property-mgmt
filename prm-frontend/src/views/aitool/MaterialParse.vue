@@ -64,7 +64,10 @@
     </el-dialog>
 
     <el-dialog v-model="viewDlg" title="解析结果 · 要素抽取 / 印章 / 术语 / 表单比对" width="720px" align-center>
-      <el-descriptions v-if="parse" title="确权要素(置信度 {{ (parse.confidence*100).toFixed(0) }}%)" :column="2" border size="small">
+      <el-alert v-if="parse" :type="parse.reviewStatus==='自动通过'?'success':'warning'" :closable="false" style="margin-bottom:10px"
+        :title="`置信度 ${(parse.confidence*100).toFixed(0)}% · ${parse.reviewStatus || (parse.confidence>=0.95?'自动通过':'需人工复核')}`"
+        :description="parse.reviewStatus==='自动通过' ? '抽取置信度达标(≥95%),可自动采用。' : '抽取置信度低于 95%,建议人工复核要素后再采用。'" show-icon />
+      <el-descriptions v-if="parse" title="确权要素抽取" :column="2" border size="small">
         <el-descriptions-item label="权利主体">{{ parse.rightSubject }}</el-descriptions-item>
         <el-descriptions-item label="权利客体">{{ parse.rightObject }}</el-descriptions-item>
         <el-descriptions-item label="权利类型">{{ parse.rightType }}</el-descriptions-item>
@@ -74,6 +77,9 @@
         <el-descriptions-item label="敏感类型">{{ parse.sensitiveType }}</el-descriptions-item>
         <el-descriptions-item label="印章识别">
           <el-tag :type="parse.sealValid==='有效'?'success':'warning'">{{ parse.sealValid }}</el-tag> {{ parse.sealDesc }}
+        </el-descriptions-item>
+        <el-descriptions-item label="复核标记">
+          <el-tag :type="parse.reviewStatus==='自动通过'?'success':'warning'">{{ parse.reviewStatus || '—' }}</el-tag>
         </el-descriptions-item>
       </el-descriptions>
       <div style="margin-top:14px;font-weight:600">术语库匹配</div>

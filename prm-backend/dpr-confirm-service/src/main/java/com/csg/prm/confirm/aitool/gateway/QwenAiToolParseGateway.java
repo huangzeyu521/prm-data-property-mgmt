@@ -52,8 +52,10 @@ public class QwenAiToolParseGateway implements AiToolParseGateway {
         try {
             String sys = "你是电力数据确权材料要素抽取助手。从确权证明材料中抽取关键要素。";
             String usr = "材料文件名:" + fileName + "\n材料正文:" + content
-                    + "\n仅输出JSON,字段:rightSubject(权利主体),rightObject(权利客体),"
-                    + "rightType(数据持有权/数据加工使用权/数据产品经营权/所有权/使用权),rightTerm(权利期限),"
+                    + "\n仅输出JSON,字段:rightSubject(权利主体,如 电力企业/供电局/供电所/用户单位),"
+                    + "rightObject(权利客体,如 电力数据/计量设备/线路资产/数据资源),"
+                    + "rightType(数据持有权/数据加工使用权/数据产品经营权/所有权/使用权/授权使用权),"
+                    + "rightTerm(权利期限,起止或有效期),"
                     + "authScope(授权范围),dataSource(自行生产/公开采集/公共数据授权/共同生产/交易采购/其他),"
                     + "sensitiveType(个人信息/敏感个人信息/商业秘密/监管数据/电网生产数据/内部运营数据),"
                     + "sealValid(有效/可疑/未检出),sealDesc(印章说明),confidence(0-1小数)。不要输出多余文本。";

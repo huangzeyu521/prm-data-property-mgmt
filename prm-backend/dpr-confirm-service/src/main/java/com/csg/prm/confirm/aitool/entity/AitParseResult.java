@@ -58,6 +58,13 @@ public class AitParseResult extends BaseEntity {
     @TableField("CEC_CONFIDENCE")
     private Double confidence;
 
+    /** 复核标记:置信度 ≥ 阈值=自动通过,否则=需人工复核(落"准确率≥95%"为可操作行为) */
+    @TableField("CEC_REVIEW_STATUS")
+    private String reviewStatus;
+
+    public String getReviewStatus() { return reviewStatus; }
+    public void setReviewStatus(String reviewStatus) { this.reviewStatus = reviewStatus; }
+
     public String getParseId() {
         return parseId;
     }
