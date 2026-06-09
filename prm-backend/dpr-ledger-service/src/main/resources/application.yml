@@ -5,7 +5,8 @@ spring:
   application:
     name: dpr-ledger-service
   profiles:
-    active: prod
+    # 本地/演示默认 dev(H2,可独立运行);部署用环境变量 SPRING_PROFILES_ACTIVE=prod 覆盖(MySQL)。
+    active: ${SPRING_PROFILES_ACTIVE:dev}
 
 # MyBatis-Plus 全局配置
 mybatis-plus:

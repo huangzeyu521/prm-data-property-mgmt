@@ -48,6 +48,7 @@ class AuthExtrasTest {
         AuthApply a = new AuthApply();
         a.setApplyId("AP-1");
         a.setAssetId("AST-001");
+        a.setAssetName("客户用电信息表");
         a.setRightType("数据加工使用权");
         applyMapper.insert(a);
 

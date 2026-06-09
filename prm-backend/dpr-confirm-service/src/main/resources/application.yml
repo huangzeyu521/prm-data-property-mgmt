@@ -5,7 +5,8 @@ spring:
   application:
     name: dpr-confirm-service
   profiles:
-    active: prod
+    # 本地/演示默认 dev(H2,可独立运行);部署用环境变量 SPRING_PROFILES_ACTIVE=prod 覆盖(MySQL)。
+    active: ${SPRING_PROFILES_ACTIVE:dev}
   # 真实文件上传(#1):单文件 500MB、批量请求整体 2GB(≤50 个)
   servlet:
     multipart:

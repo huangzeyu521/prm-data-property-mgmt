@@ -27,7 +27,7 @@
           <el-menu-item index="/dpr/workbench/todo" class="prm-top-item"><el-icon><Compass /></el-icon><span>统一待办中心</span></el-menu-item>
           <el-sub-menu index="01">
             <template #title><el-icon><Document /></el-icon><span>产权信息管理</span></template>
-            <el-menu-item index="/dpr/ledger/overview">产权台账概览(含产权树)</el-menu-item>
+            <el-menu-item index="/dpr/ledger/overview">产权台账概览</el-menu-item>
             <el-menu-item index="/dpr/ledger/archive">数据集产权档案管理</el-menu-item>
             <el-menu-item index="/dpr/ledger/change">产权变更记录管理</el-menu-item>
             <el-menu-item index="/dpr/ledger/statistics">产权台账统计分析</el-menu-item>
@@ -41,10 +41,10 @@
           </el-sub-menu>
           <el-sub-menu index="03">
             <template #title><el-icon><Stamp /></el-icon><span>数据确权管理</span></template>
-            <el-menu-item index="/dpr/confirm/wizard">⭐ 确权申请(一站式)</el-menu-item>
+            <el-menu-item index="/dpr/confirm/wizard">⭐ 确权申请</el-menu-item>
             <el-menu-item index="/dpr/confirm/guidance">确权指引管理</el-menu-item>
             <el-menu-item index="/dpr/confirm/catalog">确权目录管理</el-menu-item>
-            <el-menu-item index="/dpr/confirm/history">申请查询(进度/历史)</el-menu-item>
+            <el-menu-item index="/dpr/confirm/history">申请查询</el-menu-item>
             <el-menu-item index="/dpr/confirm/review">审核申请提交</el-menu-item>
             <el-menu-item index="/dpr/confirm/card">权益卡片生成</el-menu-item>
             <el-menu-item index="/dpr/confirm/cert">权益证书管理</el-menu-item>
@@ -52,8 +52,8 @@
           <el-sub-menu index="04">
             <template #title><el-icon><Connection /></el-icon><span>数据授权管理</span></template>
             <!-- 办事:一站式向导 -->
-            <el-menu-item index="/dpr/auth/wizard">⭐ 一事一议授权申请(一站式)</el-menu-item>
-            <el-menu-item index="/dpr/auth/batch-wizard">⭐ 批量授权申请(一站式)</el-menu-item>
+            <el-menu-item index="/dpr/auth/wizard">⭐ 一事一议授权申请</el-menu-item>
+            <el-menu-item index="/dpr/auth/batch-wizard">⭐ 批量授权申请</el-menu-item>
             <!-- 过程:清单/校验/查询/审核 -->
             <el-menu-item index="/dpr/auth/batch-list">批量授权清单</el-menu-item>
             <el-menu-item index="/dpr/auth/compliance">合规校验管理</el-menu-item>
@@ -66,7 +66,7 @@
             <!-- 权益:证书/模板/备案 -->
             <el-menu-item index="/dpr/auth/cert">授权权益管理</el-menu-item>
             <el-menu-item index="/dpr/auth/cert-template">授权权益证书模板管理</el-menu-item>
-            <el-menu-item index="/dpr/auth/filing">对外经营权授权备案(附录G)</el-menu-item>
+            <el-menu-item index="/dpr/auth/filing">对外经营权授权备案</el-menu-item>
           </el-sub-menu>
           <el-sub-menu index="07">
             <template #title><el-icon><Setting /></el-icon><span>授权配置</span></template>
@@ -77,7 +77,7 @@
           </el-sub-menu>
           <el-sub-menu index="05">
             <template #title><el-icon><DataAnalysis /></el-icon><span>综合分析管理</span></template>
-            <el-menu-item index="/dpr/dashboard/overview">数据产权全景(综合)</el-menu-item>
+            <el-menu-item index="/dpr/dashboard/overview">数据产权全景</el-menu-item>
             <el-menu-item index="/dpr/dashboard/confirm">确权看板</el-menu-item>
             <el-menu-item index="/dpr/dashboard/auth">授权看板</el-menu-item>
           </el-sub-menu>
