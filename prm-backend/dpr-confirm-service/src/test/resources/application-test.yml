@@ -20,6 +20,9 @@ spring:
 
 prm:
   db-type: MYSQL
+  # 智能确权辅助工具(独立工具)材料存储:测试写临时目录,避免污染仓库
+  storage:
+    dir: ${java.io.tmpdir}/prm-ait-test
 
 seata:
   enabled: false

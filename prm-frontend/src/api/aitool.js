@@ -3,6 +3,12 @@ import request from './request'
 // 智能确权辅助工具 M1 材料智能解析
 export const pageAitMaterial = (params) => request.get('/dpr/confirm/aitool/material/page', { params })
 export const uploadAitMaterial = (data) => request.post('/dpr/confirm/aitool/material/upload', data)
+// #1 真实文件上传:单文件 / 批量(≤50)。multipart FormData,后端做格式(pdf/doc/docx/jpg/jpeg/png)+大小(100KB–500MB)强校验
+export const uploadAitMaterialFile = (formData) =>
+  request.post('/dpr/confirm/aitool/material/upload-file', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+export const uploadAitMaterialBatch = (formData) =>
+  request.post('/dpr/confirm/aitool/material/upload-batch', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+export const aitMaterialFileUrl = (id) => `/api/dpr/confirm/aitool/material/${id}/file`
 export const parseAitMaterial = (id) => request.post(`/dpr/confirm/aitool/material/${id}/parse`)
 export const getAitParse = (id) => request.get(`/dpr/confirm/aitool/material/${id}/parse`)
 export const aitTermCheck = (id) => request.get(`/dpr/confirm/aitool/material/${id}/term-check`)

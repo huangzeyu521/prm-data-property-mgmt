@@ -1,20 +1,24 @@
 package com.csg.prm.confirm.aitool;
 
+import com.csg.prm.confirm.aitool.controller.AitMaterialController;
 import com.csg.prm.confirm.aitool.entity.AitCompare;
 import com.csg.prm.confirm.aitool.entity.AitMaterial;
 import com.csg.prm.confirm.aitool.entity.AitParseResult;
 import com.csg.prm.confirm.aitool.service.AitMaterialService;
+import com.csg.prm.common.exception.BizException;
 import com.csg.prm.confirm.entity.ConfirmApply;
 import com.csg.prm.confirm.service.ConfirmApplyService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -83,5 +87,41 @@ class AitMaterialTest {
         assertEquals("数据产品经营权", r.getRightType());
         assertEquals("个人信息", r.getSensitiveType());
         assertEquals("交易采购", r.getDataSource());
+    }
+
+    /** #1 多格式与批量上传:真实二进制上传的 格式/大小 强校验 + 元数据(哈希/大小/存储)。 */
+    @Test
+    void uploadBinary_validates_format_size_and_records_metadata() {
+        byte[] ok = new byte[120 * 1024]; // 120KB ≥ 100KB 下限
+
+        // 合法 PNG 上传 → 元数据齐全、原件可回读
+        String id = aitService.uploadBinary("客户用电信息表-盖章.png", ok, null, null);
+        AitMaterial m = aitService.getMaterial(id);
+        assertEquals("PNG", m.getFileType());
+        assertEquals(120L, m.getSizeKb());
+        assertNotNull(m.getFileHash(), "应记录 SM3 哈希");
+        assertNotNull(m.getStoragePath(), "应真实存储(磁盘)");
+        assertNotNull(m.getBatchNo(), "应生成批次号");
+        assertEquals(AitMaterial.PARSE_PENDING, m.getParseStatus());
+        assertEquals(ok.length, aitService.loadFile(id).length, "原件字节应可完整回读");
+
+        // 非法格式拒绝(仅 pdf/doc/docx/jpg/jpeg/png)
+        assertThrows(BizException.class, () -> aitService.uploadBinary("木马.exe", ok, null, null),
+                "非法格式应拒绝");
+        // 过小拒绝(< 100KB)
+        assertThrows(BizException.class, () -> aitService.uploadBinary("small.pdf", new byte[50 * 1024], null, null),
+                "单文件低于 100KB 应拒绝");
+        // 空内容拒绝
+        assertThrows(BizException.class, () -> aitService.uploadBinary("empty.pdf", new byte[0], null, null),
+                "空文件应拒绝");
+    }
+
+    /** #1 批量上限:单次批量上传超过 50 个直接拒绝(控制器层,先于落库)。 */
+    @Test
+    void uploadBatch_rejects_more_than_50() {
+        MultipartFile[] tooMany = new MultipartFile[51];
+        AitMaterialController controller = new AitMaterialController(aitService);
+        assertThrows(BizException.class, () -> controller.uploadBatch(tooMany, null),
+                "单次批量超过 50 个应拒绝");
     }
 }

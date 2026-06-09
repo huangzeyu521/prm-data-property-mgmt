@@ -9,6 +9,7 @@
         <el-table-column type="index" label="序号" width="56" align="center" />
         <el-table-column prop="fileName" label="文件" min-width="200" show-overflow-tooltip />
         <el-table-column prop="fileType" label="类型" width="80" align="center" />
+        <el-table-column prop="sizeKb" label="大小" width="100" align="right"><template #default="{ row }">{{ fmtSize(row.sizeKb) }}</template></el-table-column>
         <el-table-column prop="batchNo" label="批次" width="130" show-overflow-tooltip />
         <el-table-column prop="fileHash" label="文档哈希(SM3)" width="150">
           <template #default="{ row }"><code class="hash">{{ row.fileHash ? row.fileHash.slice(0,12)+'…' : '-' }}</code></template>
@@ -34,14 +35,28 @@
         :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" />
     </div>
 
-    <el-dialog v-model="dlg" title="上传确权证明材料" width="560px" align-center>
-      <el-form :model="form" label-width="100px">
-        <el-form-item label="文件名" required><el-input v-model="form.fileName" placeholder="如:客户用电信息表-确权证明-盖章.pdf" /></el-form-item>
-        <el-form-item label="关联确权申请"><el-input v-model="form.applyId" placeholder="确权申请ID(用于自动比对,可空)" /></el-form-item>
-        <el-form-item label="文件大小KB"><el-input-number v-model="form.sizeKb" :min="1" /></el-form-item>
-        <el-form-item label="材料正文(模拟)"><el-input v-model="form.content" type="textarea" :rows="3" placeholder="模拟OCR/解析正文,如:权利主体广东电网,数据持有权,有效期3年,自行生产,已盖章" /></el-form-item>
+    <el-dialog v-model="dlg" title="上传确权证明材料(真实文件 · 可批量)" width="600px" align-center @closed="resetUpload">
+      <el-form label-width="100px">
+        <el-form-item label="关联确权申请">
+          <el-input v-model="uploadApplyId" placeholder="确权申请ID(用于解析后自动比对,可空)" clearable />
+        </el-form-item>
+        <el-form-item label="选择文件">
+          <el-upload ref="uploadRef" drag multiple :auto-upload="false" :limit="MAX_BATCH"
+            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" :on-exceed="onExceed" :on-change="onFileChange" :on-remove="onFileChange">
+            <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
+            <div class="el-upload__text">拖拽文件到此,或<em>点击选择</em></div>
+            <template #tip>
+              <div class="el-upload__tip">支持 PDF / Word(.doc/.docx) / JPG / PNG;单文件 100KB–500MB;单次最多 {{ MAX_BATCH }} 个。</div>
+            </template>
+          </el-upload>
+        </el-form-item>
       </el-form>
-      <template #footer><el-button type="primary" @click="onUpload">上传</el-button><el-button @click="dlg=false">取消</el-button></template>
+      <template #footer>
+        <el-button type="primary" :loading="uploading" :disabled="!fileList.length" @click="onUpload">
+          上传{{ fileList.length ? `(${fileList.length})` : '' }}
+        </el-button>
+        <el-button @click="dlg=false">取消</el-button>
+      </template>
     </el-dialog>
 
     <el-dialog v-model="viewDlg" title="解析结果 · 要素抽取 / 印章 / 术语 / 表单比对" width="720px" align-center>
@@ -82,25 +97,65 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { pageAitMaterial, uploadAitMaterial, parseAitMaterial, getAitParse, aitTermCheck, aitCompares, aitProgress, aitParseExportUrl } from '@/api/aitool'
+import { UploadFilled } from '@element-plus/icons-vue'
+import { pageAitMaterial, uploadAitMaterialFile, uploadAitMaterialBatch, parseAitMaterial, getAitParse, aitTermCheck, aitCompares, aitProgress, aitParseExportUrl } from '@/api/aitool'
+
+const MAX_BATCH = 50
+const MIN_BYTES = 100 * 1024
+const MAX_BYTES = 500 * 1024 * 1024
+const ALLOWED_EXT = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png']
 
 const q = reactive({ current: 1, size: 10 })
 const rows = ref([]); const total = ref(0); const loading = ref(false)
 const dlg = ref(false)
-const form = reactive({ fileName: '', applyId: '', sizeKb: 1024, content: '' })
+const uploadRef = ref(); const fileList = ref([]); const uploadApplyId = ref(''); const uploading = ref(false)
 const viewDlg = ref(false); const parse = ref(null); const terms = ref([]); const compares = ref([])
 
 function stTag(s) { return { 成功: 'success', 失败: 'danger', 解析中: 'warning', 待解析: 'info' }[s] || 'info' }
 function diffTag(d) { return { 一致: 'success', 不一致: 'danger', 缺失: 'warning' }[d] || 'info' }
+function fmtSize(kb) { if (!kb) return '-'; return kb >= 1024 ? (kb / 1024).toFixed(1) + ' MB' : kb + ' KB' }
 
 async function load() {
   loading.value = true
   try { const r = await pageAitMaterial({ ...q }); rows.value = r.records || []; total.value = r.total || 0 }
   finally { loading.value = false }
 }
+
+function onFileChange(_file, files) { fileList.value = files }
+function onExceed() { ElMessage.warning(`单次最多上传 ${MAX_BATCH} 个文件`) }
+function resetUpload() { fileList.value = []; uploadApplyId.value = ''; uploadRef.value?.clearFiles?.() }
+
+// 客户端前置校验:格式 + 大小(后端仍强校验,双保险)
+function precheck(raw) {
+  const ext = (raw.name.split('.').pop() || '').toLowerCase()
+  if (!ALLOWED_EXT.includes(ext)) return `${raw.name}:不支持的格式 .${ext}(仅 PDF/Word/JPG/PNG)`
+  if (raw.size < MIN_BYTES) return `${raw.name}:文件过小(${(raw.size / 1024).toFixed(0)}KB),不低于 100KB`
+  if (raw.size > MAX_BYTES) return `${raw.name}:文件过大(${(raw.size / 1024 / 1024).toFixed(0)}MB),不超过 500MB`
+  return null
+}
+
 async function onUpload() {
-  if (!form.fileName) { ElMessage.warning('请填写文件名'); return }
-  await uploadAitMaterial({ ...form }); ElMessage.success('已上传(待解析)'); dlg.value = false; load()
+  const raws = fileList.value.map(f => f.raw).filter(Boolean)
+  if (!raws.length) { ElMessage.warning('请先选择文件'); return }
+  if (raws.length > MAX_BATCH) { ElMessage.warning(`单次最多 ${MAX_BATCH} 个`); return }
+  for (const r of raws) { const err = precheck(r); if (err) { ElMessage.error(err); return } }
+  uploading.value = true
+  try {
+    const fd = new FormData()
+    if (uploadApplyId.value) fd.append('applyId', uploadApplyId.value)
+    if (raws.length === 1) {
+      fd.append('file', raws[0])
+      await uploadAitMaterialFile(fd)
+    } else {
+      raws.forEach(r => fd.append('files', r))
+      await uploadAitMaterialBatch(fd)
+    }
+    ElMessage.success(`已上传 ${raws.length} 个文件(待解析)`)
+    dlg.value = false
+    load()
+  } catch (e) {
+    ElMessage.error('上传失败:' + (e?.response?.data?.message || e?.message || '请检查格式与大小'))
+  } finally { uploading.value = false }
 }
 async function onParse(row) {
   await parseAitMaterial(row.materialId)   // 异步触发
