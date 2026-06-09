@@ -26,3 +26,9 @@ application-local.yml
 .vscode/
 .DS_Store
 Thumbs.db
+
+# ===== 临时调试中转文件(curl/python) =====
+/.aid_*.txt
+/.[a-z].json
+/.[a-z][a-z].json
+/.[a-z][a-z][a-z].json

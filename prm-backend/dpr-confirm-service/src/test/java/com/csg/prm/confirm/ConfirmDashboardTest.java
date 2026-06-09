@@ -37,7 +37,7 @@ class ConfirmDashboardTest {
         applyService.approve(id); // 节点60 主管复核通过
         applyService.approve(id); // 节点70 经理终审通过 -> 制卡
 
-        ConfirmDashboardVO vo = dashboardService.dashboard();
+        ConfirmDashboardVO vo = dashboardService.dashboard(null, null, null);
         assertTrue(vo.getTotalApply() >= 1);
         assertTrue(vo.getDone() >= 1, "应统计到已完成确权");
         assertTrue(vo.getCardCount() >= 1, "应统计到权益卡片");

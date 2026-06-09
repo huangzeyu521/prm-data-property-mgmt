@@ -35,6 +35,12 @@ public class AuthCertController {
         return R.ok(service.getById(certId));
     }
 
+    /** 在线预览:渲染证书内容(证书+模板+合规校验)。 */
+    @GetMapping("/{certId}/render")
+    public R<com.csg.prm.authorize.dto.AuthCertRenderVO> render(@PathVariable String certId) {
+        return R.ok(service.render(certId));
+    }
+
     @PostMapping("/{certId}/revoke")
     public R<Void> revoke(@PathVariable String certId) {
         service.revoke(certId);

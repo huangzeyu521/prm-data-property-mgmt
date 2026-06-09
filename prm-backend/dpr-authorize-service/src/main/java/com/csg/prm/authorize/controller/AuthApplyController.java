@@ -1,10 +1,14 @@
 package com.csg.prm.authorize.controller;
 
 import com.csg.prm.authorize.dto.AuthApplyQuery;
+import com.csg.prm.authorize.dto.BatchResult;
 import com.csg.prm.authorize.entity.AuthApply;
+import com.csg.prm.authorize.entity.AuthFlowLog;
 import com.csg.prm.authorize.service.AuthApplyService;
+import com.csg.prm.authorize.service.AuthFlowLogService;
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.R;
+import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,9 +25,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthApplyController {
 
     private final AuthApplyService service;
+    private final AuthFlowLogService flowLogService;
 
-    public AuthApplyController(AuthApplyService service) {
+    public AuthApplyController(AuthApplyService service, AuthFlowLogService flowLogService) {
         this.service = service;
+        this.flowLogService = flowLogService;
     }
 
     @PostMapping("/draft")
@@ -38,8 +44,8 @@ public class AuthApplyController {
     }
 
     @PostMapping("/{applyId}/approve")
-    public R<String> approve(@PathVariable String applyId) {
-        return R.ok(service.approve(applyId));
+    public R<String> approve(@PathVariable String applyId, @RequestParam(required = false) String opinion) {
+        return R.ok(service.approve(applyId, opinion));
     }
 
     @PostMapping("/{applyId}/reject")
@@ -48,9 +54,28 @@ public class AuthApplyController {
         return R.ok();
     }
 
+    /** 批量审批通过(带审核意见,逐条)。 */
+    @PostMapping("/batch-approve")
+    public R<BatchResult> batchApprove(@RequestBody List<String> applyIds) {
+        return R.ok(service.batchApprove(applyIds));
+    }
+
+    /** 批量驳回(统一原因)。 */
+    @PostMapping("/batch-reject")
+    public R<BatchResult> batchReject(@RequestBody List<String> applyIds,
+                                      @RequestParam(required = false) String reason) {
+        return R.ok(service.batchReject(applyIds, reason));
+    }
+
     @GetMapping("/{applyId}")
     public R<AuthApply> detail(@PathVariable String applyId) {
         return R.ok(service.getById(applyId));
+    }
+
+    /** 审批处理记录(轨迹:各节点责任人/意见/时间)。 */
+    @GetMapping("/{applyId}/flow-log")
+    public R<List<AuthFlowLog>> flowLog(@PathVariable String applyId) {
+        return R.ok(flowLogService.listByApply(applyId));
     }
 
     /** 批量清单明细(表6):查清单下所有授权项 */

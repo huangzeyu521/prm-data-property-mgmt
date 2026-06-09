@@ -5,6 +5,7 @@ import com.csg.prm.authorize.service.AuthDashboardService;
 import com.csg.prm.common.api.R;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -21,7 +22,10 @@ public class AuthDashboardController {
     }
 
     @GetMapping
-    public R<AuthDashboardVO> dashboard() {
-        return R.ok(service.dashboard());
+    public R<AuthDashboardVO> dashboard(@RequestParam(required = false) String scenario,
+                                        @RequestParam(required = false) String deptName,
+                                        @RequestParam(required = false) String startTime,
+                                        @RequestParam(required = false) String endTime) {
+        return R.ok(service.dashboard(scenario, deptName, startTime, endTime));
     }
 }

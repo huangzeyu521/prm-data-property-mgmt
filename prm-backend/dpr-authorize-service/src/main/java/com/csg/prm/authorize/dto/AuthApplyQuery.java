@@ -8,6 +8,15 @@ public class AuthApplyQuery extends PageQuery {
     private String authMode;
     private String status;
     private String granteeOrg;
+    private String applicant;
+
+    public String getApplicant() {
+        return applicant;
+    }
+
+    public void setApplicant(String applicant) {
+        this.applicant = applicant;
+    }
 
     public String getAssetName() {
         return assetName;

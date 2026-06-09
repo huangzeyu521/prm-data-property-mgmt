@@ -48,15 +48,15 @@ class AuthFlowTest {
         applyService.submit(id);
         // 专项五级:合规->业务->主管->经理->副总->已生效
         assertEquals(AuthApply.STATUS_COMPLIANCE, applyService.getById(id).getStatus());
-        assertNull(applyService.approve(id)); // 合规->业务
+        assertNull(applyService.approve(id, null)); // 合规->业务
         assertEquals(AuthApply.STATUS_BUSINESS, applyService.getById(id).getStatus());
-        assertNull(applyService.approve(id)); // 业务->主管
+        assertNull(applyService.approve(id, null)); // 业务->主管
         assertEquals(AuthApply.STATUS_MANAGER, applyService.getById(id).getStatus());
-        assertNull(applyService.approve(id)); // 主管->经理
+        assertNull(applyService.approve(id, null)); // 主管->经理
         assertEquals(AuthApply.STATUS_DIRECTOR, applyService.getById(id).getStatus());
-        assertNull(applyService.approve(id)); // 经理->副总
+        assertNull(applyService.approve(id, null)); // 经理->副总
         assertEquals(AuthApply.STATUS_VP, applyService.getById(id).getStatus());
-        String certId = applyService.approve(id); // 副总->已生效(发证)
+        String certId = applyService.approve(id, null); // 副总->已生效(发证)
         assertNotNull(certId, "终审通过应自动生成授权证书");
         assertEquals(AuthApply.STATUS_EFFECTIVE, applyService.getById(id).getStatus());
 
@@ -74,11 +74,11 @@ class AuthFlowTest {
         applyService.submit(id);
         // 批量三级:合规->数字化部认定->领导小组->已生效
         assertEquals(AuthApply.STATUS_COMPLIANCE, applyService.getById(id).getStatus());
-        assertNull(applyService.approve(id)); // 合规->数字化部认定
+        assertNull(applyService.approve(id, null)); // 合规->数字化部认定
         assertEquals(AuthApply.STATUS_DEPT, applyService.getById(id).getStatus());
-        assertNull(applyService.approve(id)); // 数字化部认定->领导小组
+        assertNull(applyService.approve(id, null)); // 数字化部认定->领导小组
         assertEquals(AuthApply.STATUS_LEADERSHIP, applyService.getById(id).getStatus());
-        String certId = applyService.approve(id); // 领导小组->已生效
+        String certId = applyService.approve(id, null); // 领导小组->已生效
         assertNotNull(certId, "领导小组批准应自动生成授权证书");
         assertEquals(AuthApply.STATUS_EFFECTIVE, applyService.getById(id).getStatus());
     }

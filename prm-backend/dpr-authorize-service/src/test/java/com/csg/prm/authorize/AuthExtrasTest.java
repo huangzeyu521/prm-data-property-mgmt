@@ -1,7 +1,9 @@
 package com.csg.prm.authorize;
 
 import com.csg.prm.authorize.entity.AuthAgreement;
+import com.csg.prm.authorize.entity.AuthApply;
 import com.csg.prm.authorize.entity.AuthCatalogItem;
+import com.csg.prm.authorize.mapper.AuthApplyMapper;
 import com.csg.prm.authorize.service.AuthAgreementService;
 import com.csg.prm.authorize.service.AuthCatalogService;
 import com.csg.prm.authorize.service.AuthComplianceService;
@@ -26,6 +28,7 @@ class AuthExtrasTest {
     @Autowired private AuthCatalogService catalogService;
     @Autowired private AuthComplianceService complianceService;
     @Autowired private AuthAgreementService agreementService;
+    @Autowired private AuthApplyMapper applyMapper;
 
     @Test
     void catalog_save_disable_page() {
@@ -41,8 +44,17 @@ class AuthExtrasTest {
 
     @Test
     void compliance_check_and_page() {
-        String id = complianceService.runCheck("AP-1", "黄", "授权范围接近确权边界");
-        assertNotNull(id);
+        // 规则化校验需申请存在:无卡片/无材料 → 应红/不通过
+        AuthApply a = new AuthApply();
+        a.setApplyId("AP-1");
+        a.setAssetId("AST-001");
+        a.setRightType("数据加工使用权");
+        applyMapper.insert(a);
+
+        var report = complianceService.runCheck("AP-1");
+        assertNotNull(report);
+        assertEquals("红", report.getRiskLevel());          // 未引用权益卡片 + 未传材料 → 不通过
+        assertTrue(report.getItems().size() >= 6);          // 三维多项
         assertTrue(complianceService.page(1, 10, "AP-1", null).getTotal() >= 1);
     }
 
@@ -51,18 +63,18 @@ class AuthExtrasTest {
         String id = agreementService.generate("AP-2", "TPL-1", "广州供电局");
         assertEquals(AuthAgreement.SEAL_PENDING, agreementService.getById(id).getSealStatus());
         // 未双签不可审核
-        assertThrows(BizException.class, () -> agreementService.review(id, true));
+        assertThrows(BizException.class, () -> agreementService.review(id, true, null));
         // 甲方签 -> 待对方签
         agreementService.signByGrantor(id, "oss://agreement/AP-2-grantor.pdf");
         assertEquals(AuthAgreement.SEAL_PARTIAL, agreementService.getById(id).getSealStatus());
-        assertThrows(BizException.class, () -> agreementService.review(id, true), "仅单方签署不可审核");
+        assertThrows(BizException.class, () -> agreementService.review(id, true, null), "仅单方签署不可审核");
         // 乙方签 -> 已双签
         agreementService.signByGrantee(id, "oss://agreement/AP-2-grantee.pdf");
         assertEquals(AuthAgreement.SEAL_SIGNED, agreementService.getById(id).getSealStatus());
         assertTrue(agreementService.getById(id).getGrantorSigned());
         assertTrue(agreementService.getById(id).getGranteeSigned());
         // 双签后可审核 -> 归档
-        agreementService.review(id, true);
+        agreementService.review(id, true, null);
         assertEquals(AuthAgreement.REVIEW_PASS, agreementService.getById(id).getReviewStatus());
         agreementService.archive(id);
         assertEquals(AuthAgreement.ARCHIVE_YES, agreementService.getById(id).getArchiveStatus());

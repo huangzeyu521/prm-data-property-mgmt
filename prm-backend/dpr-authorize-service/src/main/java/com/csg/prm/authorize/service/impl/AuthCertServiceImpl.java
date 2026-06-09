@@ -30,17 +30,46 @@ public class AuthCertServiceImpl implements AuthCertService {
     private final AuthCertMapper mapper;
     private final AccountabilityService accountabilityService;
     private final ChainEvidenceService chainEvidenceService;
+    private final com.csg.prm.authorize.mapper.AuthCertTemplateMapper templateMapper;
+    private final com.csg.prm.authorize.mapper.AuthApplyMapper applyMapper;
+    private final com.csg.prm.authorize.gateway.EquityCardGateway equityCardGateway;
 
     public AuthCertServiceImpl(AuthCertMapper mapper, AccountabilityService accountabilityService,
-                               ChainEvidenceService chainEvidenceService) {
+                               ChainEvidenceService chainEvidenceService,
+                               com.csg.prm.authorize.mapper.AuthCertTemplateMapper templateMapper,
+                               com.csg.prm.authorize.mapper.AuthApplyMapper applyMapper,
+                               com.csg.prm.authorize.gateway.EquityCardGateway equityCardGateway) {
         this.mapper = mapper;
         this.accountabilityService = accountabilityService;
         this.chainEvidenceService = chainEvidenceService;
+        this.templateMapper = templateMapper;
+        this.applyMapper = applyMapper;
+        this.equityCardGateway = equityCardGateway;
+    }
+
+    /** 按授权类型(模式)+权益类型 选生效证书模板(自选/自动匹配)。 */
+    private com.csg.prm.authorize.entity.AuthCertTemplate matchTemplate(AuthApply apply) {
+        String certType = "批量".equals(apply.getAuthMode())
+                ? com.csg.prm.authorize.entity.AuthCertTemplate.TYPE_BATCH
+                : com.csg.prm.authorize.entity.AuthCertTemplate.TYPE_SPECIAL;
+        java.util.List<com.csg.prm.authorize.entity.AuthCertTemplate> tpls = templateMapper.selectList(
+                new LambdaQueryWrapper<com.csg.prm.authorize.entity.AuthCertTemplate>()
+                        .eq(com.csg.prm.authorize.entity.AuthCertTemplate::getCertType, certType)
+                        .eq(com.csg.prm.authorize.entity.AuthCertTemplate::getRightType, apply.getRightType())
+                        .eq(com.csg.prm.authorize.entity.AuthCertTemplate::getTemplateStatus, "生效中")
+                        .orderByDesc(com.csg.prm.authorize.entity.AuthCertTemplate::getCreateTime));
+        return tpls.isEmpty() ? null : tpls.get(0);
     }
 
     @Override
     @Transactional
     public String generateFromApply(AuthApply apply) {
+        // 出证前合规校验:授权范围不超确权边界(确权边界为"全字段"=不限;"约定字段"=须在边界内)
+        com.csg.prm.authorize.gateway.EquityCardGateway.CardBoundary b = equityCardGateway.boundary(apply.getEquityCardId());
+        if (b != null && StringUtils.hasText(b.scope()) && !"全字段".equals(b.scope())
+                && StringUtils.hasText(apply.getScope()) && !b.scope().equals(apply.getScope())) {
+            throw new BizException("授权范围超出确权边界,出证拦截(确权范围:" + b.scope() + ")");
+        }
         AuthCert cert = new AuthCert();
         cert.setCertNo(generateCertNo());
         cert.setApplyId(apply.getApplyId());
@@ -50,6 +79,14 @@ public class AuthCertServiceImpl implements AuthCertService {
         cert.setScope(apply.getScope());
         cert.setValidDate(apply.getValidDate());
         cert.setCertStatus(AuthCert.STATUS_EFFECTIVE);
+        // 按授权类型自动匹配生效证书模板(自选/标准化出证)
+        com.csg.prm.authorize.entity.AuthCertTemplate tpl = matchTemplate(apply);
+        if (tpl != null) {
+            cert.setTemplateId(tpl.getTemplateId());
+            cert.setTemplateName(tpl.getTemplateName());
+        } else {
+            cert.setTemplateName("标准授权证书(默认)");
+        }
         mapper.insert(cert);
         // 关键节点上链存证(授权发证):SM3 指纹锚定上链,防篡改、可追溯
         chainEvidenceService.anchor("授权发证", cert.getCertId(),
@@ -66,6 +103,44 @@ public class AuthCertServiceImpl implements AuthCertService {
             throw new BizException(ResultCode.NOT_FOUND.getCode(), "授权证书不存在");
         }
         return cert;
+    }
+
+    @Override
+    public com.csg.prm.authorize.dto.AuthCertRenderVO render(String certId) {
+        AuthCert cert = getById(certId);
+        com.csg.prm.authorize.dto.AuthCertRenderVO vo = new com.csg.prm.authorize.dto.AuthCertRenderVO();
+        vo.setCertNo(cert.getCertNo());
+        vo.setGranteeOrg(cert.getGranteeOrg());
+        vo.setAssetId(cert.getAssetId());
+        vo.setRightType(cert.getRightType());
+        vo.setScope(cert.getScope());
+        vo.setValidDate(cert.getValidDate());
+        vo.setCertStatus(cert.getCertStatus());
+        vo.setTemplateName(cert.getTemplateName());
+        if (StringUtils.hasText(cert.getTemplateId())) {
+            com.csg.prm.authorize.entity.AuthCertTemplate tpl = templateMapper.selectById(cert.getTemplateId());
+            if (tpl != null) {
+                vo.setCertType(tpl.getCertType());
+                vo.setTemplateContent(tpl.getTemplateContent());
+            }
+        }
+        // 合规校验:授权范围 ≤ 确权边界(经申请的权益卡片回溯)
+        boolean ok = true;
+        String result = "授权范围未超确权边界,内容合规";
+        AuthApply apply = StringUtils.hasText(cert.getApplyId()) ? applyMapper.selectById(cert.getApplyId()) : null;
+        if (apply != null) {
+            com.csg.prm.authorize.gateway.EquityCardGateway.CardBoundary b = equityCardGateway.boundary(apply.getEquityCardId());
+            if (b != null && StringUtils.hasText(b.scope()) && !"全字段".equals(b.scope())
+                    && StringUtils.hasText(cert.getScope()) && !b.scope().equals(cert.getScope())) {
+                ok = false;
+                result = "授权范围与确权边界(" + b.scope() + ")不一致,需复核";
+            } else {
+                result = "授权范围未超确权边界(确权:" + (b != null && StringUtils.hasText(b.scope()) ? b.scope() : "全字段") + "),内容合规";
+            }
+        }
+        vo.setComplianceOk(ok);
+        vo.setComplianceResult(result);
+        return vo;
     }
 
     @Override

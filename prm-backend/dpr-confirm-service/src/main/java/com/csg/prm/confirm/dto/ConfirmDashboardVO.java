@@ -1,11 +1,46 @@
 package com.csg.prm.confirm.dto;
 
+import java.util.List;
 import java.util.Map;
 
 /**
  * 确权看板指标(对应界面 IM-DAM-DPR-04-002-001-001 确权看板)。
  */
 public class ConfirmDashboardVO {
+
+    /** 流程瓶颈:各审批中节点积压 */
+    private Map<String, Long> nodeBacklog;
+    /** 瓶颈环节(积压最多的审批节点) */
+    private String bottleneckNode;
+    /** 月度趋势:申请量 + 通过率 */
+    private List<TrendPoint> trend;
+    /** 风险趋势预警 */
+    private List<String> riskAlerts;
+
+    public Map<String, Long> getNodeBacklog() { return nodeBacklog; }
+    public void setNodeBacklog(Map<String, Long> nodeBacklog) { this.nodeBacklog = nodeBacklog; }
+    public String getBottleneckNode() { return bottleneckNode; }
+    public void setBottleneckNode(String bottleneckNode) { this.bottleneckNode = bottleneckNode; }
+    public List<TrendPoint> getTrend() { return trend; }
+    public void setTrend(List<TrendPoint> trend) { this.trend = trend; }
+    public List<String> getRiskAlerts() { return riskAlerts; }
+    public void setRiskAlerts(List<String> riskAlerts) { this.riskAlerts = riskAlerts; }
+
+    public static class TrendPoint {
+        private final String month;
+        private final long applyCount;
+        private final double passRate;
+
+        public TrendPoint(String month, long applyCount, double passRate) {
+            this.month = month;
+            this.applyCount = applyCount;
+            this.passRate = passRate;
+        }
+
+        public String getMonth() { return month; }
+        public long getApplyCount() { return applyCount; }
+        public double getPassRate() { return passRate; }
+    }
 
     /** 确权申请总量 */
     private long totalApply;

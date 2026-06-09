@@ -52,6 +52,18 @@ public class AuthCert extends BaseEntity {
     @TableField("CEC_SUSPEND_REASON")
     private String suspendReason;
 
+    /** 出证所用证书模板ID(按授权类型自选/匹配) */
+    @TableField("CEC_TEMPLATE_ID")
+    private String templateId;
+
+    @TableField("CEC_TEMPLATE_NAME")
+    private String templateName;
+
+    public String getTemplateId() { return templateId; }
+    public void setTemplateId(String templateId) { this.templateId = templateId; }
+    public String getTemplateName() { return templateName; }
+    public void setTemplateName(String templateName) { this.templateName = templateName; }
+
     public String getSuspendReason() {
         return suspendReason;
     }

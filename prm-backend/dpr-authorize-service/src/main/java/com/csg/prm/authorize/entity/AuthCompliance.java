@@ -35,9 +35,15 @@ public class AuthCompliance extends BaseEntity {
     @TableField("CEC_PROBLEM_DESC")
     private String problemDesc;
 
+    /** 多维校验报告 JSON:[{dimension,item,pass,message}] */
+    @TableField("CEC_CHECK_REPORT")
+    private String checkReport;
+
     @TableField("CEC_CHECK_TIME")
     private LocalDateTime checkTime;
 
+    public String getCheckReport() { return checkReport; }
+    public void setCheckReport(String checkReport) { this.checkReport = checkReport; }
     public String getCheckId() { return checkId; }
     public void setCheckId(String checkId) { this.checkId = checkId; }
     public String getApplyId() { return applyId; }

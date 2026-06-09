@@ -9,8 +9,18 @@ import com.csg.prm.authorize.entity.AuthCertTemplate;
 public interface AuthCertTemplateService {
     String create(AuthCertTemplate t);
     void update(AuthCertTemplate t);
+    void delete(String templateId);
     void enable(String templateId);
     void disable(String templateId);
+
+    /** 上传套版文件(PDF/Word/图片,格式校验 + Base64)。 */
+    void uploadFile(String templateId, String fileName, byte[] data);
+
+    /** 下载套版文件。 */
+    byte[] download(String templateId);
+
+    AuthCertTemplate getById(String templateId);
+
     PageResult<AuthCertTemplate> page(long current, long size, String templateName,
                                       String certType, String templateStatus);
 }

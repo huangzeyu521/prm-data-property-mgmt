@@ -7,5 +7,6 @@ import com.csg.prm.confirm.dto.ConfirmDashboardVO;
  */
 public interface ConfirmDashboardService {
 
-    ConfirmDashboardVO dashboard();
+    /** 确权分析:支持按组织(部门)/时间周期筛选;含流程瓶颈、趋势、风险预警。 */
+    ConfirmDashboardVO dashboard(String deptName, String startTime, String endTime);
 }

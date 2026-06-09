@@ -28,7 +28,7 @@ export const revokeEquityCard = (cardId, reason) => request.post(`/dpr/confirm/c
 export const equityCardLogs = (cardId) => request.get(`/dpr/confirm/card/${cardId}/logs`)
 
 // 确权看板
-export const getConfirmDashboard = () => request.get('/dpr/confirm/dashboard')
+export const getConfirmDashboard = (params) => request.get('/dpr/confirm/dashboard', { params })
 
 // 大瓦特 AI 智能辅助(⑨)
 export const aiProvider = () => request.get('/dpr/confirm/ai/provider')

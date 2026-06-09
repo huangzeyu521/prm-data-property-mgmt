@@ -30,15 +30,25 @@
           <template #default="{ row }"><el-tag :type="row.certType==='批量授权证书'?'warning':'primary'">{{ row.certType }}</el-tag></template>
         </el-table-column>
         <el-table-column prop="rightType" label="适用权益类型" width="150" />
-        <el-table-column prop="templateVersion" label="版本" width="80" align="center" />
-        <el-table-column prop="templateStatus" label="状态" width="100" align="center">
+        <el-table-column prop="templateVersion" label="版本" width="70" align="center" />
+        <el-table-column prop="templateStatus" label="状态" width="90" align="center">
           <template #default="{ row }"><el-tag :type="row.templateStatus==='生效中'?'success':'info'">{{ row.templateStatus }}</el-tag></template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="套版文件" min-width="150">
+          <template #default="{ row }">
+            <el-link v-if="row.fileName" type="primary" @click="onDownload(row)">{{ row.fileName }}</el-link>
+            <span v-else style="color:#bbb">未上传</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="300" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="onEdit(row)">编辑</el-button>
+            <el-upload :show-file-list="false" :http-request="(o)=>doUpload(row, o.file)" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" style="display:inline-block;margin:0 8px">
+              <el-button link type="primary">上传</el-button>
+            </el-upload>
             <el-button v-if="row.templateStatus==='生效中'" link type="warning" @click="onDisable(row)">停用</el-button>
             <el-button v-else link type="success" @click="onEnable(row)">启用</el-button>
+            <el-button link type="danger" @click="onDel(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -70,10 +80,11 @@
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   pageAuthCertTemplate, createAuthCertTemplate, updateAuthCertTemplate,
-  enableAuthCertTemplate, disableAuthCertTemplate
+  enableAuthCertTemplate, disableAuthCertTemplate,
+  deleteAuthCertTemplate, uploadAuthCertTemplateFile, authCertTemplateFileUrl
 } from '@/api/authorize'
 
 const q = reactive({ current: 1, size: 10, certType: '', templateStatus: '' })
@@ -97,5 +108,15 @@ async function onSave() {
 }
 async function onEnable(row) { await enableAuthCertTemplate(row.templateId); ElMessage.success('已启用'); load() }
 async function onDisable(row) { await disableAuthCertTemplate(row.templateId); ElMessage.success('已停用'); load() }
+async function doUpload(row, file) {
+  const fd = new FormData(); fd.append('file', file)
+  await uploadAuthCertTemplateFile(row.templateId, fd)
+  ElMessage.success('套版文件已上传'); load()
+}
+function onDownload(row) { if (row.fileName) window.open(authCertTemplateFileUrl(row.templateId), '_blank') }
+function onDel(row) {
+  ElMessageBox.confirm('确认删除该证书模板吗', '提示', { type: 'warning' })
+    .then(async () => { await deleteAuthCertTemplate(row.templateId); ElMessage.success('已删除'); load() }).catch(() => {})
+}
 onMounted(load)
 </script>

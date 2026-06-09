@@ -7,5 +7,6 @@ import com.csg.prm.authorize.dto.AuthDashboardVO;
  */
 public interface AuthDashboardService {
 
-    AuthDashboardVO dashboard();
+    /** 授权分析:支持按使用场景/组织(部门)/时间周期筛选;含合规结果、趋势、风险预警。 */
+    AuthDashboardVO dashboard(String scenario, String deptName, String startTime, String endTime);
 }

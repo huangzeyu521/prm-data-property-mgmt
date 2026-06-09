@@ -44,6 +44,19 @@ public class AuthCertTemplate extends BaseEntity {
     @TableField("CEC_TEMPLATE_STATUS")
     private String templateStatus;
 
+    /** 套版文件名(Word/PDF) */
+    @TableField("CEC_FILE_NAME")
+    private String fileName;
+
+    /** 套版文件 Base64 */
+    @TableField("CEC_FILE_DATA")
+    private String fileData;
+
+    public String getFileName() { return fileName; }
+    public void setFileName(String fileName) { this.fileName = fileName; }
+    public String getFileData() { return fileData; }
+    public void setFileData(String fileData) { this.fileData = fileData; }
+
     public String getTemplateId() { return templateId; }
     public void setTemplateId(String templateId) { this.templateId = templateId; }
     public String getTemplateName() { return templateName; }

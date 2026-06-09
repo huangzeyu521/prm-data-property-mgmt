@@ -36,13 +36,13 @@ class AuthDashboardTest {
         String id = applyService.saveDraft(a);
         applyService.submit(id);
         // 专项五级审批:合规->业务->主管->经理->副总->已生效
-        applyService.approve(id);
-        applyService.approve(id);
-        applyService.approve(id);
-        applyService.approve(id);
-        applyService.approve(id); // 生效 + 生成证书
+        applyService.approve(id, null);
+        applyService.approve(id, null);
+        applyService.approve(id, null);
+        applyService.approve(id, null);
+        applyService.approve(id, null); // 生效 + 生成证书
 
-        AuthDashboardVO vo = dashboardService.dashboard();
+        AuthDashboardVO vo = dashboardService.dashboard(null, null, null, null);
         assertTrue(vo.getTotalApply() >= 1);
         assertTrue(vo.getEffective() >= 1, "应统计到已生效授权");
         assertTrue(vo.getCertCount() >= 1, "应统计到授权证书");

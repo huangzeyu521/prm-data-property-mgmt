@@ -39,7 +39,10 @@
               <el-form-item label="第三方来源"><el-input v-model="item.thirdPartySource" placeholder="涉及第三方时填" /></el-form-item>
               <el-form-item label="隐私/商密"><el-input v-model="item.sensitiveType" placeholder="个人隐私/商业秘密/无" /></el-form-item>
               <el-form-item label="是否跨域"><el-switch v-model="item.crossRegion" /></el-form-item>
-              <el-form-item><el-button type="primary" :loading="adding" @click="addItem">加入清单</el-button></el-form-item>
+              <el-form-item>
+                <el-button type="primary" :loading="adding" @click="addItem">加入清单</el-button>
+                <el-button @click="openPicker">从目录多选资产</el-button>
+              </el-form-item>
             </el-form>
           </el-col>
           <el-col :span="13">
@@ -81,6 +84,24 @@
       <el-button v-if="step === 1" type="primary" :disabled="items.length===0" @click="step = 2">下一步:提交审批</el-button>
       <el-button v-if="step === 2" type="primary" :loading="submitting" @click="doSubmit">提交清单审批</el-button>
     </div>
+
+    <!-- 从目录多选资产 -->
+    <el-dialog v-model="pickerDlg" title="从确权目录多选数据资产" width="560px" align-center>
+      <el-alert type="info" :closable="false" style="margin-bottom:10px">
+        勾选多个数据集，统一加入清单。共享字段（被授权方/权益类型/场景）取左侧表单当前值，加入后可逐条调整。
+      </el-alert>
+      <el-tree ref="pickTreeRef" :data="tree" :props="{ label: 'label', children: 'children' }" node-key="id"
+        show-checkbox default-expand-all style="max-height:380px;overflow:auto">
+        <template #default="{ data }">
+          <span>{{ data.label }}</span>
+          <span v-if="data.assetId" style="color:#909399;font-size:12px;margin-left:8px">{{ data.assetId }} · {{ data.confirmStatus }}</span>
+        </template>
+      </el-tree>
+      <template #footer>
+        <el-button type="primary" :loading="picking" @click="confirmPick">加入选中资产</el-button>
+        <el-button @click="pickerDlg=false">取消</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -89,6 +110,7 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { createBatchList, saveAuthDraft, submitBatchList } from '@/api/authorize'
+import { getPropertyTree } from '@/api/ledger'
 
 const router = useRouter()
 const rightTypes = ['数据加工使用权', '数据产品经营权']
@@ -120,6 +142,28 @@ async function next0() {
     } finally { creating.value = false }
   }
   step.value = 1
+}
+
+// 从目录多选资产批量加入清单
+const pickerDlg = ref(false); const picking = ref(false); const tree = ref([]); const pickTreeRef = ref()
+async function openPicker() {
+  if (!item.granteeOrg || !item.rightType) { ElMessage.warning('请先在左侧表单填写"被授权方"和"权益类型"作为共享字段'); return }
+  if (!tree.value.length) tree.value = await getPropertyTree() || []
+  pickerDlg.value = true
+}
+async function confirmPick() {
+  const leaves = pickTreeRef.value.getCheckedNodes().filter(n => n.type === 'DATASET' && n.assetId)
+  if (!leaves.length) { ElMessage.warning('请至少勾选一个数据集'); return }
+  picking.value = true
+  try {
+    for (const lf of leaves) {
+      const it = { ...emptyItem(), assetId: lf.assetId, assetName: lf.label, granteeOrg: item.granteeOrg, rightType: item.rightType, scenario: item.scenario }
+      await saveAuthDraft({ authMode: '批量', batchListId: batchListId.value, ...it })
+      items.value.push(it)
+    }
+    ElMessage.success(`已批量加入 ${leaves.length} 项`)
+    pickerDlg.value = false
+  } finally { picking.value = false }
 }
 
 async function addItem() {

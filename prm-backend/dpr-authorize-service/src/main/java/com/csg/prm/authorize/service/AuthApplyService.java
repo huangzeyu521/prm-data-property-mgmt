@@ -20,10 +20,16 @@ public interface AuthApplyService {
     /** 提交审批(校验先确后授;草稿 -> 审核中) */
     void submit(String applyId);
 
-    /** 审批通过 -> 已生效,自动生成授权证书,返回证书ID */
-    String approve(String applyId);
+    /** 审批通过(带审核意见) -> 已生效,自动生成授权证书,返回证书ID */
+    String approve(String applyId, String opinion);
 
     void reject(String applyId, String reason);
+
+    /** 批量审批通过(逐条,失败不影响其余)。 */
+    com.csg.prm.authorize.dto.BatchResult batchApprove(List<String> applyIds);
+
+    /** 批量驳回(逐条,统一原因)。 */
+    com.csg.prm.authorize.dto.BatchResult batchReject(List<String> applyIds, String reason);
 
     AuthApply getById(String applyId);
 

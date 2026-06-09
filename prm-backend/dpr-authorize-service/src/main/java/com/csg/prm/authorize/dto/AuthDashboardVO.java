@@ -1,11 +1,46 @@
 package com.csg.prm.authorize.dto;
 
+import java.util.List;
 import java.util.Map;
 
 /**
  * 授权看板指标(对应界面 IM-DAM-DPR-04-003-001-001 授权看板)。
  */
 public class AuthDashboardVO {
+
+    /** 合规性检查结果分布(红/黄/绿) */
+    private Map<String, Long> complianceDist;
+    /** 使用场景授权频次 */
+    private Map<String, Long> byScenario;
+    /** 月度趋势:申请量 + 生效率 */
+    private List<TrendPoint> trend;
+    /** 授权风险预警 */
+    private List<String> riskAlerts;
+
+    public Map<String, Long> getComplianceDist() { return complianceDist; }
+    public void setComplianceDist(Map<String, Long> complianceDist) { this.complianceDist = complianceDist; }
+    public Map<String, Long> getByScenario() { return byScenario; }
+    public void setByScenario(Map<String, Long> byScenario) { this.byScenario = byScenario; }
+    public List<TrendPoint> getTrend() { return trend; }
+    public void setTrend(List<TrendPoint> trend) { this.trend = trend; }
+    public List<String> getRiskAlerts() { return riskAlerts; }
+    public void setRiskAlerts(List<String> riskAlerts) { this.riskAlerts = riskAlerts; }
+
+    public static class TrendPoint {
+        private final String month;
+        private final long applyCount;
+        private final double effectiveRate;
+
+        public TrendPoint(String month, long applyCount, double effectiveRate) {
+            this.month = month;
+            this.applyCount = applyCount;
+            this.effectiveRate = effectiveRate;
+        }
+
+        public String getMonth() { return month; }
+        public long getApplyCount() { return applyCount; }
+        public double getEffectiveRate() { return effectiveRate; }
+    }
 
     /** 授权申请总量 */
     private long totalApply;

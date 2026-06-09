@@ -5,6 +5,7 @@ import com.csg.prm.confirm.dto.ConfirmDashboardVO;
 import com.csg.prm.confirm.service.ConfirmDashboardService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -21,7 +22,9 @@ public class ConfirmDashboardController {
     }
 
     @GetMapping
-    public R<ConfirmDashboardVO> dashboard() {
-        return R.ok(service.dashboard());
+    public R<ConfirmDashboardVO> dashboard(@RequestParam(required = false) String deptName,
+                                           @RequestParam(required = false) String startTime,
+                                           @RequestParam(required = false) String endTime) {
+        return R.ok(service.dashboard(deptName, startTime, endTime));
     }
 }

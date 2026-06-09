@@ -15,6 +15,9 @@ public interface AuthCertService {
 
     String generateFromApply(AuthApply apply);
 
+    /** 渲染证书内容(证书+模板+合规校验)供在线预览。 */
+    com.csg.prm.authorize.dto.AuthCertRenderVO render(String certId);
+
     AuthCert getById(String certId);
 
     void revoke(String certId);

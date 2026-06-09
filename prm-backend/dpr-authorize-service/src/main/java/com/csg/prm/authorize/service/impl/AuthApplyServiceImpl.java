@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -33,17 +34,46 @@ public class AuthApplyServiceImpl implements AuthApplyService {
     private final OpenCatalogGateway openCatalogGateway;
     private final com.csg.prm.common.writeback.LedgerWritebackGateway ledgerWriteback;
     private final ProcessFlowEngine flowEngine;
+    private final com.csg.prm.authorize.service.AuthFlowLogService flowLogService;
 
     public AuthApplyServiceImpl(AuthApplyMapper mapper, AuthCertService authCertService,
                                EquityCardGateway equityCardGateway, OpenCatalogGateway openCatalogGateway,
                                com.csg.prm.common.writeback.LedgerWritebackGateway ledgerWriteback,
-                               ProcessFlowEngine flowEngine) {
+                               ProcessFlowEngine flowEngine,
+                               com.csg.prm.authorize.service.AuthFlowLogService flowLogService) {
         this.mapper = mapper;
         this.authCertService = authCertService;
         this.equityCardGateway = equityCardGateway;
         this.openCatalogGateway = openCatalogGateway;
         this.ledgerWriteback = ledgerWriteback;
         this.flowEngine = flowEngine;
+        this.flowLogService = flowLogService;
+    }
+
+    /** 各审批状态对应的责任人(节点处理人/角色)。 */
+    private String responderOf(String status) {
+        if (AuthApply.STATUS_COMPLIANCE.equals(status)) {
+            return "合规管控小组";
+        }
+        if (AuthApply.STATUS_BUSINESS.equals(status)) {
+            return "业务部门";
+        }
+        if (AuthApply.STATUS_MANAGER.equals(status)) {
+            return "数字化部主管";
+        }
+        if (AuthApply.STATUS_DIRECTOR.equals(status)) {
+            return "数字化部经理";
+        }
+        if (AuthApply.STATUS_VP.equals(status)) {
+            return "副总/总经理";
+        }
+        if (AuthApply.STATUS_DEPT.equals(status)) {
+            return "公司总部数字化部";
+        }
+        if (AuthApply.STATUS_LEADERSHIP.equals(status)) {
+            return "领导小组办公室";
+        }
+        return "申请人";
     }
 
     @Override
@@ -105,6 +135,7 @@ public class AuthApplyServiceImpl implements AuthApplyService {
         // 由流程引擎启动对应模式的审批链(首环节:合规审核)
         String first = flowEngine.start(flowKeyOf(apply.getAuthMode()), applyId);
         updateStatus(applyId, first, 0, null);
+        flowLogService.record(apply, AuthApply.STATUS_DRAFT, first, "申请人", null);
     }
 
     /**
@@ -114,12 +145,14 @@ public class AuthApplyServiceImpl implements AuthApplyService {
      */
     @Override
     @Transactional
-    public String approve(String applyId) {
+    public String approve(String applyId, String opinion) {
         AuthApply apply = require(applyId);
         String flowKey = flowKeyOf(apply.getAuthMode());
         if (!flowEngine.canAdvance(flowKey, apply.getStatus())) {
             throw new BizException("当前状态不可审批:" + apply.getStatus());
         }
+        String from = apply.getStatus();
+        String op = StringUtils.hasText(opinion) ? opinion : "同意,符合授权要求";
         // 由流程引擎推进(去除硬编码 chain/indexInChain),按授权模式沿对应审批链流转
         FlowTransition t = flowEngine.advance(flowKey, applyId, apply.getStatus());
         if (t.terminal()) {
@@ -128,6 +161,7 @@ public class AuthApplyServiceImpl implements AuthApplyService {
                 throw new BizException("权益卡片已冻结/失效,授权熔断");
             }
             updateStatus(applyId, t.nextState(), t.stepIndex(), null);
+            flowLogService.record(apply, from, t.nextState(), responderOf(from), op);
             String certId = authCertService.generateFromApply(apply);
             // P0-① 产权事件回写:授权生效 -> 台账更新授权状态 + 变更留痕
             ledgerWriteback.apply(com.csg.prm.common.writeback.RightsEvent.authorized(
@@ -135,6 +169,7 @@ public class AuthApplyServiceImpl implements AuthApplyService {
             return certId;
         }
         updateStatus(applyId, t.nextState(), t.stepIndex(), null);
+        flowLogService.record(apply, from, t.nextState(), responderOf(from), op);
         return null;
     }
 
@@ -146,7 +181,43 @@ public class AuthApplyServiceImpl implements AuthApplyService {
         if (!flowEngine.canAdvance(flowKeyOf(apply.getAuthMode()), apply.getStatus())) {
             throw new BizException("当前状态不可驳回:" + apply.getStatus());
         }
+        String from = apply.getStatus();
         updateStatus(applyId, AuthApply.STATUS_REJECTED, null, reason);
+        flowLogService.record(apply, from, AuthApply.STATUS_REJECTED, responderOf(from), reason);
+    }
+
+    @Override
+    public com.csg.prm.authorize.dto.BatchResult batchApprove(List<String> applyIds) {
+        com.csg.prm.authorize.dto.BatchResult r = new com.csg.prm.authorize.dto.BatchResult();
+        if (applyIds == null) {
+            return r;
+        }
+        for (String id : applyIds) {
+            try {
+                approve(id, null);
+                r.ok();
+            } catch (RuntimeException e) {
+                r.fail(id, e.getMessage());
+            }
+        }
+        return r;
+    }
+
+    @Override
+    public com.csg.prm.authorize.dto.BatchResult batchReject(List<String> applyIds, String reason) {
+        com.csg.prm.authorize.dto.BatchResult r = new com.csg.prm.authorize.dto.BatchResult();
+        if (applyIds == null) {
+            return r;
+        }
+        for (String id : applyIds) {
+            try {
+                reject(id, reason);
+                r.ok();
+            } catch (RuntimeException e) {
+                r.fail(id, e.getMessage());
+            }
+        }
+        return r;
     }
 
     /** 授权模式 -> 流程定义键 */
@@ -167,6 +238,7 @@ public class AuthApplyServiceImpl implements AuthApplyService {
                 .eq(StringUtils.hasText(query.getAuthMode()), AuthApply::getAuthMode, query.getAuthMode())
                 .eq(StringUtils.hasText(query.getStatus()), AuthApply::getStatus, query.getStatus())
                 .eq(StringUtils.hasText(query.getGranteeOrg()), AuthApply::getGranteeOrg, query.getGranteeOrg())
+                .like(StringUtils.hasText(query.getApplicant()), AuthApply::getApplicantManager, query.getApplicant())
                 .orderByDesc(AuthApply::getCreateTime);
         IPage<AuthApply> page = mapper.selectPage(query.toPage(), wrapper);
         return PageResult.of(page);

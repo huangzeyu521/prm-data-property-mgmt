@@ -74,3 +74,19 @@ INSERT INTO IM_AUTH_APPLY_TEMPLATE (CEC_TEMPLATE_ID,CEC_TEMPLATE_NAME,CEC_AUTH_T
 ('AAT-001','独占授权申请表单模板','独占','[{"name":"grantee","label":"被授权方","type":"文本","required":true,"rule":"非空"},{"name":"scope","label":"授权范围","type":"多行文本","required":true,"rule":"不得超出确权边界"},{"name":"term","label":"独占期限","type":"日期","required":true,"rule":"不超过确权有效期"},{"name":"exclusive","label":"排他性声明","type":"多行文本","required":false,"rule":""}]','填报申请 → 合规审核 → 主管审批 → 签订独占协议 → 发证','v1','生效中','独占授权:同一数据同期仅授一方',CURRENT_TIMESTAMP,0),
 ('AAT-002','共享授权申请表单模板','共享','[{"name":"grantee","label":"被授权方","type":"文本","required":true,"rule":"非空"},{"name":"scope","label":"共享范围","type":"多行文本","required":true,"rule":"不得超出确权边界"},{"name":"term","label":"共享期限","type":"日期","required":true,"rule":"不超过确权有效期"},{"name":"resharable","label":"再共享限制","type":"下拉","required":true,"rule":"允许/禁止"}]','填报申请 → 合规审核 → 签订共享协议 → 发证','v1','生效中','共享授权:可多方共享使用',CURRENT_TIMESTAMP,0),
 ('AAT-003','委托授权申请表单模板','委托','[{"name":"consignor","label":"委托方","type":"文本","required":true,"rule":"非空"},{"name":"trustee","label":"受托方","type":"文本","required":true,"rule":"非空"},{"name":"matters","label":"委托事项","type":"多行文本","required":true,"rule":"明确处理目的"},{"name":"term","label":"委托期限","type":"日期","required":true,"rule":""},{"name":"dataReq","label":"数据处理要求","type":"多行文本","required":true,"rule":"符合安全合规"}]','填报申请 → 合规审核 → 签订委托处理协议 → 发证','v1','生效中','委托处理:受托方按约定处理数据',CURRENT_TIMESTAMP,0);
+
+-- 授权应用场景配置(可研 3.2.2.1.1.3.1.3)
+INSERT INTO IM_AUTH_SCENARIO (CEC_SCENARIO_ID,CEC_SCENARIO_NAME,CEC_CATEGORY,CEC_DESCRIPTION,CEC_REASON_TEMPLATE,CEC_SCENARIO_STATUS,CEC_CREATE_TIME,CEC_DEL_FLAG) VALUES
+('SC-001','内部经营分析','内部分析','本单位内部经营/运营数据统计与分析,不对外提供','用于本单位内部经营分析,数据不出域、不对外提供,使用范围限于授权部门。','生效中',CURRENT_TIMESTAMP,0),
+('SC-002','对外数据服务','对外服务','向取得经营权的外部单位提供数据产品/服务','为对外提供数据产品/服务,被授权方仅在约定范围内使用,不得再授权或超范围使用。','生效中',CURRENT_TIMESTAMP,0),
+('SC-003','联合建模','联合建模','与合作方在隐私计算/可信环境下联合建模','用于与合作方在隐私计算环境联合建模,原始数据不出域,仅交换模型/结果。','生效中',CURRENT_TIMESTAMP,0),
+('SC-004','监管报送','监管报送','按行政监管要求向监管机构报送数据','应行政监管要求报送数据,使用范围限于监管报送目的,符合相关法规。','生效中',CURRENT_TIMESTAMP,0),
+('SC-005','科研合作','对外服务','向高校/科研机构提供脱敏数据用于科研','用于科研合作,提供脱敏数据,仅限约定科研课题使用,到期销毁。','停用',CURRENT_TIMESTAMP,0);
+
+-- 授权协议模板库(可研 3.2.2.1.1.3.3.1)
+INSERT INTO IM_AUTH_AGREEMENT_TEMPLATE (CEC_TEMPLATE_ID,CEC_TEMPLATE_NAME,CEC_AUTH_TYPE,CEC_PURPOSE,CEC_TEMPLATE_CONTENT,CEC_TEMPLATE_VERSION,CEC_TEMPLATE_STATUS,CEC_CREATE_TIME,CEC_DEL_FLAG) VALUES
+('AGT-001','运营授权协议(附录D)','运营','对外服务','甲乙双方就数据产品经营权授权达成协议:授权范围、期限、再授权限制、违约责任、数据安全义务等;对外提供数据须备案。','v1','生效中',CURRENT_TIMESTAMP,0),
+('AGT-002','数据使用授权协议','独占','内部分析','被授权方在约定范围内使用数据,不得超范围、不得对外提供,到期销毁或归还。','v1','生效中',CURRENT_TIMESTAMP,0),
+('AGT-003','数据共享协议','共享','联合建模','多方共享数据用于联合建模,原始数据不出域,仅交换模型/结果,各方承担同等安全义务。','v1','生效中',CURRENT_TIMESTAMP,0),
+('AGT-004','数据委托处理协议','委托','对外服务','委托方委托受托方处理数据,明确处理目的/方式/期限,受托方不得留存或另作他用。','v1','生效中',CURRENT_TIMESTAMP,0),
+('AGT-005','旧版运营授权协议','运营','对外服务','早期模板,已停用。','v1','停用',CURRENT_TIMESTAMP,0);

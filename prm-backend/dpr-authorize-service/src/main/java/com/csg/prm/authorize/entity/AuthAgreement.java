@@ -58,6 +58,18 @@ public class AuthAgreement extends BaseEntity {
     @TableField("CEC_ARCHIVE_STATUS")
     private String archiveStatus;
 
+    /** 协议类型(授权权益类型,供存档检索) */
+    @TableField("CEC_AGREEMENT_TYPE")
+    private String agreementType;
+
+    /** 所属部门/业务域(供存档检索) */
+    @TableField("CEC_DEPT_NAME")
+    private String deptName;
+
+    /** 归档时间 */
+    @TableField("CEC_ARCHIVE_TIME")
+    private LocalDateTime archiveTime;
+
     @TableField("CEC_SIGN_TIME")
     private LocalDateTime signTime;
 
@@ -104,6 +116,12 @@ public class AuthAgreement extends BaseEntity {
     public void setReviewStatus(String reviewStatus) { this.reviewStatus = reviewStatus; }
     public String getArchiveStatus() { return archiveStatus; }
     public void setArchiveStatus(String archiveStatus) { this.archiveStatus = archiveStatus; }
+    public String getAgreementType() { return agreementType; }
+    public void setAgreementType(String agreementType) { this.agreementType = agreementType; }
+    public String getDeptName() { return deptName; }
+    public void setDeptName(String deptName) { this.deptName = deptName; }
+    public java.time.LocalDateTime getArchiveTime() { return archiveTime; }
+    public void setArchiveTime(java.time.LocalDateTime archiveTime) { this.archiveTime = archiveTime; }
     public LocalDateTime getSignTime() { return signTime; }
     public void setSignTime(LocalDateTime signTime) { this.signTime = signTime; }
 }

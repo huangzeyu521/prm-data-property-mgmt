@@ -16,10 +16,59 @@ import org.springframework.util.StringUtils;
 @Service
 public class AuthCertTemplateServiceImpl implements AuthCertTemplateService {
 
+    private static final java.util.Set<String> ALLOWED_EXT = java.util.Set.of("pdf", "doc", "docx", "png", "jpg", "jpeg");
+    private static final long MAX_BYTES = 20L * 1024 * 1024;
+
     private final AuthCertTemplateMapper mapper;
 
     public AuthCertTemplateServiceImpl(AuthCertTemplateMapper mapper) {
         this.mapper = mapper;
+    }
+
+    @Override
+    @Transactional
+    public void delete(String templateId) {
+        require(templateId);
+        mapper.deleteById(templateId);
+    }
+
+    @Override
+    @Transactional
+    public void uploadFile(String templateId, String fileName, byte[] data) {
+        require(templateId);
+        if (!StringUtils.hasText(fileName) || data == null || data.length == 0) {
+            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "套版文件为空");
+        }
+        if (data.length > MAX_BYTES) {
+            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "文件超过 20MB 上限");
+        }
+        if (!ALLOWED_EXT.contains(extOf(fileName))) {
+            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "仅支持 PDF/Word/图片 套版文件");
+        }
+        AuthCertTemplate upd = new AuthCertTemplate();
+        upd.setTemplateId(templateId);
+        upd.setFileName(fileName);
+        upd.setFileData(java.util.Base64.getEncoder().encodeToString(data));
+        mapper.updateById(upd);
+    }
+
+    @Override
+    public byte[] download(String templateId) {
+        AuthCertTemplate t = require(templateId);
+        if (!StringUtils.hasText(t.getFileData())) {
+            throw new BizException(ResultCode.NOT_FOUND.getCode(), "该模板未上传套版文件");
+        }
+        return java.util.Base64.getDecoder().decode(t.getFileData());
+    }
+
+    @Override
+    public AuthCertTemplate getById(String templateId) {
+        return require(templateId);
+    }
+
+    private String extOf(String name) {
+        int i = name.lastIndexOf('.');
+        return i >= 0 ? name.substring(i + 1).toLowerCase() : "";
     }
 
     @Override
@@ -75,6 +124,7 @@ public class AuthCertTemplateServiceImpl implements AuthCertTemplateService {
                 .orderByDesc(AuthCertTemplate::getCreateTime);
         IPage<AuthCertTemplate> p = mapper.selectPage(
                 new Page<>(current <= 0 ? 1 : current, size <= 0 ? 10 : size), w);
+        p.getRecords().forEach(t -> t.setFileData(null)); // 列表不回传重负载
         return PageResult.of(p);
     }
 
