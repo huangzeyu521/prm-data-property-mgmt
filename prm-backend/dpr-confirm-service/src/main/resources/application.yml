@@ -5,7 +5,7 @@ spring:
   application:
     name: dpr-confirm-service
   profiles:
-    active: dev
+    active: prod
   # 真实文件上传(#1):单文件 500MB、批量请求整体 2GB(≤50 个)
   servlet:
     multipart:

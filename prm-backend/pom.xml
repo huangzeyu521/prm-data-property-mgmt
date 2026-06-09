@@ -34,6 +34,7 @@
         <spring-cloud-alibaba.version>2023.0.1.0</spring-cloud-alibaba.version>
         <mybatis-plus.version>3.5.5</mybatis-plus.version>
         <h2.version>2.2.224</h2.version>
+        <mysql.version>8.3.0</mysql.version>
     </properties>
 
     <dependencyManagement>
@@ -87,6 +88,17 @@
                     <groupId>com.dameng</groupId>
                     <artifactId>DmJdbcDriver18</artifactId>
                     <version>8.1.3.62</version>
+                </dependency>
+            </dependencies>
+        </profile>
+        <!-- MySQL 驱动(可选) -->
+        <profile>
+            <id>mysql</id>
+            <dependencies>
+                <dependency>
+                    <groupId>com.mysql</groupId>
+                    <artifactId>mysql-connector-j</artifactId>
+                    <version>${mysql.version}</version>
                 </dependency>
             </dependencies>
         </profile>
