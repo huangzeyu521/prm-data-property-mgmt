@@ -254,11 +254,18 @@ public class AitConflictServiceImpl implements AitConflictService {
                             "重复确权", "中", "建议复核是否需重新确权或走变更流程"));
                 }
             }
-            // 时效冲突:授权有效期超出历史确权/数据生命周期
+            // 时效冲突:授权有效期超出客体数据生命周期/使用期限,算出超期时间范围及影响
             if (cur.getValidDate() != null && ex.getValidDate() != null && cur.getValidDate().isAfter(ex.getValidDate())) {
+                java.time.LocalDate lifeEnd = ex.getValidDate().toLocalDate();   // 数据生命周期到期(历史确权有效期)
+                java.time.LocalDate authEnd = cur.getValidDate().toLocalDate();  // 当前授权到期
+                long overDays = java.time.temporal.ChronoUnit.DAYS.between(lifeEnd, authEnd);
+                String overRange = lifeEnd.plusDays(1) + " ~ " + authEnd;       // 超期区间
                 found.add(emit(cur, AitConflict.TYPE_VALIDITY, "授权有效期超出数据生命周期",
-                        "当前有效期晚于历史确权有效期(" + ex.getValidDate().toLocalDate() + ")",
-                        "时效越界", "中", "建议调整授权有效期,不超过数据生命周期"));
+                        "授权有效期至「" + authEnd + "」,超出客体数据生命周期(" + nz(ex.getSourceType()) + "至「" + lifeEnd
+                                + "」)共 " + overDays + " 天;超期区间[" + overRange + "]该时段授权无对应数据生命周期支撑",
+                        "客体:" + cur.getAssetId() + ";超期区间:" + overRange + "(超 " + overDays + " 天)",
+                        overDays > 365 ? "高" : "中",
+                        "建议将授权有效期不晚于「" + lifeEnd + "」,避免超出数据生命周期/使用期限"));
             }
         }
         return found;

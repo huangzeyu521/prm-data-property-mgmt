@@ -137,6 +137,23 @@ class AitConflictTest {
         assertFalse(sc.getImpactScope().contains("地址"), "仅当前有的字段不应在重叠区域:" + sc.getImpactScope());
     }
 
+    /** #13 时效冲突:授权有效期超出数据生命周期 → 算出超期天数与超期区间[X~Y]。 */
+    @Test
+    void validityConflict_computes_overrun_range_and_days() {
+        String asset = "DA-VALID-1";
+        LocalDateTime lifeEnd = LocalDateTime.of(2027, 1, 1, 0, 0); // 数据生命周期到期
+        conflictService.addClaim(claim(asset, "广东电网", "数据持有权", "全字段", lifeEnd, false, "历史确权"));
+        // 当前授权:至 2027-02-01(超 31 天)
+        AitKgClaim cur = claim(asset, "广东电网", "数据加工使用权", "全字段", lifeEnd.plusDays(31), false, "当前申请");
+        AitConflict vc = conflictService.detect(cur).stream()
+                .filter(c -> AitConflict.TYPE_VALIDITY.equals(c.getConflictType())).findFirst().orElseThrow();
+
+        assertTrue(vc.getConflictDesc().contains("31 天"), "应算出超期天数,实际:" + vc.getConflictDesc());
+        assertTrue(vc.getImpactScope().contains("超 31 天"), "影响应含超期天数,实际:" + vc.getImpactScope());
+        assertTrue(vc.getImpactScope().contains("2027-01-02") && vc.getImpactScope().contains("2027-02-01"),
+                "影响应含超期区间[2027-01-02~2027-02-01],实际:" + vc.getImpactScope());
+    }
+
     private AitKgClaim claim(String asset, String subject, String rt, String scope,
                              LocalDateTime valid, boolean exclusive, String source) {
         AitKgClaim c = new AitKgClaim();
