@@ -19,6 +19,7 @@ public class AitKgClaim extends BaseEntity {
     public static final String SRC_HISTORY = "历史确权";
     public static final String SRC_CURRENT = "当前申请";
     public static final String SRC_MATERIAL = "证明材料";
+    public static final String SRC_POLICY = "法规政策";
 
     @TableId(value = "CEC_CLAIM_ID", type = IdType.ASSIGN_UUID)
     private String claimId;

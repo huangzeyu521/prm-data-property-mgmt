@@ -39,6 +39,18 @@ public class AitConflictController {
         return R.ok(service.addClaim(claim));
     }
 
+    /** 条款语义分析自动建主张(#9):由材料解析要素自动生成"证明材料"权属主张。 */
+    @PostMapping("/claim-from-material")
+    public R<String> claimFromMaterial(@RequestParam String materialId) {
+        return R.ok(service.buildClaimFromMaterial(materialId));
+    }
+
+    /** 知识图谱结构化输出(#9):节点(主体/客体/授权事项/有效期) + 关系(授权/归属/有效期/冲突)。 */
+    @GetMapping("/graph")
+    public R<com.csg.prm.confirm.aitool.dto.KgGraphVO> graph(@RequestParam String assetId) {
+        return R.ok(service.graph(assetId));
+    }
+
     /** 提交当前申请主张并做四类冲突检测 */
     @PostMapping("/detect")
     public R<List<AitConflict>> detect(@RequestBody AitKgClaim current) {

@@ -1,8 +1,13 @@
 package com.csg.prm.confirm.aitool;
 
+import com.csg.prm.confirm.aitool.dto.KgGraphVO;
 import com.csg.prm.confirm.aitool.entity.AitConflict;
 import com.csg.prm.confirm.aitool.entity.AitKgClaim;
+import com.csg.prm.confirm.aitool.entity.AitMaterial;
 import com.csg.prm.confirm.aitool.service.AitConflictService;
+import com.csg.prm.confirm.aitool.service.AitMaterialService;
+import com.csg.prm.confirm.entity.ConfirmApply;
+import com.csg.prm.confirm.service.ConfirmApplyService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,6 +20,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -26,6 +32,43 @@ class AitConflictTest {
 
     @Autowired
     private AitConflictService conflictService;
+    @Autowired
+    private AitMaterialService materialService;
+    @Autowired
+    private ConfirmApplyService applyService;
+
+    /** #9 条款语义分析自动建主张 + 知识图谱结构化输出(节点+关系)。 */
+    @Test
+    void buildClaimFromMaterial_semantic_and_graph() {
+        ConfirmApply apply = new ConfirmApply();
+        apply.setAssetId("DA-KG-1");
+        apply.setAssetName("线路资产数据");
+        apply.setRightType("数据持有权");
+        apply.setRightHolder("广东电网");
+        apply.setValidDate(LocalDateTime.now().plusYears(3));
+        String applyId = applyService.saveDraft(apply);
+
+        AitMaterial m = new AitMaterial();
+        m.setFileName("授权证明.pdf");
+        m.setApplyId(applyId);
+        m.setContent("数据持有权,授权范围约定字段,已加盖公章,有效期3年");
+        String mid = materialService.upload(m);
+        materialService.parse(mid);
+
+        // 条款语义分析 → 自动建"证明材料"主张
+        String claimId = conflictService.buildClaimFromMaterial(mid);
+        assertNotNull(claimId);
+        assertTrue(conflictService.claims("DA-KG-1").stream()
+                .anyMatch(c -> AitKgClaim.SRC_MATERIAL.equals(c.getSourceType())), "应有证明材料来源的主张");
+
+        // 知识图谱:含 客体/主体/授权事项 节点 + 授权/归属 关系
+        KgGraphVO g = conflictService.graph("DA-KG-1");
+        assertTrue(g.getNodes().stream().anyMatch(n -> "客体".equals(n.type())), "应有客体节点");
+        assertTrue(g.getNodes().stream().anyMatch(n -> "主体".equals(n.type())), "应有主体节点");
+        assertTrue(g.getNodes().stream().anyMatch(n -> "授权事项".equals(n.type())), "应有授权事项节点");
+        assertTrue(g.getEdges().stream().anyMatch(e -> "授权".equals(e.relation())), "应有授权关系");
+        assertTrue(g.getEdges().stream().anyMatch(e -> "归属".equals(e.relation())), "应有归属关系");
+    }
 
     private AitKgClaim claim(String asset, String subject, String rt, String scope,
                              LocalDateTime valid, boolean exclusive, String source) {

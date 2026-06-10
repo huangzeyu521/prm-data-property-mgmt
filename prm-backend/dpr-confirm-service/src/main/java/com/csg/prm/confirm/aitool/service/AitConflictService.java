@@ -15,6 +15,12 @@ public interface AitConflictService {
     /** 登记一条权属主张(构建/更新知识图谱) */
     String addClaim(AitKgClaim claim);
 
+    /** 条款语义分析自动建主张:复用材料解析要素(主体/类型/范围/有效期)生成"证明材料"权属主张。 */
+    String buildClaimFromMaterial(String materialId);
+
+    /** 知识图谱结构化输出:某资产的 节点(主体/客体/授权事项/有效期) + 关系(授权/归属/有效期/冲突)。 */
+    com.csg.prm.confirm.aitool.dto.KgGraphVO graph(String assetId);
+
     /** 对当前申请主张做四类冲突检测,落库并返回检出的冲突 */
     List<AitConflict> detect(AitKgClaim current);
 

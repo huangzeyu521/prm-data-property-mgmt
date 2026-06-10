@@ -21,6 +21,11 @@
               <el-button type="primary" @click="onDetect">登记并冲突检测</el-button>
             </el-form-item>
           </el-form>
+          <el-divider style="margin:6px 0">或 · 条款语义分析自动建主张(#9)</el-divider>
+          <div style="display:flex;gap:8px">
+            <el-input v-model="semMaterialId" placeholder="已解析材料ID,由其要素自动建主张" clearable />
+            <el-button type="success" :disabled="!semMaterialId" @click="onSemanticClaim">语义建主张</el-button>
+          </div>
         </el-card>
       </el-col>
       <el-col :span="14">
@@ -67,13 +72,29 @@
         </el-card>
       </el-col>
     </el-row>
+
+    <!-- #9 知识图谱结构化输出:节点(主体/客体/授权事项/有效期) + 关系(授权/归属/有效期/冲突) -->
+    <el-card shadow="hover" style="margin-top:16px">
+      <template #header>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span>电力权属知识图谱 · {{ graphAsset || '请加载' }}</span>
+          <div style="display:flex;gap:8px">
+            <el-input v-model="graphAsset" placeholder="资产ID" size="small" style="width:180px" />
+            <el-button size="small" type="primary" :disabled="!graphAsset" @click="loadGraph">看图谱</el-button>
+          </div>
+        </div>
+      </template>
+      <div ref="graphRef" style="height:380px"></div>
+      <el-empty v-if="graphEmpty" :image-size="50" description="该资产暂无权属主张,先登记/语义建主张" />
+    </el-card>
   </div>
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { reactive, ref, nextTick } from 'vue'
+import * as echarts from 'echarts'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { aitAddClaim, aitDetectConflict, aitConflicts, aitResolveConflict, aitConflictReport, aitConflictReportExportUrl } from '@/api/aitool'
+import { aitAddClaim, aitDetectConflict, aitConflicts, aitResolveConflict, aitConflictReport, aitConflictReportExportUrl, buildAitClaimFromMaterial, aitKgGraph } from '@/api/aitool'
 
 const rts = ['数据持有权', '数据加工使用权', '数据产品经营权', '所有权', '使用权']
 const claim = reactive({ assetId: 'DA-DEMO-1', subject: '', rightType: '数据持有权', authScope: '全字段', exclusive: false, sourceType: '当前申请' })
@@ -82,6 +103,44 @@ const assetId = ref(''); const qAsset = ref(''); const conflicts = ref([]); cons
 const filters = reactive({ conflictType: '', riskLevel: '', startTime: '', endTime: '' })
 const conflictTypes = ['主体冲突', '范围冲突', '时效冲突', '历史记录冲突']
 const riskLevels = ['高', '中', '低']
+// #9 语义建主张 + 知识图谱
+const semMaterialId = ref(''); const graphAsset = ref('DA-DEMO-1'); const graphRef = ref(); const graphEmpty = ref(false)
+const NODE_COLOR = { 主体: '#2f6bff', 客体: '#13c2c2', 授权事项: '#722ed1', 有效期: '#52c41a' }
+
+async function onSemanticClaim() {
+  try {
+    await buildAitClaimFromMaterial(semMaterialId.value)
+    ElMessage.success('已由材料条款语义分析自动建主张')
+    semMaterialId.value = ''
+  } catch (e) { ElMessage.error('语义建主张失败:' + (e?.response?.data?.message || '材料需先解析')) }
+}
+async function loadGraph() {
+  const g = await aitKgGraph(graphAsset.value)
+  const nodes = (g.nodes || []).map(n => ({
+    id: n.id, name: n.label, category: n.type,
+    symbolSize: n.type === '客体' ? 60 : (n.type === '主体' ? 48 : 36),
+    itemStyle: { color: NODE_COLOR[n.type] || '#909399' }
+  }))
+  graphEmpty.value = nodes.length <= 1
+  const links = (g.edges || []).map(e => ({
+    source: e.from, target: e.to,
+    label: { show: true, formatter: e.relation, fontSize: 11, color: e.relation === '冲突' ? '#d03050' : '#666' },
+    lineStyle: { color: e.relation === '冲突' ? '#d03050' : '#bbb', width: e.relation === '冲突' ? 2.5 : 1.2, type: e.relation === '冲突' ? 'dashed' : 'solid', curveness: 0.1 }
+  }))
+  const cats = ['主体', '客体', '授权事项', '有效期'].map(t => ({ name: t, itemStyle: { color: NODE_COLOR[t] } }))
+  await nextTick()
+  const chart = echarts.init(graphRef.value)
+  chart.setOption({
+    tooltip: {}, legend: [{ data: cats.map(c => c.name), bottom: 0 }],
+    series: [{
+      type: 'graph', layout: 'force', roam: true, draggable: true,
+      categories: cats, data: nodes, links,
+      force: { repulsion: 320, edgeLength: 120 },
+      label: { show: true, position: 'right', fontSize: 12 },
+      edgeSymbol: ['none', 'arrow'], edgeSymbolSize: 7
+    }]
+  })
+}
 
 async function onAdd() {
   if (!claim.assetId || !claim.subject) { ElMessage.warning('资产ID与权利主体必填'); return }

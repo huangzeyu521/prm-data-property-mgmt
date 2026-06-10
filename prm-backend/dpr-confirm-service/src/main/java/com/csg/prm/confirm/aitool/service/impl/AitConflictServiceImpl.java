@@ -3,11 +3,17 @@ package com.csg.prm.confirm.aitool.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.csg.prm.common.api.ResultCode;
 import com.csg.prm.common.exception.BizException;
+import com.csg.prm.confirm.aitool.dto.KgGraphVO;
 import com.csg.prm.confirm.aitool.entity.AitConflict;
 import com.csg.prm.confirm.aitool.entity.AitKgClaim;
+import com.csg.prm.confirm.aitool.entity.AitMaterial;
+import com.csg.prm.confirm.aitool.entity.AitParseResult;
 import com.csg.prm.confirm.aitool.mapper.AitConflictMapper;
 import com.csg.prm.confirm.aitool.mapper.AitKgClaimMapper;
 import com.csg.prm.confirm.aitool.service.AitConflictService;
+import com.csg.prm.confirm.aitool.service.AitMaterialService;
+import com.csg.prm.confirm.entity.ConfirmApply;
+import com.csg.prm.confirm.mapper.ConfirmApplyMapper;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.apache.poi.xwpf.usermodel.XWPFRun;
@@ -31,10 +37,15 @@ public class AitConflictServiceImpl implements AitConflictService {
 
     private final AitKgClaimMapper claimMapper;
     private final AitConflictMapper conflictMapper;
+    private final AitMaterialService materialService;
+    private final ConfirmApplyMapper applyMapper;
 
-    public AitConflictServiceImpl(AitKgClaimMapper claimMapper, AitConflictMapper conflictMapper) {
+    public AitConflictServiceImpl(AitKgClaimMapper claimMapper, AitConflictMapper conflictMapper,
+                                  AitMaterialService materialService, ConfirmApplyMapper applyMapper) {
         this.claimMapper = claimMapper;
         this.conflictMapper = conflictMapper;
+        this.materialService = materialService;
+        this.applyMapper = applyMapper;
     }
 
     @Override
@@ -48,6 +59,87 @@ public class AitConflictServiceImpl implements AitConflictService {
         }
         claimMapper.insert(claim);
         return claim.getClaimId();
+    }
+
+    @Override
+    @Transactional
+    public String buildClaimFromMaterial(String materialId) {
+        // 条款内容自动化语义分析:复用材料解析要素(由 AI/规则从正文条款抽取)生成权属主张
+        AitMaterial m = materialService.getMaterial(materialId);
+        AitParseResult r = materialService.getParse(materialId); // 未解析则抛出
+        String assetId = null;
+        LocalDateTime validDate = null;
+        if (StringUtils.hasText(m.getApplyId())) {
+            ConfirmApply apply = applyMapper.selectById(m.getApplyId());
+            if (apply != null) {
+                assetId = apply.getAssetId();
+                validDate = apply.getValidDate();
+            }
+        }
+        if (!StringUtils.hasText(assetId)) {
+            assetId = StringUtils.hasText(r.getRightObject()) ? r.getRightObject() : m.getFileName();
+        }
+        AitKgClaim claim = new AitKgClaim();
+        claim.setAssetId(assetId);
+        claim.setSubject(StringUtils.hasText(r.getRightSubject()) ? r.getRightSubject() : "未识别主体");
+        claim.setRightType(r.getRightType());
+        claim.setAuthScope(r.getAuthScope());
+        claim.setValidDate(validDate);
+        claim.setExclusive(r.getRightType() != null && r.getRightType().contains("独占"));
+        claim.setSourceType(AitKgClaim.SRC_MATERIAL);
+        claim.setRemark("由材料《" + m.getFileName() + "》条款语义分析自动生成(主体/类型/范围/有效期)");
+        return addClaim(claim);
+    }
+
+    @Override
+    public KgGraphVO graph(String assetId) {
+        List<AitKgClaim> claims = claimMapper.selectList(
+                new LambdaQueryWrapper<AitKgClaim>().eq(AitKgClaim::getAssetId, assetId));
+        List<AitConflict> conflicts = conflictMapper.selectList(
+                new LambdaQueryWrapper<AitConflict>().eq(AitConflict::getAssetId, assetId));
+        KgGraphVO g = new KgGraphVO();
+        g.setAssetId(assetId);
+        Map<String, KgGraphVO.Node> nodes = new LinkedHashMap<>();
+        List<KgGraphVO.Edge> edges = new ArrayList<>();
+        // 客体节点
+        String objId = "客体#" + assetId;
+        nodes.put(objId, new KgGraphVO.Node(objId, "客体", assetId));
+        List<String> subjectIds = new ArrayList<>();
+        for (AitKgClaim c : claims) {
+            String subjId = "主体#" + c.getSubject();
+            if (!nodes.containsKey(subjId)) {
+                nodes.put(subjId, new KgGraphVO.Node(subjId, "主体", c.getSubject() + "(" + nz(c.getSourceType()) + ")"));
+                subjectIds.add(subjId);
+            }
+            String matterId = "授权事项#" + c.getClaimId();
+            String matterLabel = nz(c.getRightType()) + (StringUtils.hasText(c.getAuthScope()) ? "/" + c.getAuthScope() : "")
+                    + (Boolean.TRUE.equals(c.getExclusive()) ? "(排他)" : "");
+            nodes.put(matterId, new KgGraphVO.Node(matterId, "授权事项", matterLabel));
+            edges.add(new KgGraphVO.Edge(subjId, matterId, "授权", "主张"));
+            edges.add(new KgGraphVO.Edge(matterId, objId, "归属", nz(c.getRightType())));
+            if (c.getValidDate() != null) {
+                String vId = "有效期#" + c.getClaimId();
+                nodes.put(vId, new KgGraphVO.Node(vId, "有效期", c.getValidDate().toLocalDate().toString()));
+                edges.add(new KgGraphVO.Edge(matterId, vId, "有效期", "至"));
+            }
+        }
+        // 冲突关系:涉及的不同主体之间标"冲突"
+        if (!conflicts.isEmpty() && subjectIds.size() >= 2) {
+            String ctype = nz(conflicts.get(0).getConflictType());
+            for (int i = 0; i < subjectIds.size(); i++) {
+                for (int j = i + 1; j < subjectIds.size(); j++) {
+                    edges.add(new KgGraphVO.Edge(subjectIds.get(i), subjectIds.get(j), "冲突", ctype));
+                }
+            }
+        }
+        g.setNodes(new ArrayList<>(nodes.values()));
+        g.setEdges(edges);
+        g.setConflicts(conflicts);
+        return g;
+    }
+
+    private String nz(String s) {
+        return s == null ? "" : s;
     }
 
     @Override
