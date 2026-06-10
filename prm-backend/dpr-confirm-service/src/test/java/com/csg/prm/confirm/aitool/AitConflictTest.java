@@ -154,6 +154,30 @@ class AitConflictTest {
                 "影响应含超期区间[2027-01-02~2027-02-01],实际:" + vc.getImpactScope());
     }
 
+    /** #14 历史记录比对:不同主体不同权利→归属矛盾(高,带历史明细);同主体不同权利→权利类型变更(中,非误报高)。 */
+    @Test
+    void historyConflict_distinguishes_contradiction_vs_change() {
+        // (1) 归属矛盾:历史 广东电网 持有权(有效期2027) / 当前 深圳供电局 加工使用权
+        String a1 = "DA-HIST-C1";
+        conflictService.addClaim(claim(a1, "广东电网", "数据持有权", "全字段",
+                LocalDateTime.of(2027, 1, 1, 0, 0), false, "历史确权"));
+        AitKgClaim cur1 = claim(a1, "深圳供电局", "数据加工使用权", "全字段", null, false, "当前申请");
+        AitConflict c1 = conflictService.detect(cur1).stream()
+                .filter(c -> AitConflict.TYPE_HISTORY.equals(c.getConflictType())).findFirst().orElseThrow();
+        assertEquals("高", c1.getRiskLevel(), "不同主体不同权利应为权属归属矛盾(高)");
+        assertTrue(c1.getConflictDesc().contains("归属"), "应标归属矛盾:" + c1.getConflictDesc());
+        assertTrue(c1.getConflictDesc().contains("有效期至2027"), "应带历史记录明细:" + c1.getConflictDesc());
+
+        // (2) 权利类型变更:历史 广东电网 持有权 / 当前 广东电网 加工使用权(同主体)→ 中,非误报高
+        String a2 = "DA-HIST-C2";
+        conflictService.addClaim(claim(a2, "广东电网", "数据持有权", "全字段", null, false, "历史确权"));
+        AitKgClaim cur2 = claim(a2, "广东电网", "数据加工使用权", "全字段", null, false, "当前申请");
+        AitConflict c2 = conflictService.detect(cur2).stream()
+                .filter(c -> AitConflict.TYPE_HISTORY.equals(c.getConflictType())).findFirst().orElseThrow();
+        assertEquals("中", c2.getRiskLevel(), "同主体不同权利是变更(中),非误报矛盾(高)");
+        assertTrue(c2.getConflictDesc().contains("变更"), "应标权利类型变更:" + c2.getConflictDesc());
+    }
+
     private AitKgClaim claim(String asset, String subject, String rt, String scope,
                              LocalDateTime valid, boolean exclusive, String source) {
         AitKgClaim c = new AitKgClaim();

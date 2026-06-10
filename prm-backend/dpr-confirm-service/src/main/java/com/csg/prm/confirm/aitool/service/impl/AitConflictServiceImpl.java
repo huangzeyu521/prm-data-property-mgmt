@@ -242,16 +242,32 @@ public class AitConflictServiceImpl implements AitConflictService {
                         "客体:" + cur.getAssetId() + ";" + kind + "区域:" + so.region(), "中",
                         "建议修订授权范围,避开排他授权的「" + so.region() + "」"));
             }
-            // 历史记录冲突:与历史确权矛盾(权利类型不同)或重复(同主体同权利)
+            // 历史记录比对冲突:调取历史确权记录全方位比对,检测 矛盾项(归属矛盾) / 变更项 / 重叠项(重复)
             if (AitKgClaim.SRC_HISTORY.equals(ex.getSourceType())) {
-                if (!sameRight) {
-                    found.add(emit(cur, AitConflict.TYPE_HISTORY, "证明材料与历史确权矛盾",
-                            "历史确权为「" + ex.getRightType() + "」,当前申请为「" + cur.getRightType() + "」",
-                            "权利类型矛盾", "高", "建议核实历史确权记录,补正申请信息"));
+                String hist = historyDetail(ex);
+                if (!sameRight && !sameSubject) {
+                    // 矛盾项:不同主体对同一客体主张不同权利 → 权属归属矛盾(真冲突)
+                    found.add(emit(cur, AitConflict.TYPE_HISTORY, "与历史确权权属归属矛盾",
+                            "历史确权:主体「" + ex.getSubject() + "」持「" + ex.getRightType() + "」(" + hist
+                                    + ");当前申请:主体「" + cur.getSubject() + "」主张「" + cur.getRightType()
+                                    + "」 —— 权属归属/类型矛盾",
+                            "客体:" + cur.getAssetId() + ";矛盾:历史「" + ex.getSubject() + "·" + ex.getRightType()
+                                    + "」vs 当前「" + cur.getSubject() + "·" + cur.getRightType() + "」", "高",
+                            "建议核实历史确权记录,厘清权属归属后再确权"));
+                } else if (!sameRight) {
+                    // 同主体不同权利 → 权利类型变更(非矛盾,中风险提示)
+                    found.add(emit(cur, AitConflict.TYPE_HISTORY, "同主体权利类型较历史变更",
+                            "主体「" + cur.getSubject() + "」历史确权为「" + ex.getRightType() + "」(" + hist
+                                    + "),当前主张「" + cur.getRightType() + "」,属权利类型变更(非矛盾)",
+                            "客体:" + cur.getAssetId() + ";权利类型:" + ex.getRightType() + "→" + cur.getRightType(),
+                            "中", "建议走权利变更流程,确认是否注销/调整原确权"));
                 } else if (sameSubject) {
+                    // 重叠项:同主体重复申请同一权利
                     found.add(emit(cur, AitConflict.TYPE_HISTORY, "同一主体重复申请同一权利",
-                            "主体「" + cur.getSubject() + "」已有历史确权「" + cur.getRightType() + "」",
-                            "重复确权", "中", "建议复核是否需重新确权或走变更流程"));
+                            "主体「" + cur.getSubject() + "」已有历史确权「" + cur.getRightType() + "」(" + hist
+                                    + "),本次重复申请",
+                            "客体:" + cur.getAssetId() + ";重复确权:" + cur.getSubject() + "·" + cur.getRightType(),
+                            "中", "建议复核是否需重新确权或走变更流程"));
                 }
             }
             // 时效冲突:授权有效期超出客体数据生命周期/使用期限,算出超期时间范围及影响
@@ -432,6 +448,18 @@ public class AitConflictServiceImpl implements AitConflictService {
 
     private boolean isOperation(String rt) {
         return rt != null && rt.contains("经营");
+    }
+
+    /** 历史确权记录明细:来源/有效期/范围,供"全方位比对"在冲突详情中体现。 */
+    private String historyDetail(AitKgClaim ex) {
+        StringBuilder sb = new StringBuilder("来源:").append(nz(ex.getSourceType()));
+        if (ex.getValidDate() != null) {
+            sb.append(",有效期至").append(ex.getValidDate().toLocalDate());
+        }
+        if (StringUtils.hasText(ex.getAuthScope())) {
+            sb.append(",范围:").append(ex.getAuthScope());
+        }
+        return sb.toString();
     }
 
     /** 天然单一主体的权利:数据持有权/所有权(同一客体不应被多主体声明)。 */
