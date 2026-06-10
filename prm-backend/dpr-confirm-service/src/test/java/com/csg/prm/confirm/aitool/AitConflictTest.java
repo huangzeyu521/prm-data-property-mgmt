@@ -70,6 +70,37 @@ class AitConflictTest {
         assertTrue(g.getEdges().stream().anyMatch(e -> "归属".equals(e.relation())), "应有归属关系");
     }
 
+    @Autowired
+    private com.csg.prm.confirm.mapper.EquityCardMapper cardMapper;
+
+    /** #10 动态更新:人工修改/删除节点 + 历史案例自动同步(从权益卡片,去重幂等)。 */
+    @Test
+    void claim_update_delete_and_history_sync() {
+        // 人工修改节点:add → updateClaim(改授权范围)
+        String cid = conflictService.addClaim(claim("DA-UPD-1", "广东电网", "数据持有权", "全字段", null, false, "当前申请"));
+        AitKgClaim upd = new AitKgClaim();
+        upd.setClaimId(cid);
+        upd.setAuthScope("约定字段");
+        conflictService.updateClaim(upd);
+        assertEquals("约定字段", conflictService.claims("DA-UPD-1").get(0).getAuthScope(), "修改应生效");
+        // 人工删除节点
+        conflictService.deleteClaim(cid);
+        assertTrue(conflictService.claims("DA-UPD-1").isEmpty(), "删除后应无主张");
+
+        // 历史案例自动同步:插权益卡片 → sync → 历史确权主张
+        com.csg.prm.confirm.entity.EquityCard card = new com.csg.prm.confirm.entity.EquityCard();
+        card.setAssetId("DA-HIST-1");
+        card.setCardNo("EC-HIST-1");
+        card.setRightType("数据加工使用权");
+        card.setRightOwner("南网科研院");
+        card.setValidDate(LocalDateTime.now().plusYears(2));
+        cardMapper.insert(card);
+        assertEquals(1, conflictService.syncHistoryClaims("DA-HIST-1"), "应从权益卡片同步出 1 条历史确权主张");
+        assertEquals(0, conflictService.syncHistoryClaims("DA-HIST-1"), "去重:重复同步应 0 条");
+        assertTrue(conflictService.claims("DA-HIST-1").stream()
+                .anyMatch(c -> AitKgClaim.SRC_HISTORY.equals(c.getSourceType())), "应生成历史确权主张");
+    }
+
     private AitKgClaim claim(String asset, String subject, String rt, String scope,
                              LocalDateTime valid, boolean exclusive, String source) {
         AitKgClaim c = new AitKgClaim();

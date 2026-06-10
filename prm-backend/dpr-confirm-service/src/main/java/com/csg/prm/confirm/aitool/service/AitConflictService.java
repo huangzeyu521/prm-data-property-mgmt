@@ -15,6 +15,15 @@ public interface AitConflictService {
     /** 登记一条权属主张(构建/更新知识图谱) */
     String addClaim(AitKgClaim claim);
 
+    /** 人工修改节点与关系:更新一条权属主张(适配特殊场景)(#10) */
+    void updateClaim(AitKgClaim claim);
+
+    /** 人工删除节点与关系:删除一条权属主张(#10) */
+    void deleteClaim(String claimId);
+
+    /** 历史案例自动同步:从权益卡片(历史确权记录)自动建"历史确权"主张并去重,返回新增条数(#10)。 */
+    int syncHistoryClaims(String assetId);
+
     /** 条款语义分析自动建主张:复用材料解析要素(主体/类型/范围/有效期)生成"证明材料"权属主张。 */
     String buildClaimFromMaterial(String materialId);
 

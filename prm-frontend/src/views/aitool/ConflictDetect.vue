@@ -14,7 +14,7 @@
             <el-form-item label="授权范围"><el-input v-model="claim.authScope" placeholder="全字段/约定字段" /></el-form-item>
             <el-form-item label="排他主张"><el-switch v-model="claim.exclusive" /></el-form-item>
             <el-form-item label="来源">
-              <el-radio-group v-model="claim.sourceType"><el-radio value="历史确权">历史确权</el-radio><el-radio value="当前申请">当前申请</el-radio></el-radio-group>
+              <el-radio-group v-model="claim.sourceType"><el-radio value="历史确权">历史确权</el-radio><el-radio value="当前申请">当前申请</el-radio><el-radio value="法规政策">法规政策</el-radio><el-radio value="证明材料">证明材料</el-radio></el-radio-group>
             </el-form-item>
             <el-form-item>
               <el-button @click="onAdd">仅登记主张</el-button>
@@ -79,14 +79,41 @@
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span>电力权属知识图谱 · {{ graphAsset || '请加载' }}</span>
           <div style="display:flex;gap:8px">
-            <el-input v-model="graphAsset" placeholder="资产ID" size="small" style="width:180px" />
+            <el-input v-model="graphAsset" placeholder="资产ID" size="small" style="width:170px" />
             <el-button size="small" type="primary" :disabled="!graphAsset" @click="loadGraph">看图谱</el-button>
+            <el-button size="small" type="warning" :disabled="!graphAsset" @click="onSyncHistory">同步历史案例</el-button>
           </div>
         </div>
       </template>
-      <div ref="graphRef" style="height:380px"></div>
+      <div ref="graphRef" style="height:340px"></div>
       <el-empty v-if="graphEmpty" :image-size="50" description="该资产暂无权属主张,先登记/语义建主张" />
+      <div v-if="claimList.length" style="margin-top:10px;font-weight:600;font-size:13px">节点(权属主张)· 可人工修改/删除</div>
+      <el-table v-if="claimList.length" :data="claimList" border size="small" style="margin-top:6px">
+        <el-table-column prop="subject" label="主体" min-width="160" show-overflow-tooltip />
+        <el-table-column prop="rightType" label="权利类型" width="130" />
+        <el-table-column prop="authScope" label="授权范围" width="110" />
+        <el-table-column prop="sourceType" label="来源" width="100" align="center">
+          <template #default="{ row }"><el-tag size="small" :type="srcTag(row.sourceType)">{{ row.sourceType }}</el-tag></template>
+        </el-table-column>
+        <el-table-column label="操作" width="120" align="center">
+          <template #default="{ row }">
+            <el-button link type="primary" @click="onEditClaim(row)">编辑</el-button>
+            <el-button link type="danger" @click="onDeleteClaim(row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
     </el-card>
+
+    <el-dialog v-model="editDlg" title="修改权属主张(节点与关系)" width="460px" align-center>
+      <el-form :model="editClaim" label-width="90px">
+        <el-form-item label="权利主体"><el-input v-model="editClaim.subject" /></el-form-item>
+        <el-form-item label="权利类型"><el-select v-model="editClaim.rightType" style="width:100%"><el-option v-for="t in rts" :key="t" :label="t" :value="t" /></el-select></el-form-item>
+        <el-form-item label="授权范围"><el-input v-model="editClaim.authScope" placeholder="全字段/约定字段" /></el-form-item>
+        <el-form-item label="排他主张"><el-switch v-model="editClaim.exclusive" /></el-form-item>
+        <el-form-item label="来源"><el-select v-model="editClaim.sourceType" style="width:100%"><el-option v-for="s in ['历史确权','当前申请','法规政策','证明材料']" :key="s" :label="s" :value="s" /></el-select></el-form-item>
+      </el-form>
+      <template #footer><el-button type="primary" @click="onSaveClaim">保存</el-button><el-button @click="editDlg=false">取消</el-button></template>
+    </el-dialog>
   </div>
 </template>
 
@@ -94,7 +121,7 @@
 import { reactive, ref, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { aitAddClaim, aitDetectConflict, aitConflicts, aitResolveConflict, aitConflictReport, aitConflictReportExportUrl, buildAitClaimFromMaterial, aitKgGraph } from '@/api/aitool'
+import { aitAddClaim, aitDetectConflict, aitConflicts, aitResolveConflict, aitConflictReport, aitConflictReportExportUrl, buildAitClaimFromMaterial, aitKgGraph, aitClaims, updateAitClaim, deleteAitClaim, syncAitHistoryClaims } from '@/api/aitool'
 
 const rts = ['数据持有权', '数据加工使用权', '数据产品经营权', '所有权', '使用权']
 const claim = reactive({ assetId: 'DA-DEMO-1', subject: '', rightType: '数据持有权', authScope: '全字段', exclusive: false, sourceType: '当前申请' })
@@ -106,6 +133,25 @@ const riskLevels = ['高', '中', '低']
 // #9 语义建主张 + 知识图谱
 const semMaterialId = ref(''); const graphAsset = ref('DA-DEMO-1'); const graphRef = ref(); const graphEmpty = ref(false)
 const NODE_COLOR = { 主体: '#2f6bff', 客体: '#13c2c2', 授权事项: '#722ed1', 有效期: '#52c41a' }
+const claimList = ref([]); const editDlg = ref(false); const editClaim = reactive({ claimId: '', subject: '', rightType: '', authScope: '', exclusive: false, sourceType: '' })
+function srcTag(s) { return { 历史确权: 'info', 当前申请: 'primary', 法规政策: 'warning', 证明材料: 'success' }[s] || 'info' }
+async function onSyncHistory() {
+  const n = await syncAitHistoryClaims(graphAsset.value)
+  ElMessage.success(`历史案例自动同步:新增 ${n} 条历史确权主张`)
+  loadGraph()
+}
+function onEditClaim(row) {
+  Object.assign(editClaim, { claimId: row.claimId, subject: row.subject, rightType: row.rightType, authScope: row.authScope, exclusive: !!row.exclusive, sourceType: row.sourceType })
+  editDlg.value = true
+}
+async function onSaveClaim() {
+  await updateAitClaim({ ...editClaim })
+  ElMessage.success('已修改权属主张'); editDlg.value = false; loadGraph()
+}
+function onDeleteClaim(row) {
+  ElMessageBox.confirm(`确认删除主张「${row.subject} · ${row.rightType}」吗`, '提示', { type: 'warning' })
+    .then(async () => { await deleteAitClaim(row.claimId); ElMessage.success('已删除'); loadGraph() }).catch(() => {})
+}
 
 async function onSemanticClaim() {
   try {
@@ -115,6 +161,7 @@ async function onSemanticClaim() {
   } catch (e) { ElMessage.error('语义建主张失败:' + (e?.response?.data?.message || '材料需先解析')) }
 }
 async function loadGraph() {
+  claimList.value = await aitClaims(graphAsset.value) || []
   const g = await aitKgGraph(graphAsset.value)
   const nodes = (g.nodes || []).map(n => ({
     id: n.id, name: n.label, category: n.type,

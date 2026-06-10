@@ -26,6 +26,10 @@ export const aitAddClaim = (data) => request.post('/dpr/confirm/aitool/conflict/
 // #9 条款语义分析自动建主张 + 知识图谱结构化输出
 export const buildAitClaimFromMaterial = (materialId) => request.post('/dpr/confirm/aitool/conflict/claim-from-material', null, { params: { materialId } })
 export const aitKgGraph = (assetId) => request.get('/dpr/confirm/aitool/conflict/graph', { params: { assetId } })
+// #10 知识图谱动态更新:人工修改/删除节点 + 历史案例自动同步
+export const updateAitClaim = (data) => request.put('/dpr/confirm/aitool/conflict/claim', data)
+export const deleteAitClaim = (claimId) => request.delete(`/dpr/confirm/aitool/conflict/claim/${claimId}`)
+export const syncAitHistoryClaims = (assetId) => request.post('/dpr/confirm/aitool/conflict/sync-history', null, { params: { assetId } })
 export const aitDetectConflict = (data) => request.post('/dpr/confirm/aitool/conflict/detect', data)
 export const aitClaims = (assetId) => request.get('/dpr/confirm/aitool/conflict/claims', { params: { assetId } })
 // #17 冲突列表/报告:支持多维筛选(params: assetId/conflictType/riskLevel/startTime/endTime)

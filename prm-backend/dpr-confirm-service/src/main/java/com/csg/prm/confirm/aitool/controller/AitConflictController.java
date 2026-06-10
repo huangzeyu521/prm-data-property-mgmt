@@ -45,6 +45,26 @@ public class AitConflictController {
         return R.ok(service.buildClaimFromMaterial(materialId));
     }
 
+    /** 人工修改节点与关系(#10):更新一条权属主张。 */
+    @org.springframework.web.bind.annotation.PutMapping("/claim")
+    public R<Void> updateClaim(@RequestBody AitKgClaim claim) {
+        service.updateClaim(claim);
+        return R.ok();
+    }
+
+    /** 人工删除节点与关系(#10):删除一条权属主张。 */
+    @org.springframework.web.bind.annotation.DeleteMapping("/claim/{claimId}")
+    public R<Void> deleteClaim(@org.springframework.web.bind.annotation.PathVariable String claimId) {
+        service.deleteClaim(claimId);
+        return R.ok();
+    }
+
+    /** 历史案例自动同步(#10):从权益卡片自动建"历史确权"主张,返回新增条数。 */
+    @PostMapping("/sync-history")
+    public R<Integer> syncHistory(@RequestParam String assetId) {
+        return R.ok(service.syncHistoryClaims(assetId));
+    }
+
     /** 知识图谱结构化输出(#9):节点(主体/客体/授权事项/有效期) + 关系(授权/归属/有效期/冲突)。 */
     @GetMapping("/graph")
     public R<com.csg.prm.confirm.aitool.dto.KgGraphVO> graph(@RequestParam String assetId) {

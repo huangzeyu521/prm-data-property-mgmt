@@ -13,7 +13,9 @@ import com.csg.prm.confirm.aitool.mapper.AitKgClaimMapper;
 import com.csg.prm.confirm.aitool.service.AitConflictService;
 import com.csg.prm.confirm.aitool.service.AitMaterialService;
 import com.csg.prm.confirm.entity.ConfirmApply;
+import com.csg.prm.confirm.entity.EquityCard;
 import com.csg.prm.confirm.mapper.ConfirmApplyMapper;
+import com.csg.prm.confirm.mapper.EquityCardMapper;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.apache.poi.xwpf.usermodel.XWPFRun;
@@ -39,13 +41,75 @@ public class AitConflictServiceImpl implements AitConflictService {
     private final AitConflictMapper conflictMapper;
     private final AitMaterialService materialService;
     private final ConfirmApplyMapper applyMapper;
+    private final EquityCardMapper cardMapper;
 
     public AitConflictServiceImpl(AitKgClaimMapper claimMapper, AitConflictMapper conflictMapper,
-                                  AitMaterialService materialService, ConfirmApplyMapper applyMapper) {
+                                  AitMaterialService materialService, ConfirmApplyMapper applyMapper,
+                                  EquityCardMapper cardMapper) {
         this.claimMapper = claimMapper;
         this.conflictMapper = conflictMapper;
         this.materialService = materialService;
         this.applyMapper = applyMapper;
+        this.cardMapper = cardMapper;
+    }
+
+    @Override
+    @Transactional
+    public void updateClaim(AitKgClaim claim) {
+        if (claim == null || !StringUtils.hasText(claim.getClaimId())) {
+            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "主张ID不能为空");
+        }
+        if (claimMapper.selectById(claim.getClaimId()) == null) {
+            throw new BizException(ResultCode.NOT_FOUND.getCode(), "权属主张不存在");
+        }
+        claimMapper.updateById(claim);
+    }
+
+    @Override
+    @Transactional
+    public void deleteClaim(String claimId) {
+        if (!StringUtils.hasText(claimId)) {
+            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "主张ID不能为空");
+        }
+        claimMapper.deleteById(claimId);
+    }
+
+    @Override
+    @Transactional
+    public int syncHistoryClaims(String assetId) {
+        if (!StringUtils.hasText(assetId)) {
+            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "资产ID不能为空");
+        }
+        List<EquityCard> cards = cardMapper.selectList(
+                new LambdaQueryWrapper<EquityCard>().eq(EquityCard::getAssetId, assetId));
+        List<AitKgClaim> existing = claimMapper.selectList(
+                new LambdaQueryWrapper<AitKgClaim>().eq(AitKgClaim::getAssetId, assetId)
+                        .eq(AitKgClaim::getSourceType, AitKgClaim.SRC_HISTORY));
+        int added = 0;
+        for (EquityCard card : cards) {
+            String subject = card.getRightOwner();
+            if (!StringUtils.hasText(subject)) {
+                continue;
+            }
+            // 去重:同资产+主体+权利类型 的历史主张已存在则跳过
+            boolean dup = existing.stream().anyMatch(c ->
+                    subject.equals(c.getSubject()) && java.util.Objects.equals(card.getRightType(), c.getRightType()));
+            if (dup) {
+                continue;
+            }
+            AitKgClaim claim = new AitKgClaim();
+            claim.setAssetId(assetId);
+            claim.setSubject(subject);
+            claim.setRightType(card.getRightType());
+            claim.setValidDate(card.getValidDate());
+            claim.setSourceType(AitKgClaim.SRC_HISTORY);
+            claim.setRemark("历史案例自动同步自权益卡片 " + nz(card.getCardNo())
+                    + (StringUtils.hasText(card.getRightSource()) ? "(来源:" + card.getRightSource() + ")" : ""));
+            claimMapper.insert(claim);
+            existing.add(claim);
+            added++;
+        }
+        return added;
     }
 
     @Override
