@@ -178,6 +178,26 @@ class AitConflictTest {
         assertTrue(c2.getConflictDesc().contains("变更"), "应标权利类型变更:" + c2.getConflictDesc());
     }
 
+    /** #15 结构化报告:决策建议 + 来源/影响范围汇总 + 高风险摘要。 */
+    @Test
+    void report_has_decision_source_impact_and_highrisk_summary() {
+        String asset = "DA-RPT-1";
+        // 历史确权 广东电网 经营权 排他 + 当前 深圳供电局 经营权 → 主体冲突(高) + 范围冲突
+        conflictService.addClaim(claim(asset, "广东电网", "数据产品经营权", "全字段", null, true, "历史确权"));
+        AitKgClaim cur = claim(asset, "深圳供电局", "数据产品经营权", "全字段", null, false, "当前申请");
+        conflictService.addClaim(cur);
+        conflictService.detect(cur); // 产生并持久化冲突
+
+        Map<String, Object> rpt = conflictService.report(asset, null, null, null, null);
+        assertEquals("建议驳回/暂缓", rpt.get("decision"), "有高风险应建议驳回/暂缓");
+        assertTrue(((Number) rpt.get("highRiskCount")).intValue() >= 1, "应有高风险冲突");
+        assertFalse(((List<?>) rpt.get("highRiskSummary")).isEmpty(), "应有高风险摘要");
+        assertFalse(((Map<?, ?>) rpt.get("bySource")).isEmpty(), "应有来源汇总");
+        List<?> subjects = (List<?>) rpt.get("involvedSubjects");
+        assertTrue(subjects.contains("广东电网") && subjects.contains("深圳供电局"), "影响范围应含涉及主体:" + subjects);
+        assertEquals(asset, rpt.get("involvedObject"));
+    }
+
     private AitKgClaim claim(String asset, String subject, String rt, String scope,
                              LocalDateTime valid, boolean exclusive, String source) {
         AitKgClaim c = new AitKgClaim();

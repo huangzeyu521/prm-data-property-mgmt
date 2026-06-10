@@ -52,7 +52,24 @@
             <el-button size="small" type="warning" :disabled="!assetId" @click="onExportWord">导出Word</el-button>
             <el-button size="small" :disabled="!assetId" @click="onPrintPdf">打印/PDF</el-button>
           </div>
-          <el-alert v-if="report" :title="report.conclusion" :type="report.total>0?'warning':'success'" :closable="false" show-icon style="margin-bottom:10px" />
+          <el-alert v-if="report" :title="(report.decision ? report.decision + ' · ' : '') + report.conclusion"
+                    :type="report.highRiskCount>0?'error':(report.total>0?'warning':'success')" :closable="false" show-icon style="margin-bottom:10px" />
+          <!-- #15 结构化报告:决策建议 + 来源/影响范围汇总 + 高风险摘要 -->
+          <el-descriptions v-if="report && report.total>0" :column="2" size="small" border style="margin-bottom:10px">
+            <el-descriptions-item label="决策建议">
+              <el-tag :type="report.decision==='建议驳回/暂缓'?'danger':(report.decision==='建议补正后确权'?'warning':'success')">{{ report.decision }}</el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="高风险冲突">{{ report.highRiskCount }} 项</el-descriptions-item>
+            <el-descriptions-item label="涉及客体">{{ report.involvedObject }}</el-descriptions-item>
+            <el-descriptions-item label="涉及主体">{{ (report.involvedSubjects||[]).join('、') || '—' }}</el-descriptions-item>
+            <el-descriptions-item label="按来源汇总" :span="2">
+              <el-tag v-for="(v,k) in report.bySource" :key="k" size="small" effect="plain" style="margin-right:6px">{{ k }} · {{ v }}</el-tag>
+              <span v-if="!report.bySource || !Object.keys(report.bySource).length">—</span>
+            </el-descriptions-item>
+            <el-descriptions-item v-if="(report.highRiskSummary||[]).length" label="高风险摘要(优先处置)" :span="2">
+              <div v-for="(s,i) in report.highRiskSummary" :key="i" style="color:#d03050;font-size:12px">• {{ s }}</div>
+            </el-descriptions-item>
+          </el-descriptions>
           <el-table :data="conflicts" border stripe size="small">
             <el-table-column prop="conflictType" label="冲突类型" width="110">
               <template #default="{ row }"><el-tag type="danger" effect="plain">{{ row.conflictType }}</el-tag></template>

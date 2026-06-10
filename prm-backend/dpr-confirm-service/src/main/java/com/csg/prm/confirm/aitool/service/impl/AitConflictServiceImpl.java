@@ -358,9 +358,40 @@ public class AitConflictServiceImpl implements AitConflictService {
         report.put("total", list.size());
         report.put("byType", list.stream().collect(Collectors.groupingBy(AitConflict::getConflictType, Collectors.counting())));
         report.put("byRisk", list.stream().collect(Collectors.groupingBy(AitConflict::getRiskLevel, Collectors.counting())));
+        // 来源汇总:明确冲突来源分布
+        report.put("bySource", list.stream().filter(c -> StringUtils.hasText(c.getConflictSource()))
+                .collect(Collectors.groupingBy(AitConflict::getConflictSource, Collectors.counting())));
         report.put("details", list);
-        report.put("conclusion", list.isEmpty() ? "未发现权属冲突,可继续确权"
-                : "发现 " + list.size() + " 项权属冲突,建议处置后再确权");
+
+        // 影响范围汇总:涉及客体 + 涉及主体(取自该资产的权属主张)
+        List<AitKgClaim> claims = claimMapper.selectList(
+                new LambdaQueryWrapper<AitKgClaim>().eq(AitKgClaim::getAssetId, assetId));
+        report.put("involvedObject", assetId);
+        report.put("involvedSubjects", claims.stream().map(AitKgClaim::getSubject)
+                .filter(StringUtils::hasText).distinct().collect(Collectors.toList()));
+
+        // 高风险摘要:优先处置项
+        List<AitConflict> highList = list.stream().filter(c -> "高".equals(c.getRiskLevel())).collect(Collectors.toList());
+        report.put("highRiskCount", highList.size());
+        report.put("highRiskSummary", highList.stream().limit(5)
+                .map(c -> c.getConflictType() + ":" + c.getConflictDesc()).collect(Collectors.toList()));
+
+        // 决策建议:可直接用于确权决策参考
+        String decision;
+        String advice;
+        if (list.isEmpty()) {
+            decision = "建议通过";
+            advice = "未发现权属冲突,可继续确权";
+        } else if (!highList.isEmpty()) {
+            decision = "建议驳回/暂缓";
+            advice = "发现 " + highList.size() + " 项高风险权属冲突,建议暂缓确权,优先处置高风险冲突后重新评估";
+        } else {
+            decision = "建议补正后确权";
+            advice = "发现 " + list.size() + " 项中低风险权属冲突,建议补正/协商后确权";
+        }
+        report.put("decision", decision);
+        report.put("decisionAdvice", advice);
+        report.put("conclusion", advice);
         return report;
     }
 
