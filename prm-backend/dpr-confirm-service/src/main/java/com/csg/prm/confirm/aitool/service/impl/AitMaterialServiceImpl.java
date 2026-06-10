@@ -359,28 +359,43 @@ public class AitMaterialServiceImpl implements AitMaterialService {
         AitMaterial m = require(materialId);
         AitParseResult r = getParse(materialId);
         List<AitCompare> cmps = compares(materialId);
+        List<TermSuggestion> terms = termCheck(materialId);
         try (Workbook wb = new XSSFWorkbook(); ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
             CellStyle head = headStyle(wb);
-            // Sheet1 解析要素
+            // Sheet1 解析要素(含复核标记 + 材料可信度)
             Sheet s1 = wb.createSheet("解析要素");
             writeRow(s1, 0, head, "材料文件", "权利主体", "权利客体", "权利类型", "权利期限",
-                    "授权范围", "数据来源", "敏感类型", "印章真伪", "印章说明", "置信度");
+                    "授权范围", "数据来源", "敏感类型", "印章真伪", "印章说明", "置信度", "复核标记", "材料可信度");
+            String trust = r.getTrustLevel() == null ? ""
+                    : r.getTrustLevel() + (r.getTrustScore() == null ? "" : "(" + r.getTrustScore() + "分)");
             writeRow(s1, 1, null, m.getFileName(), r.getRightSubject(), r.getRightObject(), r.getRightType(),
                     r.getRightTerm(), r.getAuthScope(), r.getDataSource(), r.getSensitiveType(),
                     r.getSealValid(), r.getSealDesc(),
-                    r.getConfidence() == null ? "" : String.format("%.0f%%", r.getConfidence() * 100));
-            for (int c = 0; c <= 10; c++) {
+                    r.getConfidence() == null ? "" : String.format("%.0f%%", r.getConfidence() * 100),
+                    r.getReviewStatus(), trust);
+            for (int c = 0; c <= 12; c++) {
                 s1.setColumnWidth(c, 5000);
             }
-            // Sheet2 表单比对差异
+            // Sheet2 表单比对差异(含原文定位片段)
             Sheet s2 = wb.createSheet("表单比对差异");
-            writeRow(s2, 0, head, "比对字段", "材料解析值", "申请表填写值", "差异类型");
+            writeRow(s2, 0, head, "比对字段", "材料解析值", "申请表填写值", "差异类型", "原文定位片段");
             int ri = 1;
             for (AitCompare c : cmps) {
-                writeRow(s2, ri++, null, c.getField(), c.getMaterialValue(), c.getFormValue(), c.getDiffType());
+                writeRow(s2, ri++, null, c.getField(), c.getMaterialValue(), c.getFormValue(),
+                        c.getDiffType(), c.getSourceSnippet());
+            }
+            for (int c = 0; c <= 4; c++) {
+                s2.setColumnWidth(c, 6000);
+            }
+            // Sheet3 术语库匹配(自动标注:非标→标准术语建议)
+            Sheet s3 = wb.createSheet("术语库匹配");
+            writeRow(s3, 0, head, "字段", "抽取值", "标准术语建议", "是否标准");
+            int ti = 1;
+            for (TermSuggestion t : terms) {
+                writeRow(s3, ti++, null, t.field(), t.value(), t.standardTerm(), t.standard() ? "标准" : "建议修正");
             }
             for (int c = 0; c <= 3; c++) {
-                s2.setColumnWidth(c, 6000);
+                s3.setColumnWidth(c, 6000);
             }
             wb.write(bos);
             return bos.toByteArray();

@@ -230,4 +230,32 @@ class AitMaterialTest {
         assertTrue(m.getFailReason().contains("损坏") || m.getFailReason().contains("无法解析"),
                 "失败原因应分类为 文件损坏/无法解析,实际:" + m.getFailReason());
     }
+
+    /** #8 导出 Excel:三 Sheet(解析要素/表单比对差异/术语库匹配),含复核标记/可信度/定位片段/术语标注。 */
+    @Test
+    void exportExcel_three_sheets_with_enrichments() throws Exception {
+        AitMaterial m = new AitMaterial();
+        m.setFileName("导出测试.pdf");
+        m.setContent("数据持有权,授权范围全网,自行生产,已加盖公章,有效期3年");
+        String id = aitService.upload(m);
+        aitService.parse(id);
+
+        byte[] xlsx = aitService.exportParseExcel(id);
+        assertNotNull(xlsx);
+        assertTrue(xlsx.length > 0);
+        try (org.apache.poi.xssf.usermodel.XSSFWorkbook wb =
+                     new org.apache.poi.xssf.usermodel.XSSFWorkbook(new java.io.ByteArrayInputStream(xlsx))) {
+            assertEquals("解析要素", wb.getSheetName(0));
+            assertEquals("表单比对差异", wb.getSheetName(1));
+            assertEquals("术语库匹配", wb.getSheetName(2));
+            java.util.List<String> h1 = new java.util.ArrayList<>();
+            wb.getSheetAt(0).getRow(0).forEach(c -> h1.add(c.getStringCellValue()));
+            assertTrue(h1.contains("复核标记") && h1.contains("材料可信度"), "Sheet1 应含 复核标记/材料可信度,实际:" + h1);
+            java.util.List<String> h2 = new java.util.ArrayList<>();
+            wb.getSheetAt(1).getRow(0).forEach(c -> h2.add(c.getStringCellValue()));
+            assertTrue(h2.contains("原文定位片段"), "Sheet2 应含 原文定位片段,实际:" + h2);
+            assertEquals("标准术语建议", wb.getSheetAt(2).getRow(0).getCell(2).getStringCellValue());
+            assertTrue(wb.getSheetAt(2).getLastRowNum() >= 1, "术语库匹配应有数据行");
+        }
+    }
 }
