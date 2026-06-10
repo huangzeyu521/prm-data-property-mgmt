@@ -416,23 +416,63 @@ public class AitMaterialServiceImpl implements AitMaterialService {
         AitMaterial mat = materialMapper.selectById(r.getMaterialId());
         String content = mat == null ? "" : mat.getContent();
         compareMapper.delete(new LambdaQueryWrapper<AitCompare>().eq(AitCompare::getParseId, r.getParseId()));
-        addCompare(r, applyId, "权利主体", r.getRightSubject(), apply.getRightHolder(), content);
-        addCompare(r, applyId, "权利类型", r.getRightType(), apply.getRightType(), content);
-        addCompare(r, applyId, "权利期限", r.getRightTerm(),
-                apply.getValidDate() == null ? null : String.valueOf(apply.getValidDate()).substring(0, 10), content);
-        addCompare(r, applyId, "授权范围", r.getAuthScope(), null, content);
+        addCompare(r, applyId, "权利主体", r.getRightSubject(), apply.getRightHolder(), content, null);
+        addCompare(r, applyId, "权利客体", r.getRightObject(), apply.getAssetName(), content, null); // 补比对客体↔资产名称
+        addCompare(r, applyId, "权利类型", r.getRightType(), apply.getRightType(), content, null);
+        // 权利期限:材料时长 vs 表单到期日,同口径(按申请创建日推算到期+容差)比对,消除"3年 vs 日期"误报
+        String formExpiry = apply.getValidDate() == null ? null : apply.getValidDate().toLocalDate().toString();
+        addCompare(r, applyId, "权利期限", r.getRightTerm(), formExpiry, content, diffTerm(r.getRightTerm(), apply));
+        // 授权范围:确权表单无此字段 → 标"表单未含此项"而非笼统缺失
+        addCompare(r, applyId, "授权范围", r.getAuthScope(), "确权表单不含此字段", content, AitCompare.DIFF_NA);
     }
 
-    private void addCompare(AitParseResult r, String applyId, String field, String matVal, String formVal, String content) {
+    /** 加比对项;diffOverride 非空则用之(语义比对结果),否则按通用字符串 diff。 */
+    private void addCompare(AitParseResult r, String applyId, String field, String matVal, String formVal, String content, String diffOverride) {
         AitCompare c = new AitCompare();
         c.setParseId(r.getParseId());
         c.setApplyId(applyId);
         c.setField(field);
         c.setMaterialValue(matVal);
         c.setFormValue(formVal);
-        c.setDiffType(diff(matVal, formVal));
+        c.setDiffType(diffOverride != null ? diffOverride : diff(matVal, formVal));
         locateInSource(c, matVal, content); // #6 在原始正文中定位材料值(字符偏移+上下文片段)
         compareMapper.insert(c);
+    }
+
+    /** 权利期限语义比对:材料时长("3年"/"长期") → 按申请创建日推算到期,与表单到期日同口径比对(±31天容差)。 */
+    private String diffTerm(String matTerm, ConfirmApply apply) {
+        if (apply.getValidDate() == null) {
+            return AitCompare.DIFF_MISSING;
+        }
+        if (!StringUtils.hasText(matTerm)) {
+            return AitCompare.DIFF_MISSING;
+        }
+        if (matTerm.contains("长期") || matTerm.contains("永久")) {
+            return AitCompare.DIFF_MATCH; // 长期授权:不设固定期限,视为一致
+        }
+        Integer years = parseYears(matTerm);
+        java.time.LocalDate actual = apply.getValidDate().toLocalDate();
+        if (years == null) {
+            return diff(matTerm, actual.toString()); // 无法解析时长 → 退回字符串比对
+        }
+        java.time.LocalDate base = apply.getCreateTime() != null
+                ? apply.getCreateTime().toLocalDate() : actual.minusYears(years);
+        java.time.LocalDate expected = base.plusYears(years);
+        long diffDays = Math.abs(java.time.temporal.ChronoUnit.DAYS.between(expected, actual));
+        return diffDays <= 31 ? AitCompare.DIFF_MATCH : AitCompare.DIFF_MISMATCH;
+    }
+
+    /** 从时长文本解析年数:"3年"→3,"36个月"→3。无法解析返回 null。 */
+    private Integer parseYears(String term) {
+        java.util.regex.Matcher y = java.util.regex.Pattern.compile("(\\d+)\\s*年").matcher(term);
+        if (y.find()) {
+            return Integer.parseInt(y.group(1));
+        }
+        java.util.regex.Matcher mo = java.util.regex.Pattern.compile("(\\d+)\\s*个?月").matcher(term);
+        if (mo.find()) {
+            return Integer.parseInt(mo.group(1)) / 12;
+        }
+        return null;
     }
 
     /** 定位标注锚点:在原始正文中查找材料值,记录字符偏移与上下文片段(图片/扫描件无正文→-1)。 */

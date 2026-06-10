@@ -79,9 +79,9 @@ class AitMaterialTest {
         List<AitMaterialService.TermSuggestion> terms = aitService.termCheck(id);
         assertTrue(terms.get(0).standard());
 
-        // 与表单比对:权利主体/类型一致;授权范围表单缺失
+        // 与表单比对:主体/客体/类型/期限/授权范围 五项逐项比对
         List<AitCompare> cmp = aitService.compares(id);
-        assertEquals(4, cmp.size());
+        assertEquals(5, cmp.size());
         AitCompare rtype = cmp.stream().filter(c -> "权利类型".equals(c.getField())).findFirst().orElseThrow();
         assertEquals(AitCompare.DIFF_MATCH, rtype.getDiffType());
         // #6 标注定位锚点:权利类型"数据持有权"在原文可定位(字符偏移 ≥0 + 上下文片段含该值)
@@ -89,8 +89,36 @@ class AitMaterialTest {
         assertTrue(rtype.getSourceOffset() >= 0, "权利类型应在原始正文定位到,offset=" + rtype.getSourceOffset());
         assertTrue(rtype.getSourceSnippet() != null && rtype.getSourceSnippet().contains("数据持有权"),
                 "定位片段应含材料值,实际:" + rtype.getSourceSnippet());
+        // #7 补比对权利客体:rightObject(文件名) 含 assetName → 一致
+        AitCompare obj = cmp.stream().filter(c -> "权利客体".equals(c.getField())).findFirst().orElseThrow();
+        assertEquals(AitCompare.DIFF_MATCH, obj.getDiffType(), "客体应与资产名称比对一致");
+        // #7 授权范围:确权表单不含此字段 → 标"表单未含此项"而非缺失
         AitCompare scope = cmp.stream().filter(c -> "授权范围".equals(c.getField())).findFirst().orElseThrow();
-        assertEquals(AitCompare.DIFF_MISSING, scope.getDiffType());
+        assertEquals(AitCompare.DIFF_NA, scope.getDiffType());
+    }
+
+    /** #7 权利期限语义对齐:材料时长"3年" → 按申请创建日推算到期,与 validDate 同口径比对(±31天容差)→ 一致,消除误报。 */
+    @Test
+    void termCompare_semantic_alignment_no_false_mismatch() {
+        ConfirmApply apply = new ConfirmApply();
+        apply.setAssetId("DA-TERM-1");
+        apply.setAssetName("线路资产数据");
+        apply.setRightType("数据加工使用权");
+        apply.setRightHolder("广东电网");
+        apply.setValidDate(java.time.LocalDateTime.now().plusYears(3)); // 到期=今+3年
+        String applyId = applyService.saveDraft(apply);
+
+        AitMaterial m = new AitMaterial();
+        m.setFileName("授权证明.pdf");
+        m.setApplyId(applyId);
+        m.setContent("数据加工使用权,有效期3年,授权范围约定字段"); // 材料时长=3年
+        String id = aitService.upload(m);
+        aitService.parse(id);
+
+        AitCompare term = aitService.compares(id).stream()
+                .filter(c -> "权利期限".equals(c.getField())).findFirst().orElseThrow();
+        assertEquals(AitCompare.DIFF_MATCH, term.getDiffType(),
+                "材料3年与表单到期日(今+3年)同口径应判一致,而非误报不一致;实际:" + term.getDiffType());
     }
 
     @Test

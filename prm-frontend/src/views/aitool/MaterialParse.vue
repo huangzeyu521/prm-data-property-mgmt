@@ -154,7 +154,7 @@ const locateParts = computed(() => {
 })
 
 function stTag(s) { return { 成功: 'success', 失败: 'danger', 解析中: 'warning', 待解析: 'info' }[s] || 'info' }
-function diffTag(d) { return { 一致: 'success', 不一致: 'danger', 缺失: 'warning' }[d] || 'info' }
+function diffTag(d) { return { 一致: 'success', 不一致: 'danger', 缺失: 'warning', 表单未含此项: 'info' }[d] || 'info' }
 function sealTag(s) { return { 有效: 'success', 可疑: 'warning', 未检出: 'info' }[s] || 'info' }
 function trustTag(t) { return { 可信: 'success', 存疑: 'warning', 不可信: 'danger' }[t] || 'info' }
 function fmtSize(kb) { if (!kb) return '-'; return kb >= 1024 ? (kb / 1024).toFixed(1) + ' MB' : kb + ' KB' }

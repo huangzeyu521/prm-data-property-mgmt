@@ -16,6 +16,8 @@ public class AitCompare extends BaseEntity {
     public static final String DIFF_MATCH = "一致";
     public static final String DIFF_MISMATCH = "不一致";
     public static final String DIFF_MISSING = "缺失";
+    /** 确权表单本就不含该字段(如授权范围),区别于"缺失"(应有却没填) */
+    public static final String DIFF_NA = "表单未含此项";
 
     @TableId(value = "CEC_COMPARE_ID", type = IdType.ASSIGN_UUID)
     private String compareId;
