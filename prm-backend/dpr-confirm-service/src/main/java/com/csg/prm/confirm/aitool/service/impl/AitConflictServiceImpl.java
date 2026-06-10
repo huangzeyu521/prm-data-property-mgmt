@@ -42,15 +42,61 @@ public class AitConflictServiceImpl implements AitConflictService {
     private final AitMaterialService materialService;
     private final ConfirmApplyMapper applyMapper;
     private final EquityCardMapper cardMapper;
+    private final com.csg.prm.confirm.aitool.gateway.AiToolParseGateway aiGateway;
 
     public AitConflictServiceImpl(AitKgClaimMapper claimMapper, AitConflictMapper conflictMapper,
                                   AitMaterialService materialService, ConfirmApplyMapper applyMapper,
-                                  EquityCardMapper cardMapper) {
+                                  EquityCardMapper cardMapper,
+                                  com.csg.prm.confirm.aitool.gateway.AiToolParseGateway aiGateway) {
         this.claimMapper = claimMapper;
         this.conflictMapper = conflictMapper;
         this.materialService = materialService;
         this.applyMapper = applyMapper;
         this.cardMapper = cardMapper;
+        this.aiGateway = aiGateway;
+    }
+
+    @Override
+    public Map<String, Object> resolutionAdvice(String conflictId) {
+        AitConflict c = conflictMapper.selectById(conflictId);
+        if (c == null) {
+            throw new BizException(ResultCode.NOT_FOUND.getCode(), "冲突不存在");
+        }
+        String basis = regulationBasis(c.getConflictType());
+        String context = "冲突类型:" + c.getConflictType() + "\n冲突描述:" + nz(c.getConflictDesc())
+                + "\n影响范围:" + nz(c.getImpactScope()) + "\n规则建议:" + nz(c.getSuggestion())
+                + "\n法规依据:" + basis + "\n请据此给出针对性、可执行的冲突解决方案建议。";
+        String ai = null;
+        try {
+            ai = aiGateway.adviseResolution(context);
+        } catch (Exception ignored) {
+            // AI 失败回退规则建议
+        }
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("conflictId", conflictId);
+        m.put("conflictType", c.getConflictType());
+        m.put("ruleSuggestion", c.getSuggestion());
+        m.put("regulationBasis", basis);
+        m.put("aiSuggestion", StringUtils.hasText(ai) ? ai : "（未启用 AI 或调用失败,请参考规则建议与法规依据）");
+        return m;
+    }
+
+    /** 各类冲突的法规/政策依据(规则映射,基于法规为建议提供依据)。 */
+    private String regulationBasis(String conflictType) {
+        if (AitConflict.TYPE_SUBJECT.equals(conflictType)) {
+            return "《关于构建数据基础制度更好发挥数据要素作用的意见》(数据二十条)数据三权分置:数据持有权应归属单一主体;"
+                    + "权属争议须补充权属证明并协商划分。";
+        }
+        if (AitConflict.TYPE_SCOPE.equals(conflictType)) {
+            return "数据授权遵循最小必要与范围不重叠原则;排他性授权范围内不得重复授权(南网数据资产管理规定)。";
+        }
+        if (AitConflict.TYPE_VALIDITY.equals(conflictType)) {
+            return "授权有效期不得超出数据生命周期/使用期限;超期授权无效,须先办理生命周期延展。";
+        }
+        if (AitConflict.TYPE_HISTORY.equals(conflictType)) {
+            return "确权以历史确权记录为准;矛盾项须厘清权属归属,变更项须走注销/变更流程。";
+        }
+        return "依据数据要素确权相关法规与南网数据资产管理规定处置。";
     }
 
     @Override

@@ -82,13 +82,31 @@
             <el-table-column prop="status" label="状态" width="84" align="center">
               <template #default="{ row }"><el-tag :type="row.status==='已处置'?'success':'info'">{{ row.status }}</el-tag></template>
             </el-table-column>
-            <el-table-column label="操作" width="80" fixed="right">
-              <template #default="{ row }"><el-button link type="success" :disabled="row.status==='已处置'" @click="onResolve(row)">处置</el-button></template>
+            <el-table-column label="操作" width="130" fixed="right">
+              <template #default="{ row }">
+                <el-button link type="primary" @click="onAdvice(row)">方案建议</el-button>
+                <el-button link type="success" :disabled="row.status==='已处置'" @click="onResolve(row)">处置</el-button>
+              </template>
             </el-table-column>
           </el-table>
         </el-card>
       </el-col>
     </el-row>
+
+    <!-- #16 冲突解决方案建议:规则 + 法规依据 + AI -->
+    <el-dialog v-model="adviceDlg" title="冲突解决方案建议" width="560px" align-center>
+      <template v-if="advice">
+        <el-tag type="danger" effect="plain" style="margin-bottom:10px">{{ advice.conflictType }}</el-tag>
+        <el-descriptions :column="1" size="small" border>
+          <el-descriptions-item label="规则建议">{{ advice.ruleSuggestion }}</el-descriptions-item>
+          <el-descriptions-item label="法规依据">{{ advice.regulationBasis }}</el-descriptions-item>
+          <el-descriptions-item label="AI 建议">
+            <span style="white-space:pre-wrap">{{ advice.aiSuggestion }}</span>
+          </el-descriptions-item>
+        </el-descriptions>
+      </template>
+      <template #footer><el-button @click="adviceDlg=false">关闭</el-button></template>
+    </el-dialog>
 
     <!-- #9 知识图谱结构化输出:节点(主体/客体/授权事项/有效期) + 关系(授权/归属/有效期/冲突) -->
     <el-card shadow="hover" style="margin-top:16px">
@@ -138,7 +156,7 @@
 import { reactive, ref, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { aitAddClaim, aitDetectConflict, aitConflicts, aitResolveConflict, aitConflictReport, aitConflictReportExportUrl, buildAitClaimFromMaterial, aitKgGraph, aitClaims, updateAitClaim, deleteAitClaim, syncAitHistoryClaims } from '@/api/aitool'
+import { aitAddClaim, aitDetectConflict, aitConflicts, aitResolveConflict, aitConflictReport, aitConflictReportExportUrl, buildAitClaimFromMaterial, aitKgGraph, aitClaims, updateAitClaim, deleteAitClaim, syncAitHistoryClaims, aitConflictAdvice } from '@/api/aitool'
 
 const rts = ['数据持有权', '数据加工使用权', '数据产品经营权', '所有权', '使用权']
 const claim = reactive({ assetId: 'DA-DEMO-1', subject: '', rightType: '数据持有权', authScope: '全字段', exclusive: false, sourceType: '当前申请' })
@@ -151,6 +169,12 @@ const riskLevels = ['高', '中', '低']
 const semMaterialId = ref(''); const graphAsset = ref('DA-DEMO-1'); const graphRef = ref(); const graphEmpty = ref(false)
 const NODE_COLOR = { 主体: '#2f6bff', 客体: '#13c2c2', 授权事项: '#722ed1', 有效期: '#52c41a' }
 const claimList = ref([]); const editDlg = ref(false); const editClaim = reactive({ claimId: '', subject: '', rightType: '', authScope: '', exclusive: false, sourceType: '' })
+// #16 冲突解决方案建议
+const adviceDlg = ref(false); const advice = ref(null)
+async function onAdvice(row) {
+  advice.value = null; adviceDlg.value = true
+  advice.value = await aitConflictAdvice(row.conflictId)
+}
 function srcTag(s) { return { 历史确权: 'info', 当前申请: 'primary', 法规政策: 'warning', 证明材料: 'success' }[s] || 'info' }
 async function onSyncHistory() {
   const n = await syncAitHistoryClaims(graphAsset.value)

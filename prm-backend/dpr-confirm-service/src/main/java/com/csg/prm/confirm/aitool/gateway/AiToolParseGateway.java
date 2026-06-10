@@ -15,4 +15,12 @@ public interface AiToolParseGateway {
 
     /** 对材料(文件名+正文)做版面/OCR/NLP 解析,抽取确权要素 */
     ParsedElements parse(String fileName, String content);
+
+    /**
+     * 基于规则+法规上下文,为权属冲突生成针对性解决方案建议(#16)。
+     * 默认返回 null(由调用方回退到规则建议);Qwen 网关用大模型生成,Local 网关用规则桩。
+     */
+    default String adviseResolution(String context) {
+        return null;
+    }
 }

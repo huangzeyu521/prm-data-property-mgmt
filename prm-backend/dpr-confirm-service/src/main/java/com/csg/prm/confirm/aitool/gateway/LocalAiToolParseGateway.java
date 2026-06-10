@@ -11,6 +11,25 @@ import org.springframework.util.StringUtils;
 public class LocalAiToolParseGateway implements AiToolParseGateway {
 
     @Override
+    public String adviseResolution(String context) {
+        String c = context == null ? "" : context;
+        // 规则桩:按冲突类型给出结构化处置方案(生产环境由 qwen3-max @Primary 覆盖生成)
+        String plan;
+        if (c.contains("主体冲突")) {
+            plan = "①由确权管理方组织争议主体补充权属证明材料;②依三权分置协商划分权利主体(数据持有权归唯一主体);③划分结论存证后再确权。";
+        } else if (c.contains("范围冲突")) {
+            plan = "①核对排他授权的具体范围;②将当前授权范围修订为与排他范围不重叠的字段;③留存范围调整记录。";
+        } else if (c.contains("时效冲突")) {
+            plan = "①将授权有效期调整至不晚于数据生命周期到期日;②对超期区间不予授权;③如需延长须先办理数据生命周期延展。";
+        } else if (c.contains("历史")) {
+            plan = "①调取历史确权记录核验;②矛盾项厘清权属归属、变更项走注销/变更流程;③重复项确认是否重新确权。";
+        } else {
+            plan = "①核验权属证明与历史确权记录;②按冲突性质协商处置;③留存处置记录备查。";
+        }
+        return "（规则引擎建议）" + plan;
+    }
+
+    @Override
     public ParsedElements parse(String fileName, String content) {
         String t = (fileName == null ? "" : fileName) + " " + (content == null ? "" : content);
         String rightType = t.contains("经营") ? "数据产品经营权"

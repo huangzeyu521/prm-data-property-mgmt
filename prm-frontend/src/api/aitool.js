@@ -35,6 +35,8 @@ export const aitClaims = (assetId) => request.get('/dpr/confirm/aitool/conflict/
 // #17 冲突列表/报告:支持多维筛选(params: assetId/conflictType/riskLevel/startTime/endTime)
 export const aitConflicts = (params) => request.get('/dpr/confirm/aitool/conflict/list', { params })
 export const aitResolveConflict = (id, feedback) => request.post(`/dpr/confirm/aitool/conflict/${id}/resolve`, null, { params: { feedback } })
+// #16 冲突解决方案建议:规则建议 + 法规依据 + AI 建议
+export const aitConflictAdvice = (conflictId) => request.get(`/dpr/confirm/aitool/conflict/${conflictId}/advice`)
 export const aitConflictReport = (params) => request.get('/dpr/confirm/aitool/conflict/report', { params })
 // #17 冲突报告导出 Word(直链下载)
 export const aitConflictReportExportUrl = (params) => {

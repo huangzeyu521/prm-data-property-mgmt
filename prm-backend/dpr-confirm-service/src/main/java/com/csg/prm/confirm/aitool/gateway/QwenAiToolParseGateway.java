@@ -95,6 +95,17 @@ public class QwenAiToolParseGateway implements AiToolParseGateway {
         }
     }
 
+    @Override
+    public String adviseResolution(String context) {
+        try {
+            String sys = "你是电力数据确权权属冲突处置专家。请基于《数据二十条》数据三权分置、南网数据资产管理规定等法规"
+                    + "与处置规则,针对给定的权属冲突给出简洁可执行的解决方案建议(1-3 条,含责任主体与处置步骤)。";
+            return chat(sys, context);
+        } catch (Exception e) {
+            return null; // 失败回退规则建议
+        }
+    }
+
     private String chat(String system, String user) {
         Map<String, Object> body = Map.of(
                 "model", model, "temperature", 0.2,

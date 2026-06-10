@@ -43,6 +43,9 @@ public interface AitConflictService {
 
     void resolve(String conflictId, String feedback);
 
+    /** 冲突解决方案建议(#16):规则建议 + 法规依据 + AI 生成建议(规则+AI,非案例库检索)。 */
+    Map<String, Object> resolutionAdvice(String conflictId);
+
     /** 冲突分析报告(按类型聚合 + 明细 + 风险分布) */
     Map<String, Object> report(String assetId);
 

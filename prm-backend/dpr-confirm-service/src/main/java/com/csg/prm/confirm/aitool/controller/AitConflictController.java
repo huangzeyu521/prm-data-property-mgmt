@@ -65,6 +65,12 @@ public class AitConflictController {
         return R.ok(service.syncHistoryClaims(assetId));
     }
 
+    /** 冲突解决方案建议(#16):规则建议 + 法规依据 + AI 生成建议。 */
+    @GetMapping("/{conflictId}/advice")
+    public R<java.util.Map<String, Object>> advice(@PathVariable String conflictId) {
+        return R.ok(service.resolutionAdvice(conflictId));
+    }
+
     /** 知识图谱结构化输出(#9):节点(主体/客体/授权事项/有效期) + 关系(授权/归属/有效期/冲突)。 */
     @GetMapping("/graph")
     public R<com.csg.prm.confirm.aitool.dto.KgGraphVO> graph(@RequestParam String assetId) {

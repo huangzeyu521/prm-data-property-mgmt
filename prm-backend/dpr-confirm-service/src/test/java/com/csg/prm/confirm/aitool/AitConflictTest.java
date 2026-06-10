@@ -198,6 +198,23 @@ class AitConflictTest {
         assertEquals(asset, rpt.get("involvedObject"));
     }
 
+    /** #16 冲突解决方案建议:规则建议 + 法规依据 + AI(测试用规则桩)建议。 */
+    @Test
+    void resolutionAdvice_returns_rule_regulation_and_ai() {
+        String asset = "DA-ADV-1";
+        conflictService.addClaim(claim(asset, "广东电网", "数据持有权", "全字段", null, false, "历史确权"));
+        AitKgClaim cur = claim(asset, "深圳供电局", "数据持有权", "全字段", null, false, "当前申请");
+        conflictService.addClaim(cur);
+        AitConflict sc = conflictService.detect(cur).stream()
+                .filter(c -> AitConflict.TYPE_SUBJECT.equals(c.getConflictType())).findFirst().orElseThrow();
+
+        Map<String, Object> adv = conflictService.resolutionAdvice(sc.getConflictId());
+        assertEquals(AitConflict.TYPE_SUBJECT, adv.get("conflictType"));
+        assertTrue(((String) adv.get("ruleSuggestion")).contains("权属证明"), "应含规则建议(补充权属证明)");
+        assertTrue(((String) adv.get("regulationBasis")).contains("三权分置"), "应含法规依据:" + adv.get("regulationBasis"));
+        assertTrue(((String) adv.get("aiSuggestion")).contains("规则引擎"), "应含AI/规则桩建议:" + adv.get("aiSuggestion"));
+    }
+
     private AitKgClaim claim(String asset, String subject, String rt, String scope,
                              LocalDateTime valid, boolean exclusive, String source) {
         AitKgClaim c = new AitKgClaim();
