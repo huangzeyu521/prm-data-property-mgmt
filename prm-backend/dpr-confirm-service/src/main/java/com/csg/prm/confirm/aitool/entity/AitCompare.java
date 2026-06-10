@@ -42,6 +42,19 @@ public class AitCompare extends BaseEntity {
     @TableField("CEC_DIFF_TYPE")
     private String diffType;
 
+    /** 定位锚点:材料值在原始正文中的字符偏移(-1=未在正文定位到,如图片/扫描件)(#6) */
+    @TableField("CEC_SOURCE_OFFSET")
+    private Integer sourceOffset;
+
+    /** 定位上下文:原始正文中该值附近的片段(供定位预览)(#6) */
+    @TableField("CEC_SOURCE_SNIPPET")
+    private String sourceSnippet;
+
+    public Integer getSourceOffset() { return sourceOffset; }
+    public void setSourceOffset(Integer sourceOffset) { this.sourceOffset = sourceOffset; }
+    public String getSourceSnippet() { return sourceSnippet; }
+    public void setSourceSnippet(String sourceSnippet) { this.sourceSnippet = sourceSnippet; }
+
     public String getCompareId() {
         return compareId;
     }

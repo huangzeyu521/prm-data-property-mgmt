@@ -413,15 +413,17 @@ public class AitMaterialServiceImpl implements AitMaterialService {
         if (apply == null) {
             return;
         }
+        AitMaterial mat = materialMapper.selectById(r.getMaterialId());
+        String content = mat == null ? "" : mat.getContent();
         compareMapper.delete(new LambdaQueryWrapper<AitCompare>().eq(AitCompare::getParseId, r.getParseId()));
-        addCompare(r, applyId, "权利主体", r.getRightSubject(), apply.getRightHolder());
-        addCompare(r, applyId, "权利类型", r.getRightType(), apply.getRightType());
+        addCompare(r, applyId, "权利主体", r.getRightSubject(), apply.getRightHolder(), content);
+        addCompare(r, applyId, "权利类型", r.getRightType(), apply.getRightType(), content);
         addCompare(r, applyId, "权利期限", r.getRightTerm(),
-                apply.getValidDate() == null ? null : String.valueOf(apply.getValidDate()).substring(0, 10));
-        addCompare(r, applyId, "授权范围", r.getAuthScope(), null);
+                apply.getValidDate() == null ? null : String.valueOf(apply.getValidDate()).substring(0, 10), content);
+        addCompare(r, applyId, "授权范围", r.getAuthScope(), null, content);
     }
 
-    private void addCompare(AitParseResult r, String applyId, String field, String matVal, String formVal) {
+    private void addCompare(AitParseResult r, String applyId, String field, String matVal, String formVal, String content) {
         AitCompare c = new AitCompare();
         c.setParseId(r.getParseId());
         c.setApplyId(applyId);
@@ -429,7 +431,25 @@ public class AitMaterialServiceImpl implements AitMaterialService {
         c.setMaterialValue(matVal);
         c.setFormValue(formVal);
         c.setDiffType(diff(matVal, formVal));
+        locateInSource(c, matVal, content); // #6 在原始正文中定位材料值(字符偏移+上下文片段)
         compareMapper.insert(c);
+    }
+
+    /** 定位标注锚点:在原始正文中查找材料值,记录字符偏移与上下文片段(图片/扫描件无正文→-1)。 */
+    private void locateInSource(AitCompare c, String matVal, String content) {
+        c.setSourceOffset(-1);
+        c.setSourceSnippet("");
+        if (!StringUtils.hasText(matVal) || !StringUtils.hasText(content)) {
+            return;
+        }
+        int idx = content.indexOf(matVal.trim());
+        if (idx < 0) {
+            return;
+        }
+        c.setSourceOffset(idx);
+        int from = Math.max(0, idx - 20);
+        int to = Math.min(content.length(), idx + matVal.trim().length() + 20);
+        c.setSourceSnippet((from > 0 ? "…" : "") + content.substring(from, to) + (to < content.length() ? "…" : ""));
     }
 
     private String diff(String mat, String form) {

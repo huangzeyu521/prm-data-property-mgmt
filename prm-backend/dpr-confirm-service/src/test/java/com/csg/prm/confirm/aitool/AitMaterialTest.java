@@ -84,6 +84,11 @@ class AitMaterialTest {
         assertEquals(4, cmp.size());
         AitCompare rtype = cmp.stream().filter(c -> "权利类型".equals(c.getField())).findFirst().orElseThrow();
         assertEquals(AitCompare.DIFF_MATCH, rtype.getDiffType());
+        // #6 标注定位锚点:权利类型"数据持有权"在原文可定位(字符偏移 ≥0 + 上下文片段含该值)
+        assertNotNull(rtype.getSourceOffset());
+        assertTrue(rtype.getSourceOffset() >= 0, "权利类型应在原始正文定位到,offset=" + rtype.getSourceOffset());
+        assertTrue(rtype.getSourceSnippet() != null && rtype.getSourceSnippet().contains("数据持有权"),
+                "定位片段应含材料值,实际:" + rtype.getSourceSnippet());
         AitCompare scope = cmp.stream().filter(c -> "授权范围".equals(c.getField())).findFirst().orElseThrow();
         assertEquals(AitCompare.DIFF_MISSING, scope.getDiffType());
     }

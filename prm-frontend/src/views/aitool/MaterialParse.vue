@@ -102,21 +102,35 @@
           </template>
         </el-table-column>
       </el-table>
-      <div style="margin-top:14px;font-weight:600">与确权申请表单比对</div>
+      <div style="margin-top:14px;font-weight:600">与确权申请表单比对 · 自动标注（点击标注定位原始材料对应位置）</div>
       <el-table :data="compares" border size="small">
-        <el-table-column prop="field" label="字段" width="120" />
+        <el-table-column prop="field" label="字段" width="110" />
         <el-table-column prop="materialValue" label="材料解析值" />
         <el-table-column prop="formValue" label="表单填写值" />
-        <el-table-column label="差异" width="90" align="center">
+        <el-table-column label="差异" width="84" align="center">
           <template #default="{ row }"><el-tag :type="diffTag(row.diffType)">{{ row.diffType }}</el-tag></template>
         </el-table-column>
+        <el-table-column label="定位" width="120" align="center">
+          <template #default="{ row }">
+            <el-button v-if="row.sourceOffset != null && row.sourceOffset >= 0" link type="primary" @click="onLocate(row)">定位原文</el-button>
+            <span v-else style="color:#bbb">原文未定位</span>
+          </template>
+        </el-table-column>
       </el-table>
+    </el-dialog>
+
+    <!-- #6 点击标注定位原始材料正文高亮视图 -->
+    <el-dialog v-model="locateDlg" :title="`原始材料定位 · ${locateRow?.field || ''} = ${locateRow?.materialValue || ''}`" width="680px" align-center>
+      <div v-if="locateParts" class="locate-doc">
+        <span>{{ locateParts.before }}</span><mark ref="markRef" class="locate-mark">{{ locateParts.match }}</mark><span>{{ locateParts.after }}</span>
+      </div>
+      <el-empty v-else :image-size="50" description="原始材料为图片/扫描件,像素坐标定位需 OCR 版面分析(外部待接)" />
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref, computed, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { UploadFilled } from '@element-plus/icons-vue'
 import { pageAitMaterial, uploadAitMaterialFile, uploadAitMaterialBatch, parseAitMaterial, getAitParse, aitTermCheck, confirmAitTerm, aitCompares, aitProgress, aitParseExportUrl } from '@/api/aitool'
@@ -131,6 +145,13 @@ const rows = ref([]); const total = ref(0); const loading = ref(false)
 const dlg = ref(false)
 const uploadRef = ref(); const fileList = ref([]); const uploadApplyId = ref(''); const uploading = ref(false)
 const viewDlg = ref(false); const parse = ref(null); const terms = ref([]); const compares = ref([]); const curMaterialId = ref('')
+const locateDlg = ref(false); const locateRow = ref(null); const locateContent = ref(''); const markRef = ref()
+const locateParts = computed(() => {
+  const c = locateContent.value, row = locateRow.value
+  if (!row || row.sourceOffset == null || row.sourceOffset < 0 || !c) return null
+  const off = row.sourceOffset, len = (row.materialValue || '').trim().length
+  return { before: c.slice(0, off), match: c.slice(off, off + len), after: c.slice(off + len) }
+})
 
 function stTag(s) { return { 成功: 'success', 失败: 'danger', 解析中: 'warning', 待解析: 'info' }[s] || 'info' }
 function diffTag(d) { return { 一致: 'success', 不一致: 'danger', 缺失: 'warning' }[d] || 'info' }
@@ -224,9 +245,20 @@ async function onAdoptTerm(row) {
   terms.value = await aitTermCheck(curMaterialId.value)
   compares.value = await aitCompares(curMaterialId.value)
 }
+// #6 点击标注 → 取原始材料正文,在对应位置高亮定位
+async function onLocate(row) {
+  const m = await aitProgress(curMaterialId.value)
+  locateContent.value = m?.content || ''
+  locateRow.value = row
+  locateDlg.value = true
+  await nextTick()
+  markRef.value?.scrollIntoView?.({ block: 'center', behavior: 'smooth' })
+}
 onMounted(load)
 </script>
 
 <style scoped>
 .hash { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: #2f6bff; }
+.locate-doc { max-height: 360px; overflow: auto; white-space: pre-wrap; word-break: break-all; line-height: 1.9; font-size: 13px; padding: 12px 14px; background: #f7f9fc; border: 1px solid #e4e7ed; border-radius: 6px; color: #303133; }
+.locate-mark { background: #ffe08a; color: #ad6800; font-weight: 700; padding: 1px 3px; border-radius: 3px; box-shadow: 0 0 0 2px #ffd666; }
 </style>
