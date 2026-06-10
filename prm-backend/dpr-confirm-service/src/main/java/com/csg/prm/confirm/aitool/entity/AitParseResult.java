@@ -62,8 +62,20 @@ public class AitParseResult extends BaseEntity {
     @TableField("CEC_REVIEW_STATUS")
     private String reviewStatus;
 
+    /** 材料可信度评分(0-100):印章交叉校验 + 置信度 + 要素完整性 综合(#5) */
+    @TableField("CEC_TRUST_SCORE")
+    private Integer trustScore;
+
+    /** 材料可信度评级:可信/存疑/不可信(#5,作为材料可信度依据) */
+    @TableField("CEC_TRUST_LEVEL")
+    private String trustLevel;
+
     public String getReviewStatus() { return reviewStatus; }
     public void setReviewStatus(String reviewStatus) { this.reviewStatus = reviewStatus; }
+    public Integer getTrustScore() { return trustScore; }
+    public void setTrustScore(Integer trustScore) { this.trustScore = trustScore; }
+    public String getTrustLevel() { return trustLevel; }
+    public void setTrustLevel(String trustLevel) { this.trustLevel = trustLevel; }
 
     public String getParseId() {
         return parseId;

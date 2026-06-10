@@ -68,7 +68,10 @@ class AitMaterialTest {
         assertEquals("3年", r.getRightTerm());
         assertEquals("约定字段", r.getAuthScope());
         assertTrue(r.getConfidence() > 0.9);
-        assertEquals("有效", r.getSealValid(), "盖章材料应识别印章有效");
+        // #5 印章-OCR 交叉校验:盖章 + 正文充分 + 抽到主体 → 有效;材料可信度=可信
+        assertEquals("有效", r.getSealValid(), "盖章且OCR佐证充分应判印章有效");
+        assertEquals("可信", r.getTrustLevel(), "有效印章+完整要素应评 可信,实际:" + r.getTrustLevel());
+        assertNotNull(r.getTrustScore());
         // 低置信度(桩 0.92 < 0.95)→ 标"需人工复核"
         assertEquals("需人工复核", r.getReviewStatus(), "置信度低于 0.95 应标需人工复核,实际:" + r.getReviewStatus());
 
@@ -132,6 +135,21 @@ class AitMaterialTest {
         AitMaterialController controller = new AitMaterialController(aitService);
         assertThrows(BizException.class, () -> controller.uploadBatch(tooMany, null),
                 "单次批量超过 50 个应拒绝");
+    }
+
+    /** #5 印章-OCR 交叉校验:有印章信号但 OCR 正文稀疏未佐证 → 判"可疑"(三态产出),并给材料可信度评级。 */
+    @Test
+    void seal_crossValidation_flags_suspicious_when_ocr_insufficient() {
+        AitMaterial m = new AitMaterial();
+        m.setFileName("仅盖章无内容.pdf");
+        m.setContent("已盖章"); // 有印章信号,但正文稀疏(<12字),OCR 不充分佐证
+        String id = aitService.upload(m);
+        aitService.parse(id);
+        AitParseResult r = aitService.getParse(id);
+        assertEquals("可疑", r.getSealValid(), "印章信号但OCR佐证不足应判可疑,实际:" + r.getSealValid());
+        assertNotNull(r.getSealDesc());
+        assertNotNull(r.getTrustLevel(), "应产出材料可信度评级");
+        assertNotNull(r.getTrustScore());
     }
 
     /** #4 内置术语库:标准命中 + 别名/模糊 → 标准术语建议。 */

@@ -75,8 +75,12 @@
         <el-descriptions-item label="授权范围">{{ parse.authScope }}</el-descriptions-item>
         <el-descriptions-item label="数据来源">{{ parse.dataSource }}</el-descriptions-item>
         <el-descriptions-item label="敏感类型">{{ parse.sensitiveType }}</el-descriptions-item>
-        <el-descriptions-item label="印章识别">
-          <el-tag :type="parse.sealValid==='有效'?'success':'warning'">{{ parse.sealValid }}</el-tag> {{ parse.sealDesc }}
+        <el-descriptions-item label="印章识别(CV×OCR交叉校验)" :span="2">
+          <el-tag :type="sealTag(parse.sealValid)">{{ parse.sealValid }}</el-tag> {{ parse.sealDesc }}
+        </el-descriptions-item>
+        <el-descriptions-item label="材料可信度">
+          <el-tag :type="trustTag(parse.trustLevel)">{{ parse.trustLevel || '—' }}</el-tag>
+          <span v-if="parse.trustScore != null" style="margin-left:6px;color:#909399">{{ parse.trustScore }}/100</span>
         </el-descriptions-item>
         <el-descriptions-item label="复核标记">
           <el-tag :type="parse.reviewStatus==='自动通过'?'success':'warning'">{{ parse.reviewStatus || '—' }}</el-tag>
@@ -130,6 +134,8 @@ const viewDlg = ref(false); const parse = ref(null); const terms = ref([]); cons
 
 function stTag(s) { return { 成功: 'success', 失败: 'danger', 解析中: 'warning', 待解析: 'info' }[s] || 'info' }
 function diffTag(d) { return { 一致: 'success', 不一致: 'danger', 缺失: 'warning' }[d] || 'info' }
+function sealTag(s) { return { 有效: 'success', 可疑: 'warning', 未检出: 'info' }[s] || 'info' }
+function trustTag(t) { return { 可信: 'success', 存疑: 'warning', 不可信: 'danger' }[t] || 'info' }
 function fmtSize(kb) { if (!kb) return '-'; return kb >= 1024 ? (kb / 1024).toFixed(1) + ' MB' : kb + ' KB' }
 function stageText(p) {
   if ((p || 0) >= 90) return '表单比对…'

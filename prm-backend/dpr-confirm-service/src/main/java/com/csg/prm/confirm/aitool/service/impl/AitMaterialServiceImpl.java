@@ -289,14 +289,69 @@ public class AitMaterialServiceImpl implements AitMaterialService {
         r.setAuthScope(e.authScope());
         r.setDataSource(e.dataSource());
         r.setSensitiveType(e.sensitiveType());
-        r.setSealValid(e.sealValid());
-        r.setSealDesc(e.sealDesc());
         r.setConfidence(e.confidence());
+        // #5 印章-OCR 交叉校验:印章信号 × OCR正文/要素一致性 → 有效/可疑/未检出(产出"可疑")
+        AitMaterial m = require(materialId);
+        String[] seal = crossValidateSeal(e, m);
+        r.setSealValid(seal[0]);
+        r.setSealDesc(seal[1]);
         // 置信度 ≥ 阈值(对齐可研"准确率≥95%")→ 自动通过;否则需人工复核
         r.setReviewStatus(e.confidence() >= CONFIDENCE_THRESHOLD ? "自动通过" : "需人工复核");
+        // #5 材料可信度评级:印章 + 置信度 + 要素完整性 综合
+        int score = trustScore(seal[0], e);
+        r.setTrustScore(score);
+        r.setTrustLevel(score >= 75 ? "可信" : (score >= 50 ? "存疑" : "不可信"));
         parseMapper.delete(new LambdaQueryWrapper<AitParseResult>().eq(AitParseResult::getMaterialId, materialId));
         parseMapper.insert(r);
         return r;
+    }
+
+    /** 印章-OCR 交叉校验:把(CV/模型)印章判定与 OCR 正文/抽取要素做一致性核验,返回 [真伪判定, 说明]。 */
+    private String[] crossValidateSeal(AiToolParseGateway.ParsedElements e, AitMaterial m) {
+        // OCR 印章信号取自正文(文件名易误导,如"无章材料");先识别否定表述
+        String content = m.getContent() == null ? "" : m.getContent();
+        boolean noSeal = content.contains("无章") || content.contains("未盖章") || content.contains("无印章")
+                || content.contains("未加盖") || content.contains("无公章");
+        boolean ocrSeal = !noSeal && (content.contains("盖章") || content.contains("公章") || content.contains("印章")
+                || content.contains("加盖") || content.contains("钢印") || content.contains("骑缝") || content.contains("印鉴"));
+        boolean modelValid = "有效".equals(e.sealValid());
+        boolean hasSubject = StringUtils.hasText(e.rightSubject());
+        boolean richContent = content.trim().length() >= 12;
+
+        // 模型(qwen/CV)已判可疑 → 保留
+        if ("可疑".equals(e.sealValid())) {
+            return new String[]{"可疑", StringUtils.hasText(e.sealDesc()) ? e.sealDesc()
+                    : "CV 印章特征与备案样本存在差异,真伪存疑,建议人工核验原件"};
+        }
+        // 既无 OCR 印章表述、模型也未判有效 → 未检出
+        if (!ocrSeal && !modelValid) {
+            return new String[]{"未检出", "未检出印章区域,OCR 正文亦无盖章表述"};
+        }
+        // OCR 印章表述 + 正文充分 + 抽到出证主体 → 交叉校验一致 → 有效
+        if (ocrSeal && hasSubject && richContent) {
+            return new String[]{"有效", "检出印章表述,与 OCR 出证主体「" + e.rightSubject() + "」一致,交叉校验通过"};
+        }
+        // 模型判有效但 OCR 正文无盖章表述 → 交叉校验不一致 → 可疑
+        if (modelValid && !ocrSeal) {
+            return new String[]{"可疑", "模型/CV 判印章有效,但 OCR 正文未见盖章表述,交叉校验不一致,建议人工核验原件"};
+        }
+        // 有 OCR 印章表述但正文稀疏/要素不足佐证 → 可疑
+        return new String[]{"可疑", "正文称已盖章,但 OCR 正文稀疏、未充分佐证出证主体/关键要素,真伪存疑,建议人工核验原件"};
+    }
+
+    /** 材料可信度评分(0-100):印章交叉校验(40/15/0) + 置信度(30/20/10) + 要素完整性(每项6,最高30)。 */
+    private int trustScore(String sealValid, AiToolParseGateway.ParsedElements e) {
+        int score = "有效".equals(sealValid) ? 40 : ("可疑".equals(sealValid) ? 15 : 0);
+        double conf = e.confidence();
+        score += conf >= 0.95 ? 30 : (conf >= 0.85 ? 20 : 10);
+        int present = 0;
+        for (String v : new String[]{e.rightSubject(), e.rightObject(), e.rightType(), e.rightTerm(), e.authScope()}) {
+            if (StringUtils.hasText(v)) {
+                present++;
+            }
+        }
+        score += present * 6;
+        return Math.min(100, score);
     }
 
     @Override
