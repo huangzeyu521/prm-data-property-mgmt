@@ -5,6 +5,7 @@ import com.csg.prm.confirm.aitool.entity.AitCompare;
 import com.csg.prm.confirm.aitool.entity.AitMaterial;
 import com.csg.prm.confirm.aitool.entity.AitParseResult;
 import com.csg.prm.confirm.aitool.service.AitMaterialService;
+import com.csg.prm.confirm.aitool.term.AitTermLibrary;
 import com.csg.prm.common.exception.BizException;
 import com.csg.prm.confirm.entity.ConfirmApply;
 import com.csg.prm.confirm.service.ConfirmApplyService;
@@ -17,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -130,6 +132,37 @@ class AitMaterialTest {
         AitMaterialController controller = new AitMaterialController(aitService);
         assertThrows(BizException.class, () -> controller.uploadBatch(tooMany, null),
                 "单次批量超过 50 个应拒绝");
+    }
+
+    /** #4 内置术语库:标准命中 + 别名/模糊 → 标准术语建议。 */
+    @Test
+    void termLibrary_matches_standard_and_suggests() {
+        assertTrue(AitTermLibrary.match(AitTermLibrary.F_RIGHT_TYPE, "数据加工使用权").standard());
+        AitTermLibrary.Match rt = AitTermLibrary.match(AitTermLibrary.F_RIGHT_TYPE, "经营权");
+        assertFalse(rt.standard(), "经营权应判为非标");
+        assertEquals("数据产品经营权", rt.standardTerm());
+        assertEquals("全字段", AitTermLibrary.match(AitTermLibrary.F_AUTH_SCOPE, "全网").standardTerm());
+        assertEquals("个人信息", AitTermLibrary.match(AitTermLibrary.F_SENSITIVE, "隐私").standardTerm());
+    }
+
+    /** #4 多要素匹配 + 人工确认修改写回:非标授权范围"全网"→建议"全字段"→采用后写回解析结果。 */
+    @Test
+    void termCheck_multiField_and_confirm_writeback() {
+        AitMaterial m = new AitMaterial();
+        m.setFileName("术语测试材料.pdf");
+        m.setContent("数据持有权,授权范围全网,自行生产"); // 桩解析 authScope="全网"(非标)
+        String id = aitService.upload(m);
+        aitService.parse(id);
+
+        List<AitMaterialService.TermSuggestion> terms = aitService.termCheck(id);
+        assertEquals(4, terms.size(), "应对 权利类型/授权范围/数据来源/敏感类型 四要素匹配");
+        AitMaterialService.TermSuggestion scope = terms.stream()
+                .filter(t -> "授权范围".equals(t.field())).findFirst().orElseThrow();
+        assertFalse(scope.standard(), "全网应判为非标");
+        assertEquals("全字段", scope.standardTerm());
+
+        aitService.confirmTerm(id, "授权范围", "全字段");
+        assertEquals("全字段", aitService.getParse(id).getAuthScope(), "采用标准术语应写回解析结果");
     }
 
     /** #2 失败原因分类:PDF 抽取不到正文(损坏/纯图)→ 解析失败,原因归类为"文件损坏/无法解析"。 */

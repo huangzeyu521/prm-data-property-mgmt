@@ -82,13 +82,20 @@
           <el-tag :type="parse.reviewStatus==='自动通过'?'success':'warning'">{{ parse.reviewStatus || '—' }}</el-tag>
         </el-descriptions-item>
       </el-descriptions>
-      <div style="margin-top:14px;font-weight:600">术语库匹配</div>
+      <div style="margin-top:14px;font-weight:600">术语库匹配 · 南网/电力专属术语库（非标可一键采用标准术语）</div>
       <el-table :data="terms" border size="small">
-        <el-table-column prop="field" label="字段" width="120" />
+        <el-table-column prop="field" label="字段" width="110" />
         <el-table-column prop="value" label="抽取值" />
-        <el-table-column prop="standardTerm" label="标准术语" />
+        <el-table-column prop="standardTerm" label="标准术语建议" />
         <el-table-column label="规范" width="90" align="center">
           <template #default="{ row }"><el-tag :type="row.standard?'success':'warning'">{{ row.standard?'标准':'建议修正' }}</el-tag></template>
+        </el-table-column>
+        <el-table-column label="人工确认" width="120" align="center">
+          <template #default="{ row }">
+            <el-button v-if="!row.standard && row.standardTerm && !row.standardTerm.includes('待人工确认')"
+              link type="primary" @click="onAdoptTerm(row)">采用标准术语</el-button>
+            <span v-else style="color:#bbb">—</span>
+          </template>
         </el-table-column>
       </el-table>
       <div style="margin-top:14px;font-weight:600">与确权申请表单比对</div>
@@ -108,7 +115,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { UploadFilled } from '@element-plus/icons-vue'
-import { pageAitMaterial, uploadAitMaterialFile, uploadAitMaterialBatch, parseAitMaterial, getAitParse, aitTermCheck, aitCompares, aitProgress, aitParseExportUrl } from '@/api/aitool'
+import { pageAitMaterial, uploadAitMaterialFile, uploadAitMaterialBatch, parseAitMaterial, getAitParse, aitTermCheck, confirmAitTerm, aitCompares, aitProgress, aitParseExportUrl } from '@/api/aitool'
 
 const MAX_BATCH = 50
 const MIN_BYTES = 100 * 1024
@@ -119,7 +126,7 @@ const q = reactive({ current: 1, size: 10 })
 const rows = ref([]); const total = ref(0); const loading = ref(false)
 const dlg = ref(false)
 const uploadRef = ref(); const fileList = ref([]); const uploadApplyId = ref(''); const uploading = ref(false)
-const viewDlg = ref(false); const parse = ref(null); const terms = ref([]); const compares = ref([])
+const viewDlg = ref(false); const parse = ref(null); const terms = ref([]); const compares = ref([]); const curMaterialId = ref('')
 
 function stTag(s) { return { 成功: 'success', 失败: 'danger', 解析中: 'warning', 待解析: 'info' }[s] || 'info' }
 function diffTag(d) { return { 一致: 'success', 不一致: 'danger', 缺失: 'warning' }[d] || 'info' }
@@ -197,10 +204,19 @@ function onExport(row) {
   window.open(aitParseExportUrl(row.materialId), '_blank')
 }
 async function onView(row) {
+  curMaterialId.value = row.materialId
   parse.value = await getAitParse(row.materialId)
   terms.value = await aitTermCheck(row.materialId)
   compares.value = await aitCompares(row.materialId)
   viewDlg.value = true
+}
+// #4 人工确认修改:采用标准术语写回,刷新要素+术语+比对
+async function onAdoptTerm(row) {
+  await confirmAitTerm(curMaterialId.value, row.field, row.standardTerm)
+  ElMessage.success(`已采用标准术语:${row.field} → ${row.standardTerm}`)
+  parse.value = await getAitParse(curMaterialId.value)
+  terms.value = await aitTermCheck(curMaterialId.value)
+  compares.value = await aitCompares(curMaterialId.value)
 }
 onMounted(load)
 </script>

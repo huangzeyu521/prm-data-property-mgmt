@@ -131,6 +131,15 @@ public class AitMaterialController {
         return R.ok(service.termCheck(materialId));
     }
 
+    /** 人工确认修改(#4):把某要素采用为标准术语,写回解析结果。 */
+    @PostMapping("/{materialId}/term-confirm")
+    public R<Void> termConfirm(@PathVariable String materialId,
+                               @RequestParam String field,
+                               @RequestParam String standardTerm) {
+        service.confirmTerm(materialId, field, standardTerm);
+        return R.ok();
+    }
+
     @GetMapping("/{materialId}/compares")
     public R<List<AitCompare>> compares(@PathVariable String materialId) {
         return R.ok(service.compares(materialId));

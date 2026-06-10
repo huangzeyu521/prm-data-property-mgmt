@@ -43,8 +43,11 @@ public interface AitMaterialService {
 
     AitParseResult getParse(String materialId);
 
-    /** 术语库匹配:对解析要素做标准术语校验与建议 */
+    /** 术语库匹配:对解析要素做标准术语校验与建议(多要素) */
     List<TermSuggestion> termCheck(String materialId);
+
+    /** 人工确认修改:把某要素采用为标准术语,写回解析结果 */
+    void confirmTerm(String materialId, String field, String standardTerm);
 
     /** 解析结果与确权申请表单的比对差异 */
     List<AitCompare> compares(String materialId);

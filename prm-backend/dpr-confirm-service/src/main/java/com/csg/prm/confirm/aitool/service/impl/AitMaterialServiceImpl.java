@@ -10,6 +10,7 @@ import com.csg.prm.common.query.PageQuery;
 import com.csg.prm.confirm.aitool.entity.AitCompare;
 import com.csg.prm.confirm.aitool.entity.AitMaterial;
 import com.csg.prm.confirm.aitool.entity.AitParseResult;
+import com.csg.prm.confirm.aitool.term.AitTermLibrary;
 import com.csg.prm.confirm.aitool.gateway.AiToolParseGateway;
 import com.csg.prm.confirm.aitool.mapper.AitCompareMapper;
 import com.csg.prm.confirm.aitool.mapper.AitMaterialMapper;
@@ -42,9 +43,6 @@ import java.util.Set;
 
 @Service
 public class AitMaterialServiceImpl implements AitMaterialService {
-
-    private static final Set<String> STD_RIGHT_TYPES = Set.of(
-            "数据持有权", "数据加工使用权", "数据产品经营权");
 
     /** 允许的文件格式(#1) */
     private static final Set<String> ALLOWED_EXT = Set.of("pdf", "doc", "docx", "jpg", "jpeg", "png");
@@ -393,23 +391,35 @@ public class AitMaterialServiceImpl implements AitMaterialService {
     public List<TermSuggestion> termCheck(String materialId) {
         AitParseResult r = getParse(materialId);
         List<TermSuggestion> out = new ArrayList<>();
-        boolean std = STD_RIGHT_TYPES.contains(r.getRightType());
-        out.add(new TermSuggestion("权利类型", r.getRightType(),
-                std ? r.getRightType() : normalizeRight(r.getRightType()), std));
+        // 多要素与内置南网/电力术语库匹配:非标/模糊→标注 + 标准术语建议
+        addTerm(out, AitTermLibrary.F_RIGHT_TYPE, r.getRightType());
+        addTerm(out, AitTermLibrary.F_AUTH_SCOPE, r.getAuthScope());
+        addTerm(out, AitTermLibrary.F_DATA_SOURCE, r.getDataSource());
+        addTerm(out, AitTermLibrary.F_SENSITIVE, r.getSensitiveType());
         return out;
     }
 
-    private String normalizeRight(String rt) {
-        if (rt == null) {
-            return "数据持有权";
+    private void addTerm(List<TermSuggestion> out, String field, String value) {
+        AitTermLibrary.Match m = AitTermLibrary.match(field, value);
+        out.add(new TermSuggestion(field, value, m.standardTerm(), m.standard()));
+    }
+
+    @Override
+    public void confirmTerm(String materialId, String field, String standardTerm) {
+        if (!StringUtils.hasText(field) || !StringUtils.hasText(standardTerm)) {
+            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "字段与标准术语不能为空");
         }
-        if (rt.contains("经营")) {
-            return "数据产品经营权";
+        AitParseResult r = getParse(materialId);
+        AitParseResult upd = new AitParseResult();
+        upd.setParseId(r.getParseId());
+        switch (field) {
+            case AitTermLibrary.F_RIGHT_TYPE -> upd.setRightType(standardTerm);
+            case AitTermLibrary.F_AUTH_SCOPE -> upd.setAuthScope(standardTerm);
+            case AitTermLibrary.F_DATA_SOURCE -> upd.setDataSource(standardTerm);
+            case AitTermLibrary.F_SENSITIVE -> upd.setSensitiveType(standardTerm);
+            default -> throw new BizException("不支持的术语字段:" + field);
         }
-        if (rt.contains("使用") || rt.contains("加工")) {
-            return "数据加工使用权";
-        }
-        return "数据持有权";
+        parseMapper.updateById(upd);
     }
 
     @Override

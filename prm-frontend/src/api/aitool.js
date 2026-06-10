@@ -12,6 +12,9 @@ export const aitMaterialFileUrl = (id) => `/api/dpr/confirm/aitool/material/${id
 export const parseAitMaterial = (id) => request.post(`/dpr/confirm/aitool/material/${id}/parse`)
 export const getAitParse = (id) => request.get(`/dpr/confirm/aitool/material/${id}/parse`)
 export const aitTermCheck = (id) => request.get(`/dpr/confirm/aitool/material/${id}/term-check`)
+// #4 人工确认修改:采用标准术语写回解析结果
+export const confirmAitTerm = (id, field, standardTerm) =>
+  request.post(`/dpr/confirm/aitool/material/${id}/term-confirm`, null, { params: { field, standardTerm } })
 export const aitCompares = (id) => request.get(`/dpr/confirm/aitool/material/${id}/compares`)
 // #2 解析进度轮询
 export const aitProgress = (id) => request.get(`/dpr/confirm/aitool/material/${id}/progress`)
