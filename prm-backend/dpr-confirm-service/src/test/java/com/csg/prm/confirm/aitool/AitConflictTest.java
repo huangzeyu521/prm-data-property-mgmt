@@ -101,6 +101,23 @@ class AitConflictTest {
                 .anyMatch(c -> AitKgClaim.SRC_HISTORY.equals(c.getSourceType())), "应生成历史确权主张");
     }
 
+    /** #11 主体冲突:同一客体被多主体声明数据持有权(非经营、非排他)→ 应判主体冲突,描述含客体+双方主体。 */
+    @Test
+    void subjectConflict_for_multi_holder_holding_right() {
+        String asset = "DA-HOLD-1";
+        conflictService.addClaim(claim(asset, "广东电网", "数据持有权", "全字段", null, false, "历史确权"));
+        AitKgClaim cur = claim(asset, "南网科研院", "数据持有权", "全字段", null, false, "当前申请");
+        List<AitConflict> found = conflictService.detect(cur);
+
+        assertTrue(found.stream().anyMatch(c -> AitConflict.TYPE_SUBJECT.equals(c.getConflictType())),
+                "同一客体多主体持有权应判主体冲突");
+        AitConflict sc = found.stream().filter(c -> AitConflict.TYPE_SUBJECT.equals(c.getConflictType()))
+                .findFirst().orElseThrow();
+        assertTrue(sc.getConflictDesc().contains(asset), "冲突描述应含客体,实际:" + sc.getConflictDesc());
+        assertTrue(sc.getConflictDesc().contains("广东电网") && sc.getConflictDesc().contains("南网科研院"),
+                "应含双方冲突主体,实际:" + sc.getConflictDesc());
+    }
+
     private AitKgClaim claim(String asset, String subject, String rt, String scope,
                              LocalDateTime valid, boolean exclusive, String source) {
         AitKgClaim c = new AitKgClaim();

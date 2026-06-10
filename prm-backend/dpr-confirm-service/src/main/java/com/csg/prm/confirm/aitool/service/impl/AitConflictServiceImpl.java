@@ -220,13 +220,16 @@ public class AitConflictServiceImpl implements AitConflictService {
             boolean sameSubject = eq(cur.getSubject(), ex.getSubject());
             boolean sameRight = rightEq(cur.getRightType(), ex.getRightType());
 
-            // 主体冲突:不同主体对同一权利客体主张同类权利(经营/排他)
-            if (!sameSubject && sameRight && (isOperation(cur.getRightType())
+            // 主体冲突:同一客体被多主体声明同类权属。
+            // 触发:不同主体 + 同类权利 + 该权利天然单一主体(持有权/所有权)或经营权或排他主张。
+            if (!sameSubject && sameRight && (isHolding(cur.getRightType()) || isOperation(cur.getRightType())
                     || Boolean.TRUE.equals(ex.getExclusive()) || Boolean.TRUE.equals(cur.getExclusive()))) {
-                found.add(emit(cur, AitConflict.TYPE_SUBJECT, "多主体声明同类权属",
-                        "主体「" + ex.getSubject() + "」与「" + cur.getSubject() + "」对同一资产主张" + cur.getRightType(),
-                        "涉及主体:" + ex.getSubject() + "、" + cur.getSubject(), "高",
-                        "建议补充权属证明,协商划分权利主体后再确权"));
+                found.add(emit(cur, AitConflict.TYPE_SUBJECT, "同一客体被多主体声明同类权属",
+                        "客体「" + cur.getAssetId() + "」被多主体声明「" + cur.getRightType() + "」 —— 主体「"
+                                + ex.getSubject() + "」(" + claimContent(ex) + ") 与 主体「"
+                                + cur.getSubject() + "」(" + claimContent(cur) + ")",
+                        "客体:" + cur.getAssetId() + ";冲突主体:" + ex.getSubject() + "、" + cur.getSubject(), "高",
+                        "建议补充权属证明,协商划分权利主体后再确权(数据持有权应归属单一主体)"));
             }
             // 范围冲突:与历史排他授权范围覆盖/重叠
             if (!sameSubject && (Boolean.TRUE.equals(ex.getExclusive()) || Boolean.TRUE.equals(cur.getExclusive()))
@@ -419,6 +422,26 @@ public class AitConflictServiceImpl implements AitConflictService {
 
     private boolean isOperation(String rt) {
         return rt != null && rt.contains("经营");
+    }
+
+    /** 天然单一主体的权利:数据持有权/所有权(同一客体不应被多主体声明)。 */
+    private boolean isHolding(String rt) {
+        return rt != null && (rt.contains("持有") || rt.contains("所有"));
+    }
+
+    /** 主张内容摘要:范围/排他/来源,供冲突详情明确各方主张。 */
+    private String claimContent(AitKgClaim c) {
+        StringBuilder sb = new StringBuilder();
+        if (StringUtils.hasText(c.getAuthScope())) {
+            sb.append("范围:").append(c.getAuthScope());
+        }
+        if (Boolean.TRUE.equals(c.getExclusive())) {
+            sb.append(sb.length() > 0 ? "," : "").append("排他");
+        }
+        if (StringUtils.hasText(c.getSourceType())) {
+            sb.append(sb.length() > 0 ? "," : "").append("来源:").append(c.getSourceType());
+        }
+        return sb.length() > 0 ? sb.toString() : "未注明";
     }
 
     private boolean scopeOverlap(String a, String b) {
