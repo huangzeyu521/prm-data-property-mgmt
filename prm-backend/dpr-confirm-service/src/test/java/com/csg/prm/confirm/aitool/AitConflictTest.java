@@ -20,6 +20,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -116,6 +117,24 @@ class AitConflictTest {
         assertTrue(sc.getConflictDesc().contains(asset), "冲突描述应含客体,实际:" + sc.getConflictDesc());
         assertTrue(sc.getConflictDesc().contains("广东电网") && sc.getConflictDesc().contains("南网科研院"),
                 "应含双方冲突主体,实际:" + sc.getConflictDesc());
+    }
+
+    /** #12 范围冲突:对比当前范围与历史排他范围,算出具体重叠字段(交集),非整段范围。 */
+    @Test
+    void scopeConflict_identifies_specific_overlap_fields() {
+        String asset = "DA-SCOPE-1";
+        // 历史排他授权:字段 用电量、电压、负荷
+        conflictService.addClaim(claim(asset, "广东电网", "数据加工使用权", "用电量、电压、负荷", null, true, "历史确权"));
+        // 当前申请:用电量、负荷、地址 → 与历史重叠 用电量、负荷(不含电压/地址)
+        AitKgClaim cur = claim(asset, "南网科研院", "数据加工使用权", "用电量、负荷、地址", null, false, "当前申请");
+        AitConflict sc = conflictService.detect(cur).stream()
+                .filter(c -> AitConflict.TYPE_SCOPE.equals(c.getConflictType())).findFirst().orElseThrow();
+
+        assertTrue(sc.getConflictDesc().contains("部分重叠"), "应判部分重叠,实际:" + sc.getConflictDesc());
+        assertTrue(sc.getImpactScope().contains("用电量") && sc.getImpactScope().contains("负荷"),
+                "影响范围应含具体重叠字段,实际:" + sc.getImpactScope());
+        assertFalse(sc.getImpactScope().contains("电压"), "仅历史有的字段不应在重叠区域:" + sc.getImpactScope());
+        assertFalse(sc.getImpactScope().contains("地址"), "仅当前有的字段不应在重叠区域:" + sc.getImpactScope());
     }
 
     private AitKgClaim claim(String asset, String subject, String rt, String scope,

@@ -231,13 +231,16 @@ public class AitConflictServiceImpl implements AitConflictService {
                         "客体:" + cur.getAssetId() + ";冲突主体:" + ex.getSubject() + "、" + cur.getSubject(), "高",
                         "建议补充权属证明,协商划分权利主体后再确权(数据持有权应归属单一主体)"));
             }
-            // 范围冲突:与历史排他授权范围覆盖/重叠
-            if (!sameSubject && (Boolean.TRUE.equals(ex.getExclusive()) || Boolean.TRUE.equals(cur.getExclusive()))
-                    && scopeOverlap(cur.getAuthScope(), ex.getAuthScope())) {
-                found.add(emit(cur, AitConflict.TYPE_SCOPE, "历史排他性授权未注销",
-                        "新授权范围「" + cur.getAuthScope() + "」与排他授权「" + ex.getAuthScope() + "」重叠",
-                        "重叠范围:" + cur.getAuthScope(), "中",
-                        "建议修订/补充授权范围,避免与排他授权重叠"));
+            // 范围冲突:对比当前授权范围与历史排他授权范围,识别 覆盖/重叠 的具体区域与影响范围
+            ScopeOverlap so = (!sameSubject && (Boolean.TRUE.equals(ex.getExclusive()) || Boolean.TRUE.equals(cur.getExclusive())))
+                    ? scopeIntersect(cur.getAuthScope(), ex.getAuthScope()) : null;
+            if (so != null) {
+                String kind = so.relation().contains("覆盖") ? "被覆盖" : "重叠";
+                found.add(emit(cur, AitConflict.TYPE_SCOPE, "历史排他性授权范围" + so.relation(),
+                        "当前授权范围「" + cur.getAuthScope() + "」与历史排他授权「" + ex.getAuthScope() + "」" + so.relation()
+                                + " —— 具体" + kind + "区域:" + so.region(),
+                        "客体:" + cur.getAssetId() + ";" + kind + "区域:" + so.region(), "中",
+                        "建议修订授权范围,避开排他授权的「" + so.region() + "」"));
             }
             // 历史记录冲突:与历史确权矛盾(权利类型不同)或重复(同主体同权利)
             if (AitKgClaim.SRC_HISTORY.equals(ex.getSourceType())) {
@@ -444,13 +447,56 @@ public class AitConflictServiceImpl implements AitConflictService {
         return sb.length() > 0 ? sb.toString() : "未注明";
     }
 
-    private boolean scopeOverlap(String a, String b) {
-        if (a == null || b == null) {
-            return false;
+    /** 范围交集分析结果:覆盖/重叠关系 + 具体重叠区域。 */
+    private record ScopeOverlap(String relation, String region) {
+    }
+
+    /** 全字段类范围(覆盖一切):全字段/全网/全部/所有字段。 */
+    private boolean isAllScope(String s) {
+        return s != null && (s.contains("全字段") || s.contains("全网") || s.contains("全部") || s.contains("所有字段"));
+    }
+
+    /** 拆解具体字段集合(排除"约定字段/指定字段"等占位词)。 */
+    private java.util.Set<String> scopeFields(String s) {
+        java.util.Set<String> set = new java.util.LinkedHashSet<>();
+        if (s == null) {
+            return set;
         }
-        if (a.contains("全") || b.contains("全")) {
-            return true;
+        for (String f : s.split("[、,，;；/\\s]+")) {
+            String t = f.trim();
+            if (!t.isEmpty() && !"约定字段".equals(t) && !"指定字段".equals(t) && !"全字段".equals(t)) {
+                set.add(t);
+            }
         }
-        return eq(a, b);
+        return set;
+    }
+
+    private String regionLabel(String s) {
+        java.util.Set<String> f = scopeFields(s);
+        return f.isEmpty() ? s : String.join("、", f);
+    }
+
+    /** 范围交集分析:区分 完全覆盖/全字段覆盖/部分重叠/范围相同,并算具体重叠区域;无重叠返回 null。 */
+    private ScopeOverlap scopeIntersect(String cur, String ex) {
+        if (cur == null || ex == null) {
+            return null;
+        }
+        boolean curAll = isAllScope(cur), exAll = isAllScope(ex);
+        if (curAll && exAll) {
+            return new ScopeOverlap("完全覆盖", "全部字段");
+        }
+        if (curAll) {
+            return new ScopeOverlap("覆盖(当前全字段覆盖历史范围)", regionLabel(ex));
+        }
+        if (exAll) {
+            return new ScopeOverlap("覆盖(历史全字段覆盖当前范围)", regionLabel(cur));
+        }
+        java.util.Set<String> ci = scopeFields(cur), ei = scopeFields(ex);
+        if (!ci.isEmpty() && !ei.isEmpty()) {
+            ci.retainAll(ei);
+            return ci.isEmpty() ? null : new ScopeOverlap("部分重叠", String.join("、", ci));
+        }
+        // 至少一方无可解析具体字段(如均"约定字段") → 范围相同才视为重叠
+        return eq(cur, ex) ? new ScopeOverlap("范围相同(需核实具体字段)", cur) : null;
     }
 }
