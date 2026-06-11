@@ -4,8 +4,19 @@
       <el-col :span="10">
         <el-card header="登记权属主张(构建知识图谱)" shadow="hover">
           <el-form :model="claim" label-width="90px">
-            <el-form-item label="资产ID"><el-input v-model="claim.assetId" /></el-form-item>
-            <el-form-item label="权利主体"><el-input v-model="claim.subject" /></el-form-item>
+            <el-form-item label="资产ID">
+              <el-select v-model="claim.assetId" filterable remote allow-create default-first-option clearable
+                :remote-method="searchAssets" :loading="assetSearching" style="width:100%"
+                placeholder="输名称/ID 搜台账,如 用电 / AST-001" @change="onAssetPicked">
+                <el-option v-for="a in assetOpts" :key="a.assetId" :value="a.assetId" :label="a.assetId + '　' + a.assetName">
+                  <span>{{ a.assetId }}</span><span style="float:right;color:#8c8c8c;font-size:12px">{{ a.assetName }}</span>
+                </el-option>
+              </el-select>
+              <div class="cd-tip">选定后右侧查询与下方图谱自动跟随该资产;
+                <el-button link type="primary" style="vertical-align:baseline" :loading="demoRunning" @click="runDemo">一键演示:登记两条对立主张并检测(测试/演示)</el-button>
+              </div>
+            </el-form-item>
+            <el-form-item label="权利主体"><el-input v-model="claim.subject" placeholder="如 广东电网有限责任公司" /></el-form-item>
             <el-form-item label="权利类型">
               <el-select v-model="claim.rightType" style="width:100%">
                 <el-option v-for="t in rts" :key="t" :label="t" :value="t" />
@@ -23,7 +34,12 @@
           </el-form>
           <el-divider style="margin:6px 0">或 · 条款语义分析自动建主张(#9)</el-divider>
           <div style="display:flex;gap:8px">
-            <el-input v-model="semMaterialId" placeholder="已解析材料ID,由其要素自动建主张" clearable />
+            <el-select v-model="semMaterialId" filterable clearable style="flex:1"
+              placeholder="选择已解析成功的材料(无需记材料ID)" @focus="loadParsedMaterials">
+              <el-option v-for="m in parsedMats" :key="m.materialId" :value="m.materialId" :label="m.fileName">
+                <span>{{ m.fileName }}</span><span style="float:right;color:#8c8c8c;font-size:12px">{{ m.materialId.slice(0, 8) }}…</span>
+              </el-option>
+            </el-select>
             <el-button type="success" :disabled="!semMaterialId" @click="onSemanticClaim">语义建主张</el-button>
           </div>
         </el-card>
@@ -238,6 +254,52 @@ async function loadGraph() {
   })
 }
 
+// 资产台账搜索(三处联动:主张表单/右侧查询/图谱)
+import { pageArchive } from '@/api/propertyArchive'
+import { pageAitMaterial } from '@/api/aitool'
+const assetOpts = ref([])
+const assetSearching = ref(false)
+async function searchAssets(kw) {
+  if (!kw) { assetOpts.value = []; return }
+  assetSearching.value = true
+  try {
+    const r = await pageArchive({ current: 1, size: 10, assetName: kw })
+    assetOpts.value = r.records || []
+  } finally { assetSearching.value = false }
+}
+function onAssetPicked(id) {
+  if (!id) return
+  qAsset.value = id
+  graphAsset.value = id
+}
+
+// 语义建主张:下拉选已解析成功的材料(替代手填材料ID)
+const parsedMats = ref([])
+let parsedLoaded = false
+async function loadParsedMaterials() {
+  if (parsedLoaded) return
+  const r = await pageAitMaterial({ current: 1, size: 50 })
+  parsedMats.value = (r.records || []).filter(m => m.parseStatus === '成功')
+  parsedLoaded = true
+}
+
+// 一键演示:同一资产登记两条对立主张(历史·所有权 vs 当前·持有权,排他全字段)→检测→冲突表+图谱即刻有内容
+const demoRunning = ref(false)
+async function runDemo() {
+  demoRunning.value = true
+  try {
+    const asset = claim.assetId || 'AST-001'
+    await aitAddClaim({ assetId: asset, subject: '深圳供电局', rightType: '所有权', authScope: '全字段',
+      exclusive: true, sourceType: '历史确权', validDate: '2027-06-11 00:00:00' })
+    const found = await aitDetectConflict({ assetId: asset, subject: '广东电网有限责任公司', rightType: '数据持有权',
+      authScope: '全字段', exclusive: true, sourceType: '当前申请', validDate: '2028-06-11 00:00:00' })
+    assetId.value = asset; qAsset.value = asset; graphAsset.value = asset
+    await refresh(asset)
+    await loadGraph()
+    ElMessage.success(`演示完成:检出 ${found.length} 项冲突,右侧报告与下方图谱已加载(资产 ${asset})`)
+  } finally { demoRunning.value = false }
+}
+
 async function onAdd() {
   if (!claim.assetId || !claim.subject) { ElMessage.warning('资产ID与权利主体必填'); return }
   await aitAddClaim({ ...claim }); ElMessage.success('已登记权属主张')
@@ -281,6 +343,7 @@ function onResolve(row) {
 .print-only { display: none; }
 .print-head h2 { text-align: center; margin: 0 0 6px; font-size: 18px; }
 .print-head div { text-align: center; color: #666; font-size: 12px; margin-bottom: 10px; }
+.cd-tip { font-size: 12px; color: #8c8c8c; line-height: 1.6; }
 </style>
 
 <!-- #17 PDF 打印优化:只输出报告区(报告抬头+汇总+冲突表),隐藏表单/图谱/操作/对话框 -->
