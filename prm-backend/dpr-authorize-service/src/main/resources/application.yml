@@ -27,3 +27,15 @@ prm:
 logging:
   level:
     com.csg.prm: debug
+
+# 健康端点细节(排查/演示):展示各组件健康状态
+management:
+  endpoint:
+    health:
+      show-details: always
+  health:
+    # 本地/演示无 Nacos 服务器,禁用其健康指示器避免整体 DOWN;接入真实 Nacos 的环境用环境变量覆盖开启
+    nacos-config:
+      enabled: false
+    nacos-discovery:
+      enabled: false

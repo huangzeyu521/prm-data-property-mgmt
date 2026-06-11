@@ -14,6 +14,11 @@
     <description>公共能力:统一响应、异常、分页、用户上下文(ABAC)、基础实体</description>
 
     <dependencies>
+        <!-- 健康检查端点(/actuator/health):无此依赖时 404 被兜底处理器包装成 HTTP 200,健康门假通过 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>

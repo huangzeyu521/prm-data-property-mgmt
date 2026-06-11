@@ -4,12 +4,15 @@ import com.csg.prm.common.api.R;
 import com.csg.prm.common.api.ResultCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.stream.Collectors;
 
@@ -40,6 +43,14 @@ public class GlobalExceptionHandler {
     public R<Void> handleNotReadable(HttpMessageNotReadableException e) {
         log.warn("请求体解析失败: {}", e.getMessage());
         return R.fail(ResultCode.PARAM_ERROR.getCode(), "请求体格式错误,请检查参数");
+    }
+
+    /** 路径不存在属客户端 404:返回真实 404 状态码并降为 WARN,避免误报"系统异常"与 ERROR 堆栈噪音 */
+    @ExceptionHandler(NoResourceFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public R<Void> handleNotFound(NoResourceFoundException e) {
+        log.warn("请求路径不存在: {}", e.getResourcePath());
+        return R.fail(ResultCode.NOT_FOUND.getCode(), "请求路径不存在");
     }
 
     @ExceptionHandler(Exception.class)
