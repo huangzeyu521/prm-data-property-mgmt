@@ -1,8 +1,10 @@
 package com.csg.prm.confirm;
 
+import com.csg.prm.confirm.entity.ConfirmApply;
 import com.csg.prm.confirm.entity.ConfirmGuidance;
 import com.csg.prm.confirm.entity.ConfirmMaterial;
 import com.csg.prm.confirm.entity.EquityCertTemplate;
+import com.csg.prm.confirm.service.ConfirmApplyService;
 import com.csg.prm.confirm.service.ConfirmGuidanceService;
 import com.csg.prm.confirm.service.ConfirmMaterialService;
 import com.csg.prm.confirm.service.EquityCertService;
@@ -23,10 +25,26 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @ActiveProfiles("test")
 class ConfirmExtrasTest {
 
+    @Autowired private ConfirmApplyService applyService;
     @Autowired private ConfirmGuidanceService guidanceService;
     @Autowired private ConfirmMaterialService materialService;
     @Autowired private EquityCertService certService;
     @Autowired private EquityCertTemplateService templateService;
+
+    @Test
+    void apply_supports_multi_right_type_and_one_case_one_meeting_mode() {
+        ConfirmApply a = new ConfirmApply();
+        a.setAssetId("DA-EXT-MODE");
+        a.setAssetName("多类型一事一议");
+        a.setRightType("数据资源持有权、数据加工使用权");
+        a.setRightHolder("中国南方电网有限责任公司");
+        a.setApplyMode("一事一议");
+        String id = applyService.saveDraft(a);
+
+        ConfirmApply saved = applyService.getById(id);
+        assertEquals("一事一议", saved.getApplyMode(), "申请模式应持久化");
+        assertTrue(saved.getRightType().contains("、"), "多权属类型应合并保存");
+    }
 
     @Test
     void guidance_save_and_page() {

@@ -7,7 +7,13 @@
         <el-icon :size="18"><component :is="collapse ? 'Expand' : 'Fold'" /></el-icon>
       </el-button>
       <span class="prm-logo">数据资产管理平台</span>
-      <span class="prm-module">数据产权管理</span>
+      <!-- 平台一级导航模拟(评审2):数据产权管理为平台内一级子菜单,非独立工具;其余为平台既有功能集成位 -->
+      <nav class="prm-plat-nav">
+        <el-tooltip v-for="m in PLAT_MENUS" :key="m" content="平台既有功能(集成位,待与数据资产管理平台对接)" placement="bottom">
+          <span class="plat-item disabled">{{ m }}</span>
+        </el-tooltip>
+        <span class="plat-item active">数据产权管理</span>
+      </nav>
       <div class="prm-spacer"></div>
       <el-select
         v-model="jump"
@@ -97,6 +103,7 @@
             <el-breadcrumb-item v-if="groupName">{{ groupName }}</el-breadcrumb-item>
             <el-breadcrumb-item>{{ pageTitle }}</el-breadcrumb-item>
           </el-breadcrumb>
+          <span v-if="pageGoal" class="prm-goal">本页目标:{{ pageGoal }}</span>
         </div>
         <div class="prm-content">
           <router-view :key="$route.fullPath" />
@@ -157,6 +164,12 @@ const groupName = computed(() => {
 // 当前页面名(面包屑第三级)
 const pageTitle = computed(() => route.meta.title || '')
 
+// 本页目标(评审1:讲清用户在每个页面要达成什么)
+const pageGoal = computed(() => route.meta.goal || '')
+
+// 平台既有功能集成位(评审2:体现"平台内一级子菜单"而非独立工具)
+const PLAT_MENUS = ['数据资产目录', '数据资产卡片', '数据服务']
+
 // 手风琴:根据当前路由自动展开所属一级分组(unique-opened 负责切换时互斥折叠)
 const openeds = computed(() => {
   const p = route.path
@@ -182,7 +195,11 @@ const openeds = computed(() => {
 .prm-collapse-btn { color: #c9cdd4; padding: 4px; }
 .prm-collapse-btn:hover { color: #fff; }
 .prm-logo { font-size: 18px; font-weight: 600; }
-.prm-module { font-size: 14px; color: #c9cdd4; }
+.prm-plat-nav { display: flex; align-items: center; gap: 4px; margin-left: 12px; }
+.plat-item { font-size: 13px; padding: 4px 10px; border-radius: 4px; white-space: nowrap; }
+.plat-item.disabled { color: #6b7280; cursor: not-allowed; }
+.plat-item.active { color: #fff; background: rgba(47, 107, 255, 0.55); font-weight: 600; }
+.prm-goal { margin-left: auto; font-size: 12px; color: #909399; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 52%; }
 .prm-spacer { flex: 1; }
 .prm-search { width: 260px; }
 .prm-ait-btn { color: #ffd666; font-size: 13px; }

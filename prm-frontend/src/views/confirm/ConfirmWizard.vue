@@ -25,12 +25,16 @@
             </el-tag>
           </el-form-item>
           <el-form-item label="资产名称" prop="assetName"><el-input v-model="form.assetName" /></el-form-item>
-          <el-form-item label="权属类型" prop="rightType">
-            <el-select v-model="form.rightType" style="width:100%">
+          <el-form-item label="权属类型" prop="rightTypes">
+            <el-select v-model="form.rightTypes" multiple style="width:100%" placeholder="可多选,多种权属类型合并一份申请">
               <el-option v-for="t in rightTypes" :key="t" :label="t" :value="t" />
             </el-select>
+            <div class="form-tip">支持多选:多种权属类型合并发起同一份申请(评审优化)</div>
           </el-form-item>
-          <el-form-item label="权属人(公司主体)"><el-input v-model="form.rightHolder" /></el-form-item>
+          <el-form-item label="申报权属主体">
+            <el-input v-model="form.rightHolder" placeholder="当前申报主体,最终权属以确权审核结果为准" />
+            <div class="form-tip">分省上报的数据产权,确权通过后统一归口中国南方电网有限责任公司</div>
+          </el-form-item>
           <el-form-item label="责任部门"><el-input v-model="form.respDept" /></el-form-item>
           <el-form-item label="系统负责人"><el-input v-model="form.systemOwner" placeholder="附录F 表1" /></el-form-item>
           <el-form-item label="联系方式"><el-input v-model="form.contactInfo" placeholder="电话 / 邮箱" /></el-form-item>
@@ -39,6 +43,13 @@
               <el-radio value="初始确权">初始确权</el-radio>
               <el-radio value="确权变更">确权变更</el-radio>
             </el-radio-group>
+          </el-form-item>
+          <el-form-item label="申请模式">
+            <el-radio-group v-model="form.applyMode">
+              <el-radio value="常规">常规</el-radio>
+              <el-radio value="一事一议">一事一议(特殊事项单独审议)</el-radio>
+            </el-radio-group>
+            <div class="form-tip">权属复杂/跨主体/全网统一转让等特殊场景选择"一事一议",由合规管控小组单独组织审议</div>
           </el-form-item>
           <el-form-item label="来源权益识别">
             <el-checkbox-group v-model="form.sourceIdent">
@@ -91,11 +102,21 @@
         </el-table>
       </el-card>
 
-      <!-- 步骤3:材料校验 -->
+      <!-- 步骤3:材料校验(规则校验 + AI 智能校验,评审8.4) -->
       <el-card v-show="step === 2" shadow="never">
-        <div class="prm-table-note" style="margin-bottom:10px">基于预设规则(应交清单)自动校验完整性与合规性,识别缺失/不合规项;全部通过方可推送审核。</div>
+        <div class="prm-table-note" style="margin-bottom:10px">基于预设规则(应交清单)自动校验完整性与合规性 + AI 智能校验(智能确权辅助工具);全部通过方可推送审核。</div>
         <el-button type="primary" :loading="checking" @click="runCheck" style="margin-bottom:12px">规则校验全部材料</el-button>
+        <el-button type="warning" plain :loading="aiChecking" @click="runAiCheck" style="margin-bottom:12px;margin-left:8px">
+          <el-icon><MagicStick /></el-icon> AI 智能校验
+        </el-button>
         <el-button :disabled="!checkReport" @click="onExportCheck" style="margin-bottom:12px;margin-left:8px">导出校验结果</el-button>
+        <el-alert v-if="aiResult" :type="aiResult.prediction === '建议通过' ? 'success' : 'warning'" :closable="false" style="margin-bottom:12px">
+          <div><b>AI 校验结论:{{ aiResult.prediction }}</b>(综合评分 {{ aiResult.score }};AI 预测:{{ aiResult.aiPrediction || '未生成' }})</div>
+          <div style="margin-top:4px">需补材料:{{ aiResult.supplementMaterials }}</div>
+          <div style="margin-top:4px">待处理冲突:{{ aiResult.pendingConflicts }}</div>
+          <div style="margin-top:4px;color:#909399">由智能确权辅助工具基于本申请已解析材料/权属冲突/法规检索生成;点击下方按钮可进入工具补充材料</div>
+          <el-button size="small" type="warning" plain style="margin-top:6px" @click="invokeAitool">进入智能确权辅助工具</el-button>
+        </el-alert>
         <el-alert v-if="checkReport" :type="checkReport.allPass ? 'success' : 'warning'" :closable="false" style="margin-bottom:12px">
           <div>{{ checkReport.summary }}</div>
           <div v-if="checkReport.missing && checkReport.missing.length" style="margin-top:4px">缺失项:{{ checkReport.missing.join('、') }}</div>
@@ -119,6 +140,15 @@
             </template>
           </el-table-column>
         </el-table>
+
+        <!-- 审批重要节点显式化(评审8.5) -->
+        <el-divider content-position="left" style="font-size:12px;color:#909399">提交后审批链(重要节点)</el-divider>
+        <el-steps :active="0" align-center class="approve-chain">
+          <el-step title="合规管控小组审核" description="生成表3/表4及认定意见" />
+          <el-step title="数据管理部门主管复核" description="权属边界与责任复核" />
+          <el-step title="经理/高级经理终审" :description="(form.applyMode === '一事一议' ? '一事一议:单独组织审议' : '逐级审批')" />
+          <el-step title="制卡归集" description="生成权益卡片并归集" />
+        </el-steps>
       </el-card>
 
       <!-- 步骤4:完成 -->
@@ -146,6 +176,7 @@ import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { autofillConfirm, saveConfirmDraft, uploadMaterial, uploadMaterialFile, materialFileUrl, listMaterialByApply, checkMaterial, runMaterialCheck, pushMaterialReview, materialExportUrl, submitConfirm } from '@/api/confirm'
+import { aitAnalyze } from '@/api/aitool'
 
 const router = useRouter()
 const rightTypes = ['数据资源持有权', '数据加工使用权', '数据产品经营权']
@@ -178,20 +209,34 @@ const applyNo = ref('')
 function invokeAitool() {
   window.open('/aitool/material?applyId=' + encodeURIComponent(applyId.value || ''), '_blank')
 }
+
+// AI 智能校验(评审8.4):调用智能确权辅助工具决策分析,取回 预测/需补材料/冲突 结论
+const aiChecking = ref(false)
+const aiResult = ref(null)
+async function runAiCheck() {
+  if (!applyId.value) { ElMessage.warning('请先完成步骤1暂存申请'); return }
+  aiChecking.value = true
+  try {
+    aiResult.value = await aitAnalyze(applyId.value)
+    ElMessage.success('AI 智能校验完成')
+  } catch (e) {
+    ElMessage.warning('AI 校验失败:' + (e?.response?.data?.message || '请先通过"进入智能确权辅助工具"上传并解析本申请材料'))
+  } finally { aiChecking.value = false }
+}
 const checklist = ref([])
 const checkReport = ref(null)
 const materials = ref([])
 
 const form = reactive({
-  assetId: '', assetName: '', rightType: '', rightHolder: '', respDept: '',
-  systemOwner: '', contactInfo: '', registerType: '初始确权',
+  assetId: '', assetName: '', rightTypes: [], rightHolder: '', respDept: '',
+  systemOwner: '', contactInfo: '', registerType: '初始确权', applyMode: '常规',
   purpose: '', thirdPartyInfo: '', sourceSubject: '', sourceLimit: '', relationSubject: '', equityRisk: '',
   sourceIdent: [], relationIdent: []
 })
 const rules = {
   assetId: [{ required: true, message: '请输入关联资产ID', trigger: 'blur' }],
   assetName: [{ required: true, message: '请输入资产名称', trigger: 'blur' }],
-  rightType: [{ required: true, message: '请选择权属类型', trigger: 'change' }]
+  rightTypes: [{ required: true, type: 'array', min: 1, message: '请至少选择一种权属类型', trigger: 'change' }]
 }
 const needTable2 = computed(() =>
   form.sourceIdent.some(c => ['B', 'C', 'D', 'E', 'F'].includes(c)) ||
@@ -204,7 +249,7 @@ async function onAutofill(silent = false) {
   try {
     const r = await autofillConfirm(form.assetId)
     form.assetName = r.assetName; form.rightHolder = r.rightHolder
-    form.respDept = r.respDept; if (!form.rightType) form.rightType = r.rightType
+    form.respDept = r.respDept; if (!form.rightTypes.length && r.rightType) form.rightTypes = [r.rightType]
     quality.value = r.qualityScore
     lastAutofillId = form.assetId
     ElMessage.success(silent ? `已实时同步元数据(${form.assetId})` : '已按元数据自动填充')
@@ -224,6 +269,8 @@ async function next0() {
     try {
       const payload = {
         ...form,
+        // 多权属类型合并一份申请(评审8.1):拼接保存,兼容单类型
+        rightType: form.rightTypes.join('、'),
         sourceIdentification: form.sourceIdent.join(','),
         relationIdentification: form.relationIdent.join(','),
         involvesThirdParty: needTable2.value,
@@ -304,7 +351,7 @@ function goProgress() { router.push('/dpr/confirm/history') }
 function reset() {
   step.value = 0; applyId.value = ''; applyNo.value = ''; quality.value = null
   checklist.value = []; materials.value = []
-  Object.assign(form, { assetId: '', assetName: '', rightType: '', rightHolder: '', respDept: '', systemOwner: '', contactInfo: '', registerType: '初始确权', purpose: '', thirdPartyInfo: '', sourceSubject: '', sourceLimit: '', relationSubject: '', equityRisk: '', sourceIdent: [], relationIdent: [] })
+  Object.assign(form, { assetId: '', assetName: '', rightTypes: [], rightHolder: '', respDept: '', systemOwner: '', contactInfo: '', registerType: '初始确权', applyMode: '常规', purpose: '', thirdPartyInfo: '', sourceSubject: '', sourceLimit: '', relationSubject: '', equityRisk: '', sourceIdent: [], relationIdent: [] })
 }
 </script>
 
@@ -312,4 +359,6 @@ function reset() {
 .wz-steps { max-width: 900px; margin: 8px auto 20px; }
 .wz-body { min-height: 320px; }
 .wz-foot { margin-top: 18px; display: flex; gap: 12px; justify-content: center; }
+.form-tip { font-size: 12px; color: #909399; line-height: 1.6; }
+.approve-chain { max-width: 880px; margin: 8px auto 0; }
 </style>

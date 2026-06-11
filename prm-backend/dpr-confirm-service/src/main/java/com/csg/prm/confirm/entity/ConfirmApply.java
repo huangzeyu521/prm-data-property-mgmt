@@ -111,6 +111,10 @@ public class ConfirmApply extends BaseEntity {
     @TableField("CEC_REGISTER_TYPE")
     private String registerType;
 
+    /** 申请模式:常规 / 一事一议(特殊事项单独审议) */
+    @TableField("CEC_APPLY_MODE")
+    private String applyMode;
+
     /** 表2:来源主体名称(涉第三方权益) */
     @TableField("CEC_SOURCE_SUBJECT")
     private String sourceSubject;
@@ -149,6 +153,14 @@ public class ConfirmApply extends BaseEntity {
 
     public void setRegisterType(String registerType) {
         this.registerType = registerType;
+    }
+
+    public String getApplyMode() {
+        return applyMode;
+    }
+
+    public void setApplyMode(String applyMode) {
+        this.applyMode = applyMode;
     }
 
     public String getSourceSubject() {
