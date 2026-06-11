@@ -131,6 +131,7 @@
 
 <script setup>
 import { onMounted, reactive, ref, computed, nextTick } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { UploadFilled } from '@element-plus/icons-vue'
 import { pageAitMaterial, uploadAitMaterialFile, uploadAitMaterialBatch, parseAitMaterial, getAitParse, aitTermCheck, confirmAitTerm, aitCompares, aitProgress, aitParseExportUrl } from '@/api/aitool'
@@ -254,7 +255,15 @@ async function onLocate(row) {
   await nextTick()
   markRef.value?.scrollIntoView?.({ block: 'center', behavior: 'smooth' })
 }
-onMounted(load)
+// 被业务流程调用时(?applyId=)预填申请上下文并直接打开上传对话框
+const route = useRoute()
+onMounted(() => {
+  load()
+  if (route.query.applyId) {
+    uploadApplyId.value = String(route.query.applyId)
+    dlg.value = true
+  }
+})
 </script>
 
 <style scoped>

@@ -160,7 +160,8 @@
 </template>
 
 <script setup>
-import { reactive, ref, nextTick } from 'vue'
+import { reactive, ref, nextTick, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import * as echarts from 'echarts'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { aitAddClaim, aitDetectConflict, aitConflicts, aitResolveConflict, aitConflictReport, aitConflictReportExportUrl, buildAitClaimFromMaterial, aitKgGraph, aitClaims, updateAitClaim, deleteAitClaim, syncAitHistoryClaims, aitConflictAdvice } from '@/api/aitool'
@@ -249,6 +250,16 @@ async function onDetect() {
   await refresh(claim.assetId)
 }
 async function loadByAsset() { if (qAsset.value) { assetId.value = qAsset.value; await refresh(qAsset.value) } }
+
+// 被业务流程调用时(?assetId=)预填资产并自动加载冲突报告
+const route = useRoute()
+onMounted(() => {
+  if (route.query.assetId) {
+    qAsset.value = String(route.query.assetId)
+    claim.assetId = qAsset.value
+    loadByAsset()
+  }
+})
 function params(a) { return { assetId: a, conflictType: filters.conflictType, riskLevel: filters.riskLevel, startTime: filters.startTime, endTime: filters.endTime, subject: filters.subject } }
 async function refresh(a) { conflicts.value = await aitConflicts(params(a)); report.value = await aitConflictReport(params(a)) }
 function onExportWord() {

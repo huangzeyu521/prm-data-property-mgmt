@@ -64,10 +64,19 @@ const routes = [
   { path: '/dpr/dashboard/overview', name: 'DataPropertyOverview', component: () => import('@/views/dashboard/DataPropertyOverview.vue'), meta: { title: '数据产权全景(综合)' } },
   { path: '/dpr/dashboard/confirm', name: 'ConfirmDashboard', component: () => import('@/views/dashboard/ConfirmDashboard.vue'), meta: { title: '确权看板' } },
   { path: '/dpr/dashboard/auth', name: 'AuthDashboard', component: () => import('@/views/dashboard/AuthDashboard.vue'), meta: { title: '授权看板' } },
-  // 智能确权辅助工具
-  { path: '/dpr/aitool/material', name: 'AitMaterial', component: () => import('@/views/aitool/MaterialParse.vue'), meta: { title: '材料智能解析' } },
-  { path: '/dpr/aitool/conflict', name: 'AitConflict', component: () => import('@/views/aitool/ConflictDetect.vue'), meta: { title: '权属冲突识别' } },
-  { path: '/dpr/aitool/decision', name: 'AitDecision', component: () => import('@/views/aitool/DecisionSupport.vue'), meta: { title: '确权决策支持' } }
+  // 智能确权辅助工具:独立工具(独立外壳,不挂主导航),业务流程可带 applyId/assetId 调用
+  {
+    path: '/aitool',
+    component: () => import('@/views/aitool/AitoolShell.vue'),
+    redirect: '/aitool/material',
+    children: [
+      { path: 'material', name: 'AitMaterial', component: () => import('@/views/aitool/MaterialParse.vue'), meta: { title: '材料智能解析' } },
+      { path: 'conflict', name: 'AitConflict', component: () => import('@/views/aitool/ConflictDetect.vue'), meta: { title: '权属冲突识别' } },
+      { path: 'decision', name: 'AitDecision', component: () => import('@/views/aitool/DecisionSupport.vue'), meta: { title: '确权决策支持' } }
+    ]
+  },
+  // 旧路径兼容重定向(保留历史链接/收藏)
+  { path: '/dpr/aitool/:page(material|conflict|decision)', redirect: (to) => ({ path: '/aitool/' + to.params.page, query: to.query }) }
 ]
 
 export default createRouter({

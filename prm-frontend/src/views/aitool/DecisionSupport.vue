@@ -75,7 +75,8 @@
 </template>
 
 <script setup>
-import { ref, nextTick, computed } from 'vue'
+import { ref, nextTick, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import * as echarts from 'echarts'
 import { ElMessage } from 'element-plus'
 import { aitAnalyze } from '@/api/aitool'
@@ -84,6 +85,15 @@ const applyId = ref('')
 const d = ref(null); const factors = ref([]); const gauge = ref()
 const citations = computed(() => (d.value?.ragCitations || '').split(';').filter(Boolean))
 const splitPlans = computed(() => { try { return JSON.parse(d.value?.splitPlansJson || '[]') } catch { return [] } })
+
+// 被业务流程调用时(?applyId=)预填申请并自动研判
+const route = useRoute()
+onMounted(() => {
+  if (route.query.applyId) {
+    applyId.value = String(route.query.applyId)
+    onAnalyze()
+  }
+})
 
 function predTag(p) { return { 建议通过: 'success', 建议补充材料: 'warning', 建议驳回: 'danger' }[p] || 'info' }
 

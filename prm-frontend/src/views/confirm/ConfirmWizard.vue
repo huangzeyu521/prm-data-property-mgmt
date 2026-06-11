@@ -65,7 +65,12 @@
 
       <!-- 步骤2:上传材料(按 A–J 动态清单) -->
       <el-card v-show="step === 1" shadow="never">
-        <div class="prm-table-note" style="margin-bottom:10px">按所选来源/关联(A–J)应交材料清单。"上传原件"真实上传文件(仅 PDF/Word/JPG/PNG,自动格式验证);或"仅登记"占位。</div>
+        <div class="prm-table-note" style="margin-bottom:10px">
+          按所选来源/关联(A–J)应交材料清单。"上传原件"真实上传文件(仅 PDF/Word/JPG/PNG,自动格式验证);或"仅登记"占位。
+          <el-button size="small" type="warning" plain style="margin-left:12px" @click="invokeAitool">
+            <el-icon><MagicStick /></el-icon> 调用智能确权辅助工具(解析/比对本申请材料)
+          </el-button>
+        </div>
         <el-table :data="checklist" border>
           <el-table-column type="index" label="序号" width="60" align="center" />
           <el-table-column prop="code" label="标识" width="70" align="center" />
@@ -168,6 +173,11 @@ const submitting = ref(false)
 const quality = ref(null)
 const applyId = ref('')
 const applyNo = ref('')
+
+// 调用独立智能确权辅助工具,带本申请上下文(新标签打开)
+function invokeAitool() {
+  window.open('/aitool/material?applyId=' + encodeURIComponent(applyId.value || ''), '_blank')
+}
 const checklist = ref([])
 const checkReport = ref(null)
 const materials = ref([])

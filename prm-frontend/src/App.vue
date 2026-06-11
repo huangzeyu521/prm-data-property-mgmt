@@ -1,5 +1,7 @@
 <template>
-  <el-container style="height: 100%">
+  <!-- 智能确权辅助工具:独立外壳,不渲染主平台布局 -->
+  <router-view v-if="isAitool" />
+  <el-container v-else style="height: 100%">
     <el-header class="prm-header">
       <el-button text class="prm-collapse-btn" @click="collapse = !collapse">
         <el-icon :size="18"><component :is="collapse ? 'Expand' : 'Fold'" /></el-icon>
@@ -18,6 +20,11 @@
         <template #prefix><el-icon><Search /></el-icon></template>
         <el-option v-for="p in pages" :key="p.value" :label="p.label" :value="p.value" />
       </el-select>
+      <el-tooltip content="独立智能工具,新标签打开(业务流程亦可带上下文调用)" placement="bottom">
+        <el-button text class="prm-ait-btn" @click="openAitool">
+          <el-icon :size="16"><MagicStick /></el-icon><span>智能确权辅助工具</span>
+        </el-button>
+      </el-tooltip>
       <work-guide />
       <notification-center />
     </el-header>
@@ -81,12 +88,6 @@
             <el-menu-item index="/dpr/dashboard/confirm">确权看板</el-menu-item>
             <el-menu-item index="/dpr/dashboard/auth">授权看板</el-menu-item>
           </el-sub-menu>
-          <el-sub-menu index="06">
-            <template #title><el-icon><MagicStick /></el-icon><span>智能确权辅助工具</span></template>
-            <el-menu-item index="/dpr/aitool/material">材料智能解析</el-menu-item>
-            <el-menu-item index="/dpr/aitool/conflict">权属冲突识别</el-menu-item>
-            <el-menu-item index="/dpr/aitool/decision">确权决策支持</el-menu-item>
-          </el-sub-menu>
         </el-menu>
       </el-aside>
       <el-main class="prm-main">
@@ -116,6 +117,14 @@ const router = useRouter()
 const collapse = ref(false)
 const jump = ref('')
 
+// 智能确权辅助工具走独立外壳(AitoolShell),不渲染主平台布局
+const isAitool = computed(() => route.path.startsWith('/aitool'))
+
+// 顶栏调用入口:新标签打开独立工具
+function openAitool() {
+  window.open('/aitool/material', '_blank')
+}
+
 // 全部可跳转页面(供顶部搜索),取自路由表 meta.title
 const pages = router.getRoutes()
   .filter((r) => r.meta && r.meta.title)
@@ -135,8 +144,7 @@ const GROUP_NAMES = {
   '/dpr/monitor': '权益动态监测',
   '/dpr/confirm': '数据确权管理',
   '/dpr/auth': '数据授权管理',
-  '/dpr/dashboard': '综合分析管理',
-  '/dpr/aitool': '智能确权辅助工具'
+  '/dpr/dashboard': '综合分析管理'
 }
 
 // 当前一级分组名(面包屑第二级)
@@ -159,7 +167,6 @@ const openeds = computed(() => {
   if (AUTH_CONFIG.includes(p)) return ['07']
   if (p.startsWith('/dpr/auth')) return ['04']
   if (p.startsWith('/dpr/dashboard')) return ['05']
-  if (p.startsWith('/dpr/aitool')) return ['06']
   return ['01']
 })
 </script>
@@ -178,6 +185,8 @@ const openeds = computed(() => {
 .prm-module { font-size: 14px; color: #c9cdd4; }
 .prm-spacer { flex: 1; }
 .prm-search { width: 260px; }
+.prm-ait-btn { color: #ffd666; font-size: 13px; }
+.prm-ait-btn:hover { color: #ffe599; }
 .prm-aside { background: #fff; border-right: 1px solid var(--prm-color-border); transition: width 0.25s; overflow-x: hidden; }
 /* 折叠态菜单不显示分组右侧多余边框 */
 .prm-aside :deep(.el-menu) { border-right: none; }
