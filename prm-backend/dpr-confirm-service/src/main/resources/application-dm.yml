@@ -23,7 +23,7 @@ prm:
   ai:
     provider: ${PRM_AI_PROVIDER:stub}
     base-url: ${PRM_AI_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
-    model: ${QWEN_MODEL_NAME:qwen3-max}
+    model: ${QWEN_MODEL_NAME:qwen3.7-max-2026-06-08}
     api-key: ${DASHSCOPE_API_KEY:}
 seata:
   enabled: ${SEATA_ENABLED:false}

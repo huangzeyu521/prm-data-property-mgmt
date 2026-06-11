@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 文档解析网关 —— 真实调用大瓦特(以阿里云百炼 qwen3-max 模拟,OpenAI 兼容)做确权要素抽取。
+ * 文档解析网关 —— 真实调用大瓦特(以阿里云百炼 qwen3.7-max-2026-06-08 模拟,OpenAI 兼容)做确权要素抽取。
  * 仅当 prm.ai.provider=qwen 时启用并 @Primary 覆盖本地桩;调用失败/超时自动回退 {@link LocalAiToolParseGateway}。
  * 密钥仅从环境变量(prm.ai.api-key -> ${DASHSCOPE_API_KEY})读取,绝不硬编码。
  */
@@ -35,7 +35,7 @@ public class QwenAiToolParseGateway implements AiToolParseGateway {
     public QwenAiToolParseGateway(
             LocalAiToolParseGateway fallback,
             @Value("${prm.ai.base-url:https://dashscope.aliyuncs.com/compatible-mode/v1}") String baseUrl,
-            @Value("${prm.ai.model:qwen3-max}") String model,
+            @Value("${prm.ai.model:qwen3.7-max-2026-06-08}") String model,
             @Value("${prm.ai.api-key:}") String apiKey) {
         this.fallback = fallback;
         this.model = model;

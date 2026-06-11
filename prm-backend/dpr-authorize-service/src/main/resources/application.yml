@@ -18,6 +18,12 @@ mybatis-plus:
     map-underscore-to-camel-case: true
 
 prm:
+  # 大瓦特 AI 接入:provider=stub 本地规则桩(默认,离线);provider=qwen 接阿里云百炼 qwen3.7-max
+  ai:
+    provider: ${PRM_AI_PROVIDER:stub}
+    base-url: ${PRM_AI_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
+    model: ${QWEN_MODEL_NAME:qwen3.7-max-2026-06-08}
+    api-key: ${DASHSCOPE_API_KEY:}
   db-type: MYSQL
   # P0-① 台账回写:默认关闭(本地桩,离线/测试);PRM_LEDGER_WB=true 启用 HTTP 回写台账服务
   ledger:

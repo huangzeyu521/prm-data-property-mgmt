@@ -31,11 +31,11 @@ prm:
   ledger:
     writeback-enabled: ${PRM_LEDGER_WB:false}
     writeback-url: ${PRM_LEDGER_URL:http://host.docker.internal:9101}
-  # 大瓦特 AI 接入(⑨):provider=stub 用本地规则桩(默认,离线);provider=qwen 接阿里云百炼 qwen3-max
+  # 大瓦特 AI 接入(⑨):provider=stub 用本地规则桩(默认,离线);provider=qwen 接阿里云百炼 qwen3.7-max-2026-06-08
   ai:
     provider: ${PRM_AI_PROVIDER:stub}
     base-url: ${PRM_AI_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
-    model: ${QWEN_MODEL_NAME:qwen3-max}
+    model: ${QWEN_MODEL_NAME:qwen3.7-max-2026-06-08}
     api-key: ${DASHSCOPE_API_KEY:}
   # P2 流程编排引擎:state-machine=声明式状态机(默认,离线);camunda=Camunda7 BPMN(需 -Pcamunda 构建)
   workflow:

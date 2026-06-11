@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 大瓦特 AI 网关 —— 基于阿里云百炼 qwen3-max(OpenAI 兼容接口)的真实实现,模拟大瓦特 AI 平台。
+ * 大瓦特 AI 网关 —— 基于阿里云百炼 qwen3.7-max-2026-06-08(OpenAI 兼容接口)的真实实现,模拟大瓦特 AI 平台。
  * 仅当 prm.ai.provider=qwen 时启用并 @Primary 覆盖本地桩;调用失败/超时自动回退 {@link LocalDawatAiGateway}。
  * 密钥仅从环境变量(prm.ai.api-key -> ${DASHSCOPE_API_KEY})读取,绝不硬编码。
  */
@@ -32,7 +32,7 @@ public class QwenDawatAiGateway implements DawatAiGateway {
 
     public QwenDawatAiGateway(LocalDawatAiGateway fallback,
                               @Value("${prm.ai.base-url:https://dashscope.aliyuncs.com/compatible-mode/v1}") String baseUrl,
-                              @Value("${prm.ai.model:qwen3-max}") String model,
+                              @Value("${prm.ai.model:qwen3.7-max-2026-06-08}") String model,
                               @Value("${prm.ai.api-key:}") String apiKey) {
         this.fallback = fallback;
         this.model = model;

@@ -20,6 +20,12 @@ mybatis-plus:
 
 # 分页方言:dev/test=MYSQL(H2),prod=DM(达梦)。见各 profile 覆盖。
 prm:
+  # 大瓦特 AI 接入:provider=stub 本地规则桩(默认,离线);provider=qwen 接阿里云百炼 qwen3.7-max
+  ai:
+    provider: ${PRM_AI_PROVIDER:stub}
+    base-url: ${PRM_AI_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
+    model: ${QWEN_MODEL_NAME:qwen3.7-max-2026-06-08}
+    api-key: ${DASHSCOPE_API_KEY:}
   db-type: MYSQL
   # P0-② 跨域聚合(资产360 / 统一待办):默认关闭(本地空桩,离线/单测仅台账本地数据);
   # PRM_AGG=true 时经 HTTP 跨服务读取确权/授权,实现一屏贯通。
