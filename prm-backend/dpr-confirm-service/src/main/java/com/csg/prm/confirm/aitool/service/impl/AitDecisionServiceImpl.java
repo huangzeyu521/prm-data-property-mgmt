@@ -109,10 +109,22 @@ public class AitDecisionServiceImpl implements AitDecisionService {
             prediction = AitDecision.PRED_SUPPLEMENT;
         }
 
+        // 每因子附"得分依据"说明(#19),前端进度条悬浮展示
+        String matReason = materials.isEmpty() ? "未上传任何权属证明材料"
+                : "共" + materials.size() + "份材料,已解析" + matStat.parsed() + "份"
+                + (matStat.sealMissing() ? ";印章缺失/可疑,得分封顶70" : ";印章均有效");
+        String confReason = conflicts.isEmpty() ? "无未处置权属冲突"
+                : "未处置冲突" + conflicts.size() + "项:高风险" + high + "项(每项-40)/中风险" + med + "项(每项-20)";
+        String compReason = "权利类型「" + apply.getRightType() + "」"
+                + (STD_RIGHT.contains(apply.getRightType()) ? "属三权分置标准权利" : "非三权分置标准权利,需人工复核");
+        String histReason = histMatch ? "同资产存在同类权利的历史确权记录,匹配度高"
+                : "无同资产同类权利历史确权记录,按基准分计";
         String factorsJson = String.format(
-                "[{\"name\":\"材料完整性\",\"weight\":0.30,\"score\":%s},{\"name\":\"权属无冲突\",\"weight\":0.40,\"score\":%s},"
-              + "{\"name\":\"合规性\",\"weight\":0.15,\"score\":%s},{\"name\":\"历史案例匹配度\",\"weight\":0.15,\"score\":%s}]",
-                matScore, confScore, compScore, histScore);
+                "[{\"name\":\"材料完整性\",\"weight\":0.30,\"score\":%s,\"reason\":\"%s\"},"
+              + "{\"name\":\"权属无冲突\",\"weight\":0.40,\"score\":%s,\"reason\":\"%s\"},"
+              + "{\"name\":\"合规性\",\"weight\":0.15,\"score\":%s,\"reason\":\"%s\"},"
+              + "{\"name\":\"历史案例匹配度\",\"weight\":0.15,\"score\":%s,\"reason\":\"%s\"}]",
+                matScore, matReason, confScore, confReason, compScore, compReason, histScore, histReason);
         String strength = factorTag(matScore >= 85, "材料完整性") + factorTag(confScore >= 85, "权属无冲突")
                 + factorTag(compScore >= 85, "合规性") + factorTag(histScore >= 85, "历史匹配度");
         String weak = factorTag(matScore < 70, "材料完整性") + factorTag(confScore < 70, "权属无冲突")

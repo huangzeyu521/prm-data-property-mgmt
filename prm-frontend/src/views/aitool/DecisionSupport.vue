@@ -30,7 +30,11 @@
             <el-table-column prop="name" label="因子" width="150" />
             <el-table-column label="权重" width="90" align="center"><template #default="{ row }">{{ (row.weight*100).toFixed(0) }}%</template></el-table-column>
             <el-table-column label="得分" min-width="200">
-              <template #default="{ row }"><el-progress :percentage="row.score" :color="row.score>=85?'#18a058':(row.score<70?'#d03050':'#f0a020')" /></template>
+              <template #default="{ row }">
+                <el-tooltip :content="row.reason || '—'" :disabled="!row.reason" placement="top">
+                  <el-progress :percentage="row.score" :color="row.score>=85?'#18a058':(row.score<70?'#d03050':'#f0a020')" />
+                </el-tooltip>
+              </template>
             </el-table-column>
           </el-table>
           <div class="kv">优势因子:<el-tag type="success" effect="plain">{{ d.strengthFactors }}</el-tag></div>

@@ -60,6 +60,9 @@ class AitDecisionTest {
         assertTrue(d.getScore() >= 80);
         assertNotNull(d.getEvidenceChain());
         assertTrue(d.getFactorsJson().contains("材料完整性"));
+        assertTrue(d.getFactorsJson().contains("\"reason\""), "因子应带得分依据说明");
+        assertTrue(d.getFactorsJson().contains("已解析1份"), "材料完整性依据应含解析数量");
+        assertTrue(d.getFactorsJson().contains("无未处置权属冲突"), "无冲突时应说明依据");
         assertTrue(d.getRagAdvice() != null && !d.getRagAdvice().isEmpty());
     }
 
