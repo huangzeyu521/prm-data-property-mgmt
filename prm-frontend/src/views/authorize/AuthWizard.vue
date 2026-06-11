@@ -52,7 +52,7 @@
             <el-alert :closable="false" type="info" style="width:100%">{{ selectedReason }}</el-alert>
           </el-form-item>
           <el-form-item label="授权范围"><el-input v-model="form.scope" /></el-form-item>
-          <el-form-item label="有效期(权益时效)"><el-date-picker v-model="form.validDate" type="date" value-format="YYYY-MM-DDTHH:mm:ss" style="width:100%" /></el-form-item>
+          <el-form-item label="有效期(权益时效)"><el-date-picker v-model="form.validDate" type="date" value-format="YYYY-MM-DD HH:mm:ss" style="width:100%" /></el-form-item>
           <el-form-item label="所属业务域"><el-input v-model="form.businessDomain" placeholder="营销/生产/调度/财务..." /></el-form-item>
           <el-form-item label="申请单位主管"><el-input v-model="form.applicantManager" /></el-form-item>
           <el-form-item label="联系方式"><el-input v-model="form.contactInfo" placeholder="电话 / 邮箱" /></el-form-item>

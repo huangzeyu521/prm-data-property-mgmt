@@ -48,7 +48,7 @@
         <el-form-item label="当前状态"><el-tag :type="statusType(current.certStatus)">{{ current.certStatus }}</el-tag></el-form-item>
         <el-form-item label="新有效期" required>
           <el-date-picker v-model="newValidDate" type="datetime" placeholder="选择续签到期时间"
-            value-format="YYYY-MM-DDTHH:mm:ss" style="width:100%" />
+            value-format="YYYY-MM-DD HH:mm:ss" style="width:100%" />
         </el-form-item>
       </el-form>
       <template #footer>
