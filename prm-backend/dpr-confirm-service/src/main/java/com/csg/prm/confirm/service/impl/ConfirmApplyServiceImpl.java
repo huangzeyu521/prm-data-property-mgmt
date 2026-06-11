@@ -377,7 +377,10 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
         }
     }
 
+    /** 申请编号对齐南网补录工单规范:MDAU-00-日期-5位序号(如 MDAU-00-20250725-00026) */
     private String generateApplyNo() {
-        return "QQ-" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase();
+        String date = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE);
+        int seq = (int) (Math.abs(java.util.UUID.randomUUID().getLeastSignificantBits()) % 100000);
+        return String.format("MDAU-00-%s-%05d", date, seq);
     }
 }

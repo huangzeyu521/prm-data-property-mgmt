@@ -115,6 +115,10 @@ public class ConfirmApply extends BaseEntity {
     @TableField("CEC_APPLY_MODE")
     private String applyMode;
 
+    /** 管制属性:管制业务 / 非管制(权益归集判定关键输入,管制单位默认没有限经营权) */
+    @TableField("CEC_REGULATED")
+    private String regulated;
+
     /** 表2:来源主体名称(涉第三方权益) */
     @TableField("CEC_SOURCE_SUBJECT")
     private String sourceSubject;
@@ -161,6 +165,14 @@ public class ConfirmApply extends BaseEntity {
 
     public void setApplyMode(String applyMode) {
         this.applyMode = applyMode;
+    }
+
+    public String getRegulated() {
+        return regulated;
+    }
+
+    public void setRegulated(String regulated) {
+        this.regulated = regulated;
     }
 
     public String getSourceSubject() {

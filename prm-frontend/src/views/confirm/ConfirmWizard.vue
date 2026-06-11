@@ -42,7 +42,15 @@
             <el-radio-group v-model="form.registerType">
               <el-radio value="初始确权">初始确权</el-radio>
               <el-radio value="确权变更">确权变更</el-radio>
+              <el-radio value="产权补录">产权补录(存量系统 MDAU 工单)</el-radio>
             </el-radio-group>
+          </el-form-item>
+          <el-form-item label="管制属性">
+            <el-radio-group v-model="form.regulated">
+              <el-radio value="管制业务">管制业务</el-radio>
+              <el-radio value="非管制">非管制</el-radio>
+            </el-radio-group>
+            <div class="form-tip">权益归集判定关键输入:管制单位默认没有限经营权;自行生产且不涉第三方时,管制单位经营权调整为有并归集网公司</div>
           </el-form-item>
           <el-form-item label="申请模式">
             <el-radio-group v-model="form.applyMode">
@@ -69,6 +77,23 @@
             <el-form-item label="权益风险说明"><el-input v-model="form.equityRisk" type="textarea" :rows="2" placeholder="表2:权益风险说明" /></el-form-item>
           </template>
           <el-form-item label="用途说明"><el-input v-model="form.purpose" type="textarea" /></el-form-item>
+
+          <el-divider content-position="left" style="font-size:12px;color:#909399">表级数据清单(M02 元数据-系统数据表,确权粒度到库表)</el-divider>
+          <el-form-item label="批量粘贴">
+            <el-input v-model="tableItemText" type="textarea" :rows="4"
+              placeholder="每行一张表:实例TNS,schema,表代码,表名称[,密级][,来源判定][,来源主体]&#10;XC_ORA_ZH01,NCLAIMUSER,PRPLNEGOTIATIONS,谈判表,敏感信息,A 自行生产数据,鼎和保险" />
+            <div class="form-tip">密级:不涉密/核心商密/普通商密/工作秘密/敏感信息;来源判定:A自行生产/B公开采集/C公共授权/D公共生产/E交易采购/F其他;G-J 识别默认取上方"信息关联识别"勾选</div>
+            <el-button size="small" type="primary" plain style="margin-top:6px" @click="parseTableItems">解析为表级清单</el-button>
+            <span v-if="tableItems.length" class="form-tip" style="margin-left:8px">已解析 {{ tableItems.length }} 张表,暂存申请时一并保存</span>
+          </el-form-item>
+          <el-table v-if="tableItems.length" :data="tableItems" border size="small" style="margin-bottom:8px">
+            <el-table-column prop="instanceName" label="实例TNS" width="130" />
+            <el-table-column prop="schemaName" label="schema" width="120" />
+            <el-table-column prop="tableCode" label="表代码" min-width="160" />
+            <el-table-column prop="tableName" label="表名称" min-width="140" />
+            <el-table-column prop="secretLevel" label="密级" width="90" />
+            <el-table-column prop="sourceType" label="来源判定" width="130" />
+          </el-table>
         </el-form>
         <el-alert v-if="applyId" type="success" :closable="false" show-icon
           :title="`申请已暂存(${applyNo || applyId})，进入材料上传`" style="max-width:640px;margin-top:8px" />
@@ -141,6 +166,17 @@
           </el-table-column>
         </el-table>
 
+        <!-- 权益归集判定(分子公司共享网公司,《权益内部管理汇总表》说明页规则) -->
+        <el-divider content-position="left" style="font-size:12px;color:#909399">权益归集判定(分子公司共享网公司)</el-divider>
+        <el-descriptions v-if="consolidation" :column="4" border size="small" class="consol-panel">
+          <el-descriptions-item label="命中规则">规则 {{ consolidation.rule }}</el-descriptions-item>
+          <el-descriptions-item label="网公司持有权"><el-tag :type="consolidation.holdRight === '有' ? 'success' : 'info'" size="small">{{ consolidation.holdRight }}</el-tag></el-descriptions-item>
+          <el-descriptions-item label="网公司使用权"><el-tag :type="consolidation.useRight === '有' ? 'success' : 'info'" size="small">{{ consolidation.useRight }}</el-tag></el-descriptions-item>
+          <el-descriptions-item label="网公司经营权"><el-tag :type="consolidation.operateRight === '有' ? 'success' : (consolidation.operateRight === '无' ? 'info' : 'warning')" size="small">{{ consolidation.operateRight }}</el-tag></el-descriptions-item>
+          <el-descriptions-item label="共享判定原因" :span="4">{{ consolidation.reason }}</el-descriptions-item>
+        </el-descriptions>
+        <el-alert v-else type="info" :closable="false" title="暂存申请后自动按管制属性/来源判定/第三方识别给出网公司权益归集判定" style="margin-bottom:8px" />
+
         <!-- 审批重要节点显式化(评审8.5) -->
         <el-divider content-position="left" style="font-size:12px;color:#909399">提交后审批链(重要节点)</el-divider>
         <el-steps :active="0" align-center class="approve-chain">
@@ -175,7 +211,7 @@
 import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { autofillConfirm, saveConfirmDraft, uploadMaterial, uploadMaterialFile, materialFileUrl, listMaterialByApply, checkMaterial, runMaterialCheck, pushMaterialReview, materialExportUrl, submitConfirm } from '@/api/confirm'
+import { autofillConfirm, saveConfirmDraft, uploadMaterial, uploadMaterialFile, materialFileUrl, listMaterialByApply, checkMaterial, runMaterialCheck, pushMaterialReview, materialExportUrl, submitConfirm, saveTableItems, getConsolidation } from '@/api/confirm'
 import { aitAnalyze } from '@/api/aitool'
 
 const router = useRouter()
@@ -227,9 +263,31 @@ const checklist = ref([])
 const checkReport = ref(null)
 const materials = ref([])
 
+// 表级清单(M02)批量粘贴解析
+const tableItemText = ref('')
+const tableItems = ref([])
+function parseTableItems() {
+  tableItems.value = tableItemText.value.split('\n').map(l => l.trim()).filter(Boolean).map(line => {
+    const [instanceName, schemaName, tableCode, tableName, secretLevel, sourceType, sourceSubject] =
+      line.split(/[,，]/).map(s => (s || '').trim())
+    return { instanceName, schemaName, tableCode, tableName, tableComment: tableName,
+      secretLevel: secretLevel || '不涉密', sourceType: sourceType || 'A 自行生产数据', sourceSubject: sourceSubject || '',
+      gFlag: form.relationIdent.includes('G') ? '是' : '否', hFlag: form.relationIdent.includes('H') ? '是' : '否',
+      iFlag: form.relationIdent.includes('I') ? '是' : '否', jFlag: form.relationIdent.includes('J') ? '是' : '否' }
+  }).filter(it => it.tableCode || it.tableName)
+  if (!tableItems.value.length) ElMessage.warning('未解析到有效表级记录,请检查格式')
+}
+
+// 权益归集判定结果(分子公司共享网公司)
+const consolidation = ref(null)
+async function loadConsolidation() {
+  if (!applyId.value) return
+  try { consolidation.value = await getConsolidation(applyId.value) } catch (e) { consolidation.value = null }
+}
+
 const form = reactive({
   assetId: '', assetName: '', rightTypes: [], rightHolder: '', respDept: '',
-  systemOwner: '', contactInfo: '', registerType: '初始确权', applyMode: '常规',
+  systemOwner: '', contactInfo: '', registerType: '初始确权', applyMode: '常规', regulated: '非管制',
   purpose: '', thirdPartyInfo: '', sourceSubject: '', sourceLimit: '', relationSubject: '', equityRisk: '',
   sourceIdent: [], relationIdent: []
 })
@@ -278,6 +336,11 @@ async function next0() {
         thirdPartyInfo: needTable2.value ? `来源主体:${form.sourceSubject}; 限制:${form.sourceLimit}; 关联主体:${form.relationSubject}; 风险:${form.equityRisk}` : ''
       }
       applyId.value = await saveConfirmDraft(payload)
+      if (tableItems.value.length) {
+        await saveTableItems(applyId.value, tableItems.value)
+        ElMessage.success(`已保存 ${tableItems.value.length} 张表级清单(M02)`)
+      }
+      loadConsolidation()
       buildChecklist()
     } finally { saving.value = false }
   }

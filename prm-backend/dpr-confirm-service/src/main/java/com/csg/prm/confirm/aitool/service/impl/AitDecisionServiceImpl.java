@@ -275,6 +275,7 @@ public class AitDecisionServiceImpl implements AitDecisionService {
         if (hasConflict) {
             snippets.add("南网制度(附录F 3.2):先确后授,权属冲突须经合规管控小组裁定后方可确权");
         }
+        snippets.add("确权授权工作指引:在不违反法律法规合同约定前提下,网公司合法取得分公司及全资子公司所有数据相应权益(权益归集);管制单位默认没有限经营权,自行生产且不涉第三方时经营权调整为有并归集网公司");
         return snippets;
     }
 

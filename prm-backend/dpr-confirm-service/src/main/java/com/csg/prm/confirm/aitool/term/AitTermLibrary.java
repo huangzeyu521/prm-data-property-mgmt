@@ -16,6 +16,7 @@ public final class AitTermLibrary {
     public static final String F_AUTH_SCOPE = "授权范围";
     public static final String F_DATA_SOURCE = "数据来源";
     public static final String F_SENSITIVE = "敏感类型";
+    public static final String F_SECRET_LEVEL = "密级";
 
     /** 字段 → 标准术语集(有序,便于展示)。 */
     private static final Map<String, Set<String>> STANDARD = new LinkedHashMap<>();
@@ -47,6 +48,14 @@ public final class AitTermLibrary {
                 "隐私", "个人信息", "个人隐私", "个人信息", "高敏感", "敏感个人信息",
                 "商密", "商业秘密", "商业机密", "商业秘密", "机密", "商业秘密",
                 "监管", "监管数据", "运营数据", "内部运营数据", "生产数据", "电网生产数据"));
+
+        // 密级标准值域(《数据确权信息汇总表》官方口径)
+        STANDARD.put(F_SECRET_LEVEL, new LinkedHashSet<>(Set.of(
+                "不涉密", "核心商密", "普通商密", "工作秘密", "敏感信息")));
+        ALIAS.put(F_SECRET_LEVEL, ofPairs(
+                "无密级", "不涉密", "非密", "不涉密", "公开", "不涉密",
+                "核心商业秘密", "核心商密", "普通商业秘密", "普通商密",
+                "工作密", "工作秘密", "内部", "工作秘密", "敏感", "敏感信息", "涉敏", "敏感信息"));
     }
 
     private AitTermLibrary() {

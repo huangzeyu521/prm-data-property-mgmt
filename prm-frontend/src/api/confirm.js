@@ -77,3 +77,10 @@ export const enableCertTemplate = (id) => request.post(`/dpr/confirm/cert-templa
 export const disableCertTemplate = (id) => request.post(`/dpr/confirm/cert-template/${id}/disable`)
 export const uploadCertTemplateFile = (id, formData) => request.post(`/dpr/confirm/cert-template/${id}/upload-file`, formData)
 export const certTemplateFileUrl = (id) => `/api/dpr/confirm/cert-template/${id}/file`
+
+// 表级确权清单(M02) + 权益归集判定 + 官方汇总表导出(对齐南网评审资料)
+export const saveTableItems = (applyId, items) => request.post(`/dpr/confirm/apply/${applyId}/table-items`, items)
+export const listTableItems = (applyId) => request.get(`/dpr/confirm/apply/${applyId}/table-items`)
+export const getConsolidation = (applyId) => request.get(`/dpr/confirm/apply/${applyId}/consolidation`)
+export const confirmSummaryExportUrl = () => '/api/dpr/confirm/summary/confirm-export'
+export const equityConsolidationExportUrl = () => '/api/dpr/confirm/summary/equity-export'

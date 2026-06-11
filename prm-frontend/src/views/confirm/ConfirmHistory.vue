@@ -17,6 +17,8 @@
           <el-button type="primary" @click="onSearch">查询</el-button>
           <el-button @click="onReset">重置</el-button>
           <el-button @click="onExport">导出</el-button>
+          <el-button type="success" plain @click="onExportSummary">导出《数据确权信息汇总表》</el-button>
+          <el-button type="success" plain @click="onExportEquity">导出《权益内部管理汇总表》</el-button>
         </el-form-item>
       </el-form>
     </div>
@@ -73,7 +75,11 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { pageConfirmApply, deleteConfirmApply, getConfirmFlowLog, confirmHistoryExportUrl, batchSubmitConfirm } from '@/api/confirm'
+import { pageConfirmApply, deleteConfirmApply, getConfirmFlowLog, confirmHistoryExportUrl, batchSubmitConfirm, confirmSummaryExportUrl, equityConsolidationExportUrl } from '@/api/confirm'
+
+// 官方汇总表导出(对齐南网《数据确权信息汇总表》/《权益内部管理汇总表》模板)
+function onExportSummary() { window.open(confirmSummaryExportUrl(), '_blank') }
+function onExportEquity() { window.open(equityConsolidationExportUrl(), '_blank') }
 const draftSel = ref([])
 function onSel(sel) { draftSel.value = sel.filter(r => r.status === '草稿') }
 async function onBatchSubmit() {
