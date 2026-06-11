@@ -24,7 +24,7 @@
           </el-form-item>
           <el-divider style="margin:4px 0" />
           <el-form-item label="关联资产ID" prop="assetId">
-            <el-input v-model="form.assetId" placeholder="输入资产ID后失焦，自动引用资产信息" @blur="onAssetBlur">
+            <el-input v-model="form.assetId" placeholder="输入资产ID后失焦自动引用资产信息,如 AST-001" @blur="onAssetBlur">
               <template #append><el-button :loading="assetLoading" @click="onAssetBlur">引用资产信息</el-button></template>
             </el-input>
           </el-form-item>
@@ -32,7 +32,7 @@
           <el-alert v-if="assetRef" type="success" :closable="false" style="margin:0 0 12px 0">
             已引用外部资产信息 — 系统:{{ assetRef.systemName || '-' }} / 模式:{{ assetRef.schemaName || '-' }} / 安全等级:{{ assetRef.securityLevel || '-' }} / 责任部门:{{ assetRef.respDept || '-' }}
           </el-alert>
-          <el-form-item label="权益卡片ID" prop="equityCardId"><el-input v-model="form.equityCardId" placeholder="先确后授:引用已确权权益卡片" /></el-form-item>
+          <el-form-item label="权益卡片ID" prop="equityCardId"><el-input v-model="form.equityCardId" placeholder="先确后授:引用已确权权益卡片,如 EC-PRA-0001" /></el-form-item>
           <el-form-item label="申请主体(被授权方)" prop="granteeOrg"><el-input v-model="form.granteeOrg" /></el-form-item>
           <el-form-item label="授权权益类型" prop="rightType">
             <el-select v-model="form.rightType" style="width:100%">

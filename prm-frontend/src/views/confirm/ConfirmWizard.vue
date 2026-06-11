@@ -14,12 +14,28 @@
     <div class="wz-body">
       <!-- 步骤1:填写申请 -->
       <el-card v-show="step === 0" shadow="never">
+        <el-alert v-if="!applyId" type="info" :closable="false" style="margin-bottom:12px;max-width:640px">
+          <template #title>
+            第一次填写?可
+            <el-button link type="primary" style="vertical-align:baseline" @click="fillDemo">一键填充示例(AST-001,测试/演示用)</el-button>
+            体验完整流程,材料包见 test/确权申请 目录
+          </template>
+        </el-alert>
         <el-form ref="formRef" :model="form" :rules="rules" label-width="110px" :disabled="!!applyId" style="max-width:640px">
           <el-form-item label="关联资产ID" prop="assetId">
             <div style="display:flex;gap:8px;width:100%">
-              <el-input v-model="form.assetId" @blur="onAutoFillSilent" placeholder="填资产ID后自动同步元数据" />
+              <el-select v-model="form.assetId" filterable remote allow-create default-first-option clearable
+                :remote-method="searchAssets" :loading="assetSearching" style="flex:1"
+                placeholder="输入资产名称/ID 搜索台账,或直接输入,如 AST-001" @change="onAssetPicked">
+                <el-option v-for="a in assetOpts" :key="a.assetId" :value="a.assetId"
+                  :label="a.assetId + '　' + a.assetName">
+                  <span>{{ a.assetId }}</span>
+                  <span style="float:right;color:#8c8c8c;font-size:12px">{{ a.assetName }}</span>
+                </el-option>
+              </el-select>
               <el-button type="primary" plain :loading="autoLoading" @click="onAutofill">元数据自动填充</el-button>
             </div>
+            <div class="form-tip">不清楚资产ID?输入名称关键词(如"用电")即可搜索产权台账;也可在"产权台账概览"页查询</div>
             <el-tag v-if="quality !== null" :type="quality < 80 ? 'danger' : 'success'" effect="plain" style="margin-top:6px">
               元数据质量评分 {{ quality }}{{ quality < 80 ? ' · 低于80,提交将被自动驳回(请先治理元数据)' : '' }}
             </el-tag>
@@ -331,6 +347,47 @@ const rules = {
 const needTable2 = computed(() =>
   form.sourceIdent.some(c => ['B', 'C', 'D', 'E', 'F'].includes(c)) ||
   form.relationIdent.some(c => ['G', 'H', 'I', 'J'].includes(c)))
+
+// 资产远程搜索(产权台账):降低"不知道填什么ID"的首填门槛
+import { pageArchive } from '@/api/propertyArchive'
+const assetOpts = ref([])
+const assetSearching = ref(false)
+async function searchAssets(kw) {
+  if (!kw) { assetOpts.value = []; return }
+  assetSearching.value = true
+  try {
+    const r = await pageArchive({ current: 1, size: 10, assetName: kw })
+    assetOpts.value = r.records || []
+  } finally { assetSearching.value = false }
+}
+function onAssetPicked(id) {
+  const hit = assetOpts.value.find(a => a.assetId === id)
+  if (hit) form.assetName = hit.assetName
+  if (id) onAutofill(true)
+}
+
+// 一键填充示例(测试/演示):对齐 test/确权申请 手册 AST-001 全套数据
+function fillDemo() {
+  Object.assign(form, {
+    assetId: 'AST-001', assetName: '客户用电信息表',
+    rightTypes: ['数据资源持有权', '数据加工使用权'],
+    rightHolder: '广东电网有限责任公司', respDept: '数字化部',
+    systemOwner: '张工', contactInfo: '020-88886666',
+    registerType: '初始确权', applyMode: '常规', regulated: '管制业务',
+    sourceIdent: ['A'], relationIdent: ['G', 'H'],
+    sourceSubject: '用电客户', sourceLimit: '涉个人信息字段对外提供须脱敏并经客户授权',
+    relationSubject: '国家能源局南方监管局;用电客户', equityRisk: '未经授权对外提供个人信息存在合规风险',
+    purpose: '营销域购售电数据确权(示例)'
+  })
+  tableItemText.value = 'MKT_DB01,MKT,C_CONS_ELEC_INFO,客户用电信息表,敏感信息,A 自行生产数据,广东电网有限责任公司'
+  parseTableItems()
+  // autofill 取质量评分,但桩会回写申报主体为网公司,完成后恢复示例主体(分省申报口径)
+  onAutofill(true).then(() => {
+    form.rightHolder = '广东电网有限责任公司'
+    form.respDept = '数字化部'
+  })
+  ElMessage.success('已填充 AST-001 示例,可直接"下一步";材料文件在 test/确权申请 目录')
+}
 
 let lastAutofillId = ''
 async function onAutofill(silent = false) {

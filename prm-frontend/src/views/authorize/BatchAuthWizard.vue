@@ -42,9 +42,9 @@
         <el-row :gutter="16">
           <el-col :span="11">
             <el-form ref="itemRef" :model="item" :rules="itemRules" label-width="110px">
-              <el-form-item label="关联资产ID" prop="assetId"><el-input v-model="item.assetId" /></el-form-item>
+              <el-form-item label="关联资产ID" prop="assetId"><el-input v-model="item.assetId" placeholder="如 AST-002" /></el-form-item>
               <el-form-item label="资产名称" prop="assetName"><el-input v-model="item.assetName" /></el-form-item>
-              <el-form-item label="权益卡片ID" prop="equityCardId"><el-input v-model="item.equityCardId" placeholder="先确后授" /></el-form-item>
+              <el-form-item label="权益卡片ID" prop="equityCardId"><el-input v-model="item.equityCardId" placeholder="先确后授,如 EC-BAT-0002" /></el-form-item>
               <el-form-item label="被授权方" prop="granteeOrg"><el-input v-model="item.granteeOrg" /></el-form-item>
               <el-form-item label="权益类型" prop="rightType">
                 <el-select v-model="item.rightType" style="width:100%">
