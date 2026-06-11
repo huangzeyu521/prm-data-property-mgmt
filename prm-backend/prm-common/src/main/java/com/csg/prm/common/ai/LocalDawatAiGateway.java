@@ -206,7 +206,14 @@ public class LocalDawatAiGateway implements DawatAiGateway {
                 .compile("[\u4e00-\u9fa5A-Za-z0-9]{2,12}数据").matcher(t);
         while (m.find()) {
             String name = m.group();
-            if (!name.startsWith("批量") && !name.startsWith("授权")) {
+            // 贪婪匹配会把主体/动词前缀卷进来(如"公司授权台区负荷数据"),按边界词修剪到真实资产名
+            for (String boundary : new String[]{"公司", "授权", "开放", "使用", "提供", "向", "予"}) {
+                int idx = name.lastIndexOf(boundary);
+                if (idx >= 0 && idx + boundary.length() < name.length() - 2) {
+                    name = name.substring(idx + boundary.length());
+                }
+            }
+            if (!name.startsWith("批量") && name.length() > 2) {
                 assets.add(name);
             }
         }

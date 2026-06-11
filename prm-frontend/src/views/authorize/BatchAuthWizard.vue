@@ -15,6 +15,13 @@
       <!-- 步骤1:建清单 -->
       <el-card v-show="step === 0" shadow="never">
         <el-form :model="listForm" label-width="100px" style="max-width:520px">
+          <el-alert v-if="!batchListId" type="info" :closable="false" style="margin-bottom:12px;max-width:680px">
+            <template #title>
+              第一次用?可
+              <el-button link type="primary" style="vertical-align:baseline" :loading="demoFilling" @click="fillDemo">一键示例:建清单并自动加入3条明细(测试/演示)</el-button>
+              生效卡片自动匹配,材料见 test/批量授权申请
+            </template>
+          </el-alert>
           <el-form-item label="授权年度" required><el-input v-model="listForm.listYear" placeholder="如 2026" /></el-form-item>
           <el-form-item label="清单备注"><el-input v-model="listForm.remark" type="textarea" :rows="2" placeholder="如:综能板块年度批量授权" /></el-form-item>
         </el-form>
@@ -42,7 +49,15 @@
         <el-row :gutter="16">
           <el-col :span="11">
             <el-form ref="itemRef" :model="item" :rules="itemRules" label-width="110px">
-              <el-form-item label="关联资产ID" prop="assetId"><el-input v-model="item.assetId" placeholder="如 AST-002" /></el-form-item>
+              <el-form-item label="关联资产ID" prop="assetId">
+                <el-select v-model="item.assetId" filterable remote allow-create default-first-option clearable
+                  :remote-method="searchAssets" :loading="assetSearching" style="width:100%"
+                  placeholder="输名称/ID 搜台账,如 台区 / AST-002" @change="onItemAssetPicked">
+                  <el-option v-for="a in assetOpts" :key="a.assetId" :value="a.assetId" :label="a.assetId + '　' + a.assetName">
+                    <span>{{ a.assetId }}</span><span style="float:right;color:#8c8c8c;font-size:12px">{{ a.assetName }}</span>
+                  </el-option>
+                </el-select>
+              </el-form-item>
               <el-form-item label="资产名称" prop="assetName"><el-input v-model="item.assetName" /></el-form-item>
               <el-form-item label="权益卡片ID" prop="equityCardId"><el-input v-model="item.equityCardId" placeholder="先确后授,如 EC-BAT-0002" /></el-form-item>
               <el-form-item label="被授权方" prop="granteeOrg"><el-input v-model="item.granteeOrg" /></el-form-item>
@@ -130,6 +145,8 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { createBatchList, saveAuthDraft, submitBatchList, aiBatchIntent, aiBatchPreReview } from '@/api/authorize'
+import { pageArchive } from '@/api/propertyArchive'
+import { pageEquityCard } from '@/api/confirm'
 import { getPropertyTree } from '@/api/ledger'
 
 const router = useRouter()
@@ -176,12 +193,21 @@ async function confirmPick() {
   if (!leaves.length) { ElMessage.warning('请至少勾选一个数据集'); return }
   picking.value = true
   try {
+    await loadCards()
+    let ok = 0
+    const skipped = []
     for (const lf of leaves) {
-      const it = { ...emptyItem(), assetId: lf.assetId, assetName: lf.label, granteeOrg: item.granteeOrg, rightType: item.rightType, scenario: item.scenario }
+      // 先确后授:自动匹配生效权益卡片,无卡项跳过并提示(后端会拦截空卡)
+      const card = findUsableCard(lf.assetId)
+      if (!card) { skipped.push(lf.label || lf.assetId); continue }
+      const it = { ...emptyItem(), assetId: lf.assetId, assetName: lf.label, equityCardId: card,
+        granteeOrg: item.granteeOrg, rightType: item.rightType, scenario: item.scenario }
       await saveAuthDraft({ authMode: '批量', batchListId: batchListId.value, ...it })
       items.value.push(it)
+      ok++
     }
-    ElMessage.success(`已批量加入 ${leaves.length} 项`)
+    ElMessage[skipped.length ? 'warning' : 'success'](
+      `已加入 ${ok} 项(生效卡自动匹配)` + (skipped.length ? `;跳过未确权 ${skipped.length} 项:${skipped.slice(0, 3).join('、')}` : ''))
     pickerDlg.value = false
   } finally { picking.value = false }
 }
@@ -197,8 +223,16 @@ async function runAiBatch() {
     const r = typeof raw === 'string' ? JSON.parse(raw) : raw
     aiShared.value = { granteeOrg: r.granteeOrg || '', rightType: r.rightType || '', scenario: r.scenario || '' }
     Object.assign(item, { granteeOrg: r.granteeOrg || '', rightType: r.rightType || '', scenario: r.scenario || '' })
-    aiItems.value = (r.items || []).map(x => ({ assetName: x.assetName, equityCardId: '' }))
-    ElMessage.success(`AI 解析出 ${aiItems.value.length} 条明细,补全权益卡片ID后可一键加入`)
+    const parsed = []
+    await loadCards()
+    for (const x of (r.items || [])) {
+      const asset = await resolveAssetByName(x.assetName)
+      const card = asset ? findUsableCard(asset.assetId) : ''
+      parsed.push({ assetName: x.assetName, assetId: asset ? asset.assetId : x.assetName, equityCardId: card })
+    }
+    aiItems.value = parsed
+    const matched = parsed.filter(x => x.equityCardId).length
+    ElMessage.success(`AI 解析 ${parsed.length} 条,已自动匹配生效卡片 ${matched} 条` + (matched < parsed.length ? ',其余请补卡片ID' : ',可直接一键加入'))
   } catch (e) { ElMessage.warning('AI 解析失败:' + (e?.message || '')) }
   finally { aiParsing.value = false }
 }
@@ -207,7 +241,7 @@ async function addAiItems() {
   aiAdding.value = true
   try {
     for (const x of aiItems.value) {
-      const it = { ...emptyItem(), assetId: x.assetName, assetName: x.assetName, equityCardId: x.equityCardId,
+      const it = { ...emptyItem(), assetId: x.assetId || x.assetName, assetName: x.assetName, equityCardId: x.equityCardId,
         granteeOrg: aiShared.value.granteeOrg, rightType: aiShared.value.rightType, scenario: aiShared.value.scenario }
       await saveAuthDraft({ authMode: '批量', batchListId: batchListId.value, ...it })
       items.value.push(it)
@@ -224,6 +258,70 @@ async function runListPreReview() {
   try { listOpinion.value = await aiBatchPreReview(batchListId.value) }
   catch (e) { ElMessage.warning('AI 预审失败') }
   finally { listReviewing.value = false }
+}
+
+// 自动配卡引擎:台账搜索 + 按资产匹配生效权益卡片(先确后授),贯穿手填/目录多选/AI 三条录入通道
+const CARD_OK = ['正常', '生效']
+const assetOpts = ref([])
+const assetSearching = ref(false)
+const cardOpts = ref([])
+let cardsLoaded = false
+async function loadCards() {
+  if (cardsLoaded) return
+  const r = await pageEquityCard({ current: 1, size: 200 })
+  cardOpts.value = r.records || []
+  cardsLoaded = true
+}
+function findUsableCard(assetId) {
+  const c = cardOpts.value.find(x => x.assetId === assetId && CARD_OK.includes(x.cardStatus))
+  return c ? (c.cardNo || c.cardId) : ''
+}
+async function searchAssets(kw) {
+  if (!kw) { assetOpts.value = []; return }
+  assetSearching.value = true
+  try {
+    const r = await pageArchive({ current: 1, size: 10, assetName: kw })
+    assetOpts.value = r.records || []
+  } finally { assetSearching.value = false }
+}
+async function onItemAssetPicked(id) {
+  const hit = assetOpts.value.find(a => a.assetId === id)
+  if (hit) item.assetName = hit.assetName
+  if (!id) return
+  await loadCards()
+  const card = findUsableCard(id)
+  if (card) { item.equityCardId = card; ElMessage.success('已自动带出生效权益卡片 ' + card) }
+  else ElMessage.warning('该资产暂无生效权益卡片,请先完成确权(先确后授)')
+}
+async function resolveAssetByName(name) {
+  const r = await pageArchive({ current: 1, size: 3, assetName: name })
+  const recs = r.records || []
+  return recs.find(x => x.assetName === name) || recs[0] || null
+}
+
+// 一键示例:建清单+3条明细全自动(生效卡自动匹配,对齐 test/批量授权申请 手册)
+const demoFilling = ref(false)
+async function fillDemo() {
+  demoFilling.value = true
+  try {
+    listForm.listYear = '2026'
+    listForm.remark = '综能板块年度批量授权(示例)'
+    await next0()
+    await loadCards()
+    Object.assign(item, { granteeOrg: '南网综合能源股份有限公司', rightType: '数据加工使用权', scenario: '综合能源服务' })
+    const demo = [['AST-001', '客户用电信息表'], ['AST-002', '台区负荷数据'], ['AST-006', '充电桩运营数据']]
+    let ok = 0
+    for (const [aid, name] of demo) {
+      const card = findUsableCard(aid)
+      if (!card) continue
+      const it = { ...emptyItem(), assetId: aid, assetName: name, equityCardId: card,
+        granteeOrg: item.granteeOrg, rightType: item.rightType, scenario: item.scenario }
+      await saveAuthDraft({ authMode: '批量', batchListId: batchListId.value, ...it })
+      items.value.push(it)
+      ok++
+    }
+    ElMessage.success(`示例完成:清单已建,自动加入 ${ok} 条明细(生效卡已配),可直接"提交清单审批"`)
+  } finally { demoFilling.value = false }
 }
 
 async function addItem() {
