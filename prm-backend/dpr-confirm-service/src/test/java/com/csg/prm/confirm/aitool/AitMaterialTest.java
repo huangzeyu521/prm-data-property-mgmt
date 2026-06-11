@@ -137,7 +137,7 @@ class AitMaterialTest {
     /** #1 多格式与批量上传:真实二进制上传的 格式/大小 强校验 + 元数据(哈希/大小/存储)。 */
     @Test
     void uploadBinary_validates_format_size_and_records_metadata() {
-        byte[] ok = new byte[120 * 1024]; // 120KB ≥ 100KB 下限
+        byte[] ok = new byte[120 * 1024]; // 120KB(常规扫描件量级)
 
         // 合法 PNG 上传 → 元数据齐全、原件可回读
         String id = aitService.uploadBinary("客户用电信息表-盖章.png", ok, null, null);
@@ -153,9 +153,12 @@ class AitMaterialTest {
         // 非法格式拒绝(仅 pdf/doc/docx/jpg/jpeg/png)
         assertThrows(BizException.class, () -> aitService.uploadBinary("木马.exe", ok, null, null),
                 "非法格式应拒绝");
-        // 过小拒绝(< 100KB)
-        assertThrows(BizException.class, () -> aitService.uploadBinary("small.pdf", new byte[50 * 1024], null, null),
-                "单文件低于 100KB 应拒绝");
+        // 小文件合法(下限仅 1KB,防空文件;质量交解析分类判定)
+        String smallId = aitService.uploadBinary("授权函-简短版.pdf", new byte[50 * 1024], null, null);
+        assertNotNull(smallId, "50KB 合法材料不应被体积下限误拦");
+        // 过小拒绝(< 1KB)
+        assertThrows(BizException.class, () -> aitService.uploadBinary("tiny.pdf", new byte[512], null, null),
+                "低于 1KB 应拒绝(防空文件)");
         // 空内容拒绝
         assertThrows(BizException.class, () -> aitService.uploadBinary("empty.pdf", new byte[0], null, null),
                 "空文件应拒绝");

@@ -46,9 +46,9 @@ public class AitMaterialServiceImpl implements AitMaterialService {
 
     /** 允许的文件格式(#1) */
     private static final Set<String> ALLOWED_EXT = Set.of("pdf", "doc", "docx", "jpg", "jpeg", "png");
-    /** 单文件大小下限 100KB、上限 500MB(#1) */
-    private static final long MIN_BYTES = 100L * 1024;
-    private static final long MAX_BYTES = 500L * 1024 * 1024;
+    /** 单文件大小:下限 1KB 仅防空文件(质量交解析分类判定),上限 50MB 与确权材料一致 */
+    private static final long MIN_BYTES = 1024L;
+    private static final long MAX_BYTES = 50L * 1024 * 1024;
     /** 抽取置信度阈值(#3 对齐可研"准确率≥95%"):低于则标"需人工复核"。 */
     private static final double CONFIDENCE_THRESHOLD = 0.95;
 
@@ -101,10 +101,10 @@ public class AitMaterialServiceImpl implements AitMaterialService {
             throw new BizException("不支持的文件格式:" + ext + ",仅支持 PDF/Word/JPG/PNG");
         }
         if (data.length < MIN_BYTES) {
-            throw new BizException("文件过小(" + (data.length / 1024) + "KB),单文件不低于 100KB");
+            throw new BizException("文件过小(" + data.length + "B),单文件不低于 1KB");
         }
         if (data.length > MAX_BYTES) {
-            throw new BizException("文件过大(" + (data.length / 1024 / 1024) + "MB),单文件不超过 500MB");
+            throw new BizException("文件过大(" + (data.length / 1024 / 1024) + "MB),单文件不超过 50MB");
         }
         // 存储二进制
         String storagePath = storage.save(fileName, data);

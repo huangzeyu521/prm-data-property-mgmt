@@ -7,11 +7,11 @@ spring:
   profiles:
     # 本地/演示默认 dev(H2,可独立运行);部署用环境变量 SPRING_PROFILES_ACTIVE=prod 覆盖(MySQL)。
     active: ${SPRING_PROFILES_ACTIVE:dev}
-  # 真实文件上传(#1):单文件 500MB、批量请求整体 2GB(≤50 个)
+  # 真实文件上传:单文件 50MB(框架留 60MB 余量)、批量整体 3GB(50 个×50MB 自洽)
   servlet:
     multipart:
-      max-file-size: 500MB
-      max-request-size: 2GB
+      max-file-size: 60MB
+      max-request-size: 3GB
 
 mybatis-plus:
   global-config:

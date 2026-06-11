@@ -50,7 +50,7 @@
             <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
             <div class="el-upload__text">拖拽文件到此,或<em>点击选择</em></div>
             <template #tip>
-              <div class="el-upload__tip">支持 PDF / Word(.doc/.docx) / JPG / PNG;单文件 100KB–500MB;单次最多 {{ MAX_BATCH }} 个。</div>
+              <div class="el-upload__tip">支持 PDF / Word(.doc/.docx) / JPG / PNG;单文件 1KB–50MB;单次最多 {{ MAX_BATCH }} 个。</div>
             </template>
           </el-upload>
         </el-form-item>
@@ -137,8 +137,8 @@ import { UploadFilled } from '@element-plus/icons-vue'
 import { pageAitMaterial, uploadAitMaterialFile, uploadAitMaterialBatch, parseAitMaterial, getAitParse, aitTermCheck, confirmAitTerm, aitCompares, aitProgress, aitParseExportUrl } from '@/api/aitool'
 
 const MAX_BATCH = 50
-const MIN_BYTES = 100 * 1024
-const MAX_BYTES = 500 * 1024 * 1024
+const MIN_BYTES = 1024
+const MAX_BYTES = 50 * 1024 * 1024
 const ALLOWED_EXT = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png']
 
 const q = reactive({ current: 1, size: 10 })
@@ -180,8 +180,8 @@ function resetUpload() { fileList.value = []; uploadApplyId.value = ''; uploadRe
 function precheck(raw) {
   const ext = (raw.name.split('.').pop() || '').toLowerCase()
   if (!ALLOWED_EXT.includes(ext)) return `${raw.name}:不支持的格式 .${ext}(仅 PDF/Word/JPG/PNG)`
-  if (raw.size < MIN_BYTES) return `${raw.name}:文件过小(${(raw.size / 1024).toFixed(0)}KB),不低于 100KB`
-  if (raw.size > MAX_BYTES) return `${raw.name}:文件过大(${(raw.size / 1024 / 1024).toFixed(0)}MB),不超过 500MB`
+  if (raw.size < MIN_BYTES) return `${raw.name}:文件过小(${raw.size}B),不低于 1KB`
+  if (raw.size > MAX_BYTES) return `${raw.name}:文件过大(${(raw.size / 1024 / 1024).toFixed(0)}MB),不超过 50MB`
   return null
 }
 
