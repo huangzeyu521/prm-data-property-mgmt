@@ -47,6 +47,65 @@ class ConfirmExtrasTest {
     }
 
     @Test
+    void ai_material_check_reviews_each_material() {
+        ConfirmApply a = new ConfirmApply();
+        a.setAssetId("DA-AICHK-1");
+        a.setAssetName("AI校验测试集");
+        a.setRightType("数据资源持有权");
+        a.setRightHolder("广东电网有限责任公司");
+        String applyId = applyService.saveDraft(a);
+
+        ConfirmMaterial sealed = new ConfirmMaterial();
+        sealed.setApplyId(applyId);
+        sealed.setMaterialName("数据确权证明材料(权属/来源凭证)");
+        sealed.setMaterialType("证明材料");
+        materialService.uploadFile(sealed, "证明-盖好.docx",
+                docxBytes("数据持有权,广东电网有限责任公司,有效期3年,自行生产,已盖章"));
+
+        ConfirmMaterial unsealed = new ConfirmMaterial();
+        unsealed.setApplyId(applyId);
+        unsealed.setMaterialName("《表1 数据确权信息清单(系统级)》");
+        unsealed.setMaterialType("表1");
+        materialService.uploadFile(unsealed, "表1-清单.docx", docxBytes("资产:AI校验测试集,权属类型:数据资源持有权"));
+
+        String json = materialService.aiCheck(applyId);
+        assertTrue(json.contains("\"overall\""), "应输出整体结论");
+        assertTrue(json.contains("数据确权证明材料"), "应逐份点名材料");
+        assertTrue(json.contains("通过"), "含盖章材料应判通过");
+        assertTrue(json.contains("存疑"), "无盖章表述材料应判存疑");
+        assertTrue(json.contains("suggestion"), "应给出补正建议");
+    }
+
+    /** 生成含指定中文正文的最小合法 docx(纯 XML zip,无字体依赖,供正文抽取) */
+    private byte[] docxBytes(String text) {
+        try {
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            try (java.util.zip.ZipOutputStream zip = new java.util.zip.ZipOutputStream(out)) {
+                zip.putNextEntry(new java.util.zip.ZipEntry("[Content_Types].xml"));
+                zip.write(("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+                        + "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">"
+                        + "<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>"
+                        + "<Default Extension=\"xml\" ContentType=\"application/xml\"/>"
+                        + "<Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/>"
+                        + "</Types>").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                zip.putNextEntry(new java.util.zip.ZipEntry("_rels/.rels"));
+                zip.write(("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+                        + "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
+                        + "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\"/>"
+                        + "</Relationships>").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                zip.putNextEntry(new java.util.zip.ZipEntry("word/document.xml"));
+                zip.write(("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+                        + "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">"
+                        + "<w:body><w:p><w:r><w:t>" + text + "</w:t></w:r></w:p></w:body></w:document>")
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            }
+            return out.toByteArray();
+        } catch (Exception e) {
+            throw new IllegalStateException("测试 docx 生成失败", e);
+        }
+    }
+
+    @Test
     void guidance_save_and_page() {
         ConfirmGuidance g = new ConfirmGuidance();
         g.setTitle("数据确权操作指引");

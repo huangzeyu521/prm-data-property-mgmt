@@ -131,10 +131,27 @@
       <el-card v-show="step === 2" shadow="never">
         <div class="prm-table-note" style="margin-bottom:10px">基于预设规则(应交清单)自动校验完整性与合规性 + AI 智能校验(智能确权辅助工具);全部通过方可推送审核。</div>
         <el-button type="primary" :loading="checking" @click="runCheck" style="margin-bottom:12px">规则校验全部材料</el-button>
+        <el-button type="warning" :loading="aiMatChecking" @click="runAiMaterialCheck" style="margin-bottom:12px;margin-left:8px">
+          <el-icon><MagicStick /></el-icon> AI 材料校验(qwen3-max)
+        </el-button>
         <el-button type="warning" plain :loading="aiChecking" @click="runAiCheck" style="margin-bottom:12px;margin-left:8px">
-          <el-icon><MagicStick /></el-icon> AI 智能校验
+          <el-icon><MagicStick /></el-icon> AI 决策研判
         </el-button>
         <el-button :disabled="!checkReport" @click="onExportCheck" style="margin-bottom:12px;margin-left:8px">导出校验结果</el-button>
+        <!-- AI 材料校验:大模型逐份校验 完整性/合规性/与表单一致性 -->
+        <el-alert v-if="aiMatResult" :type="aiMatResult.overall === '通过' ? 'success' : (aiMatResult.overall === '不通过' ? 'error' : 'warning')" :closable="false" style="margin-bottom:12px">
+          <div><b>AI 材料校验:{{ aiMatResult.overall }}</b> — {{ aiMatResult.overallDesc }}</div>
+          <el-table :data="aiMatResult.items" border size="small" style="margin-top:8px">
+            <el-table-column prop="materialName" label="材料" min-width="220" />
+            <el-table-column label="校验结论" width="100" align="center">
+              <template #default="{ row }">
+                <el-tag :type="row.verdict === '通过' ? 'success' : (row.verdict === '不通过' ? 'danger' : 'warning')" size="small">{{ row.verdict }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="issues" label="问题" min-width="200" />
+            <el-table-column prop="suggestion" label="建议" min-width="180" />
+          </el-table>
+        </el-alert>
         <el-alert v-if="aiResult" :type="aiResult.prediction === '建议通过' ? 'success' : 'warning'" :closable="false" style="margin-bottom:12px">
           <div><b>AI 校验结论:{{ aiResult.prediction }}</b>(综合评分 {{ aiResult.score }};AI 预测:{{ aiResult.aiPrediction || '未生成' }})</div>
           <div style="margin-top:4px">需补材料:{{ aiResult.supplementMaterials }}</div>
@@ -211,7 +228,7 @@
 import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { autofillConfirm, saveConfirmDraft, uploadMaterial, uploadMaterialFile, materialFileUrl, listMaterialByApply, checkMaterial, runMaterialCheck, pushMaterialReview, materialExportUrl, submitConfirm, saveTableItems, getConsolidation } from '@/api/confirm'
+import { autofillConfirm, saveConfirmDraft, uploadMaterial, uploadMaterialFile, materialFileUrl, listMaterialByApply, checkMaterial, runMaterialCheck, pushMaterialReview, materialExportUrl, submitConfirm, saveTableItems, getConsolidation, aiMaterialCheck } from '@/api/confirm'
 import { aitAnalyze } from '@/api/aitool'
 
 const router = useRouter()
@@ -246,7 +263,22 @@ function invokeAitool() {
   window.open('/aitool/material?applyId=' + encodeURIComponent(applyId.value || ''), '_blank')
 }
 
-// AI 智能校验(评审8.4):调用智能确权辅助工具决策分析,取回 预测/需补材料/冲突 结论
+// AI 材料校验:qwen3-max 逐份校验 完整性/合规性/与表单一致性(stub 回退)
+const aiMatChecking = ref(false)
+const aiMatResult = ref(null)
+async function runAiMaterialCheck() {
+  if (!applyId.value) { ElMessage.warning('请先完成步骤1暂存申请'); return }
+  aiMatChecking.value = true
+  try {
+    const raw = await aiMaterialCheck(applyId.value)
+    aiMatResult.value = typeof raw === 'string' ? JSON.parse(raw) : raw
+    ElMessage.success('AI 材料校验完成')
+  } catch (e) {
+    ElMessage.warning('AI 材料校验失败:' + (e?.response?.data?.message || e?.message || '请先上传材料'))
+  } finally { aiMatChecking.value = false }
+}
+
+// AI 决策研判(评审8.4):调用智能确权辅助工具决策分析,取回 预测/需补材料/冲突 结论
 const aiChecking = ref(false)
 const aiResult = ref(null)
 async function runAiCheck() {

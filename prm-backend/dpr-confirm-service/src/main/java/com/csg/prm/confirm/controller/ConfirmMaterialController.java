@@ -96,6 +96,12 @@ public class ConfirmMaterialController {
         return R.ok(service.runCheck(applyId));
     }
 
+    /** 材料 AI 校验:qwen3-max 逐份校验完整性/合规性/与表单一致性(stub 回退),返回严格 JSON */
+    @PostMapping("/ai-check")
+    public R<String> aiCheck(@RequestParam String applyId) {
+        return R.ok(service.aiCheck(applyId));
+    }
+
     /** 推送审核(后端门禁):校验全通过才提交审核。 */
     @PostMapping("/push-review")
     public R<Void> pushReview(@RequestParam String applyId) {

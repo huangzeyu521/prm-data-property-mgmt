@@ -23,4 +23,13 @@ public interface AiToolParseGateway {
     default String adviseResolution(String context) {
         return null;
     }
+
+    /**
+     * 确权申请材料 AI 校验:输入 申请要素+逐份材料正文,输出严格 JSON
+     * {"overall":"通过|不通过|存疑","overallDesc":"…","items":[{"materialName","verdict","issues","suggestion"}]}。
+     * 默认返回 null(调用方回退规则结论);Qwen 网关用 qwen3-max 真实校验,Local 网关用确定性规则桩。
+     */
+    default String reviewMaterials(String context) {
+        return null;
+    }
 }

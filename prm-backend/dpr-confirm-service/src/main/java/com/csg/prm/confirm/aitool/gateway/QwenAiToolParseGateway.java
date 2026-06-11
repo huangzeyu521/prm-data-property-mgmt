@@ -106,6 +106,21 @@ public class QwenAiToolParseGateway implements AiToolParseGateway {
         }
     }
 
+    @Override
+    public String reviewMaterials(String context) {
+        try {
+            String sys = "你是中国南方电网数据确权材料合规校验专家,依据《数据确权授权业务指导书》逐份校验申请材料:"
+                    + "①完整性(要素是否齐全、是否盖章);②合规性(密级/敏感信息/第三方权益表述是否合规);"
+                    + "③与申请表单一致性(权属主体/类型/资产是否一致)。"
+                    + "仅输出严格JSON:{\"overall\":\"通过|不通过|存疑\",\"overallDesc\":\"...\","
+                    + "\"items\":[{\"materialName\":\"...\",\"verdict\":\"通过|不通过|存疑\",\"issues\":\"...\",\"suggestion\":\"...\"}]},"
+                    + "不要输出多余文本。";
+            return chat(sys, context);
+        } catch (Exception e) {
+            return null; // 失败回退规则桩结论
+        }
+    }
+
     private String chat(String system, String user) {
         Map<String, Object> body = Map.of(
                 "model", model, "temperature", 0.2,

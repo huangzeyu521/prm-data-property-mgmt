@@ -66,4 +66,37 @@ public class LocalAiToolParseGateway implements AiToolParseGateway {
         }
         return dflt;
     }
+
+    /**
+     * 材料 AI 校验规则桩(确定性,便于离线联调与契约测试;生产由 qwen3-max @Primary 覆盖):
+     * 逐份材料按 正文是否含盖章表述 给 通过/存疑,汇总 overall。
+     * 约定上下文格式:每份材料一段 "【材料】名称=xxx;正文=yyy"。
+     */
+    @Override
+    public String reviewMaterials(String context) {
+        String c = context == null ? "" : context;
+        StringBuilder items = new StringBuilder();
+        boolean anyDoubt = false;
+        for (String seg : c.split("【材料】")) {
+            if (!seg.contains("名称=")) {
+                continue;
+            }
+            String name = seg.substring(seg.indexOf("名称=") + 3);
+            name = name.substring(0, name.indexOf(';') >= 0 ? name.indexOf(';') : name.length()).trim();
+            boolean sealed = seg.contains("盖章") && !seg.contains("未盖章") && !seg.contains("无章");
+            boolean doubt = !sealed;
+            anyDoubt = anyDoubt || doubt;
+            if (items.length() > 0) {
+                items.append(',');
+            }
+            items.append("{\"materialName\":\"").append(name)
+                 .append("\",\"verdict\":\"").append(doubt ? "存疑" : "通过")
+                 .append("\",\"issues\":\"").append(doubt ? "正文未见盖章表述,印章有效性待人工核验" : "无")
+                 .append("\",\"suggestion\":\"").append(doubt ? "补充盖章版扫描件或线下核验后备注" : "无需补正")
+                 .append("\"}");
+        }
+        String overall = anyDoubt ? "存疑" : "通过";
+        return "{\"overall\":\"" + overall + "\",\"overallDesc\":\"(规则桩校验)逐份核验盖章表述与要素完整性,"
+                + (anyDoubt ? "存在待人工核验项" : "全部通过") + "\",\"items\":[" + items + "]}";
+    }
 }

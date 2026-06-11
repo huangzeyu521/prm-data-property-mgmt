@@ -53,10 +53,78 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
 
     private final ConfirmMaterialMapper mapper;
     private final ConfirmApplyService applyService;
+    private final com.csg.prm.confirm.aitool.gateway.AiToolParseGateway aiGateway;
 
-    public ConfirmMaterialServiceImpl(ConfirmMaterialMapper mapper, ConfirmApplyService applyService) {
+    public ConfirmMaterialServiceImpl(ConfirmMaterialMapper mapper, ConfirmApplyService applyService,
+                                      com.csg.prm.confirm.aitool.gateway.AiToolParseGateway aiGateway) {
         this.mapper = mapper;
         this.applyService = applyService;
+        this.aiGateway = aiGateway;
+    }
+
+    /**
+     * 材料 AI 校验:抽取每份材料正文,连同申请要素交大模型(qwen3-max)逐份校验
+     * 完整性/合规性/与表单一致性;模型不可用时回退规则桩。返回严格 JSON 字符串。
+     */
+    @Override
+    public String aiCheck(String applyId) {
+        ConfirmApply apply = applyService.getById(applyId);
+        List<ConfirmMaterial> mats = listByApply(applyId);
+        if (mats.isEmpty()) {
+            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "尚未上传材料,无法 AI 校验");
+        }
+        StringBuilder ctx = new StringBuilder("【申请要素】资产:").append(apply.getAssetName())
+                .append('(').append(apply.getAssetId()).append(");权属类型:").append(apply.getRightType())
+                .append(";申报主体:").append(apply.getRightHolder())
+                .append(";管制属性:").append(apply.getRegulated() == null ? "未填" : apply.getRegulated())
+                .append(";登记类型:").append(apply.getRegisterType()).append('\n');
+        for (ConfirmMaterial m : mats) {
+            // listByApply 出于响应瘦身置空了 fileData,抽正文须按 ID 重取完整记录
+            String text = extractText(mapper.selectById(m.getMaterialId()));
+            ctx.append("【材料】名称=").append(m.getMaterialName())
+                    .append(";类型=").append(m.getMaterialType())
+                    .append(";正文=").append(text.isEmpty() ? "(图片/无法抽取正文,需人工核验)"
+                            : text.substring(0, Math.min(text.length(), 1200)))
+                    .append('\n');
+        }
+        String result = aiGateway.reviewMaterials(ctx.toString());
+        if (!StringUtils.hasText(result)) {
+            throw new BizException(ResultCode.SYSTEM_ERROR.getCode(), "AI 校验暂不可用,请稍后重试或走规则校验");
+        }
+        return result;
+    }
+
+    /** 抽取材料正文(PDF/docx;图片与旧版doc留待OCR返回空),异常优雅降级 */
+    private String extractText(ConfirmMaterial m) {
+        if (!StringUtils.hasText(m.getFileData())) {
+            return "";
+        }
+        try {
+            byte[] data = Base64.getDecoder().decode(m.getFileData());
+            String url = m.getFileName() == null ? "" : m.getFileName().toLowerCase();
+            if (url.endsWith(".pdf")) {
+                try (org.apache.pdfbox.pdmodel.PDDocument doc = org.apache.pdfbox.pdmodel.PDDocument.load(data)) {
+                    String t = new org.apache.pdfbox.text.PDFTextStripper().getText(doc);
+                    return t == null ? "" : t.trim();
+                }
+            }
+            if (url.endsWith(".docx")) {
+                // 直读 zip 内 word/document.xml 去标签(不依赖 POI 包关系校验,对精简 docx 更鲁棒)
+                try (java.util.zip.ZipInputStream zip =
+                             new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(data))) {
+                    java.util.zip.ZipEntry entry;
+                    while ((entry = zip.getNextEntry()) != null) {
+                        if ("word/document.xml".equals(entry.getName())) {
+                            String xml = new String(zip.readAllBytes(), StandardCharsets.UTF_8);
+                            return xml.replaceAll("<[^>]+>", " ").replaceAll("\\s+", " ").trim();
+                        }
+                    }
+                }
+            }
+            return "";
+        } catch (Exception e) {
+            return "";
+        }
     }
 
     @Override

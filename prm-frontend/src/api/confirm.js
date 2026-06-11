@@ -84,3 +84,5 @@ export const listTableItems = (applyId) => request.get(`/dpr/confirm/apply/${app
 export const getConsolidation = (applyId) => request.get(`/dpr/confirm/apply/${applyId}/consolidation`)
 export const confirmSummaryExportUrl = () => '/api/dpr/confirm/summary/confirm-export'
 export const equityConsolidationExportUrl = () => '/api/dpr/confirm/summary/equity-export'
+// 材料 AI 校验(qwen3-max 逐份校验,stub 回退)
+export const aiMaterialCheck = (applyId) => request.post('/dpr/confirm/material/ai-check', null, { params: { applyId } })
