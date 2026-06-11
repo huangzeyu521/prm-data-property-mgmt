@@ -23,6 +23,22 @@
 
       <!-- 步骤2:逐条加授权项 -->
       <el-card v-show="step === 1" shadow="never">
+        <!-- AI 批量填单(qwen3-max,stub 回退):一段话解析出共享字段+多条明细 -->
+        <div class="ai-batch">
+          <el-input v-model="aiBatchText" type="textarea" :rows="2"
+            placeholder="AI 批量填单:如 向南网综合能源股份有限公司授权台区负荷数据、充电桩运营数据、线损分析数据用于综合能源服务,数据加工使用权,批量授权" />
+          <el-button type="warning" :loading="aiParsing" style="margin-top:6px" @click="runAiBatch">大瓦特 AI 解析并预填明细</el-button>
+          <el-button v-if="aiItems.length" type="primary" plain :loading="aiAdding" style="margin-top:6px;margin-left:8px" @click="addAiItems">
+            一键加入清单({{ aiItems.length }} 项)
+          </el-button>
+          <el-table v-if="aiItems.length" :data="aiItems" border size="small" style="margin-top:8px;max-width:680px">
+            <el-table-column prop="assetName" label="解析出的数据资产" min-width="180" />
+            <el-table-column label="权益卡片ID" min-width="160">
+              <template #default="{ row }"><el-input v-model="row.equityCardId" size="small" placeholder="先确后授:填卡片ID" /></template>
+            </el-table-column>
+          </el-table>
+        </div>
+        <el-divider />
         <el-row :gutter="16">
           <el-col :span="11">
             <el-form ref="itemRef" :model="item" :rules="itemRules" label-width="110px">
@@ -61,6 +77,10 @@
       <!-- 步骤3:提交清单审批 -->
       <el-card v-show="step === 2" shadow="never">
         <el-result icon="info" :title="`提交《批量授权清单》申报稿（${items.length} 项）`" sub-title="资料审核 → 清单审核审批 → 领导小组决策批准" />
+        <div style="text-align:center;margin-top:4px">
+          <el-button type="warning" plain :loading="listReviewing" @click="runListPreReview">AI 清单预审(qwen3-max)</el-button>
+        </div>
+        <el-alert v-if="listOpinion" type="info" :closable="false" style="margin-top:12px" title="AI 清单预审意见" :description="listOpinion" show-icon />
       </el-card>
 
       <!-- 步骤4:完成 -->
@@ -109,7 +129,7 @@
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { createBatchList, saveAuthDraft, submitBatchList } from '@/api/authorize'
+import { createBatchList, saveAuthDraft, submitBatchList, aiBatchIntent, aiBatchPreReview } from '@/api/authorize'
 import { getPropertyTree } from '@/api/ledger'
 
 const router = useRouter()
@@ -164,6 +184,46 @@ async function confirmPick() {
     ElMessage.success(`已批量加入 ${leaves.length} 项`)
     pickerDlg.value = false
   } finally { picking.value = false }
+}
+
+// AI 批量填单(qwen3-max,stub 回退)
+const aiBatchText = ref(''); const aiParsing = ref(false); const aiItems = ref([]); const aiAdding = ref(false)
+const aiShared = ref({ granteeOrg: '', rightType: '', scenario: '' })
+async function runAiBatch() {
+  if (!aiBatchText.value) { ElMessage.warning('请先描述批量授权诉求'); return }
+  aiParsing.value = true
+  try {
+    const raw = await aiBatchIntent(aiBatchText.value)
+    const r = typeof raw === 'string' ? JSON.parse(raw) : raw
+    aiShared.value = { granteeOrg: r.granteeOrg || '', rightType: r.rightType || '', scenario: r.scenario || '' }
+    Object.assign(item, { granteeOrg: r.granteeOrg || '', rightType: r.rightType || '', scenario: r.scenario || '' })
+    aiItems.value = (r.items || []).map(x => ({ assetName: x.assetName, equityCardId: '' }))
+    ElMessage.success(`AI 解析出 ${aiItems.value.length} 条明细,补全权益卡片ID后可一键加入`)
+  } catch (e) { ElMessage.warning('AI 解析失败:' + (e?.message || '')) }
+  finally { aiParsing.value = false }
+}
+async function addAiItems() {
+  if (aiItems.value.some(x => !x.equityCardId)) { ElMessage.warning('请为每条明细补全权益卡片ID(先确后授)'); return }
+  aiAdding.value = true
+  try {
+    for (const x of aiItems.value) {
+      const it = { ...emptyItem(), assetId: x.assetName, assetName: x.assetName, equityCardId: x.equityCardId,
+        granteeOrg: aiShared.value.granteeOrg, rightType: aiShared.value.rightType, scenario: aiShared.value.scenario }
+      await saveAuthDraft({ authMode: '批量', batchListId: batchListId.value, ...it })
+      items.value.push(it)
+    }
+    ElMessage.success(`已加入 ${aiItems.value.length} 项`)
+    aiItems.value = []
+  } finally { aiAdding.value = false }
+}
+
+// AI 清单预审(qwen3-max,stub 回退)
+const listReviewing = ref(false); const listOpinion = ref('')
+async function runListPreReview() {
+  listReviewing.value = true
+  try { listOpinion.value = await aiBatchPreReview(batchListId.value) }
+  catch (e) { ElMessage.warning('AI 预审失败') }
+  finally { listReviewing.value = false }
 }
 
 async function addItem() {

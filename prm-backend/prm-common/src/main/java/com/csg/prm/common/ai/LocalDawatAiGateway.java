@@ -151,4 +151,73 @@ public class LocalDawatAiGateway implements DawatAiGateway {
         }
         return "待明确被授权方";
     }
+
+    /** 授权材料校验规则桩:逐份按盖章表述给 通过/存疑(生产由 qwen3-max @Primary 覆盖) */
+    @Override
+    public String reviewAuthMaterials(String context) {
+        String c = context == null ? "" : context;
+        StringBuilder items = new StringBuilder();
+        boolean anyDoubt = false;
+        for (String seg : c.split("【材料】")) {
+            if (!seg.contains("名称=")) {
+                continue;
+            }
+            String name = seg.substring(seg.indexOf("名称=") + 3);
+            name = name.substring(0, name.indexOf(';') >= 0 ? name.indexOf(';') : name.length()).trim();
+            boolean sealed = seg.contains("盖章") && !seg.contains("未盖章") && !seg.contains("无章");
+            anyDoubt = anyDoubt || !sealed;
+            if (items.length() > 0) {
+                items.append(',');
+            }
+            items.append("{\"materialName\":\"").append(name)
+                 .append("\",\"verdict\":\"").append(sealed ? "通过" : "存疑")
+                 .append("\",\"issues\":\"").append(sealed ? "无" : "正文未见盖章表述,待人工核验")
+                 .append("\",\"suggestion\":\"").append(sealed ? "无需补正" : "补充盖章版扫描件")
+                 .append("\"}");
+        }
+        return "{\"overall\":\"" + (anyDoubt ? "存疑" : "通过")
+                + "\",\"overallDesc\":\"(规则桩校验)逐份核验授权材料盖章表述与要素,"
+                + (anyDoubt ? "存在待人工核验项" : "全部通过") + "\",\"items\":[" + items + "]}";
+    }
+
+    /** 授权合规预审规则桩:按规则结果给补充意见 */
+    @Override
+    public String preReviewAuth(String context) {
+        String c = context == null ? "" : context;
+        boolean hasFail = c.contains("不符") || c.contains("不通过");
+        boolean sensitive = c.contains("个人隐私") || c.contains("商业秘密");
+        StringBuilder op = new StringBuilder("(规则桩预审)");
+        op.append(hasFail ? "存在不符项,建议先补正后再提交审批;" : "各项规则校验通过,同意提交多级审批;");
+        op.append("提醒:授权范围与有效期不得超出权益卡片确权边界(先确后授);");
+        if (sensitive) {
+            op.append("涉个人隐私/商密,留意保密承诺函(附录E)与信息授权协议覆盖授权场景;");
+        }
+        op.append("经营权授权须校验对外开放目录。");
+        return op.toString();
+    }
+
+    /** 批量意图解析规则桩:抽 被授权方/权益/场景 + 以"××数据"词组拆明细 */
+    @Override
+    public String parseBatchIntent(String text) {
+        String t = text == null ? "" : text;
+        AuthIntent base = recognizeAuthIntent(t);
+        java.util.LinkedHashSet<String> assets = new java.util.LinkedHashSet<>();
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("[\u4e00-\u9fa5A-Za-z0-9]{2,12}数据").matcher(t);
+        while (m.find()) {
+            String name = m.group();
+            if (!name.startsWith("批量") && !name.startsWith("授权")) {
+                assets.add(name);
+            }
+        }
+        StringBuilder items = new StringBuilder();
+        for (String a : assets) {
+            if (items.length() > 0) {
+                items.append(',');
+            }
+            items.append("{\"assetName\":\"").append(a).append("\"}");
+        }
+        return "{\"granteeOrg\":\"" + base.granteeOrg() + "\",\"rightType\":\"" + base.rightType()
+                + "\",\"scenario\":\"" + base.scenario() + "\",\"items\":[" + items + "]}";
+    }
 }

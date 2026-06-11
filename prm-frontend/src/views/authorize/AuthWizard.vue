@@ -88,6 +88,20 @@
       <el-card v-show="step === 1" shadow="never">
         <div class="prm-table-note" style="margin-bottom:10px">依据规则自动校验【材料完整性 / 权限合理性(先确后授·权益类型·授权范围) / 合规性(第三方许可·敏感数据·跨域)】，红灯不通过不可提交。</div>
         <el-button type="primary" :loading="checking" @click="runCheck" style="margin-bottom:12px">执行合规校验</el-button>
+        <el-button type="warning" :loading="aiMatChecking" @click="runAiMatCheck" style="margin-bottom:12px;margin-left:8px">AI 材料校验(qwen3-max)</el-button>
+        <el-button type="warning" plain :loading="preReviewing" @click="runPreReview" style="margin-bottom:12px;margin-left:8px">AI 合规预审</el-button>
+        <el-alert v-if="preOpinion" type="info" :closable="false" style="margin-bottom:12px" :title="'AI 预审意见'" :description="preOpinion" show-icon />
+        <el-alert v-if="aiMatResult" :type="aiMatResult.overall === '通过' ? 'success' : 'warning'" :closable="false" style="margin-bottom:12px">
+          <div><b>AI 材料校验:{{ aiMatResult.overall }}</b> — {{ aiMatResult.overallDesc }}</div>
+          <el-table :data="aiMatResult.items" border size="small" style="margin-top:8px">
+            <el-table-column prop="materialName" label="材料" min-width="200" />
+            <el-table-column label="结论" width="90" align="center">
+              <template #default="{ row }"><el-tag :type="row.verdict === '通过' ? 'success' : 'warning'" size="small">{{ row.verdict }}</el-tag></template>
+            </el-table-column>
+            <el-table-column prop="issues" label="问题" min-width="180" />
+            <el-table-column prop="suggestion" label="建议" min-width="160" />
+          </el-table>
+        </el-alert>
         <el-descriptions v-if="checkResult" :column="2" border style="margin-bottom:12px">
           <el-descriptions-item label="校验结果">
             <el-tag :type="checkResult.checkResult === '通过' ? 'success' : (checkResult.checkResult === '不通过' ? 'danger' : 'warning')">{{ checkResult.checkResult || '—' }}</el-tag>
@@ -142,6 +156,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { saveAuthDraft, submitAuth, runAuthCompliance, pageScenario, uploadAuthMaterialFile, listAuthMaterial, deleteAuthMaterial, authMaterialFileUrl } from '@/api/authorize'
 import { aiAuthIntent } from '@/api/confirm'
+import { aiAuthMaterialCheck, aiAuthPreReview } from '@/api/authorize'
 import { getAsset } from '@/api/ledger'
 
 const router = useRouter()
@@ -235,6 +250,26 @@ async function next0() {
     finally { saving.value = false }
   }
   step.value = 1
+}
+
+// AI 材料校验 + AI 合规预审(qwen3-max,stub 回退)
+const aiMatChecking = ref(false); const aiMatResult = ref(null)
+const preReviewing = ref(false); const preOpinion = ref('')
+async function runAiMatCheck() {
+  if (!applyId.value) { ElMessage.warning('请先暂存申请'); return }
+  aiMatChecking.value = true
+  try {
+    const raw = await aiAuthMaterialCheck(applyId.value)
+    aiMatResult.value = typeof raw === 'string' ? JSON.parse(raw) : raw
+  } catch (e) { ElMessage.warning('AI 材料校验失败:' + (e?.response?.data?.message || '请先上传材料')) }
+  finally { aiMatChecking.value = false }
+}
+async function runPreReview() {
+  if (!applyId.value) { ElMessage.warning('请先暂存申请'); return }
+  preReviewing.value = true
+  try { preOpinion.value = await aiAuthPreReview(applyId.value) }
+  catch (e) { ElMessage.warning('AI 预审失败') }
+  finally { preReviewing.value = false }
 }
 
 async function runCheck() {

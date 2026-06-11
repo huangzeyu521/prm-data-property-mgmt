@@ -13,6 +13,9 @@ public interface AuthComplianceService {
     /** 规则化三维自动校验,生成报告并落库记录。 */
     AuthComplianceReport runCheck(String applyId);
 
+    /** 合规 AI 预审:规则结果+申请上下文交大模型生成补充预审意见(非门禁) */
+    String preReview(String applyId);
+
     /** 导出校验记录(CSV,按申请/风险等级过滤)。 */
     byte[] exportRecords(String applyId, String riskLevel);
 

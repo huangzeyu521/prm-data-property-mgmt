@@ -22,9 +22,75 @@ public class AuthMaterialServiceImpl implements AuthMaterialService {
     private static final long MAX_BYTES = 50L * 1024 * 1024;
 
     private final AuthMaterialMapper mapper;
+    private final com.csg.prm.authorize.mapper.AuthApplyMapper applyMapper;
+    private final com.csg.prm.common.ai.DawatAiGateway ai;
 
-    public AuthMaterialServiceImpl(AuthMaterialMapper mapper) {
+    public AuthMaterialServiceImpl(AuthMaterialMapper mapper,
+                                   com.csg.prm.authorize.mapper.AuthApplyMapper applyMapper,
+                                   com.csg.prm.common.ai.DawatAiGateway ai) {
         this.mapper = mapper;
+        this.applyMapper = applyMapper;
+        this.ai = ai;
+    }
+
+    /**
+     * 授权材料 AI 校验:抽取每份材料正文,连同申请要素交大模型(qwen3-max)逐份校验;
+     * Local 桩确定性回退。listByApply 置空 fileData,须按 ID 重取完整记录。
+     */
+    @Override
+    public String aiCheck(String applyId) {
+        com.csg.prm.authorize.entity.AuthApply apply = applyMapper.selectById(applyId);
+        if (apply == null) {
+            throw new BizException(ResultCode.NOT_FOUND.getCode(), "授权申请不存在");
+        }
+        List<AuthMaterial> mats = listByApply(applyId);
+        if (mats.isEmpty()) {
+            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "尚未上传材料,无法 AI 校验");
+        }
+        StringBuilder ctx = new StringBuilder("【申请要素】资产:").append(apply.getAssetName())
+                .append('(').append(apply.getAssetId()).append(");被授权方:").append(apply.getGranteeOrg())
+                .append(";权益类型:").append(apply.getRightType()).append(";场景:").append(apply.getScenario())
+                .append(";范围:").append(apply.getScope())
+                .append(";隐私/商密:").append(apply.getSensitiveType() == null ? "无" : apply.getSensitiveType())
+                .append('\n');
+        for (AuthMaterial m : mats) {
+            String text = extractText(mapper.selectById(m.getMaterialId()));
+            ctx.append("【材料】名称=").append(m.getMaterialName() == null ? m.getFileName() : m.getMaterialName())
+                    .append(";正文=").append(text.isEmpty() ? "(图片/无法抽取正文,需人工核验)"
+                            : text.substring(0, Math.min(text.length(), 1200)))
+                    .append('\n');
+        }
+        String result = ai.reviewAuthMaterials(ctx.toString());
+        if (!StringUtils.hasText(result)) {
+            throw new BizException(ResultCode.SYSTEM_ERROR.getCode(), "AI 校验暂不可用,请稍后重试");
+        }
+        return result;
+    }
+
+    /** 抽取材料正文:docx 直读 zip 内 document.xml 去标签;PDF/图片留待 OCR 返回空 */
+    private String extractText(AuthMaterial m) {
+        if (m == null || !StringUtils.hasText(m.getFileData())) {
+            return "";
+        }
+        try {
+            byte[] data = Base64.getDecoder().decode(m.getFileData());
+            String name = m.getFileName() == null ? "" : m.getFileName().toLowerCase();
+            if (name.endsWith(".docx")) {
+                try (java.util.zip.ZipInputStream zip =
+                             new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(data))) {
+                    java.util.zip.ZipEntry entry;
+                    while ((entry = zip.getNextEntry()) != null) {
+                        if ("word/document.xml".equals(entry.getName())) {
+                            String xml = new String(zip.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+                            return xml.replaceAll("<[^>]+>", " ").replaceAll("\s+", " ").trim();
+                        }
+                    }
+                }
+            }
+            return "";
+        } catch (Exception e) {
+            return "";
+        }
     }
 
     @Override

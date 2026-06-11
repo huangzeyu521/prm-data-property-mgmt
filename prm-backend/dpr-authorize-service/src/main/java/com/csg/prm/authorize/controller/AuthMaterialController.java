@@ -32,6 +32,12 @@ public class AuthMaterialController {
     }
 
     /** 上传申请材料(multipart:file + applyId/材料名/类型/上传人)。 */
+    /** 授权材料 AI 校验:qwen3-max 逐份校验(stub 回退),返回严格 JSON */
+    @PostMapping("/ai-check")
+    public R<String> aiCheck(@RequestParam String applyId) {
+        return R.ok(service.aiCheck(applyId));
+    }
+
     @PostMapping("/upload-file")
     public R<String> uploadFile(@RequestParam("file") MultipartFile file,
                                 @RequestParam String applyId,

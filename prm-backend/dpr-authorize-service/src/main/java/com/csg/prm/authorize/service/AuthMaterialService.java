@@ -21,4 +21,7 @@ public interface AuthMaterialService {
 
     /** 某申请的材料清单(置空 fileData)。 */
     List<AuthMaterial> listByApply(String applyId);
+
+    /** 授权材料 AI 校验(qwen3-max 逐份校验,stub 回退),返回严格 JSON 字符串 */
+    String aiCheck(String applyId);
 }

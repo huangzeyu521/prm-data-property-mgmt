@@ -39,4 +39,26 @@ public interface DawatAiGateway {
 
     /** RAG 知识问答:基于确权授权业务指导书与附录F 回答 */
     RagAnswer ask(String question);
+
+    /**
+     * 授权申请材料 AI 校验:输入 申请要素+逐份材料正文(段格式 【材料】名称=..;正文=..),
+     * 输出严格 JSON {"overall":"通过|不通过|存疑","overallDesc":"…","items":[{materialName,verdict,issues,suggestion}]}。
+     * 默认 null(调用方报"暂不可用");Qwen 用 qwen3-max 真实校验,Local 用确定性规则桩。
+     */
+    default String reviewAuthMaterials(String context) {
+        return null;
+    }
+
+    /** 授权合规 AI 预审:输入 规则校验结果+申请上下文,输出预审意见文本(规则门禁的补充意见,非门禁) */
+    default String preReviewAuth(String context) {
+        return null;
+    }
+
+    /**
+     * 批量授权意图解析:自然语言→严格 JSON
+     * {"granteeOrg":"…","rightType":"…","scenario":"…","items":[{"assetName":"…"}]}(一段话解析出多条明细)。
+     */
+    default String parseBatchIntent(String text) {
+        return null;
+    }
 }

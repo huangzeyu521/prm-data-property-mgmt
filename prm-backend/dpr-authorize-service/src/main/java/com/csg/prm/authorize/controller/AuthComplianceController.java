@@ -34,6 +34,12 @@ public class AuthComplianceController {
     }
 
     /** 导出校验记录(CSV)。 */
+    /** 合规 AI 预审意见(规则结果+上下文交大模型,非门禁) */
+    @PostMapping("/pre-review")
+    public R<String> preReview(@RequestParam String applyId) {
+        return R.ok(service.preReview(applyId));
+    }
+
     @GetMapping("/export")
     public ResponseEntity<byte[]> export(@RequestParam(required = false) String applyId,
                                          @RequestParam(required = false) String riskLevel) {

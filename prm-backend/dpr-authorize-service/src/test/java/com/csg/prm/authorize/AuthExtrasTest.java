@@ -25,6 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @ActiveProfiles("test")
 class AuthExtrasTest {
 
+    @Autowired private com.csg.prm.authorize.service.AuthMaterialService materialService;
+    @Autowired private com.csg.prm.common.ai.DawatAiGateway dawatAi;
     @Autowired private AuthCatalogService catalogService;
     @Autowired private AuthComplianceService complianceService;
     @Autowired private AuthAgreementService agreementService;
@@ -79,5 +81,84 @@ class AuthExtrasTest {
         assertEquals(AuthAgreement.REVIEW_PASS, agreementService.getById(id).getReviewStatus());
         agreementService.archive(id);
         assertEquals(AuthAgreement.ARCHIVE_YES, agreementService.getById(id).getArchiveStatus());
+    }
+
+    @Test
+    void auth_ai_material_check_reviews_each_material() {
+        AuthApply a = new AuthApply();
+        a.setAssetId("AST-AI-1");
+        a.setAssetName("AI授权校验测试");
+        a.setEquityCardId("EC-AI-1");
+        a.setGranteeOrg("广州供电局");
+        a.setRightType("数据加工使用权");
+        a.setScenario("电力金融征信");
+        a.setSensitiveType("个人隐私");
+        applyMapper.insert(a);
+
+        com.csg.prm.authorize.entity.AuthMaterial sealed = new com.csg.prm.authorize.entity.AuthMaterial();
+        sealed.setApplyId(a.getApplyId());
+        sealed.setMaterialName("保密承诺函(附录E)");
+        materialService.uploadFile(sealed, "保密承诺函-盖好.docx", docxBytes("承诺单位(盖章):广州供电局,严格保密"));
+
+        com.csg.prm.authorize.entity.AuthMaterial unsealed = new com.csg.prm.authorize.entity.AuthMaterial();
+        unsealed.setApplyId(a.getApplyId());
+        unsealed.setMaterialName("表5 数据授权申请表");
+        materialService.uploadFile(unsealed, "表5-申请表.docx", docxBytes("资产:AI授权校验测试,权益:数据加工使用权"));
+
+        String json = materialService.aiCheck(a.getApplyId());
+        assertTrue(json.contains("\"overall\""), "应输出整体结论");
+        assertTrue(json.contains("保密承诺函"), "应逐份点名材料");
+        assertTrue(json.contains("通过") && json.contains("存疑"), "盖章/未盖章应分别判定");
+    }
+
+    @Test
+    void auth_pre_review_returns_opinion() {
+        AuthApply a = new AuthApply();
+        a.setAssetId("AST-AI-2");
+        a.setAssetName("预审测试");
+        a.setEquityCardId("EC-AI-2");
+        a.setGranteeOrg("广州供电局");
+        a.setRightType("数据产品经营权");
+        a.setScenario("电力金融征信");
+        a.setSensitiveType("个人隐私");
+        applyMapper.insert(a);
+
+        String opinion = complianceService.preReview(a.getApplyId());
+        assertNotNull(opinion);
+        assertTrue(opinion.contains("先确后授"), "预审意见应含先确后授边界提醒");
+        assertTrue(opinion.contains("开放目录"), "经营权应提醒对外开放目录");
+    }
+
+    @Test
+    void batch_intent_parses_multiple_items() {
+        String json = dawatAi.parseBatchIntent(
+                "向南网综合能源股份有限公司授权台区负荷数据、充电桩运营数据、线损分析数据用于综合能源服务,数据加工使用权,批量授权");
+        assertTrue(json.contains("台区负荷数据") && json.contains("充电桩运营数据") && json.contains("线损分析数据"),
+                "应解析出 3 条明细:" + json);
+        assertTrue(json.contains("数据加工使用权"), "应识别权益类型");
+    }
+
+    /** 最小合法 docx(纯 XML zip),供正文抽取 */
+    private byte[] docxBytes(String text) {
+        try {
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            try (java.util.zip.ZipOutputStream zip = new java.util.zip.ZipOutputStream(out)) {
+                zip.putNextEntry(new java.util.zip.ZipEntry("[Content_Types].xml"));
+                zip.write(("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+                        + "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">"
+                        + "<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>"
+                        + "<Default Extension=\"xml\" ContentType=\"application/xml\"/>"
+                        + "<Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/>"
+                        + "</Types>").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                zip.putNextEntry(new java.util.zip.ZipEntry("word/document.xml"));
+                zip.write(("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+                        + "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">"
+                        + "<w:body><w:p><w:r><w:t>" + text + "</w:t></w:r></w:p></w:body></w:document>")
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            }
+            return out.toByteArray();
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
     }
 }

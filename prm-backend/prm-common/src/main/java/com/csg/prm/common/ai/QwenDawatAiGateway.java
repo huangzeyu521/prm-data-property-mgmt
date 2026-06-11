@@ -101,6 +101,45 @@ public class QwenDawatAiGateway implements DawatAiGateway {
         }
     }
 
+    @Override
+    public String reviewAuthMaterials(String context) {
+        try {
+            return chat("你是中国南方电网数据授权材料合规校验专家,依据《数据确权授权业务指导书》附录D/E,逐份校验授权申请材料:"
+                            + "①要素与申请表单一致性;②保密承诺函/信息授权协议是否覆盖授权场景;③盖章与必备表述完整性。"
+                            + "仅输出严格JSON:{\"overall\":\"通过|不通过|存疑\",\"overallDesc\":\"...\","
+                            + "\"items\":[{\"materialName\":\"...\",\"verdict\":\"通过|不通过|存疑\",\"issues\":\"...\",\"suggestion\":\"...\"}]},不要输出多余文本。",
+                    context);
+        } catch (RuntimeException e) {
+            log.warn("[大瓦特AI] reviewAuthMaterials 调用失败,回退本地桩: {}", e.getMessage());
+            return fallback.reviewAuthMaterials(context);
+        }
+    }
+
+    @Override
+    public String preReviewAuth(String context) {
+        try {
+            return chat("你是数据授权合规预审专家。基于给定的规则校验结果与申请上下文,输出一段简洁的预审意见"
+                            + "(是否同意提交、风险提示、先确后授边界与对外开放目录提醒),100字以内,直接输出文本。",
+                    context);
+        } catch (RuntimeException e) {
+            log.warn("[大瓦特AI] preReviewAuth 调用失败,回退本地桩: {}", e.getMessage());
+            return fallback.preReviewAuth(context);
+        }
+    }
+
+    @Override
+    public String parseBatchIntent(String text) {
+        try {
+            return chat("你是批量数据授权意图解析助手。从自然语言中解析共享字段与多条明细。"
+                            + "仅输出严格JSON:{\"granteeOrg\":\"被授权方\",\"rightType\":\"数据持有权/数据加工使用权/数据产品经营权\","
+                            + "\"scenario\":\"场景\",\"items\":[{\"assetName\":\"数据资产名\"}]},不要输出多余文本。",
+                    "申请描述:" + text);
+        } catch (RuntimeException e) {
+            log.warn("[大瓦特AI] parseBatchIntent 调用失败,回退本地桩: {}", e.getMessage());
+            return fallback.parseBatchIntent(text);
+        }
+    }
+
     private String chat(String system, String user) {
         if (!StringUtils.hasText(apiKey)) {
             throw new IllegalStateException("DASHSCOPE_API_KEY 未配置");

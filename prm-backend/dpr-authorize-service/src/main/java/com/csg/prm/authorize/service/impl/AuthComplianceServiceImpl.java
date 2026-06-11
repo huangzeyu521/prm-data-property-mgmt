@@ -30,11 +30,33 @@ public class AuthComplianceServiceImpl implements AuthComplianceService {
     private final AuthApplyMapper applyMapper;
     private final AuthMaterialMapper materialMapper;
 
+    private final com.csg.prm.common.ai.DawatAiGateway ai;
+
     public AuthComplianceServiceImpl(AuthComplianceMapper mapper, AuthApplyMapper applyMapper,
-                                     AuthMaterialMapper materialMapper) {
+                                     AuthMaterialMapper materialMapper, com.csg.prm.common.ai.DawatAiGateway ai) {
         this.mapper = mapper;
         this.applyMapper = applyMapper;
         this.materialMapper = materialMapper;
+        this.ai = ai;
+    }
+
+    /** 合规 AI 预审:先跑规则三维校验,再交大模型生成补充预审意见(qwen3-max,stub 回退) */
+    @Override
+    public String preReview(String applyId) {
+        AuthComplianceReport report = runCheck(applyId);
+        com.csg.prm.authorize.entity.AuthApply apply = applyMapper.selectById(applyId);
+        StringBuilder ctx = new StringBuilder("【申请】资产:").append(apply.getAssetName())
+                .append(";被授权方:").append(apply.getGranteeOrg()).append(";权益:").append(apply.getRightType())
+                .append(";场景:").append(apply.getScenario())
+                .append(";隐私/商密:").append(apply.getSensitiveType() == null ? "无" : apply.getSensitiveType())
+                .append("\n【规则校验】结果:").append(report.getCheckResult())
+                .append(";风险:").append(report.getRiskLevel()).append('\n');
+        for (AuthComplianceReport.Item it : report.getItems()) {
+            ctx.append(it.getDimension()).append('/').append(it.getItem()).append(':')
+                    .append(it.isPass() ? "通过" : "不符").append('(').append(it.getMessage()).append(")\n");
+        }
+        String opinion = ai.preReviewAuth(ctx.toString());
+        return opinion == null ? "AI 预审暂不可用" : opinion;
     }
 
     @Override
