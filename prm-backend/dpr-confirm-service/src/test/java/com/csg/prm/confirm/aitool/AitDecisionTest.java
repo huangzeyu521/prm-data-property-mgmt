@@ -83,6 +83,7 @@ class AitDecisionTest {
         assertNotNull(d.getRagCitations());
         assertTrue(d.getRagCitations().contains("数据二十条"), "引用应含《数据二十条》");
         assertTrue(d.getRagAdvice().contains("建议"), "RAG 建议应含预测结论表述");
+        assertTrue(d.getReason().contains("AI 预测与规则结论一致"), "理由应纳入 AI 预测一致性");
     }
 
     @Test
@@ -90,7 +91,23 @@ class AitDecisionTest {
         String applyId = newApply("DA-DEC-2");
         AitDecision d = decisionService.analyze(applyId);
         assertEquals(AitDecision.PRED_SUPPLEMENT, d.getPrediction(), "无材料应建议补充材料");
-        assertTrue(d.getSupplementMaterials().contains("补充"));
+        assertTrue(d.getSupplementMaterials().contains("需提供"), "无材料应给出基础材料清单");
+        assertTrue(d.getSupplementMaterials().contains("权属证明"));
+    }
+
+    @Test
+    void supplement_names_specific_material_issue() {
+        String asset = "DA-DEC-7";
+        String applyId = newApply(asset);
+        AitMaterial m = new AitMaterial();
+        m.setFileName(asset + "-权属证明.pdf");
+        m.setApplyId(applyId);
+        m.setContent("数据持有权,广东电网,有效期3年,自行生产");
+        materialService.parse(materialService.upload(m));
+
+        AitDecision d = decisionService.analyze(applyId);
+        assertTrue(d.getSupplementMaterials().contains(asset + "-权属证明.pdf"), "应按文件名点名问题材料");
+        assertTrue(d.getSupplementMaterials().contains("印章"), "应说明印章问题");
     }
 
     @Test

@@ -143,7 +143,10 @@ public class AitDecisionServiceImpl implements AitDecisionService {
         String[] splitPlans = buildSplitPlans(subjects, claims);
         String split = splitPlans[0];
 
-        String supplement = matScore < 80 ? "需补充权属证明/授权函(印章或要素缺失项)" : "材料齐备";
+        // 需补材料逐项点名(#21):无材料给基础清单,有问题材料按文件名点名
+        String supplement = materials.isEmpty()
+                ? "未上传材料,需提供:权属证明、授权函/委托书(盖章件)"
+                : (matStat.issues().isEmpty() ? "材料齐备" : "需补正:" + String.join(";", matStat.issues()));
         String pending = conflicts.isEmpty() ? "无待处置冲突"
                 : "待处置冲突 " + conflicts.size() + " 项:"
                 + conflicts.stream().map(AitConflict::getConflictType).distinct().collect(Collectors.joining("、"));
@@ -165,6 +168,11 @@ public class AitDecisionServiceImpl implements AitDecisionService {
             ragCitations = "《数据二十条》;南网数据确权授权业务指导书";
             aiPrediction = null;
         }
+
+        // 理由纳入 AI 预测一致性(#21)
+        reason = reason + (aiPrediction == null ? "AI 预测未生成,建议人工复核。"
+                : prediction.equals(aiPrediction) ? "AI 预测与规则结论一致。"
+                : "AI 预测(" + aiPrediction + ")与规则结论不一致,建议人工复核。");
 
         String evidence = "0x" + Sm3Util.hashHex(
                 applyId + "|" + composite + "|" + prediction + "|" + aiPrediction + "|" + factorsJson);
@@ -192,28 +200,33 @@ public class AitDecisionServiceImpl implements AitDecisionService {
         return d;
     }
 
-    /** 材料完整性统计:已解析数/印章缺失/完整性评分 */
-    private record MaterialStat(int parsed, boolean sealMissing, double score) {
+    /** 材料完整性统计:已解析数/印章缺失/完整性评分/逐份问题点名(#21) */
+    private record MaterialStat(int parsed, boolean sealMissing, double score, List<String> issues) {
     }
 
     private MaterialStat materialStat(List<AitMaterial> materials) {
         if (materials.isEmpty()) {
-            return new MaterialStat(0, false, 0d);
+            return new MaterialStat(0, false, 0d, List.of());
         }
         int parsed = 0;
         boolean sealMissing = false;
+        List<String> issues = new ArrayList<>();
         for (AitMaterial m : materials) {
             AitParseResult r = parseMapper.selectOne(
                     new LambdaQueryWrapper<AitParseResult>().eq(AitParseResult::getMaterialId, m.getMaterialId()));
-            if (r != null) {
-                parsed++;
-                if (!"有效".equals(r.getSealValid())) {
-                    sealMissing = true;
-                }
+            if (r == null) {
+                issues.add("《" + m.getFileName() + "》尚未解析,请先完成智能解析");
+                continue;
+            }
+            parsed++;
+            if (!"有效".equals(r.getSealValid())) {
+                sealMissing = true;
+                String seal = StringUtils.hasText(r.getSealValid()) ? r.getSealValid() : "未检出";
+                issues.add("《" + m.getFileName() + "》印章" + seal + ",需补充盖章版权属证明");
             }
         }
         double base = round(parsed * 100.0 / materials.size());
-        return new MaterialStat(parsed, sealMissing, sealMissing ? Math.min(base, 70d) : base);
+        return new MaterialStat(parsed, sealMissing, sealMissing ? Math.min(base, 70d) : base, issues);
     }
 
     /**
