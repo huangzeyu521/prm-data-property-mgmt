@@ -1,18 +1,40 @@
-/* 设计令牌 —— 依据《数研院 WEB 用户界面设计规范 V1.0》与《界面高压线》。
-   字体:中文微软雅黑/英文 Arial;主按钮蓝;最小字号 12px。 */
+/* 设计令牌 —— 对齐《数研院-电脑端用户界面设计规范 V1.0》与数据中心工具平台典型界面切图标注。
+   令牌值自官方 Adobe XD 标注精确解码:主色 #126CFD;文字 #262626/#666/#8C8C8C;
+   边框 #D8D8D8;底 #F5F8FA;选中 #EFF7FF;警示 #E21F0C;圆角 2px;微软雅黑 14px。 */
 :root {
   --prm-font-family: "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
-  --prm-color-primary: #2f6bff;     /* 主按钮蓝 */
-  --prm-color-text: #1f2329;
-  --prm-color-text-secondary: #646a73;
-  --prm-color-border: #dfe2e8;
-  --prm-color-bg: #f5f6f8;
+  --prm-color-primary: #126cfd;
+  --prm-color-primary-light: #1e87f0;
+  --prm-color-primary-pale: #82b2ff;
+  --prm-color-selected-bg: #eff7ff;
+  --prm-color-text: #262626;
+  --prm-color-text-secondary: #666666;
+  --prm-color-text-weak: #8c8c8c;
+  --prm-color-text-disabled: #b4b4b4;
+  --prm-color-border: #d8d8d8;
+  --prm-color-bg: #f5f8fa;
+  --prm-color-danger: #e21f0c;
+  --prm-color-danger-light: #fd5a43;
+  --prm-radius: 2px;
   --prm-font-size-base: 14px;
   --prm-font-size-min: 12px;
   --prm-space-sm: 8px;
   --prm-space-md: 16px;
   --prm-space-lg: 24px;
+
+  /* Element Plus 全局变量对齐规范 */
   --el-color-primary: var(--prm-color-primary);
+  --el-color-danger: var(--prm-color-danger);
+  --el-border-radius-base: var(--prm-radius);
+  --el-border-radius-small: var(--prm-radius);
+  --el-font-size-base: var(--prm-font-size-base);
+  --el-text-color-primary: var(--prm-color-text);
+  --el-text-color-regular: var(--prm-color-text);
+  --el-text-color-secondary: var(--prm-color-text-secondary);
+  --el-border-color: var(--prm-color-border);
+  --el-border-color-light: #e8e8e8;
+  --el-border-color-lighter: #efefef;
+  --el-fill-color-light: var(--prm-color-bg);
 }
 
 html, body, #app {
@@ -29,7 +51,7 @@ body {
 
 /* 必填红星固定在文字标签左侧(高压线第六条) */
 .el-form-item.is-required:not(.is-no-asterisk) > .el-form-item__label:before {
-  color: #f5222d;
+  color: var(--prm-color-danger);
 }
 
 /* 工作区最大化、统一间距 */
@@ -38,18 +60,88 @@ body {
 }
 .prm-query-bar {
   background: #fff;
-  padding: var(--prm-space-md);
-  border-radius: 4px;
-  margin-bottom: var(--prm-space-md);
+  padding: 12px var(--prm-space-md) 4px;
+  border-radius: var(--prm-radius);
+  margin-bottom: 12px;
+  border: 1px solid #efefef;
 }
 .prm-table-card {
   background: #fff;
   padding: var(--prm-space-md);
-  border-radius: 4px;
+  border-radius: var(--prm-radius);
+  border: 1px solid #efefef;
 }
 /* 列表下方注释,左对齐、非红色、以"注:"开头(高压线第十条) */
 .prm-table-note {
   margin-top: var(--prm-space-sm);
-  color: var(--prm-color-text-secondary);
+  color: var(--prm-color-text-weak);
   font-size: var(--prm-font-size-min);
+}
+
+/* 表格:浅灰蓝表头 + 深主文字(典型界面-面包屑-表格列表) */
+.el-table {
+  --el-table-header-bg-color: var(--prm-color-bg);
+  --el-table-header-text-color: var(--prm-color-text);
+  --el-table-row-hover-bg-color: var(--prm-color-selected-bg);
+  --el-table-border-color: #e8e8e8;
+}
+.el-table th.el-table__cell {
+  font-weight: 600;
+}
+
+/* 分页:紧凑(典型界面右下分页) */
+.el-pagination {
+  --el-pagination-font-size: var(--prm-font-size-min);
+}
+
+/* 按钮:小圆角 */
+.el-button {
+  border-radius: var(--prm-radius);
+}
+
+/* 下拉选中/悬停统一主色 */
+.el-select-dropdown__item.is-selected,
+.el-dropdown-menu__item:not(.is-disabled):hover {
+  color: var(--prm-color-primary);
+}
+
+/* 卡片:小圆角;头部 15px 加粗 + 左侧蓝色竖条(典型界面卡片标题样式) */
+.el-card {
+  --el-card-border-radius: var(--prm-radius);
+  border-color: #efefef;
+}
+.el-card__header {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--prm-color-text);
+  padding: 12px 16px;
+  position: relative;
+}
+.el-card__header::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 14px;
+  background: var(--prm-color-primary);
+  border-radius: 0 2px 2px 0;
+}
+
+/* 面包屑:当前项主文字加粗、前级灰(典型界面面包屑) */
+.el-breadcrumb__inner {
+  color: var(--prm-color-text-weak);
+}
+.el-breadcrumb__item:last-child .el-breadcrumb__inner {
+  color: var(--prm-color-text);
+  font-weight: 600;
+}
+
+/* 弹窗/标签小圆角 */
+.el-dialog {
+  --el-dialog-border-radius: var(--prm-radius);
+}
+.el-tag {
+  border-radius: var(--prm-radius);
 }

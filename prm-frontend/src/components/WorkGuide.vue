@@ -198,8 +198,8 @@ function openPdf() { if (docMeta.value.pdf) window.open(docMeta.value.pdf, '_bla
 </script>
 
 <style scoped>
-.wg-trigger { color: #c9cdd4; padding: 6px 8px; }
-.wg-trigger:hover { color: #fff; }
+.wg-trigger { color: #666666; padding: 6px 8px; }
+.wg-trigger:hover { color: var(--prm-color-primary, #126cfd); }
 .wg-trigger-label { margin-left: 4px; font-size: 13px; }
 </style>
 

@@ -6,7 +6,7 @@
       <el-button text class="prm-collapse-btn" @click="collapse = !collapse">
         <el-icon :size="18"><component :is="collapse ? 'Expand' : 'Fold'" /></el-icon>
       </el-button>
-      <span class="prm-logo">数据资产管理平台</span>
+      <span class="prm-logo"><span class="prm-logo-csg">中国南方电网</span><span class="prm-logo-name">数据资产管理平台</span></span>
       <!-- 平台一级导航模拟(评审2):数据产权管理为平台内一级子菜单,非独立工具;其余为平台既有功能集成位 -->
       <nav class="prm-plat-nav">
         <el-tooltip v-for="m in PLAT_MENUS" :key="m" content="平台既有功能(集成位,待与数据资产管理平台对接)" placement="bottom">
@@ -185,28 +185,78 @@ const openeds = computed(() => {
 </script>
 
 <style scoped>
+/* 顶栏:白底(数研院典型界面),左 logo+蓝色平台名,水平平台导航,右侧深色图标组 */
 .prm-header {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #1f2329;
-  color: #fff;
+  background: #fff;
+  color: var(--prm-color-text);
+  border-bottom: 1px solid #e8e8e8;
 }
-.prm-collapse-btn { color: #c9cdd4; padding: 4px; }
-.prm-collapse-btn:hover { color: #fff; }
-.prm-logo { font-size: 18px; font-weight: 600; }
-.prm-plat-nav { display: flex; align-items: center; gap: 4px; margin-left: 12px; }
-.plat-item { font-size: 13px; padding: 4px 10px; border-radius: 4px; white-space: nowrap; }
-.plat-item.disabled { color: #6b7280; cursor: not-allowed; }
-.plat-item.active { color: #fff; background: rgba(47, 107, 255, 0.55); font-weight: 600; }
-.prm-goal { margin-left: auto; font-size: 12px; color: #909399; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 52%; }
+.prm-collapse-btn { color: #666; padding: 4px; }
+.prm-collapse-btn:hover { color: var(--prm-color-primary); }
+.prm-logo { display: flex; flex-direction: column; line-height: 1.15; }
+.prm-logo-csg { font-size: 11px; color: #8c8c8c; letter-spacing: 1px; }
+.prm-logo-name { font-size: 17px; font-weight: 700; color: var(--prm-color-primary); white-space: nowrap; }
+/* 平台一级导航:水平菜单,激活项蓝字+底部蓝条(典型界面顶部导航) */
+.prm-plat-nav { display: flex; align-items: stretch; gap: 2px; margin-left: 20px; height: 100%; }
+.plat-item {
+  font-size: 14px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  position: relative;
+}
+.plat-item.disabled { color: #8c8c8c; cursor: not-allowed; }
+.plat-item.active { color: var(--prm-color-primary); font-weight: 600; }
+.plat-item.active::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 0;
+  height: 2px;
+  background: var(--prm-color-primary);
+}
+.prm-goal { margin-left: auto; font-size: 12px; color: #8c8c8c; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 52%; }
 .prm-spacer { flex: 1; }
 .prm-search { width: 260px; }
-.prm-ait-btn { color: #ffd666; font-size: 13px; }
-.prm-ait-btn:hover { color: #ffe599; }
-.prm-aside { background: #fff; border-right: 1px solid var(--prm-color-border); transition: width 0.25s; overflow-x: hidden; }
-/* 折叠态菜单不显示分组右侧多余边框 */
-.prm-aside :deep(.el-menu) { border-right: none; }
+.prm-ait-btn { color: var(--prm-color-primary); font-size: 13px; }
+.prm-ait-btn:hover { color: var(--prm-color-primary-light); }
+/* 侧栏:深蓝渐变+白字菜单(典型界面左导航),激活项亮蓝高亮 */
+.prm-aside {
+  background: linear-gradient(180deg, #2b62d9 0%, #1d4ab4 55%, #16357f 100%);
+  transition: width 0.25s;
+  overflow-x: hidden;
+}
+.prm-aside :deep(.el-menu) {
+  border-right: none;
+  background: transparent;
+  --el-menu-text-color: rgba(255, 255, 255, 0.85);
+  --el-menu-hover-text-color: #fff;
+  --el-menu-active-color: #fff;
+  --el-menu-bg-color: transparent;
+  --el-menu-hover-bg-color: rgba(255, 255, 255, 0.12);
+}
+.prm-aside :deep(.el-sub-menu .el-menu) { background: rgba(0, 0, 0, 0.12); }
+.prm-aside :deep(.el-menu-item.is-active) {
+  background: var(--prm-color-primary);
+  color: #fff;
+  position: relative;
+}
+.prm-aside :deep(.el-menu-item.is-active)::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #82b2ff;
+}
+.prm-aside :deep(.el-sub-menu__title:hover),
+.prm-aside :deep(.el-menu-item:hover) { background: rgba(255, 255, 255, 0.12); }
 .prm-main { padding: 0; display: flex; flex-direction: column; }
 .prm-crumb {
   position: sticky;

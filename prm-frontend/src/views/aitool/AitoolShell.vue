@@ -52,6 +52,7 @@ function backToPlatform() {
 </script>
 
 <style scoped>
+/* 对齐数研院典型界面:白顶栏 + 蓝色标题 + 蓝下划线页签 */
 .ait-shell { height: 100%; }
 .ait-header {
   display: flex;
@@ -59,31 +60,33 @@ function backToPlatform() {
   gap: 12px;
   height: 56px;
   padding: 0 20px;
-  color: #fff;
-  background: linear-gradient(90deg, #1d2b53 0%, #2f6bff 100%);
+  color: var(--prm-color-text, #262626);
+  background: #fff;
+  border-bottom: 1px solid #e8e8e8;
 }
-.ait-logo-icon { color: #ffd666; }
-.ait-title { font-size: 18px; font-weight: 600; white-space: nowrap; }
-.ait-sub { font-size: 12px; color: rgba(255, 255, 255, 0.75); white-space: nowrap; }
+.ait-logo-icon { color: var(--prm-color-primary, #126cfd); }
+.ait-title { font-size: 17px; font-weight: 700; color: var(--prm-color-primary, #126cfd); white-space: nowrap; }
+.ait-sub { font-size: 12px; color: #8c8c8c; white-space: nowrap; }
 .ait-nav {
   margin-left: 16px;
   background: transparent;
   border-bottom: none;
+  height: 100%;
 }
 .ait-nav :deep(.el-menu-item) {
-  color: rgba(255, 255, 255, 0.85);
+  color: #666;
   border-bottom: 2px solid transparent;
 }
 .ait-nav :deep(.el-menu-item.is-active) {
-  color: #fff;
+  color: var(--prm-color-primary, #126cfd);
   font-weight: 600;
-  border-bottom-color: #ffd666;
-  background: rgba(255, 255, 255, 0.08);
+  border-bottom-color: var(--prm-color-primary, #126cfd);
+  background: transparent;
 }
-.ait-nav :deep(.el-menu-item:hover) { background: rgba(255, 255, 255, 0.12); color: #fff; }
+.ait-nav :deep(.el-menu-item:hover) { background: var(--prm-color-selected-bg, #eff7ff); color: var(--prm-color-primary, #126cfd); }
 .ait-spacer { flex: 1; }
 .ait-ctx { white-space: nowrap; }
-.ait-back { color: rgba(255, 255, 255, 0.85); white-space: nowrap; }
-.ait-back:hover { color: #fff; }
-.ait-main { padding: 0; overflow: auto; background: var(--prm-color-bg, #f5f7fa); }
+.ait-back { color: #666; white-space: nowrap; }
+.ait-back:hover { color: var(--prm-color-primary, #126cfd); }
+.ait-main { padding: 0; overflow: auto; background: var(--prm-color-bg, #f5f8fa); }
 </style>

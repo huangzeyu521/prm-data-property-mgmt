@@ -136,8 +136,8 @@ onUnmounted(() => timer && clearInterval(timer))
 </script>
 
 <style scoped>
-.nc-bell { color: #c9cdd4; padding: 6px; }
-.nc-bell:hover { color: #fff; }
+.nc-bell { color: #666666; padding: 6px; }
+.nc-bell:hover { color: var(--prm-color-primary, #126cfd); }
 .nc-badge :deep(.el-badge__content) { border: none; }
 </style>
 
