@@ -48,7 +48,21 @@
         <el-descriptions-item label="决策理由">{{ d.reason }}</el-descriptions-item>
         <el-descriptions-item label="需补充材料">{{ d.supplementMaterials }}</el-descriptions-item>
         <el-descriptions-item label="待处置冲突">{{ d.pendingConflicts }}</el-descriptions-item>
-        <el-descriptions-item label="权益分割方案">{{ d.splitPlan }}</el-descriptions-item>
+        <el-descriptions-item label="权益分割方案">
+          <div>{{ d.splitPlan }}</div>
+          <el-tabs v-if="splitPlans.length" style="margin-top:8px">
+            <el-tab-pane v-for="p in splitPlans" :key="p.plan" :label="'方案·' + p.plan">
+              <div class="plan-desc">{{ p.desc }}</div>
+              <el-table :data="p.items" border size="small">
+                <el-table-column prop="subject" label="主体" width="140" />
+                <el-table-column prop="rightType" label="权利" width="150" />
+                <el-table-column prop="scope" label="权利范围" min-width="220" />
+                <el-table-column prop="term" label="使用期限" width="120" />
+                <el-table-column prop="duty" label="责任划分" min-width="180" />
+              </el-table>
+            </el-tab-pane>
+          </el-tabs>
+        </el-descriptions-item>
         <el-descriptions-item label="RAG 智能建议">{{ d.ragAdvice }}</el-descriptions-item>
         <el-descriptions-item label="法规/知识引用">
           <el-tag v-for="c in citations" :key="c" type="info" effect="plain" size="small" style="margin-right:6px">{{ c }}</el-tag>
@@ -69,6 +83,7 @@ import { aitAnalyze } from '@/api/aitool'
 const applyId = ref('')
 const d = ref(null); const factors = ref([]); const gauge = ref()
 const citations = computed(() => (d.value?.ragCitations || '').split(';').filter(Boolean))
+const splitPlans = computed(() => { try { return JSON.parse(d.value?.splitPlansJson || '[]') } catch { return [] } })
 
 function predTag(p) { return { 建议通过: 'success', 建议补充材料: 'warning', 建议驳回: 'danger' }[p] || 'info' }
 
@@ -94,5 +109,6 @@ function renderGauge(score) {
 <style scoped>
 .kv { margin-top: 8px; font-size: 13px; }
 .ai-lbl { font-size: 13px; color: #606266; margin-right: 6px; }
+.plan-desc { font-size: 12px; color: #909399; margin-bottom: 6px; }
 .hash { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: #2f6bff; word-break: break-all; }
 </style>

@@ -94,6 +94,41 @@ class AitDecisionTest {
     }
 
     @Test
+    void multi_subject_generates_dual_split_plans() {
+        String asset = "DA-DEC-5";
+        String applyId = newApply(asset);
+        AitKgClaim a = new AitKgClaim();
+        a.setAssetId(asset); a.setSubject("广东电网"); a.setRightType("数据持有权");
+        a.setAuthScope("用电量、负荷"); a.setValidDate(LocalDateTime.now().plusYears(2));
+        a.setSourceType(AitKgClaim.SRC_CURRENT);
+        conflictService.addClaim(a);
+        AitKgClaim b = new AitKgClaim();
+        b.setAssetId(asset); b.setSubject("深圳供电局"); b.setRightType("数据加工使用权");
+        b.setAuthScope("负荷、电压"); b.setValidDate(LocalDateTime.now().plusYears(1));
+        b.setSourceType(AitKgClaim.SRC_HISTORY);
+        conflictService.addClaim(b);
+
+        AitDecision d = decisionService.analyze(applyId);
+        assertTrue(d.getSplitPlan().contains("推荐"), "摘要应含推荐方案");
+        assertTrue(d.getSplitPlan().contains("按比例"), "负荷字段重叠应推荐按比例");
+        String plans = d.getSplitPlansJson();
+        assertTrue(plans.contains("按业务范围") && plans.contains("按比例"), "应生成双方案");
+        assertTrue(plans.contains("广东电网") && plans.contains("深圳供电局"), "应覆盖全部主体");
+        assertTrue(plans.contains("重叠:负荷"), "应标注具体重叠字段");
+        assertTrue(plans.contains("至2"), "应含使用期限");
+        assertTrue(plans.contains("数据质量与安全主体责任") && plans.contains("加工合规"), "应含责任划分");
+        assertTrue(plans.contains("%"), "按比例方案应含比例");
+    }
+
+    @Test
+    void single_subject_needs_no_split() {
+        String applyId = newApply("DA-DEC-6");
+        AitDecision d = decisionService.analyze(applyId);
+        assertTrue(d.getSplitPlan().contains("无需分割"));
+        assertEquals("[]", d.getSplitPlansJson());
+    }
+
+    @Test
     void high_risk_conflicts_should_lower_decision() {
         String asset = "DA-DEC-3";
         String applyId = newApply(asset);

@@ -25,10 +25,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -41,6 +45,9 @@ public class AitDecisionServiceImpl implements AitDecisionService {
     private static final double W_CONFLICT = 0.40;
     private static final double W_COMPLIANCE = 0.15;
     private static final double W_HISTORY = 0.15;
+    /** 按比例方案:全字段主张折算的满额权重 */
+    private static final int FULL_SCOPE_WEIGHT = 10;
+    private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
     private final AitDecisionMapper decisionMapper;
     private final AitMaterialMapper materialMapper;
@@ -130,12 +137,11 @@ public class AitDecisionServiceImpl implements AitDecisionService {
         String weak = factorTag(matScore < 70, "材料完整性") + factorTag(confScore < 70, "权属无冲突")
                 + factorTag(compScore < 70, "合规性") + factorTag(histScore < 70, "历史匹配度");
 
-        // 权益分割方案(多主体)
+        // 权益分割方案(#20):多主体自动生成 按业务范围/按比例 双方案,明确各主体 权利/范围/期限/责任
         Set<String> subjects = claims.stream().map(AitKgClaim::getSubject).filter(StringUtils::hasText)
                 .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
-        String split = subjects.size() >= 2
-                ? "按业务范围分割:" + subjects.stream().map(s -> s + "(约定范围)").collect(Collectors.joining("、"))
-                : "单一权利主体,无需分割";
+        String[] splitPlans = buildSplitPlans(subjects, claims);
+        String split = splitPlans[0];
 
         String supplement = matScore < 80 ? "需补充权属证明/授权函(印章或要素缺失项)" : "材料齐备";
         String pending = conflicts.isEmpty() ? "无待处置冲突"
@@ -172,6 +178,7 @@ public class AitDecisionServiceImpl implements AitDecisionService {
         d.setStrengthFactors(StringUtils.hasText(strength) ? strength : "无明显优势因子");
         d.setWeakFactors(StringUtils.hasText(weak) ? weak : "无明显短板");
         d.setSplitPlan(split);
+        d.setSplitPlansJson(splitPlans[1]);
         d.setReason(reason);
         d.setSupplementMaterials(supplement);
         d.setPendingConflicts(pending);
@@ -256,6 +263,138 @@ public class AitDecisionServiceImpl implements AitDecisionService {
             snippets.add("南网制度(附录F 3.2):先确后授,权属冲突须经合规管控小组裁定后方可确权");
         }
         return snippets;
+    }
+
+    /**
+     * #20 权益分割方案生成:多主体时输出 [0]=推荐摘要、[1]=双方案明细 JSON。
+     * 方案A 按业务范围(各主体既有主张范围,重叠部分标注协商);方案B 按比例(主张范围字段数折算)。
+     */
+    private String[] buildSplitPlans(Set<String> subjects, List<AitKgClaim> claims) {
+        if (subjects.size() < 2) {
+            return new String[]{"单一权利主体,无需分割", "[]"};
+        }
+        Map<String, List<AitKgClaim>> bySubject = new LinkedHashMap<>();
+        claims.stream().filter(c -> StringUtils.hasText(c.getSubject()))
+                .forEach(c -> bySubject.computeIfAbsent(c.getSubject(), k -> new ArrayList<>()).add(c));
+
+        List<Map<String, Object>> planA = new ArrayList<>();
+        List<Map<String, Object>> planB = new ArrayList<>();
+        Map<String, Integer> weights = new LinkedHashMap<>();
+        bySubject.forEach((s, cs) -> weights.put(s, cs.stream().mapToInt(c -> scopeWeight(c.getAuthScope())).max().orElse(1)));
+        int totalWeight = weights.values().stream().mapToInt(Integer::intValue).sum();
+
+        boolean hasOverlap = false;
+        int assigned = 0;
+        int idx = 0;
+        for (Map.Entry<String, List<AitKgClaim>> e : bySubject.entrySet()) {
+            String subject = e.getKey();
+            List<AitKgClaim> cs = e.getValue();
+            String rightType = cs.stream().map(AitKgClaim::getRightType).filter(StringUtils::hasText)
+                    .distinct().collect(Collectors.joining("、"));
+            String scope = cs.stream().map(AitKgClaim::getAuthScope).filter(StringUtils::hasText)
+                    .distinct().collect(Collectors.joining("、"));
+            String overlapNote = overlapNote(subject, cs, bySubject);
+            hasOverlap = hasOverlap || !overlapNote.isEmpty();
+            String term = cs.stream().map(AitKgClaim::getValidDate).filter(java.util.Objects::nonNull)
+                    .min(java.util.Comparator.naturalOrder())
+                    .map(t -> "至" + t.toLocalDate()).orElse("按申请约定");
+            String duty = cs.stream().map(c -> dutyOf(c.getRightType())).distinct().collect(Collectors.joining(";"));
+
+            Map<String, Object> a = new LinkedHashMap<>();
+            a.put("subject", subject);
+            a.put("rightType", rightType.isEmpty() ? "按主张认定" : rightType);
+            a.put("scope", (scope.isEmpty() ? "约定范围" : scope) + overlapNote);
+            a.put("term", term);
+            a.put("duty", duty);
+            planA.add(a);
+
+            idx++;
+            int ratio = idx == bySubject.size() ? 100 - assigned
+                    : (int) Math.round(weights.get(subject) * 100.0 / totalWeight);
+            assigned += ratio;
+            Map<String, Object> b = new LinkedHashMap<>(a);
+            b.put("scope", "全量范围按比例 " + ratio + "%(主张范围字段数折算)");
+            planB.add(b);
+        }
+
+        String recommend = hasOverlap ? "按比例" : "按业务范围";
+        String summary = "多主体(" + subjects.size() + "方)权益分割:推荐「" + recommend + "」方案"
+                + (hasOverlap ? "(主张范围存在重叠)" : "(主张范围互不重叠)")
+                + ";涉及主体:" + String.join("、", subjects) + ";双方案明细见下表";
+        List<Map<String, Object>> plans = List.of(
+                Map.of("plan", "按业务范围", "desc", "按各主体既有业务主张划分权利范围,重叠部分标注协商划分", "items", planA),
+                Map.of("plan", "按比例", "desc", "按各主体主张范围字段数折算比例分配权益(全字段=满额)", "items", planB));
+        try {
+            return new String[]{summary, JSON_MAPPER.writeValueAsString(plans)};
+        } catch (com.fasterxml.jackson.core.JsonProcessingException ex) {
+            return new String[]{summary, "[]"};
+        }
+    }
+
+    /** 主体范围与其他主体的重叠标注(全字段视为包含一切) */
+    private String overlapNote(String subject, List<AitKgClaim> own, Map<String, List<AitKgClaim>> bySubject) {
+        Set<String> mine = fieldsOf(own);
+        List<String> notes = new ArrayList<>();
+        for (Map.Entry<String, List<AitKgClaim>> e : bySubject.entrySet()) {
+            if (e.getKey().equals(subject)) {
+                continue;
+            }
+            Set<String> theirs = fieldsOf(e.getValue());
+            Set<String> shared;
+            if (mine == null && theirs == null) {
+                shared = Set.of("全字段");
+            } else if (mine == null) {
+                shared = theirs;
+            } else if (theirs == null) {
+                shared = mine;
+            } else {
+                shared = mine.stream().filter(theirs::contains)
+                        .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
+            }
+            if (!shared.isEmpty()) {
+                notes.add("与" + e.getKey() + "重叠:" + String.join("、", shared));
+            }
+        }
+        return notes.isEmpty() ? "" : "[" + String.join(";", notes) + ",建议协商或按比例划分]";
+    }
+
+    /** 主体全部主张的范围字段集;含全字段主张返回 null(表示不限) */
+    private Set<String> fieldsOf(List<AitKgClaim> cs) {
+        Set<String> fields = new java.util.LinkedHashSet<>();
+        for (AitKgClaim c : cs) {
+            String s = c.getAuthScope();
+            if (!StringUtils.hasText(s)) {
+                continue;
+            }
+            if (s.contains("全字段") || s.contains("全部") || s.contains("不限")) {
+                return null;
+            }
+            for (String f : s.split("[、,，;；]")) {
+                if (StringUtils.hasText(f)) {
+                    fields.add(f.trim());
+                }
+            }
+        }
+        return fields;
+    }
+
+    /** 范围权重:全字段=满额10,否则字段数(至少1),用于按比例方案折算 */
+    private int scopeWeight(String scope) {
+        if (!StringUtils.hasText(scope) || scope.contains("全字段") || scope.contains("全部") || scope.contains("不限")) {
+            return FULL_SCOPE_WEIGHT;
+        }
+        return Math.max(1, (int) java.util.Arrays.stream(scope.split("[、,，;；]"))
+                .filter(StringUtils::hasText).count());
+    }
+
+    /** 责任划分:按权利类型映射(三权分置) */
+    private String dutyOf(String rightType) {
+        return switch (norm(rightType)) {
+            case "持有" -> "数据质量与安全主体责任";
+            case "使用" -> "加工合规与最小必要脱敏责任";
+            case "经营" -> "对外提供合规与开放目录边界责任";
+            default -> "按协议约定承担相应合规责任";
+        };
     }
 
     /** 从模型回答中抽取预测结论(未命中返回 null,由前端提示人工复核) */

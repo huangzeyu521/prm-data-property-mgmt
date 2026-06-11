@@ -46,9 +46,13 @@ public class AitDecision extends BaseEntity {
     @TableField("CEC_WEAKNESS")
     private String weakFactors;
 
-    /** 权益分割方案(多主体场景) */
+    /** 权益分割方案(多主体场景,推荐摘要) */
     @TableField("CEC_SPLIT_PLAN")
     private String splitPlan;
+
+    /** 权益分割多方案明细(JSON:按业务范围/按比例,含 主体/权利/范围/期限/责任) */
+    @TableField("CEC_SPLIT_PLANS_JSON")
+    private String splitPlansJson;
 
     /** 决策理由 */
     @TableField("CEC_REASON")
@@ -180,6 +184,14 @@ public class AitDecision extends BaseEntity {
 
     public void setRagAdvice(String ragAdvice) {
         this.ragAdvice = ragAdvice;
+    }
+
+    public String getSplitPlansJson() {
+        return splitPlansJson;
+    }
+
+    public void setSplitPlansJson(String splitPlansJson) {
+        this.splitPlansJson = splitPlansJson;
     }
 
     public String getAiPrediction() {
