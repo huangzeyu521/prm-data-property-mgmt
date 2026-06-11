@@ -14,6 +14,13 @@
     <div class="wz-body">
       <!-- 步骤1:填申请(表5 全字段) -->
       <el-card v-show="step === 0" shadow="never">
+        <el-alert v-if="!applyId" type="info" :closable="false" style="margin-bottom:12px;max-width:680px">
+          <template #title>
+            第一次填写?可
+            <el-button link type="primary" style="vertical-align:baseline" @click="fillDemo">一键填充示例(AST-001/EC-PRA-0001,测试/演示用)</el-button>
+            材料包见 test/一事一议授权申请 目录
+          </template>
+        </el-alert>
         <el-form ref="formRef" :model="form" :rules="rules" label-width="130px" :disabled="!!applyId" style="max-width:680px">
           <el-form-item label="AI 智能填单">
             <div style="width:100%">
@@ -24,15 +31,34 @@
           </el-form-item>
           <el-divider style="margin:4px 0" />
           <el-form-item label="关联资产ID" prop="assetId">
-            <el-input v-model="form.assetId" placeholder="输入资产ID后失焦自动引用资产信息,如 AST-001" @blur="onAssetBlur">
-              <template #append><el-button :loading="assetLoading" @click="onAssetBlur">引用资产信息</el-button></template>
-            </el-input>
+            <div style="display:flex;gap:8px;width:100%">
+              <el-select v-model="form.assetId" filterable remote allow-create default-first-option clearable
+                :remote-method="searchAssets" :loading="assetSearching" style="flex:1"
+                placeholder="输入资产名称/ID 搜索台账,如 用电 / AST-001" @change="onAssetPicked">
+                <el-option v-for="a in assetOpts" :key="a.assetId" :value="a.assetId" :label="a.assetId + '　' + a.assetName">
+                  <span>{{ a.assetId }}</span>
+                  <span style="float:right;color:#8c8c8c;font-size:12px">{{ a.assetName }}</span>
+                </el-option>
+              </el-select>
+              <el-button :loading="assetLoading" @click="onAssetBlur">引用资产信息</el-button>
+            </div>
+            <div class="auth-tip">选资产后自动带出该资产的"生效"权益卡片(先确后授);不清楚ID输名称关键词即可搜索</div>
           </el-form-item>
           <el-form-item label="资产名称" prop="assetName"><el-input v-model="form.assetName" /></el-form-item>
           <el-alert v-if="assetRef" type="success" :closable="false" style="margin:0 0 12px 0">
             已引用外部资产信息 — 系统:{{ assetRef.systemName || '-' }} / 模式:{{ assetRef.schemaName || '-' }} / 安全等级:{{ assetRef.securityLevel || '-' }} / 责任部门:{{ assetRef.respDept || '-' }}
           </el-alert>
-          <el-form-item label="权益卡片ID" prop="equityCardId"><el-input v-model="form.equityCardId" placeholder="先确后授:引用已确权权益卡片,如 EC-PRA-0001" /></el-form-item>
+          <el-form-item label="权益卡片ID" prop="equityCardId">
+            <el-select v-model="form.equityCardId" filterable allow-create default-first-option clearable style="width:100%"
+              placeholder="先确后授:搜索已确权权益卡片,如 EC-PRA-0001" @focus="loadCards" @change="onCardPicked">
+              <el-option v-for="c in cardOpts" :key="c.cardNo || c.cardId" :value="c.cardNo || c.cardId"
+                :label="(c.cardNo || c.cardId) + '　' + (c.assetName || c.assetId)" :disabled="!CARD_OK.includes(c.cardStatus)">
+                <span>{{ c.cardNo || c.cardId }}</span>
+                <span style="float:right;font-size:12px" :style="{color: CARD_OK.includes(c.cardStatus) ? '#18a058' : '#b4b4b4'}">
+                  {{ c.assetName || c.assetId }} · {{ c.cardStatus }}</span>
+              </el-option>
+            </el-select>
+          </el-form-item>
           <el-form-item label="申请主体(被授权方)" prop="granteeOrg"><el-input v-model="form.granteeOrg" /></el-form-item>
           <el-form-item label="授权权益类型" prop="rightType">
             <el-select v-model="form.rightType" style="width:100%">
@@ -157,6 +183,8 @@ import { ElMessage } from 'element-plus'
 import { saveAuthDraft, submitAuth, runAuthCompliance, pageScenario, uploadAuthMaterialFile, listAuthMaterial, deleteAuthMaterial, authMaterialFileUrl } from '@/api/authorize'
 import { aiAuthIntent } from '@/api/confirm'
 import { aiAuthMaterialCheck, aiAuthPreReview } from '@/api/authorize'
+import { pageArchive } from '@/api/propertyArchive'
+import { pageEquityCard } from '@/api/confirm'
 import { getAsset } from '@/api/ledger'
 
 const router = useRouter()
@@ -187,6 +215,65 @@ function onScenarioChange(name) {
 
 // 集成外部资产信息引用:输入资产ID → 自动加载资产基本信息
 const assetRef = ref(null); const assetLoading = ref(false)
+// 资产远程搜索(产权台账)+选资产自动带生效卡片(先确后授,一选三填)
+const assetOpts = ref([])
+const assetSearching = ref(false)
+async function searchAssets(kw) {
+  if (!kw) { assetOpts.value = []; return }
+  assetSearching.value = true
+  try {
+    const r = await pageArchive({ current: 1, size: 10, assetName: kw })
+    assetOpts.value = r.records || []
+  } finally { assetSearching.value = false }
+}
+async function onAssetPicked(id) {
+  const hit = assetOpts.value.find(a => a.assetId === id)
+  if (hit) form.assetName = hit.assetName
+  if (!id) return
+  onAssetBlur()
+  await loadCards()
+  const card = cardOpts.value.find(c => c.assetId === id && CARD_OK.includes(c.cardStatus))
+  if (card) {
+    form.equityCardId = card.cardNo || card.cardId
+    ElMessage.success('已自动带出生效权益卡片 ' + form.equityCardId)
+  } else {
+    ElMessage.warning('该资产暂无生效权益卡片,请先完成确权(先确后授)')
+  }
+}
+
+// 权益卡片选择器(失效卡禁选,选卡反向回填资产)
+const CARD_OK = ['正常', '生效']
+const cardOpts = ref([])
+let cardsLoaded = false
+async function loadCards() {
+  if (cardsLoaded) return
+  const r = await pageEquityCard({ current: 1, size: 100 })
+  cardOpts.value = r.records || []
+  cardsLoaded = true
+}
+function onCardPicked(no) {
+  const hit = cardOpts.value.find(c => (c.cardNo || c.cardId) === no)
+  if (hit) {
+    form.assetId = hit.assetId
+    form.assetName = hit.assetName || form.assetName
+  }
+}
+
+// 一键填充示例(测试/演示):对齐 test/一事一议授权申请 手册
+function fillDemo() {
+  Object.assign(form, {
+    assetId: 'AST-001', assetName: '客户用电信息表', equityCardId: 'EC-PRA-0001',
+    granteeOrg: '广州供电局', rightType: '数据产品经营权', scenario: '电力金融征信',
+    scope: '全字段', validDate: '2028-06-11 00:00:00', businessDomain: '营销域',
+    applicantManager: '李主管', contactInfo: '020-66668888', crossRegion: false,
+    sensitiveType: '个人隐私', thirdPartySource: '', needConfidentiality: true,
+    confidentialityFile: '04-保密承诺函(附录E)-广州供电局.docx',
+    infoAuthAgreement: '03-信息授权协议-征信客户授权说明.docx'
+  })
+  onAssetBlur()
+  ElMessage.success('已填充示例,可直接"下一步";材料文件在 test/一事一议授权申请 目录')
+}
+
 async function onAssetBlur() {
   if (!form.assetId) return
   assetLoading.value = true
@@ -299,4 +386,5 @@ function reset() {
 .wz-body { min-height: 320px; }
 .wz-foot { margin-top: 18px; display: flex; gap: 12px; justify-content: center; }
 .wz-flow { background: #f7f9ff; border-radius: 8px; padding: 10px 16px; color: #4a5160; font-size: 13px; display: inline-block; }
+.auth-tip { font-size: 12px; color: #8c8c8c; line-height: 1.6; }
 </style>
