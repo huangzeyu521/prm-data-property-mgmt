@@ -356,12 +356,12 @@ public class AitConflictServiceImpl implements AitConflictService {
 
     @Override
     public List<AitConflict> conflicts(String assetId) {
-        return conflicts(assetId, null, null, null, null);
+        return conflicts(assetId, null, null, null, null, null);
     }
 
     @Override
     public List<AitConflict> conflicts(String assetId, String conflictType, String riskLevel,
-                                       String startTime, String endTime) {
+                                       String startTime, String endTime, String subject) {
         LambdaQueryWrapper<AitConflict> w = new LambdaQueryWrapper<AitConflict>()
                 .eq(StringUtils.hasText(assetId), AitConflict::getAssetId, assetId)
                 .eq(StringUtils.hasText(conflictType), AitConflict::getConflictType, conflictType)
@@ -371,6 +371,10 @@ public class AitConflictServiceImpl implements AitConflictService {
         }
         if (StringUtils.hasText(endTime)) {
             w.le(AitConflict::getCreateTime, LocalDate.parse(endTime).atTime(23, 59, 59));
+        }
+        // 按主体筛选:冲突无主体列,匹配影响范围/描述中含该主体的冲突
+        if (StringUtils.hasText(subject)) {
+            w.and(q -> q.like(AitConflict::getImpactScope, subject).or().like(AitConflict::getConflictDesc, subject));
         }
         w.orderByDesc(AitConflict::getCreateTime);
         return conflictMapper.selectList(w);
@@ -392,13 +396,13 @@ public class AitConflictServiceImpl implements AitConflictService {
 
     @Override
     public Map<String, Object> report(String assetId) {
-        return report(assetId, null, null, null, null);
+        return report(assetId, null, null, null, null, null);
     }
 
     @Override
     public Map<String, Object> report(String assetId, String conflictType, String riskLevel,
-                                      String startTime, String endTime) {
-        List<AitConflict> list = conflicts(assetId, conflictType, riskLevel, startTime, endTime);
+                                      String startTime, String endTime, String subject) {
+        List<AitConflict> list = conflicts(assetId, conflictType, riskLevel, startTime, endTime, subject);
         Map<String, Object> report = new LinkedHashMap<>();
         report.put("assetId", assetId);
         report.put("total", list.size());
@@ -443,8 +447,8 @@ public class AitConflictServiceImpl implements AitConflictService {
 
     @Override
     public byte[] exportReportWord(String assetId, String conflictType, String riskLevel,
-                                   String startTime, String endTime) {
-        List<AitConflict> list = conflicts(assetId, conflictType, riskLevel, startTime, endTime);
+                                   String startTime, String endTime, String subject) {
+        List<AitConflict> list = conflicts(assetId, conflictType, riskLevel, startTime, endTime, subject);
         try (XWPFDocument doc = new XWPFDocument(); ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
             XWPFParagraph title = doc.createParagraph();
             title.setAlignment(org.apache.poi.xwpf.usermodel.ParagraphAlignment.CENTER);

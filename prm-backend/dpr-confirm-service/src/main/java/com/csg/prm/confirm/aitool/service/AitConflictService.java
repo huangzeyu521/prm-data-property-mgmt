@@ -37,9 +37,9 @@ public interface AitConflictService {
 
     List<AitConflict> conflicts(String assetId);
 
-    /** 多维筛选冲突(按 资产/冲突类型/风险等级/起止时间)(#17) */
+    /** 多维筛选冲突(按 资产/冲突类型/风险等级/起止时间/主体)(#17) */
     List<AitConflict> conflicts(String assetId, String conflictType, String riskLevel,
-                                String startTime, String endTime);
+                                String startTime, String endTime, String subject);
 
     void resolve(String conflictId, String feedback);
 
@@ -51,9 +51,9 @@ public interface AitConflictService {
 
     /** 多维筛选冲突分析报告(#17) */
     Map<String, Object> report(String assetId, String conflictType, String riskLevel,
-                               String startTime, String endTime);
+                               String startTime, String endTime, String subject);
 
     /** 导出冲突分析报告为 Word(.docx)(#17) */
     byte[] exportReportWord(String assetId, String conflictType, String riskLevel,
-                            String startTime, String endTime);
+                            String startTime, String endTime, String subject);
 }

@@ -96,8 +96,9 @@ public class AitConflictController {
                                      @RequestParam(required = false) String conflictType,
                                      @RequestParam(required = false) String riskLevel,
                                      @RequestParam(required = false) String startTime,
-                                     @RequestParam(required = false) String endTime) {
-        return R.ok(service.conflicts(assetId, conflictType, riskLevel, startTime, endTime));
+                                     @RequestParam(required = false) String endTime,
+                                     @RequestParam(required = false) String subject) {
+        return R.ok(service.conflicts(assetId, conflictType, riskLevel, startTime, endTime, subject));
     }
 
     @PostMapping("/{conflictId}/resolve")
@@ -112,8 +113,9 @@ public class AitConflictController {
                                          @RequestParam(required = false) String conflictType,
                                          @RequestParam(required = false) String riskLevel,
                                          @RequestParam(required = false) String startTime,
-                                         @RequestParam(required = false) String endTime) {
-        return R.ok(service.report(assetId, conflictType, riskLevel, startTime, endTime));
+                                         @RequestParam(required = false) String endTime,
+                                         @RequestParam(required = false) String subject) {
+        return R.ok(service.report(assetId, conflictType, riskLevel, startTime, endTime, subject));
     }
 
     /** 导出冲突分析报告为 Word(.docx)(#17;PDF 由前端打印导出) */
@@ -122,8 +124,9 @@ public class AitConflictController {
                                                @RequestParam(required = false) String conflictType,
                                                @RequestParam(required = false) String riskLevel,
                                                @RequestParam(required = false) String startTime,
-                                               @RequestParam(required = false) String endTime) {
-        byte[] data = service.exportReportWord(assetId, conflictType, riskLevel, startTime, endTime);
+                                               @RequestParam(required = false) String endTime,
+                                               @RequestParam(required = false) String subject) {
+        byte[] data = service.exportReportWord(assetId, conflictType, riskLevel, startTime, endTime, subject);
         String fn = URLEncoder.encode("权属冲突分析报告-" + assetId + ".docx", StandardCharsets.UTF_8)
                 .replace("+", "%20");
         return ResponseEntity.ok()

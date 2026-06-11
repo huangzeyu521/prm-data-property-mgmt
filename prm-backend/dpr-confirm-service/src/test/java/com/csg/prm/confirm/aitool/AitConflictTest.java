@@ -188,7 +188,7 @@ class AitConflictTest {
         conflictService.addClaim(cur);
         conflictService.detect(cur); // 产生并持久化冲突
 
-        Map<String, Object> rpt = conflictService.report(asset, null, null, null, null);
+        Map<String, Object> rpt = conflictService.report(asset, null, null, null, null, null);
         assertEquals("建议驳回/暂缓", rpt.get("decision"), "有高风险应建议驳回/暂缓");
         assertTrue(((Number) rpt.get("highRiskCount")).intValue() >= 1, "应有高风险冲突");
         assertFalse(((List<?>) rpt.get("highRiskSummary")).isEmpty(), "应有高风险摘要");
@@ -213,6 +213,22 @@ class AitConflictTest {
         assertTrue(((String) adv.get("ruleSuggestion")).contains("权属证明"), "应含规则建议(补充权属证明)");
         assertTrue(((String) adv.get("regulationBasis")).contains("三权分置"), "应含法规依据:" + adv.get("regulationBasis"));
         assertTrue(((String) adv.get("aiSuggestion")).contains("规则引擎"), "应含AI/规则桩建议:" + adv.get("aiSuggestion"));
+    }
+
+    /** #17 按主体筛选:仅返回 影响范围/描述含该主体 的冲突。 */
+    @Test
+    void conflicts_filter_by_subject() {
+        String asset = "DA-FLT-1";
+        conflictService.addClaim(claim(asset, "广东电网", "数据持有权", "全字段", null, false, "历史确权"));
+        AitKgClaim cur = claim(asset, "深圳供电局", "数据持有权", "全字段", null, false, "当前申请");
+        conflictService.addClaim(cur);
+        conflictService.detect(cur); // 主体冲突涉及 广东电网+深圳供电局
+
+        List<AitConflict> hit = conflictService.conflicts(asset, null, null, null, null, "深圳供电局");
+        assertFalse(hit.isEmpty(), "应筛出含该主体的冲突");
+        assertTrue(hit.stream().allMatch(c ->
+                c.getImpactScope().contains("深圳供电局") || c.getConflictDesc().contains("深圳供电局")), "筛出项均应含该主体");
+        assertTrue(conflictService.conflicts(asset, null, null, null, null, "北京电网").isEmpty(), "不相关主体应筛不到");
     }
 
     private AitKgClaim claim(String asset, String subject, String rt, String scope,

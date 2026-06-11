@@ -29,7 +29,7 @@
         </el-card>
       </el-col>
       <el-col :span="14">
-        <el-card shadow="hover">
+        <el-card shadow="hover" id="conflict-report-print">
           <template #header>
             <div style="display:flex;justify-content:space-between;align-items:center">
               <span>权属冲突 · {{ assetId || '请检测' }}</span>
@@ -39,10 +39,11 @@
             </div>
           </template>
           <!-- #17 多维筛选 + 报告导出 -->
-          <div class="conflict-filter">
+          <div class="conflict-filter no-print">
             <el-select v-model="filters.conflictType" placeholder="冲突类型" clearable size="small" style="width:130px">
               <el-option v-for="t in conflictTypes" :key="t" :label="t" :value="t" />
             </el-select>
+            <el-input v-model="filters.subject" placeholder="主体" clearable size="small" style="width:120px" />
             <el-select v-model="filters.riskLevel" placeholder="风险" clearable size="small" style="width:90px">
               <el-option v-for="l in riskLevels" :key="l" :label="l" :value="l" />
             </el-select>
@@ -51,6 +52,12 @@
             <el-button size="small" type="primary" :disabled="!assetId" @click="refresh(assetId)">筛选</el-button>
             <el-button size="small" type="warning" :disabled="!assetId" @click="onExportWord">导出Word</el-button>
             <el-button size="small" :disabled="!assetId" @click="onPrintPdf">打印/PDF</el-button>
+          </div>
+          <!-- 打印态报告抬头(仅打印可见) -->
+          <div v-if="report" class="print-only print-head">
+            <h2>权属冲突分析报告</h2>
+            <div>资产:{{ assetId }} ·
+              筛选:{{ [filters.conflictType, filters.subject, filters.riskLevel, (filters.startTime||filters.endTime)?(filters.startTime+'~'+filters.endTime):''].filter(Boolean).join(' / ') || '全部' }}</div>
           </div>
           <el-alert v-if="report" :title="(report.decision ? report.decision + ' · ' : '') + report.conclusion"
                     :type="report.highRiskCount>0?'error':(report.total>0?'warning':'success')" :closable="false" show-icon style="margin-bottom:10px" />
@@ -82,7 +89,7 @@
             <el-table-column prop="status" label="状态" width="84" align="center">
               <template #default="{ row }"><el-tag :type="row.status==='已处置'?'success':'info'">{{ row.status }}</el-tag></template>
             </el-table-column>
-            <el-table-column label="操作" width="130" fixed="right">
+            <el-table-column label="操作" width="130" fixed="right" class-name="no-print">
               <template #default="{ row }">
                 <el-button link type="primary" @click="onAdvice(row)">方案建议</el-button>
                 <el-button link type="success" :disabled="row.status==='已处置'" @click="onResolve(row)">处置</el-button>
@@ -162,7 +169,7 @@ const rts = ['数据持有权', '数据加工使用权', '数据产品经营权'
 const claim = reactive({ assetId: 'DA-DEMO-1', subject: '', rightType: '数据持有权', authScope: '全字段', exclusive: false, sourceType: '当前申请' })
 const assetId = ref(''); const qAsset = ref(''); const conflicts = ref([]); const report = ref(null)
 // #17 多维筛选
-const filters = reactive({ conflictType: '', riskLevel: '', startTime: '', endTime: '' })
+const filters = reactive({ conflictType: '', riskLevel: '', startTime: '', endTime: '', subject: '' })
 const conflictTypes = ['主体冲突', '范围冲突', '时效冲突', '历史记录冲突']
 const riskLevels = ['高', '中', '低']
 // #9 语义建主张 + 知识图谱
@@ -242,7 +249,7 @@ async function onDetect() {
   await refresh(claim.assetId)
 }
 async function loadByAsset() { if (qAsset.value) { assetId.value = qAsset.value; await refresh(qAsset.value) } }
-function params(a) { return { assetId: a, conflictType: filters.conflictType, riskLevel: filters.riskLevel, startTime: filters.startTime, endTime: filters.endTime } }
+function params(a) { return { assetId: a, conflictType: filters.conflictType, riskLevel: filters.riskLevel, startTime: filters.startTime, endTime: filters.endTime, subject: filters.subject } }
 async function refresh(a) { conflicts.value = await aitConflicts(params(a)); report.value = await aitConflictReport(params(a)) }
 function onExportWord() {
   if (!assetId.value) { ElMessage.warning('请先检测或查询某资产的冲突'); return }
@@ -260,4 +267,19 @@ function onResolve(row) {
 
 <style scoped>
 .conflict-filter { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+.print-only { display: none; }
+.print-head h2 { text-align: center; margin: 0 0 6px; font-size: 18px; }
+.print-head div { text-align: center; color: #666; font-size: 12px; margin-bottom: 10px; }
+</style>
+
+<!-- #17 PDF 打印优化:只输出报告区(报告抬头+汇总+冲突表),隐藏表单/图谱/操作/对话框 -->
+<style>
+@media print {
+  body * { visibility: hidden; }
+  #conflict-report-print, #conflict-report-print * { visibility: visible; }
+  #conflict-report-print { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none !important; border: none !important; }
+  #conflict-report-print .no-print, #conflict-report-print .no-print * { display: none !important; visibility: hidden !important; }
+  #conflict-report-print .print-only { display: block !important; visibility: visible !important; }
+  .el-card__header { display: none !important; }
+}
 </style>
