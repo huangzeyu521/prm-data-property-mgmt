@@ -64,6 +64,9 @@ public class LocalDawatAiGateway implements DawatAiGateway {
     @Override
     public RagAnswer ask(String question) {
         String q = question == null ? "" : question;
+        if (q.contains("确权结果预测")) {
+            return predictOutcome(q);
+        }
         if (q.contains("确权") && (q.contains("流程") || q.contains("节点"))) {
             return new RagAnswer(
                     "数据确权按附录F 4.1 的八节点流程办理:发起→收集编制(表1/表2)→配合提供→归集审查→合规小组审核(生成表3/表4 及认定意见)→主管审核→经理/高级经理审批→制卡归集。",
@@ -87,6 +90,45 @@ public class LocalDawatAiGateway implements DawatAiGateway {
         return new RagAnswer(
                 "[RAG本地桩] 未命中知识条目,建议细化问题(如确权流程/先确后授/三权分置/授权审批)。生产由大瓦特RAG基于全量指导书检索作答。",
                 List.of("附录F 数据确权授权业务指导书"), 0.5);
+    }
+
+    /**
+     * 确权结果预测桩(#18 简化 RAG):从结构化检索上下文解析 高风险冲突数/已解析材料数,
+     * 按规则口径给出预测结论(生产由 qwen 基于同一上下文生成)。
+     */
+    private RagAnswer predictOutcome(String q) {
+        int high = extractInt(q, "高风险冲突数:");
+        int parsed = extractInt(q, "已解析材料数:");
+        String pred;
+        String why;
+        if (high >= 2) {
+            pred = "建议驳回";
+            why = "存在多项高风险权属冲突,按先确后授原则须经合规管控小组裁定后方可确权";
+        } else if (parsed <= 0) {
+            pred = "建议补充材料";
+            why = "未检索到已解析的权属证明材料,材料完整性不足";
+        } else if (high == 1) {
+            pred = "建议补充材料";
+            why = "存在高风险冲突,建议补充权属证明并先行处置冲突";
+        } else {
+            pred = "建议通过";
+            why = "材料齐备且未检索到高风险权属冲突,历史案例与现行法规均无阻却事由";
+        }
+        return new RagAnswer("【" + pred + "】" + why + "。依据《数据二十条》三权分置产权制度与南网数据确权授权业务指导书研判。",
+                List.of("《数据二十条》数据产权三权分置", "附录F 3.2 先确后授", "附录F 4.1 数据确权流程"), 0.88);
+    }
+
+    private int extractInt(String text, String key) {
+        int idx = text.indexOf(key);
+        if (idx < 0) {
+            return 0;
+        }
+        int start = idx + key.length();
+        int end = start;
+        while (end < text.length() && Character.isDigit(text.charAt(end))) {
+            end++;
+        }
+        return end > start ? Integer.parseInt(text.substring(start, end)) : 0;
     }
 
     private String inferRightType(String s) {

@@ -66,6 +66,14 @@ public class AitDecision extends BaseEntity {
     @TableField("CEC_RAG_ADVICE")
     private String ragAdvice;
 
+    /** AI 预测结论(大模型基于 RAG 上下文给出,与规则预测对照) */
+    @TableField("CEC_AI_PREDICTION")
+    private String aiPrediction;
+
+    /** RAG 法规/知识引用条目 */
+    @TableField("CEC_RAG_CITATIONS")
+    private String ragCitations;
+
     /** 证据链 SM3 指纹(材料片段+知识库+规则+模型理由+结论) */
     @TableField("CEC_EVIDENCE_CHAIN")
     private String evidenceChain;
@@ -172,6 +180,22 @@ public class AitDecision extends BaseEntity {
 
     public void setRagAdvice(String ragAdvice) {
         this.ragAdvice = ragAdvice;
+    }
+
+    public String getAiPrediction() {
+        return aiPrediction;
+    }
+
+    public void setAiPrediction(String aiPrediction) {
+        this.aiPrediction = aiPrediction;
+    }
+
+    public String getRagCitations() {
+        return ragCitations;
+    }
+
+    public void setRagCitations(String ragCitations) {
+        this.ragCitations = ragCitations;
     }
 
     public String getEvidenceChain() {

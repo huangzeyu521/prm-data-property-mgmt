@@ -27,6 +27,7 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -73,7 +74,8 @@ public class AitDecisionServiceImpl implements AitDecisionService {
         // 因子1:材料完整性
         List<AitMaterial> materials = materialMapper.selectList(
                 new LambdaQueryWrapper<AitMaterial>().eq(AitMaterial::getApplyId, applyId));
-        double matScore = materialCompleteness(materials);
+        MaterialStat matStat = materialStat(materials);
+        double matScore = matStat.score();
 
         // 因子2:权属无冲突
         List<AitConflict> conflicts = conflictMapper.selectList(new LambdaQueryWrapper<AitConflict>()
@@ -129,15 +131,25 @@ public class AitDecisionServiceImpl implements AitDecisionService {
                 + conflicts.stream().map(AitConflict::getConflictType).distinct().collect(Collectors.joining("、"));
         String reason = "综合评分 " + composite + " 分;" + pending + ";材料完整性 " + matScore + ",权属无冲突 " + confScore + "。";
 
-        // RAG 智能建议(大模型/本地桩)
+        // RAG 智能建议(#18 简化检索增强:历史案例+法规条款+申请事实 → 大模型生成 建议+预测结论)
+        String ragContext = buildRagContext(apply, materials.size(), matStat.parsed(), conflicts,
+                (int) high, (int) med, claims);
         String ragAdvice;
+        String ragCitations;
+        String aiPrediction;
         try {
-            ragAdvice = ai.ask("数据确权决策依据与流程要点(" + apply.getRightType() + ")").answer();
+            DawatAiGateway.RagAnswer ans = ai.ask(ragContext);
+            ragAdvice = ans.answer();
+            ragCitations = String.join(";", ans.citations());
+            aiPrediction = extractPrediction(ragAdvice);
         } catch (RuntimeException e) {
-            ragAdvice = "[RAG] 依据《数据二十条》与南网制度,按三权分置与先确后授原则研判。";
+            ragAdvice = "[RAG] 模型暂不可用,依据《数据二十条》与南网制度按三权分置与先确后授原则研判。";
+            ragCitations = "《数据二十条》;南网数据确权授权业务指导书";
+            aiPrediction = null;
         }
 
-        String evidence = "0x" + Sm3Util.hashHex(applyId + "|" + composite + "|" + prediction + "|" + factorsJson);
+        String evidence = "0x" + Sm3Util.hashHex(
+                applyId + "|" + composite + "|" + prediction + "|" + aiPrediction + "|" + factorsJson);
 
         AitDecision d = new AitDecision();
         d.setApplyId(applyId);
@@ -152,6 +164,8 @@ public class AitDecisionServiceImpl implements AitDecisionService {
         d.setSupplementMaterials(supplement);
         d.setPendingConflicts(pending);
         d.setRagAdvice(ragAdvice);
+        d.setAiPrediction(aiPrediction);
+        d.setRagCitations(ragCitations);
         d.setEvidenceChain(evidence);
 
         decisionMapper.delete(new LambdaQueryWrapper<AitDecision>().eq(AitDecision::getApplyId, applyId));
@@ -159,9 +173,13 @@ public class AitDecisionServiceImpl implements AitDecisionService {
         return d;
     }
 
-    private double materialCompleteness(List<AitMaterial> materials) {
+    /** 材料完整性统计:已解析数/印章缺失/完整性评分 */
+    private record MaterialStat(int parsed, boolean sealMissing, double score) {
+    }
+
+    private MaterialStat materialStat(List<AitMaterial> materials) {
         if (materials.isEmpty()) {
-            return 0d;
+            return new MaterialStat(0, false, 0d);
         }
         int parsed = 0;
         boolean sealMissing = false;
@@ -176,7 +194,73 @@ public class AitDecisionServiceImpl implements AitDecisionService {
             }
         }
         double base = round(parsed * 100.0 / materials.size());
-        return sealMissing ? Math.min(base, 70d) : base;
+        return new MaterialStat(parsed, sealMissing, sealMissing ? Math.min(base, 70d) : base);
+    }
+
+    /**
+     * #18 简化 RAG:组装结构化检索上下文(申请事实 + 材料 + 冲突 + 历史案例 + 法规条款),
+     * 交大模型生成预测结论(建议通过/驳回/补充材料)与建议;未建向量库,检索为结构化/关键词方式。
+     */
+    private String buildRagContext(ConfirmApply apply, int materialTotal, int parsedCount,
+                                   List<AitConflict> conflicts, int high, int med, List<AitKgClaim> claims) {
+        String conflictTypes = conflicts.isEmpty() ? "无"
+                : conflicts.stream().map(AitConflict::getConflictType).distinct().collect(Collectors.joining("、"));
+        return "【任务】确权结果预测:请基于下方检索内容研判,预测结论限定为 建议通过/建议驳回/建议补充材料 三者之一,"
+                + "用【】标注在回答开头,并给出理由与法规引用。\n"
+                + "【申请事实】资产:" + apply.getAssetName() + "(" + apply.getAssetId() + ");申请权利类型:"
+                + apply.getRightType() + ";申请主体:" + apply.getRightHolder() + "\n"
+                + "【材料情况】已上传材料数:" + materialTotal + ";已解析材料数:" + parsedCount + "\n"
+                + "【冲突情况】未处置冲突数:" + conflicts.size() + ";高风险冲突数:" + high + ";中风险冲突数:" + med
+                + ";冲突类型:" + conflictTypes + "\n"
+                + "【历史案例】" + historyCases(apply, claims) + "\n"
+                + "【法规条款】" + String.join(" / ", regulationSnippets(apply.getRightType(), !conflicts.isEmpty()));
+    }
+
+    /** 历史案例结构化检索:同资产历史确权主张 + 同资产既往智能研判记录 */
+    private String historyCases(ConfirmApply apply, List<AitKgClaim> claims) {
+        List<String> cases = new ArrayList<>();
+        claims.stream().filter(c -> AitKgClaim.SRC_HISTORY.equals(c.getSourceType()))
+                .forEach(c -> cases.add("历史确权:" + c.getSubject() + "(" + c.getRightType()
+                        + (c.getValidDate() != null ? ",有效期至" + c.getValidDate().toLocalDate() : "") + ")"));
+        decisionMapper.selectList(new LambdaQueryWrapper<AitDecision>()
+                        .eq(AitDecision::getAssetId, apply.getAssetId()).ne(AitDecision::getApplyId, apply.getApplyId()))
+                .forEach(d -> cases.add("既往研判:" + d.getPrediction() + "(评分" + d.getScore() + ")"));
+        return cases.isEmpty() ? "无同资产历史确权案例" : String.join(";", cases);
+    }
+
+    /** 现行法规条款库(《数据二十条》/南网制度)按权利类型与冲突情形关键词检索 */
+    private List<String> regulationSnippets(String rightType, boolean hasConflict) {
+        List<String> snippets = new ArrayList<>();
+        snippets.add("《数据二十条》:建立数据资源持有权、数据加工使用权、数据产品经营权等分置的产权运行机制");
+        String norm = norm(rightType);
+        if ("持有".equals(norm)) {
+            snippets.add("《数据二十条》:推进实施公共数据确权授权机制,保障数据持有主体权益");
+        } else if ("使用".equals(norm)) {
+            snippets.add("《数据二十条》:保障数据加工使用权,促进数据使用价值复用");
+        } else if ("经营".equals(norm)) {
+            snippets.add("南网制度(附录F 3.4.3):数据产品经营权对外授权范围仅限对外开放目录");
+        }
+        if (hasConflict) {
+            snippets.add("南网制度(附录F 3.2):先确后授,权属冲突须经合规管控小组裁定后方可确权");
+        }
+        return snippets;
+    }
+
+    /** 从模型回答中抽取预测结论(未命中返回 null,由前端提示人工复核) */
+    private String extractPrediction(String answer) {
+        if (answer == null) {
+            return null;
+        }
+        if (answer.contains(AitDecision.PRED_REJECT)) {
+            return AitDecision.PRED_REJECT;
+        }
+        if (answer.contains(AitDecision.PRED_SUPPLEMENT) || answer.contains("补充材料")) {
+            return AitDecision.PRED_SUPPLEMENT;
+        }
+        if (answer.contains(AitDecision.PRED_PASS)) {
+            return AitDecision.PRED_PASS;
+        }
+        return null;
     }
 
     @Override

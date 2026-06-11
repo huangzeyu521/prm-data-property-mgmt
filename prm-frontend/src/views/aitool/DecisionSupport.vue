@@ -5,7 +5,7 @@
         <el-form-item label="确权申请ID"><el-input v-model="applyId" placeholder="输入确权申请ID" style="width:280px" /></el-form-item>
         <el-form-item><el-button type="primary" @click="onAnalyze">智能研判</el-button></el-form-item>
       </el-form>
-      <span class="prm-table-note">综合 材料完整性30% / 权属无冲突40% / 合规15% / 历史匹配15% 加权,RAG 结合《数据二十条》与南网制度给出决策建议。</span>
+      <span class="prm-table-note">综合 材料完整性30% / 权属无冲突40% / 合规15% / 历史匹配15% 加权;RAG 检索历史确权案例与《数据二十条》/南网制度条款,由大模型给出预测结论并与规则预测对照。</span>
     </div>
 
     <el-row v-if="d" :gutter="16">
@@ -13,6 +13,14 @@
         <el-card shadow="hover"><div ref="gauge" style="height:200px"></div>
           <div style="text-align:center;margin-top:-6px">
             <el-tag :type="predTag(d.prediction)" effect="dark" size="large">{{ d.prediction }}</el-tag>
+          </div>
+          <div style="text-align:center;margin-top:8px" class="ai-pred">
+            <span class="ai-lbl">AI 预测:</span>
+            <el-tag :type="predTag(d.aiPrediction)" effect="plain">{{ d.aiPrediction || '未生成' }}</el-tag>
+            <el-tag v-if="d.aiPrediction" :type="d.aiPrediction === d.prediction ? 'success' : 'warning'" size="small" style="margin-left:6px">
+              {{ d.aiPrediction === d.prediction ? '与规则一致' : '不一致·建议人工复核' }}
+            </el-tag>
+            <el-tag v-else type="info" size="small" style="margin-left:6px">建议人工复核</el-tag>
           </div>
         </el-card>
       </el-col>
@@ -38,6 +46,10 @@
         <el-descriptions-item label="待处置冲突">{{ d.pendingConflicts }}</el-descriptions-item>
         <el-descriptions-item label="权益分割方案">{{ d.splitPlan }}</el-descriptions-item>
         <el-descriptions-item label="RAG 智能建议">{{ d.ragAdvice }}</el-descriptions-item>
+        <el-descriptions-item label="法规/知识引用">
+          <el-tag v-for="c in citations" :key="c" type="info" effect="plain" size="small" style="margin-right:6px">{{ c }}</el-tag>
+          <span v-if="!citations.length">—</span>
+        </el-descriptions-item>
         <el-descriptions-item label="证据链(SM3)"><code class="hash">{{ d.evidenceChain }}</code></el-descriptions-item>
       </el-descriptions>
     </el-card>
@@ -45,13 +57,14 @@
 </template>
 
 <script setup>
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, computed } from 'vue'
 import * as echarts from 'echarts'
 import { ElMessage } from 'element-plus'
 import { aitAnalyze } from '@/api/aitool'
 
 const applyId = ref('')
 const d = ref(null); const factors = ref([]); const gauge = ref()
+const citations = computed(() => (d.value?.ragCitations || '').split(';').filter(Boolean))
 
 function predTag(p) { return { 建议通过: 'success', 建议补充材料: 'warning', 建议驳回: 'danger' }[p] || 'info' }
 
@@ -76,5 +89,6 @@ function renderGauge(score) {
 
 <style scoped>
 .kv { margin-top: 8px; font-size: 13px; }
+.ai-lbl { font-size: 13px; color: #606266; margin-right: 6px; }
 .hash { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: #2f6bff; word-break: break-all; }
 </style>

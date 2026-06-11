@@ -64,6 +64,25 @@ class AitDecisionTest {
     }
 
     @Test
+    void rag_generates_ai_prediction_with_citations() {
+        String asset = "DA-DEC-4";
+        String applyId = newApply(asset);
+        AitMaterial m = new AitMaterial();
+        m.setFileName(asset + "-确权证明-盖章.pdf");
+        m.setApplyId(applyId);
+        m.setContent("数据持有权,广东电网,有效期3年,自行生产,已盖章");
+        materialService.parse(materialService.upload(m));
+
+        AitDecision d = decisionService.analyze(applyId);
+        assertNotNull(d.getAiPrediction(), "RAG 应产出 AI 预测结论");
+        assertEquals(AitDecision.PRED_PASS, d.getAiPrediction(), "干净案例 AI 预测应为建议通过");
+        assertEquals(d.getPrediction(), d.getAiPrediction(), "干净案例 AI 预测应与规则预测一致");
+        assertNotNull(d.getRagCitations());
+        assertTrue(d.getRagCitations().contains("数据二十条"), "引用应含《数据二十条》");
+        assertTrue(d.getRagAdvice().contains("建议"), "RAG 建议应含预测结论表述");
+    }
+
+    @Test
     void no_material_should_suggest_supplement() {
         String applyId = newApply("DA-DEC-2");
         AitDecision d = decisionService.analyze(applyId);
