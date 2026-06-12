@@ -99,6 +99,8 @@ public class AitMaterialController {
     /** 触发解析(异步):立即返回,前端轮询 /progress 获取 0–100% 进度(#2) */
     @PostMapping("/{materialId}/parse")
     public R<Void> parse(@PathVariable String materialId) {
+        // 派发异步前同步校验材料存在:@Async 线程内的"材料不存在"异常无人接收,否则前端误得"成功"
+        service.getMaterial(materialId);
         service.submitParse(materialId);
         return R.ok();
     }

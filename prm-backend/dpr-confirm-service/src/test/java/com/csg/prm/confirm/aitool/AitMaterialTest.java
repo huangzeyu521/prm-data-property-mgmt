@@ -166,6 +166,13 @@ class AitMaterialTest {
 
     /** #1 批量上限:单次批量上传超过 50 个直接拒绝(控制器层,先于落库)。 */
     @Test
+    void parse_missing_material_rejected_synchronously() {
+        // @Async 解析派发前必须同步校验材料存在,否则异常被异步线程吞掉、前端误得"成功"
+        AitMaterialController controller = new AitMaterialController(aitService);
+        assertThrows(BizException.class, () -> controller.parse("NO-SUCH-MATERIAL"));
+    }
+
+    @Test
     void uploadBatch_rejects_more_than_50() {
         MultipartFile[] tooMany = new MultipartFile[51];
         AitMaterialController controller = new AitMaterialController(aitService);
