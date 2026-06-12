@@ -225,6 +225,7 @@
         <el-result icon="success" title="确权申请已提交" :sub-title="`申请编号 ${applyNo || applyId}，已进入：合规审核 → 主管复核 → 经理终审`">
           <template #extra>
             <el-button type="primary" @click="goProgress">查看进度</el-button>
+            <el-button type="success" @click="router.push('/dpr/confirm/review?applyId=' + applyId)">去审核(审核申请提交)</el-button>
             <el-button @click="reset">再发起一笔</el-button>
           </template>
         </el-result>

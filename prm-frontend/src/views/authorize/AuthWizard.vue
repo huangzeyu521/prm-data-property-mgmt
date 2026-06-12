@@ -155,6 +155,10 @@
       <el-card v-show="step === 3" shadow="never">
         <el-result icon="success" title="一事一议授权申请已提交" :sub-title="`申请 ${applyId} 已进入审批流`">
           <template #extra>
+            <div style="margin-bottom:10px">
+              <el-button type="success" @click="go('/dpr/auth/review?applyId=' + applyId)">去审核(授权审核提交)</el-button>
+              <el-button type="warning" plain @click="go('/dpr/auth/agreement-seal')">去协议签章(双签附录D)</el-button>
+            </div>
             <div class="wz-flow">后续闭环:多级审批 → 授权方/被授权方双签《运营授权协议(附录D)》→ 自动签发授权证书 → 执行授权</div>
             <div style="margin-top:14px">
               <el-button type="primary" @click="go('/dpr/auth/review')">去审核台</el-button>

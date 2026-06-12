@@ -6,7 +6,7 @@
         <el-button type="success" :disabled="!sel.length" @click="onBatchApprove">批量通过（{{ sel.length }}）</el-button>
         <el-button type="danger" :disabled="!sel.length" @click="onBatchReject">批量驳回（{{ sel.length }}）</el-button>
       </div>
-      <el-table :data="reviewing" v-loading="loading" border stripe @selection-change="s => sel = s">
+      <el-table :row-class-name="rowHl" :data="reviewing" v-loading="loading" border stripe @selection-change="s => sel = s">
         <el-table-column type="selection" width="46" />
         <el-table-column type="index" label="序号" width="56" align="center" />
         <el-table-column prop="applyNo" label="申请编号" width="160" show-overflow-tooltip />
@@ -110,9 +110,15 @@ async function onDetail(row) {
   drawer.value = true
 }
 function preview(row) { if (row.materialId) window.open(materialFileUrl(row.materialId), '_blank') }
+// 从向导"去审核"带 applyId 跳入时高亮目标单
+import { useRoute } from 'vue-router'
+const route = useRoute()
+function rowHl({ row }) { return route.query.applyId && row.applyId === route.query.applyId ? 'hl-row' : '' }
+
 onMounted(load)
 </script>
 
 <style scoped>
 .rv-h { font-weight: 600; margin: 16px 0 8px; }
+:deep(.hl-row) { background: var(--prm-color-selected-bg, #eff7ff) !important; outline: 1px solid var(--prm-color-primary, #126cfd); }
 </style>

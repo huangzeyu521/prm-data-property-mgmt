@@ -13,6 +13,9 @@ import java.util.List;
  */
 public interface EquityCardService {
 
+    /** 按卡片编号查询(供授权服务跨服务"先确后授"真实校验) */
+    com.csg.prm.confirm.entity.EquityCard findByNo(String cardNo);
+
     /** 由确权申请生成权益卡片,返回卡片ID */
     String generateFromApply(ConfirmApply apply);
 

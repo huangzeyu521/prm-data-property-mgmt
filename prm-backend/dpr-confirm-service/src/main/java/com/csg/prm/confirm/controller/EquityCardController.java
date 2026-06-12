@@ -29,6 +29,12 @@ public class EquityCardController {
         this.service = service;
     }
 
+    /** 按卡片编号查询(授权服务先确后授真实校验用;不存在返回 data=null) */
+    @GetMapping("/by-no/{cardNo}")
+    public R<com.csg.prm.confirm.entity.EquityCard> byNo(@PathVariable String cardNo) {
+        return R.ok(service.findByNo(cardNo));
+    }
+
     @GetMapping("/{cardId}")
     public R<EquityCard> detail(@PathVariable String cardId) {
         return R.ok(service.getById(cardId));

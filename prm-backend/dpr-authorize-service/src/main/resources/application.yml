@@ -19,6 +19,9 @@ mybatis-plus:
 
 prm:
   # 大瓦特 AI 接入:provider=stub 本地规则桩(默认,离线);provider=qwen 接阿里云百炼 qwen3.7-max
+  # 先确后授真实校验:HTTP 查 confirm 服务卡片实况(不可达回退桩)
+  confirm:
+    base-url: ${PRM_CONFIRM_URL:http://host.docker.internal:9102}
   ai:
     provider: ${PRM_AI_PROVIDER:stub}
     base-url: ${PRM_AI_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}

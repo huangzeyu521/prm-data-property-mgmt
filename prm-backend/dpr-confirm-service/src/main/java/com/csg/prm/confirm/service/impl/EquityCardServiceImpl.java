@@ -42,6 +42,13 @@ public class EquityCardServiceImpl implements EquityCardService {
         this.certService = certService;
     }
 
+
+    @Override
+    public com.csg.prm.confirm.entity.EquityCard findByNo(String cardNo) {
+        return mapper.selectOne(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.csg.prm.confirm.entity.EquityCard>()
+                .eq(com.csg.prm.confirm.entity.EquityCard::getCardNo, cardNo).last("limit 1"));
+    }
+
     @Override
     @Transactional
     public String generateFromApply(ConfirmApply apply) {
