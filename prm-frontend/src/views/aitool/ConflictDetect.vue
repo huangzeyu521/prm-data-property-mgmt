@@ -3,7 +3,7 @@
     <el-row :gutter="16">
       <el-col :span="10">
         <el-card header="登记权属主张(构建知识图谱)" shadow="hover">
-          <el-form :model="claim" label-width="90px">
+          <el-form :model="claim" label-width="100px">
             <el-form-item label="资产ID">
               <el-select v-model="claim.assetId" filterable remote allow-create default-first-option clearable
                 :remote-method="searchAssets" :loading="assetSearching" style="width:100%"
@@ -163,7 +163,7 @@
     </el-card>
 
     <el-dialog v-model="editDlg" title="修改权属主张(节点与关系)" width="460px" align-center>
-      <el-form :model="editClaim" label-width="90px">
+      <el-form :model="editClaim" label-width="100px">
         <el-form-item label="权利主体"><el-input v-model="editClaim.subject" /></el-form-item>
         <el-form-item label="权利类型"><el-select v-model="editClaim.rightType" style="width:100%"><el-option v-for="t in rts" :key="t" :label="t" :value="t" /></el-select></el-form-item>
         <el-form-item label="授权范围"><el-input v-model="editClaim.authScope" placeholder="全字段/约定字段" /></el-form-item>

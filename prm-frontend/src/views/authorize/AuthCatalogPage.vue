@@ -26,7 +26,7 @@
         :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" />
     </div>
     <el-dialog v-model="dlg" :title="'新增'+label" width="520px" align-center>
-      <el-form :model="form" label-width="80px">
+      <el-form :model="form" label-width="100px">
         <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
         <el-form-item label="类型"><el-input v-model="form.itemType" /></el-form-item>
         <el-form-item label="内容"><el-input v-model="form.content" type="textarea" /></el-form-item>

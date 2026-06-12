@@ -40,7 +40,7 @@
     </div>
 
     <el-dialog v-model="dlg" title="上传确权证明材料(真实文件 · 可批量)" width="600px" align-center @closed="resetUpload">
-      <el-form label-width="100px">
+      <el-form label-width="150px">
         <el-form-item label="关联确权申请">
           <el-input v-model="uploadApplyId" placeholder="确权申请ID(用于解析后自动比对,可空)" clearable />
         </el-form-item>

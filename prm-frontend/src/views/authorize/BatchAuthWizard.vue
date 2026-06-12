@@ -48,7 +48,7 @@
         <el-divider />
         <el-row :gutter="16">
           <el-col :span="11">
-            <el-form ref="itemRef" :model="item" :rules="itemRules" label-width="110px">
+            <el-form ref="itemRef" :model="item" :rules="itemRules" label-width="100px">
               <el-form-item label="关联资产ID" prop="assetId">
                 <el-select v-model="item.assetId" filterable remote allow-create default-first-option clearable
                   :remote-method="searchAssets" :loading="assetSearching" style="width:100%"

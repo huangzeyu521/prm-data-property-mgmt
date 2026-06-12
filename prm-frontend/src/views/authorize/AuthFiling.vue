@@ -30,7 +30,7 @@
         :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" />
     </div>
     <el-dialog v-model="dlg" title="新增对外经营权授权备案" width="520px" align-center>
-      <el-form :model="form" label-width="110px">
+      <el-form :model="form" label-width="100px">
         <el-form-item label="备案单位"><el-input v-model="form.filingOrg" placeholder="分子公司名称" /></el-form-item>
         <el-form-item label="被授权方"><el-input v-model="form.granteeOrg" /></el-form-item>
         <el-form-item label="产权类型">

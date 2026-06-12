@@ -33,7 +33,7 @@
     <el-dialog v-model="rcDlg" title="权属变动 · 联动派生重确权" width="500px" align-center>
       <el-alert type="warning" :closable="false" show-icon style="margin-bottom:12px"
         title="附录F 3.3.2:数据新增/来源变更/到期将生成重要预警并派生重确权工单(草稿)进入确权流程。" />
-      <el-form :model="rc" label-width="90px">
+      <el-form :model="rc" label-width="100px">
         <el-form-item label="资产ID" required><el-input v-model="rc.assetId" placeholder="发生权属变动的资产ID" /></el-form-item>
         <el-form-item label="资产名称"><el-input v-model="rc.assetName" /></el-form-item>
         <el-form-item label="触发类型">
@@ -54,7 +54,7 @@
     <el-dialog v-model="vioDlg" title="违规上报 · 联动熔断授权" width="500px" align-center>
       <el-alert type="error" :closable="false" show-icon style="margin-bottom:12px"
         title="附录F 3.4.5:确认后将生成紧急预警,并联动暂停该资产下全部生效授权证书 + 自动建追责。" />
-      <el-form :model="vio" label-width="90px">
+      <el-form :model="vio" label-width="100px">
         <el-form-item label="资产ID" required><el-input v-model="vio.assetId" placeholder="涉事数据资产ID" /></el-form-item>
         <el-form-item label="违规类型">
           <el-select v-model="vio.violationType" style="width:100%">

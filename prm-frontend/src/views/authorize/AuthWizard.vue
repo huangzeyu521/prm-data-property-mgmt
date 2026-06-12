@@ -21,7 +21,7 @@
             材料包见 test/一事一议授权申请 目录
           </template>
         </el-alert>
-        <el-form ref="formRef" :model="form" :rules="rules" label-width="130px" :disabled="!!applyId" style="max-width:680px">
+        <el-form ref="formRef" :model="form" :rules="rules" label-width="150px" :disabled="!!applyId" style="max-width:680px">
           <el-form-item label="AI 智能填单">
             <div style="width:100%">
               <el-input v-model="aiText" type="textarea" :rows="2" placeholder="用自然语言描述授权诉求,如:拟向广州供电局开放数据用于电力金融征信,全字段" />

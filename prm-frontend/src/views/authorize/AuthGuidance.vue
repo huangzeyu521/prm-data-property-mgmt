@@ -42,7 +42,7 @@
 
     <!-- 新增/修改 -->
     <el-dialog v-model="dlg" :title="form.guidanceId ? '修改授权指引' : '新增授权指引'" width="540px" align-center>
-      <el-form :model="form" label-width="90px">
+      <el-form :model="form" label-width="100px">
         <el-form-item label="标题"><el-input v-model="form.title" /></el-form-item>
         <el-form-item label="类型">
           <el-select v-model="form.guidanceType" style="width:100%">

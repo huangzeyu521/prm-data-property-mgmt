@@ -49,7 +49,7 @@
     </div>
 
     <el-dialog v-model="dialogVisible" title="新增授权申请" width="600px" align-center :close-on-click-modal="false">
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="150px">
         <el-form-item label="授权模式">
           <el-select v-model="form.authMode" style="width:100%">
             <el-option v-for="m in modes" :key="m" :label="m" :value="m" />

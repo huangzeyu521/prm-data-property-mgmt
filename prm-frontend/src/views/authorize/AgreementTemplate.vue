@@ -55,7 +55,7 @@
     </div>
 
     <el-dialog v-model="dlg" :title="form.templateId ? '修改协议模板（保存自增版本）' : '新增协议模板'" width="640px" align-center>
-      <el-form :model="form" label-width="90px">
+      <el-form :model="form" label-width="100px">
         <el-form-item label="模板名称"><el-input v-model="form.templateName" /></el-form-item>
         <el-form-item label="授权类型">
           <el-select v-model="form.authType" allow-create filterable style="width:220px"><el-option v-for="t in authTypes" :key="t" :label="t" :value="t" /></el-select>

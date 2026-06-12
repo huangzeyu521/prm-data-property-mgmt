@@ -57,7 +57,7 @@
     </div>
 
     <el-dialog v-model="dlg" :title="editing ? '编辑授权证书模板（更新将自增版本）' : '新增授权证书模板'" width="560px" align-center>
-      <el-form :model="form" label-width="110px">
+      <el-form :model="form" label-width="150px">
         <el-form-item label="模板名称" required><el-input v-model="form.templateName" /></el-form-item>
         <el-form-item label="证书类型">
           <el-select v-model="form.certType" style="width:100%">

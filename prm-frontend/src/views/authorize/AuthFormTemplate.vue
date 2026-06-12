@@ -44,7 +44,7 @@
 
     <!-- 新增/修改 -->
     <el-dialog v-model="dlg" :title="form.templateId ? '修改申请模板（保存自增版本）' : '新增申请模板'" width="760px" align-center>
-      <el-form :model="form" label-width="90px">
+      <el-form :model="form" label-width="100px">
         <el-form-item label="模板名称"><el-input v-model="form.templateName" /></el-form-item>
         <el-form-item label="授权类型">
           <el-select v-model="form.authType" style="width:220px">

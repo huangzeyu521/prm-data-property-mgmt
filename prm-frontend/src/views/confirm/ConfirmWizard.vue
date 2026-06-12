@@ -21,7 +21,7 @@
             体验完整流程,材料包见 test/确权申请 目录
           </template>
         </el-alert>
-        <el-form ref="formRef" :model="form" :rules="rules" label-width="110px" :disabled="!!applyId" style="max-width:640px">
+        <el-form ref="formRef" :model="form" :rules="rules" label-width="150px" :disabled="!!applyId" style="max-width:640px">
           <el-form-item label="关联资产ID" prop="assetId">
             <div style="display:flex;gap:8px;width:100%">
               <el-select v-model="form.assetId" filterable remote allow-create default-first-option clearable

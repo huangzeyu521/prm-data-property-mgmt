@@ -54,6 +54,11 @@ body {
   color: var(--prm-color-danger);
 }
 
+/* 表单标签:右对齐单行展示,禁止折行(高压线"标签不可折行";录入表单 150px/简单表单 100px 两档) */
+.el-form-item__label {
+  white-space: nowrap;
+}
+
 /* 工作区最大化、统一间距 */
 .prm-page {
   padding: var(--prm-space-md);

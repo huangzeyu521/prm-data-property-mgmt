@@ -45,7 +45,7 @@
     </div>
 
     <el-dialog v-model="dlg" :title="form.scenarioId ? '修改应用场景' : '新增应用场景'" width="560px" align-center>
-      <el-form :model="form" label-width="100px">
+      <el-form :model="form" label-width="150px">
         <el-form-item label="场景名称"><el-input v-model="form.scenarioName" /></el-form-item>
         <el-form-item label="场景分类">
           <el-select v-model="form.category" allow-create filterable default-first-option style="width:100%" placeholder="选择或输入分类">

@@ -55,7 +55,7 @@
       </el-tab-pane>
     </el-tabs>
     <el-dialog v-model="dlg" :title="form.templateId ? '修改证书模板（保存自增版本）' : '新增证书模板'" width="560px" align-center>
-      <el-form :model="form" label-width="90px">
+      <el-form :model="form" label-width="100px">
         <el-form-item label="模板名称"><el-input v-model="form.templateName" /></el-form-item>
         <el-form-item label="适用权益">
           <el-select v-model="form.rightType" style="width:100%">
