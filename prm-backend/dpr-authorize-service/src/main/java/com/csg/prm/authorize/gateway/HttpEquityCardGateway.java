@@ -22,6 +22,7 @@ import java.util.Set;
  */
 @Component
 @Primary
+@org.springframework.context.annotation.Profile("!test")
 public class HttpEquityCardGateway implements EquityCardGateway {
 
     private static final Logger log = LoggerFactory.getLogger(HttpEquityCardGateway.class);
@@ -41,6 +42,7 @@ public class HttpEquityCardGateway implements EquityCardGateway {
         f.setConnectTimeout((int) Duration.ofSeconds(2).toMillis());
         f.setReadTimeout((int) Duration.ofSeconds(5).toMillis());
         this.rest = new RestTemplate(f);
+        log.info("[先确后授] HttpEquityCardGateway 已启用,confirm={}", confirmBaseUrl);
     }
 
     @Override
@@ -50,8 +52,10 @@ public class HttpEquityCardGateway implements EquityCardGateway {
         }
         Map<?, ?> card = fetchCard(equityCardId);
         if (card == REMOTE_DOWN) {
+            log.debug("[先确后授] isUsable({}) 远端不可达→回退桩", equityCardId);
             return fallback.isUsable(equityCardId);
         }
+        log.debug("[先确后授] isUsable({}) 实况status={}", equityCardId, card == null ? "卡不存在" : card.get("cardStatus"));
         // 远端可达:以确权侧实况为准——卡不存在或状态非 正常/生效 即不可用(冻结/失效熔断)
         return card != null && USABLE_STATUS.contains(String.valueOf(card.get("cardStatus")));
     }
@@ -86,7 +90,7 @@ public class HttpEquityCardGateway implements EquityCardGateway {
             Object data = body.get("data");
             return data instanceof Map ? (Map<?, ?>) data : null;
         } catch (Exception e) {
-            log.debug("[先确后授] confirm 服务不可达,回退本地桩: {}", e.getMessage());
+            log.debug("[先确后授] fetchCard({}) 异常,回退桩: {}", cardNo, e.getMessage());
             return REMOTE_DOWN;
         }
     }

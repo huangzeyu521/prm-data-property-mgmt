@@ -20,6 +20,9 @@ spring:
 
 prm:
   db-type: MYSQL
+  # 单测确定性:先确后授网关强制走本地桩(避免与宿主机运行中的 confirm 容器耦合)
+  confirm:
+    gateway: stub
 
 seata:
   enabled: false

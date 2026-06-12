@@ -45,6 +45,14 @@ public class GlobalExceptionHandler {
         return R.fail(ResultCode.PARAM_ERROR.getCode(), "请求体格式错误,请检查参数");
     }
 
+    /** 方法不支持属客户端 405:返回真实状态码并降为 WARN(同 404 口径,避免误报系统异常) */
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
+    public R<Void> handleMethodNotSupported(org.springframework.web.HttpRequestMethodNotSupportedException e) {
+        log.warn("请求方法不支持: {}", e.getMessage());
+        return R.fail(ResultCode.PARAM_ERROR.getCode(), "请求方法不支持:" + e.getMethod());
+    }
+
     /** 路径不存在属客户端 404:返回真实 404 状态码并降为 WARN,避免误报"系统异常"与 ERROR 堆栈噪音 */
     @ExceptionHandler(NoResourceFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
