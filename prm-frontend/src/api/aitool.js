@@ -36,7 +36,7 @@ export const aitClaims = (assetId) => request.get('/dpr/confirm/aitool/conflict/
 export const aitConflicts = (params) => request.get('/dpr/confirm/aitool/conflict/list', { params })
 export const aitResolveConflict = (id, feedback) => request.post(`/dpr/confirm/aitool/conflict/${id}/resolve`, null, { params: { feedback } })
 // #16 冲突解决方案建议:规则建议 + 法规依据 + AI 建议
-export const aitConflictAdvice = (conflictId) => request.get(`/dpr/confirm/aitool/conflict/${conflictId}/advice`)
+export const aitConflictAdvice = (conflictId) => request.get(`/dpr/confirm/aitool/conflict/${conflictId}/advice`, { timeout: 120000 })
 export const aitConflictReport = (params) => request.get('/dpr/confirm/aitool/conflict/report', { params })
 // #17 冲突报告导出 Word(直链下载)
 export const aitConflictReportExportUrl = (params) => {
@@ -45,6 +45,6 @@ export const aitConflictReportExportUrl = (params) => {
 }
 
 // M3 确权决策支持
-export const aitAnalyze = (applyId) => request.post('/dpr/confirm/aitool/decision/analyze', null, { params: { applyId } })
+export const aitAnalyze = (applyId) => request.post('/dpr/confirm/aitool/decision/analyze', null, { params: { applyId }, timeout: 120000 })
 export const aitDecisionByApply = (applyId) => request.get(`/dpr/confirm/aitool/decision/by-apply/${applyId}`)
 export const pageAitDecision = (params) => request.get('/dpr/confirm/aitool/decision/page', { params })

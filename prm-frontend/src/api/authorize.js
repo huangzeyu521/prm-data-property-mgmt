@@ -126,7 +126,7 @@ export const uploadAgrTemplateFile = (id, fd) => request.post(`/dpr/auth/agreeme
 export const agrTemplateFileUrl = (id) => `/api/dpr/auth/agreement-template/${id}/file`
 
 // 授权大模型能力(qwen3-max,stub 回退)
-export const aiAuthMaterialCheck = (applyId) => request.post('/dpr/auth/material/ai-check', null, { params: { applyId } })
-export const aiAuthPreReview = (applyId) => request.post('/dpr/auth/compliance/pre-review', null, { params: { applyId } })
-export const aiBatchIntent = (text) => request.post('/dpr/auth/batch-list/ai-intent', null, { params: { text } })
-export const aiBatchPreReview = (batchListId) => request.post(`/dpr/auth/batch-list/${batchListId}/pre-review`)
+export const aiAuthMaterialCheck = (applyId) => request.post('/dpr/auth/material/ai-check', null, { params: { applyId }, timeout: 120000 })
+export const aiAuthPreReview = (applyId) => request.post('/dpr/auth/compliance/pre-review', null, { params: { applyId }, timeout: 120000 })
+export const aiBatchIntent = (text) => request.post('/dpr/auth/batch-list/ai-intent', null, { params: { text }, timeout: 120000 })
+export const aiBatchPreReview = (batchListId) => request.post(`/dpr/auth/batch-list/${batchListId}/pre-review`, null, { timeout: 120000 })

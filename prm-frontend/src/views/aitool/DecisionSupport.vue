@@ -2,8 +2,20 @@
   <div class="prm-page">
     <div class="prm-query-bar">
       <el-form :inline="true" @submit.prevent>
-        <el-form-item label="确权申请ID"><el-input v-model="applyId" placeholder="输入确权申请ID" style="width:280px" /></el-form-item>
+        <el-form-item label="确权申请ID">
+          <el-select v-model="applyId" filterable allow-create default-first-option clearable style="width:340px"
+            placeholder="下拉选择已有申请,或粘贴申请ID" @focus="loadApplies">
+            <el-option v-for="a in applyOpts" :key="a.applyId" :value="a.applyId"
+              :label="(a.applyNo || a.applyId.slice(0, 12)) + '　' + (a.assetName || '')">
+              <span>{{ a.applyNo || a.applyId.slice(0, 12) }}</span>
+              <span style="float:right;color:#8c8c8c;font-size:12px">{{ a.assetName }} · {{ a.status }}</span>
+            </el-option>
+          </el-select>
+        </el-form-item>
         <el-form-item><el-button type="primary" @click="onAnalyze">智能研判</el-button></el-form-item>
+        <el-form-item>
+          <el-button type="warning" plain :loading="demoRunning" @click="runDemo">一键示例并研判(测试/演示)</el-button>
+        </el-form-item>
       </el-form>
       <span class="prm-table-note">综合 材料完整性30% / 权属无冲突40% / 合规15% / 历史匹配15% 加权;RAG 检索历史确权案例与《数据二十条》/南网制度条款,由大模型给出预测结论并与规则预测对照。</span>
     </div>
@@ -97,6 +109,45 @@ onMounted(() => {
 
 function predTag(p) { return { 建议通过: 'success', 建议补充材料: 'warning', 建议驳回: 'danger' }[p] || 'info' }
 
+// 申请下拉:加载现有确权申请(免记ID;H2内存库重启会清空,旧ID失效属预期)
+import { pageConfirmApply, saveConfirmDraft } from '@/api/confirm'
+import { uploadAitMaterial, parseAitMaterial, aitProgress } from '@/api/aitool'
+const applyOpts = ref([])
+let appliesLoaded = false
+async function loadApplies() {
+  if (appliesLoaded) return
+  const r = await pageConfirmApply({ current: 1, size: 30 })
+  applyOpts.value = r.records || []
+  appliesLoaded = true
+}
+
+// 一键示例并研判:建申请→工具传含盖章材料→解析→智能研判,全链自给自足
+const demoRunning = ref(false)
+async function runDemo() {
+  demoRunning.value = true
+  try {
+    const id = await saveConfirmDraft({ assetId: 'AST-001', assetName: '客户用电信息表',
+      rightType: '数据资源持有权', rightHolder: '广东电网有限责任公司', regulated: '管制业务',
+      purpose: '决策支持示例' })
+    const mid = await uploadAitMaterial({ applyId: id, fileName: 'AST-001-确权证明-盖好.pdf',
+      content: '兹证明客户用电信息表由广东电网有限责任公司自行生产,权利类型为数据资源持有权,有效期3年,范围全字段,已盖章。' })
+    ElMessage.info('示例进行中:材料已上传,正在智能解析(真调大模型约20秒)…')
+    await parseAitMaterial(mid)
+    for (let i = 0; i < 60; i++) {
+      const m = await aitProgress(mid)
+      if (m.parseStatus === '成功' || m.parseStatus === '失败') break
+      await new Promise(r => setTimeout(r, 1000))
+    }
+    applyId.value = id
+    appliesLoaded = false
+    ElMessage.info('解析完成,正在智能研判(真调大模型约30秒)…')
+    await onAnalyze()
+    ElMessage.success('示例完成:已建申请并传含盖章材料,研判结果如下')
+  } catch (e) {
+    ElMessage.error('示例失败:' + (e?.response?.data?.message || e?.message || ''))
+  } finally { demoRunning.value = false }
+}
+
 async function onAnalyze() {
   if (!applyId.value) { ElMessage.warning('请输入确权申请ID'); return }
   try {
@@ -104,7 +155,7 @@ async function onAnalyze() {
     factors.value = JSON.parse(d.value.factorsJson || '[]')
     await nextTick(); renderGauge(d.value.score)
     ElMessage.success('研判完成')
-  } catch (e) { ElMessage.error('研判失败:确认申请ID存在') }
+  } catch (e) { ElMessage.error('研判失败:该申请ID不存在(演示库重启会清空旧ID)。可:①下拉选择现有申请 ②点“一键示例并研判” ③去“确权申请”向导新建') }
 }
 function renderGauge(score) {
   echarts.init(gauge.value).setOption({

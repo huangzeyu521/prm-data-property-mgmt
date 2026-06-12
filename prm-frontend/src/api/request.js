@@ -4,7 +4,7 @@ import { ElMessage } from 'element-plus'
 // 统一请求封装:对接后端统一响应信封 {code, msg, data}
 const request = axios.create({
   baseURL: '/api',
-  timeout: 15000
+  timeout: 60000 // 真调大模型接口耗时数十秒,普通接口本就秒回不受影响
 })
 
 // 请求拦截:透传用户上下文(正式环境由 4A 网关注入,此处便于本地联调)

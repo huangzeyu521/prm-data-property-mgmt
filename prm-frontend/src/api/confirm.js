@@ -34,7 +34,7 @@ export const getConfirmDashboard = (params) => request.get('/dpr/confirm/dashboa
 export const aiProvider = () => request.get('/dpr/confirm/ai/provider')
 export const aiOcrOwnership = (fileUrl) => request.post('/dpr/confirm/ai/ocr-ownership', null, { params: { fileUrl } })
 export const aiDetectConflict = (params) => request.post('/dpr/confirm/ai/detect-conflict', null, { params })
-export const aiAuthIntent = (text) => request.post('/dpr/confirm/ai/auth-intent', null, { params: { text } })
+export const aiAuthIntent = (text) => request.post('/dpr/confirm/ai/auth-intent', null, { params: { text }, timeout: 120000 })
 export const aiAsk = (question) => request.get('/dpr/confirm/ai/ask', { params: { question } })
 
 // 确权汇总表(表3/表4)
@@ -85,4 +85,4 @@ export const getConsolidation = (applyId) => request.get(`/dpr/confirm/apply/${a
 export const confirmSummaryExportUrl = () => '/api/dpr/confirm/summary/confirm-export'
 export const equityConsolidationExportUrl = () => '/api/dpr/confirm/summary/equity-export'
 // 材料 AI 校验(qwen3-max 逐份校验,stub 回退)
-export const aiMaterialCheck = (applyId) => request.post('/dpr/confirm/material/ai-check', null, { params: { applyId } })
+export const aiMaterialCheck = (applyId) => request.post('/dpr/confirm/material/ai-check', null, { params: { applyId }, timeout: 120000 })
