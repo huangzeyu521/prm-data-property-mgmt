@@ -3,8 +3,10 @@ package com.csg.prm.authorize.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.csg.prm.authorize.entity.AuthApply;
 import com.csg.prm.authorize.entity.BatchAuthList;
 import com.csg.prm.authorize.mapper.BatchAuthListMapper;
+import com.csg.prm.authorize.service.AuthApplyService;
 import com.csg.prm.authorize.service.BatchAuthListService;
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.ResultCode;
@@ -13,15 +15,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Service
 public class BatchAuthListServiceImpl implements BatchAuthListService {
 
     private final BatchAuthListMapper mapper;
+    private final AuthApplyService applyService;
 
-    public BatchAuthListServiceImpl(BatchAuthListMapper mapper) {
+    public BatchAuthListServiceImpl(BatchAuthListMapper mapper, AuthApplyService applyService) {
         this.mapper = mapper;
+        this.applyService = applyService;
     }
 
     @Override
@@ -47,6 +53,30 @@ public class BatchAuthListServiceImpl implements BatchAuthListService {
         BatchAuthList l = require(batchListId);
         if (!BatchAuthList.STATUS_DRAFT.equals(l.getListStatus())) {
             throw new BizException("仅草案可提交为申报稿");
+        }
+        // 逐项合规门禁(与一事一议对齐):先拦第三方凭证红线,再逐条提交进批量审批链
+        // ——之前 submit 只改清单状态、明细停在草稿从未进链;此处补齐"提交即逐项校验+入链"。
+        List<AuthApply> items = applyService.byBatch(batchListId);
+        if (items.isEmpty()) {
+            throw new BizException("清单为空,不可提交申报稿(请先添加授权项)");
+        }
+        List<String> blocked = new ArrayList<>();
+        for (AuthApply a : items) {
+            if (!AuthApply.STATUS_DRAFT.equals(a.getStatus())) {
+                continue; // 已入链的明细跳过(幂等)
+            }
+            if (StringUtils.hasText(a.getThirdPartySource()) && !StringUtils.hasText(a.getThirdPartyLicense())) {
+                blocked.add(a.getAssetName() + "(涉第三方未提许可凭证)");
+            }
+        }
+        if (!blocked.isEmpty()) {
+            throw new BizException("以下明细未通过合规校验,清单不可提交:" + String.join("、", blocked));
+        }
+        // 逐条提交:复用一事一议同一套硬校验(先确后授+授权⊆确权边界+经营权仅限开放目录+默认2年)
+        for (AuthApply a : items) {
+            if (AuthApply.STATUS_DRAFT.equals(a.getStatus())) {
+                applyService.submit(a.getApplyId());
+            }
         }
         update(batchListId, BatchAuthList.STATUS_SUBMITTED);
     }

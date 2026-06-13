@@ -24,7 +24,9 @@ public final class FlowDefinitions {
     static {
         FLOWS.put(DPR_CONFIRM, List.of("合规审核中", "主管复核中", "经理终审中", "已完成"));
         FLOWS.put(DPR_AUTH_SPECIAL, List.of("合规审核中", "业务审核中", "主管审核中", "经理审核中", "副总审批中", "已生效"));
-        FLOWS.put(DPR_AUTH_BATCH, List.of("合规审核中", "数字化部认定中", "领导小组审批中", "已生效"));
+        // 批量(附录F 步骤50-90):合规审核 -> 数字化部主管 -> 数字化部经理 -> 数字化部副总 -> 领导小组决策 -> 已生效。
+        // 数字化部三节点(主管/经理/副总)与一事一议同名同粒度,差异仅在:一事一议第2节点为"业务审核中",批量末节点为"领导小组审批中"。
+        FLOWS.put(DPR_AUTH_BATCH, List.of("合规审核中", "主管审核中", "经理审核中", "副总审批中", "领导小组审批中", "已生效"));
     }
 
     private FlowDefinitions() {

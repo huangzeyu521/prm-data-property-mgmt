@@ -45,10 +45,13 @@ class StateMachineFlowEngineTest {
     }
 
     @Test
-    void auth_batch_chain_is_shorter() {
+    void auth_batch_chain_aligns_dept_nodes_and_ends_at_leadership() {
+        // 节点对齐:批量数字化部三节点(主管/经理/副总)与一事一议同名同粒度,末节点为领导小组决策
         String key = FlowDefinitions.DPR_AUTH_BATCH;
-        assertEquals("数字化部认定中", engine.advance(key, "a2", "合规审核中").nextState());
-        assertEquals("领导小组审批中", engine.advance(key, "a2", "数字化部认定中").nextState());
+        assertEquals("主管审核中", engine.advance(key, "a2", "合规审核中").nextState());
+        assertEquals("经理审核中", engine.advance(key, "a2", "主管审核中").nextState());
+        assertEquals("副总审批中", engine.advance(key, "a2", "经理审核中").nextState());
+        assertEquals("领导小组审批中", engine.advance(key, "a2", "副总审批中").nextState());
         assertTrue(engine.advance(key, "a2", "领导小组审批中").terminal());
     }
 

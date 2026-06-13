@@ -71,8 +71,12 @@ public class HttpEquityCardGateway implements EquityCardGateway {
         }
         boolean usable = USABLE_STATUS.contains(String.valueOf(card.get("cardStatus")));
         LocalDateTime valid = parseTime(card.get("validDate"));
-        // 卡片无独立范围字段,确权边界范围按"全字段"口径(与既有规则一致)
-        return new CardBoundary(usable, str(card.get("rightType")), "全字段",
+        // 读确权侧实况范围(制卡时按是否列表级清单写入 全字段/约定字段);缺省回退全字段(不限),使授权范围⊆确权边界在生产生效
+        String scope = str(card.get("scope"));
+        if (!StringUtils.hasText(scope)) {
+            scope = "全字段";
+        }
+        return new CardBoundary(usable, str(card.get("rightType")), scope,
                 valid != null ? valid : LocalDateTime.now().plusYears(5));
     }
 

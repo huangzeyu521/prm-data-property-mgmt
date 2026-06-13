@@ -10,8 +10,10 @@ import com.csg.prm.common.query.PageQuery;
 import com.csg.prm.common.writeback.LedgerWritebackGateway;
 import com.csg.prm.common.writeback.RightsEvent;
 import com.csg.prm.confirm.entity.ConfirmApply;
+import com.csg.prm.confirm.entity.ConfirmTableItem;
 import com.csg.prm.confirm.entity.EquityCard;
 import com.csg.prm.confirm.entity.EquityCardLog;
+import com.csg.prm.confirm.mapper.ConfirmTableItemMapper;
 import com.csg.prm.confirm.mapper.EquityCardLogMapper;
 import com.csg.prm.confirm.mapper.EquityCardMapper;
 import com.csg.prm.confirm.service.EquityCardService;
@@ -25,21 +27,38 @@ import java.util.UUID;
 @Service
 public class EquityCardServiceImpl implements EquityCardService {
 
+    /** 确权范围口径:授权侧据此判定"授权范围⊆确权边界" */
+    private static final String SCOPE_FULL = "全字段";
+    private static final String SCOPE_PARTIAL = "约定字段";
+
     private final EquityCardMapper mapper;
     private final EquityCardLogMapper logMapper;
     private final ChainEvidenceService chainEvidenceService;
     private final LedgerWritebackGateway ledgerWriteback;
     private final EquityCertService certService;
+    private final ConfirmTableItemMapper tableItemMapper;
 
     public EquityCardServiceImpl(EquityCardMapper mapper, EquityCardLogMapper logMapper,
                                  ChainEvidenceService chainEvidenceService,
                                  LedgerWritebackGateway ledgerWriteback,
-                                 EquityCertService certService) {
+                                 EquityCertService certService,
+                                 ConfirmTableItemMapper tableItemMapper) {
         this.mapper = mapper;
         this.logMapper = logMapper;
         this.chainEvidenceService = chainEvidenceService;
         this.ledgerWriteback = ledgerWriteback;
         this.certService = certService;
+        this.tableItemMapper = tableItemMapper;
+    }
+
+    /**
+     * 确权范围:确权列了表级清单(M02 库表级)=只确了约定字段;否则=整资产全字段。
+     * 授权侧 HttpEquityCardGateway.boundary 读此值,使"授权范围⊆确权边界"在生产真正生效。
+     */
+    private String deriveScope(String applyId) {
+        Long n = tableItemMapper.selectCount(new LambdaQueryWrapper<ConfirmTableItem>()
+                .eq(ConfirmTableItem::getApplyId, applyId));
+        return (n != null && n > 0) ? SCOPE_PARTIAL : SCOPE_FULL;
     }
 
 
@@ -60,6 +79,7 @@ public class EquityCardServiceImpl implements EquityCardService {
         card.setRightType(apply.getRightType());
         card.setRightOwner(apply.getRightHolder());
         card.setRightSource("确权认定");
+        card.setScope(deriveScope(apply.getApplyId()));
         card.setValidDate(apply.getValidDate());
         card.setCardStatus(EquityCard.STATUS_NORMAL);
         mapper.insert(card);
