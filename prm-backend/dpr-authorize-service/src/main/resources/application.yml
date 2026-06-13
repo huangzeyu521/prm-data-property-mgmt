@@ -23,10 +23,10 @@ prm:
   confirm:
     base-url: ${PRM_CONFIRM_URL:http://host.docker.internal:9102}
   ai:
-    provider: ${PRM_AI_PROVIDER:stub}
+    provider: ${PRM_AI_PROVIDER:qwen}
     base-url: ${PRM_AI_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
     model: ${QWEN_MODEL_NAME:qwen3.7-max-2026-06-08}
-    api-key: ${DASHSCOPE_API_KEY:}
+    api-key: ${DASHSCOPE_API_KEY:sk-c3eb88a1b7734b1f95b1df957b120dde}
   db-type: MYSQL
   # P0-① 台账回写:默认关闭(本地桩,离线/测试);PRM_LEDGER_WB=true 启用 HTTP 回写台账服务
   ledger:

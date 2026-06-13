@@ -5,18 +5,19 @@ spring:
     driver-class-name: dm.jdbc.driver.DmDriver
     url: ${DM_URL:jdbc:dm://localhost:5236}
     username: ${DM_USER:SYSDBA}
-    password: ${DM_PWD:SYSDBA}
+    password: ${DM_PWD:SYSDBA001}
   sql:
     init:
       mode: never
   cloud:
     nacos:
       discovery:
-        enabled: true
-        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+        enabled: false
       config:
         import-check:
           enabled: false
+    discovery:
+      enabled: false
 prm:
   db-type: DM
 seata:

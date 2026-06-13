@@ -12,11 +12,12 @@ spring:
   cloud:
     nacos:
       discovery:
-        enabled: true
-        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+        enabled: false
       config:
         import-check:
           enabled: false
+    discovery:
+      enabled: false
 prm:
   db-type: DM
 seata:
