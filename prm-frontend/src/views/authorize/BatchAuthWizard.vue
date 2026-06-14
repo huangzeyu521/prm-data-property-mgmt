@@ -38,6 +38,7 @@
           <el-button v-if="aiItems.length" type="primary" plain :loading="aiAdding" style="margin-top:6px;margin-left:8px" @click="addAiItems">
             一键加入清单({{ aiItems.length }} 项)
           </el-button>
+          <AiThinking v-bind="aiThink.state" />
           <el-table v-if="aiItems.length" :data="aiItems" border size="small" style="margin-top:8px;max-width:680px">
             <el-table-column prop="assetName" label="解析出的数据资产" min-width="180" />
             <el-table-column label="权益卡片ID" min-width="160">
@@ -95,6 +96,7 @@
         <div style="text-align:center;margin-top:4px">
           <el-button type="warning" plain :loading="listReviewing" @click="runListPreReview">AI 清单预审(qwen3-max)</el-button>
         </div>
+        <AiThinking v-bind="aiThink.state" />
         <el-alert v-if="listOpinion" type="info" :closable="false" style="margin-top:12px" title="AI 清单预审意见" :description="listOpinion" show-icon />
       </el-card>
 
@@ -145,6 +147,10 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { createBatchList, saveAuthDraft, submitBatchList, aiBatchIntent, aiBatchPreReview } from '@/api/authorize'
+import AiThinking from '@/components/AiThinking.vue'
+import { useAiThinking } from '@/composables/useAiThinking'
+import { AI_PHASES } from '@/lib/aiPhases'
+const aiThink = useAiThinking()
 import { pageArchive } from '@/api/propertyArchive'
 import { pageEquityCard } from '@/api/confirm'
 import { getPropertyTree } from '@/api/ledger'
@@ -219,7 +225,8 @@ async function runAiBatch() {
   if (!aiBatchText.value) { ElMessage.warning('请先描述批量授权诉求'); return }
   aiParsing.value = true
   try {
-    const raw = await aiBatchIntent(aiBatchText.value)
+    const raw = await aiThink.run(() => aiBatchIntent(aiBatchText.value),
+      { phases: AI_PHASES.batchIntent, title: '大模型解析批量诉求中' })
     const r = typeof raw === 'string' ? JSON.parse(raw) : raw
     aiShared.value = { granteeOrg: r.granteeOrg || '', rightType: r.rightType || '', scenario: r.scenario || '' }
     Object.assign(item, { granteeOrg: r.granteeOrg || '', rightType: r.rightType || '', scenario: r.scenario || '' })
@@ -255,8 +262,10 @@ async function addAiItems() {
 const listReviewing = ref(false); const listOpinion = ref('')
 async function runListPreReview() {
   listReviewing.value = true
-  try { listOpinion.value = await aiBatchPreReview(batchListId.value) }
-  catch (e) { ElMessage.warning('AI 预审失败') }
+  try {
+    listOpinion.value = await aiThink.run(() => aiBatchPreReview(batchListId.value),
+      { phases: AI_PHASES.batchPreReview, title: '大模型清单预审中' })
+  } catch (e) { ElMessage.warning('AI 预审失败') }
   finally { listReviewing.value = false }
 }
 

@@ -27,6 +27,7 @@
               <el-input v-model="aiText" type="textarea" :rows="2" placeholder="用自然语言描述授权诉求,如:拟向广州供电局开放数据用于电力金融征信,全字段" />
               <el-button type="primary" plain size="small" :loading="aiLoading" style="margin-top:6px" @click="onAiFill">大瓦特 AI 识别意图并填单</el-button>
               <span v-if="aiTip" style="margin-left:10px;color:#909399;font-size:12px">{{ aiTip }}</span>
+              <AiThinking v-bind="aiThink.state" />
             </div>
           </el-form-item>
           <el-divider style="margin:4px 0" />
@@ -116,6 +117,7 @@
         <el-button type="primary" :loading="checking" @click="runCheck" style="margin-bottom:12px">执行合规校验</el-button>
         <el-button type="warning" :loading="aiMatChecking" @click="runAiMatCheck" style="margin-bottom:12px;margin-left:8px">AI 材料校验(qwen3-max)</el-button>
         <el-button type="warning" plain :loading="preReviewing" @click="runPreReview" style="margin-bottom:12px;margin-left:8px">AI 合规预审</el-button>
+        <AiThinking v-bind="aiThink.state" />
         <el-alert v-if="preOpinion" type="info" :closable="false" style="margin-bottom:12px" :title="'AI 预审意见'" :description="preOpinion" show-icon />
         <el-alert v-if="aiMatResult" :type="aiMatResult.overall === '通过' ? 'success' : 'warning'" :closable="false" style="margin-bottom:12px">
           <div><b>AI 材料校验:{{ aiMatResult.overall }}</b> — {{ aiMatResult.overallDesc }}</div>
@@ -187,6 +189,10 @@ import { ElMessage } from 'element-plus'
 import { saveAuthDraft, submitAuth, runAuthCompliance, pageScenario, uploadAuthMaterialFile, listAuthMaterial, deleteAuthMaterial, authMaterialFileUrl } from '@/api/authorize'
 import { aiAuthIntent } from '@/api/confirm'
 import { aiAuthMaterialCheck, aiAuthPreReview } from '@/api/authorize'
+import AiThinking from '@/components/AiThinking.vue'
+import { useAiThinking } from '@/composables/useAiThinking'
+import { AI_PHASES } from '@/lib/aiPhases'
+const aiThink = useAiThinking()
 import { pageArchive } from '@/api/propertyArchive'
 import { pageEquityCard } from '@/api/confirm'
 import { getAsset } from '@/api/ledger'
@@ -322,7 +328,8 @@ async function onAiFill() {
   if (!aiText.value) { ElMessage.warning('请输入授权诉求描述'); return }
   aiLoading.value = true
   try {
-    const r = await aiAuthIntent(aiText.value)
+    const r = await aiThink.run(() => aiAuthIntent(aiText.value),
+      { phases: AI_PHASES.intent, title: '大模型识别授权意图中' })
     if (r.granteeOrg && r.granteeOrg !== '待明确被授权方') form.granteeOrg = r.granteeOrg
     if (rightTypes.includes(r.rightType)) form.rightType = r.rightType
     if (r.scenario) form.scenario = r.scenario
@@ -350,7 +357,8 @@ async function runAiMatCheck() {
   if (!applyId.value) { ElMessage.warning('请先暂存申请'); return }
   aiMatChecking.value = true
   try {
-    const raw = await aiAuthMaterialCheck(applyId.value)
+    const raw = await aiThink.run(() => aiAuthMaterialCheck(applyId.value),
+      { phases: AI_PHASES.materialCheck, title: '大模型材料校验中' })
     aiMatResult.value = typeof raw === 'string' ? JSON.parse(raw) : raw
   } catch (e) { ElMessage.warning('AI 材料校验失败:' + (e?.response?.data?.message || '请先上传材料')) }
   finally { aiMatChecking.value = false }
@@ -358,8 +366,10 @@ async function runAiMatCheck() {
 async function runPreReview() {
   if (!applyId.value) { ElMessage.warning('请先暂存申请'); return }
   preReviewing.value = true
-  try { preOpinion.value = await aiAuthPreReview(applyId.value) }
-  catch (e) { ElMessage.warning('AI 预审失败') }
+  try {
+    preOpinion.value = await aiThink.run(() => aiAuthPreReview(applyId.value),
+      { phases: AI_PHASES.preReview, title: '大模型合规预审中' })
+  } catch (e) { ElMessage.warning('AI 预审失败') }
   finally { preReviewing.value = false }
 }
 

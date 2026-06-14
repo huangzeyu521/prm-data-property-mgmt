@@ -18,6 +18,7 @@
         </el-form-item>
       </el-form>
       <span class="prm-table-note">综合 材料完整性30% / 权属无冲突40% / 合规15% / 历史匹配15% 加权;RAG 检索历史确权案例与《数据二十条》/南网制度条款,由大模型给出预测结论并与规则预测对照。</span>
+      <AiThinking v-bind="aiAnalyze.state" />
     </div>
 
     <el-row v-if="d" :gutter="16">
@@ -92,9 +93,13 @@ import { useRoute } from 'vue-router'
 import * as echarts from 'echarts'
 import { ElMessage } from 'element-plus'
 import { aitAnalyze } from '@/api/aitool'
+import AiThinking from '@/components/AiThinking.vue'
+import { useAiThinking } from '@/composables/useAiThinking'
+import { AI_PHASES } from '@/lib/aiPhases'
 
 const applyId = ref('')
 const d = ref(null); const factors = ref([]); const gauge = ref()
+const aiAnalyze = useAiThinking()
 const citations = computed(() => (d.value?.ragCitations || '').split(';').filter(Boolean))
 const splitPlans = computed(() => { try { return JSON.parse(d.value?.splitPlansJson || '[]') } catch { return [] } })
 
@@ -151,7 +156,8 @@ async function runDemo() {
 async function onAnalyze() {
   if (!applyId.value) { ElMessage.warning('请输入确权申请ID'); return }
   try {
-    d.value = await aitAnalyze(applyId.value)
+    d.value = await aiAnalyze.run(() => aitAnalyze(applyId.value),
+      { phases: AI_PHASES.analyze, title: '大模型研判中', stepMs: 6000 })
     factors.value = JSON.parse(d.value.factorsJson || '[]')
     await nextTick(); renderGauge(d.value.score)
     ElMessage.success('研判完成')

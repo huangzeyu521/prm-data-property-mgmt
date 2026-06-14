@@ -154,6 +154,7 @@
           <el-icon><MagicStick /></el-icon> AI 决策研判
         </el-button>
         <el-button :disabled="!checkReport" @click="onExportCheck" style="margin-bottom:12px;margin-left:8px">导出校验结果</el-button>
+        <AiThinking v-bind="aiThink.state" />
         <!-- AI 材料校验:大模型逐份校验 完整性/合规性/与表单一致性 -->
         <el-alert v-if="aiMatResult" :type="aiMatResult.overall === '通过' ? 'success' : (aiMatResult.overall === '不通过' ? 'error' : 'warning')" :closable="false" style="margin-bottom:12px">
           <div><b>AI 材料校验:{{ aiMatResult.overall }}</b> — {{ aiMatResult.overallDesc }}</div>
@@ -247,6 +248,10 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { autofillConfirm, saveConfirmDraft, uploadMaterial, uploadMaterialFile, materialFileUrl, listMaterialByApply, checkMaterial, runMaterialCheck, pushMaterialReview, materialExportUrl, submitConfirm, saveTableItems, getConsolidation, aiMaterialCheck } from '@/api/confirm'
 import { aitAnalyze } from '@/api/aitool'
+import AiThinking from '@/components/AiThinking.vue'
+import { useAiThinking } from '@/composables/useAiThinking'
+import { AI_PHASES } from '@/lib/aiPhases'
+const aiThink = useAiThinking()
 
 const router = useRouter()
 const rightTypes = ['数据资源持有权', '数据加工使用权', '数据产品经营权']
@@ -287,7 +292,8 @@ async function runAiMaterialCheck() {
   if (!applyId.value) { ElMessage.warning('请先完成步骤1暂存申请'); return }
   aiMatChecking.value = true
   try {
-    const raw = await aiMaterialCheck(applyId.value)
+    const raw = await aiThink.run(() => aiMaterialCheck(applyId.value),
+      { phases: AI_PHASES.materialCheck, title: '大模型材料校验中' })
     aiMatResult.value = typeof raw === 'string' ? JSON.parse(raw) : raw
     ElMessage.success('AI 材料校验完成')
   } catch (e) {
@@ -302,7 +308,8 @@ async function runAiCheck() {
   if (!applyId.value) { ElMessage.warning('请先完成步骤1暂存申请'); return }
   aiChecking.value = true
   try {
-    aiResult.value = await aitAnalyze(applyId.value)
+    aiResult.value = await aiThink.run(() => aitAnalyze(applyId.value),
+      { phases: AI_PHASES.analyze, title: '大模型决策研判中' })
     ElMessage.success('AI 智能校验完成')
   } catch (e) {
     ElMessage.warning('AI 校验失败:' + (e?.response?.data?.message || '请先通过"进入智能确权辅助工具"上传并解析本申请材料'))
