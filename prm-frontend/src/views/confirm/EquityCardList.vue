@@ -13,9 +13,10 @@
         <el-table-column prop="cardStatus" label="状态" width="90" align="center">
           <template #default="{ row }"><el-tag :type="statusTag(row.cardStatus)">{{ row.cardStatus }}</el-tag></template>
         </el-table-column>
-        <el-table-column label="操作" width="360" fixed="right">
+        <el-table-column label="操作" width="430" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="onDetail(row)">详情</el-button>
+            <el-button link type="success" :disabled="row.cardStatus !== '正常'" @click="onAuthorize(row)">发起授权</el-button>
             <el-button link type="primary" @click="onPreview(row)">预览证书</el-button>
             <el-button link type="warning" :disabled="row.cardStatus !== '正常'" @click="onFreeze(row)">冻结</el-button>
             <el-button link type="success" :disabled="row.cardStatus !== '冻结'" @click="onUnfreeze(row)">解冻</el-button>
@@ -89,9 +90,16 @@
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { pageEquityCard, freezeEquityCard, unfreezeEquityCard, revokeEquityCard, equityCardLogs } from '@/api/confirm'
 import { getAsset } from '@/api/ledger'
+
+const router = useRouter()
+// 先确后授一键衔接:正常卡直接发起授权,带资产+卡号到授权向导
+function onAuthorize(row) {
+  router.push({ path: '/dpr/auth/wizard', query: { assetId: row.assetId, assetName: row.assetName, cardNo: row.cardNo } })
+}
 
 const query = reactive({ current: 1, size: 10 })
 const rows = ref([])

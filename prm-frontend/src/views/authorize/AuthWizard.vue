@@ -184,7 +184,7 @@
 
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { saveAuthDraft, submitAuth, runAuthCompliance, pageScenario, uploadAuthMaterialFile, listAuthMaterial, deleteAuthMaterial, authMaterialFileUrl } from '@/api/authorize'
 import { aiAuthIntent } from '@/api/confirm'
@@ -198,6 +198,7 @@ import { pageEquityCard } from '@/api/confirm'
 import { getAsset } from '@/api/ledger'
 
 const router = useRouter()
+const route = useRoute()
 const rightTypes = ['数据加工使用权', '数据产品经营权']
 const step = ref(0)
 const formRef = ref()
@@ -217,6 +218,14 @@ const selectedReason = ref('')
 onMounted(async () => {
   const r = await pageScenario({ status: '生效中', size: 100 })
   scenarioOpts.value = r.records || []
+  // 先确后授一键衔接:从权益卡片页"发起授权"带来 资产+卡号,直接预填(免去重新搜索选卡)
+  const q = route.query
+  if (q.assetId) {
+    form.assetId = String(q.assetId)
+    if (q.assetName) form.assetName = String(q.assetName)
+    if (q.cardNo) { form.equityCardId = String(q.cardNo); ElMessage.success('已从权益卡片带入资产与生效卡片,可直接补全授权信息') }
+    else await onAssetPicked(form.assetId)
+  }
 })
 function onScenarioChange(name) {
   const s = scenarioOpts.value.find(x => x.scenarioName === name)
