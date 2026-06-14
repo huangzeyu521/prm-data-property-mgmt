@@ -30,11 +30,11 @@ public class AuthService implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        seed("apply", "申报员-张三", "apply", "GD");
-        seed("review", "审核员-李四", "review", "GD");
-        seed("admin", "配置管理员-王五", "admin", "");
-        seed("viewer", "管理层-赵六", "view", "");
-        seed("super", "超级管理员", "all", "");
+        seed("apply", "梁晶晶", "apply", "GD");
+        seed("review", "李天天", "review", "GD");
+        seed("admin", "陈明亮", "admin", "");
+        seed("viewer", "黄文静", "view", "");
+        seed("super", "吴海涛", "all", "");
     }
 
     private void seed(String username, String realName, String role, String prov) {
