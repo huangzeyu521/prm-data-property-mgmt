@@ -26,7 +26,7 @@ export function useAiThinking() {
     elapsedTimer = phaseTimer = null
   }
 
-  function start({ phases = [], title = '大模型处理中', stepMs = 6000 } = {}) {
+  function start({ phases = [], title = '大模型处理中', stepMs = 6000, bound = false } = {}) {
     clearTimers()
     state.phases = phases
     state.title = title
@@ -37,10 +37,21 @@ export function useAiThinking() {
     elapsedTimer = setInterval(() => {
       state.elapsed = Math.floor((Date.now() - startTs) / 1000)
     }, 1000)
-    // 阶段自动推进:停在末阶段(不虚标完成),由 stop() 收尾
-    phaseTimer = setInterval(() => {
-      if (state.phaseIndex < state.phases.length - 1) state.phaseIndex++
-    }, stepMs)
+    // 单轮调用:按估计节奏自动推进,停在末阶段(不虚标完成),由 stop() 收尾。
+    // bound=true(多步管线):阶段由调用方据真实进度 setPhase() 驱动,不自动推进。
+    if (!bound) {
+      phaseTimer = setInterval(() => {
+        if (state.phaseIndex < state.phases.length - 1) state.phaseIndex++
+      }, stepMs)
+    }
+  }
+
+  /** 绑定模式:据真实进度(0–100)映射到阶段下标 */
+  function setProgress(pct) {
+    const n = state.phases.length
+    if (n === 0) return
+    const idx = Math.min(n - 1, Math.floor((pct / 100) * n))
+    state.phaseIndex = Math.max(state.phaseIndex, idx)
   }
 
   function stop() {
@@ -58,5 +69,5 @@ export function useAiThinking() {
     }
   }
 
-  return { state, run, start, stop }
+  return { state, run, start, stop, setProgress }
 }

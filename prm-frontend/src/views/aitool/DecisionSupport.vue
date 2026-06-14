@@ -136,16 +136,18 @@ async function runDemo() {
       purpose: '决策支持示例' })
     const mid = await uploadAitMaterial({ applyId: id, fileName: 'AST-001-确权证明-盖好.pdf',
       content: '兹证明客户用电信息表由广东电网有限责任公司自行生产,权利类型为数据资源持有权,有效期3年,范围全字段,已盖章。' })
-    ElMessage.info('示例进行中:材料已上传,正在智能解析(真调大模型约20秒)…')
+    // 解析段绑定真实进度,消灭"一键示例"前置的静默等待
+    aiAnalyze.start({ phases: AI_PHASES.materialParse, title: '大模型解析材料中', bound: true })
     await parseAitMaterial(mid)
     for (let i = 0; i < 60; i++) {
       const m = await aitProgress(mid)
+      aiAnalyze.setProgress(m.progress || 0)
       if (m.parseStatus === '成功' || m.parseStatus === '失败') break
       await new Promise(r => setTimeout(r, 1000))
     }
+    aiAnalyze.stop()
     applyId.value = id
     appliesLoaded = false
-    ElMessage.info('解析完成,正在智能研判(真调大模型约30秒)…')
     await onAnalyze()
     ElMessage.success('示例完成:已建申请并传含盖章材料,研判结果如下')
   } catch (e) {
