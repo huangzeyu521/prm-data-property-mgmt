@@ -152,7 +152,7 @@ async function runDemo() {
     ElMessage.success('示例完成:已建申请并传含盖章材料,研判结果如下')
   } catch (e) {
     ElMessage.error('示例失败:' + (e?.response?.data?.message || e?.message || ''))
-  } finally { demoRunning.value = false }
+  } finally { aiAnalyze.stop(); demoRunning.value = false }
 }
 
 async function onAnalyze() {

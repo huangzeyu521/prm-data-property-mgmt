@@ -1,4 +1,4 @@
-import { reactive } from 'vue'
+import { reactive, getCurrentInstance, onUnmounted } from 'vue'
 
 /**
  * 大模型等待体验组合式:点击即显(消灭静默间隙) + 已用时计时 + 阶段旁白自动推进。
@@ -67,6 +67,11 @@ export function useAiThinking() {
     } finally {
       stop()
     }
+  }
+
+  // 组件卸载时清理定时器(防止 AI 调用进行中切走页面导致定时器泄漏/卸载后更新)
+  if (getCurrentInstance()) {
+    onUnmounted(clearTimers)
   }
 
   return { state, run, start, stop, setProgress }
