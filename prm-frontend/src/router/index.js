@@ -5,6 +5,10 @@ const routes = [
   { path: '/dpr', redirect: '/dpr/dashboard/overview' },
   // 统一待办中心(eLink 待办的 Web 实现)
   { path: '/dpr/workbench/todo', name: 'TodoCenter', component: () => import('@/views/workbench/TodoCenter.vue'), meta: { title: '统一待办中心', goal: '集中查看并处理确权/授权全流程待办与预警,一处办结' } },
+  // 我的申请(申报人首屏:在途确权+授权一处看)
+  { path: '/dpr/workbench/my', name: 'MyApplications', component: () => import('@/views/workbench/MyApplications.vue'), meta: { title: '我的申请', goal: '一处掌握我提交的确权/授权申请进度,驳回单可修改重提' } },
+  // 协议工作台(P1-4:签章/审核/存档合一)
+  { path: '/dpr/auth/agreement', name: 'AgreementWorkbench', component: () => import('@/views/authorize/AgreementWorkbench.vue'), meta: { title: '协议工作台', goal: '一份协议从签章到存档一处流转' } },
   {
     path: '/dpr/ledger/overview',
     name: 'LedgerOverview',
