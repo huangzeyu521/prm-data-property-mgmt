@@ -60,8 +60,8 @@ async function load() {
       pageConfirmApply({ pageNum: 1, pageSize: 200 }),
       pageAuthApply({ pageNum: 1, pageSize: 200 }),
     ])
-    const cf = (c.records || []).map((r) => ({ domain: '确权', no: r.applyNo, assetName: r.assetName, status: r.status, createTime: r.createTime, id: r.applyId, creatorId: r.creatorId }))
-    const af = (a.records || []).map((r) => ({ domain: '授权', no: r.applyNo, assetName: r.assetName, status: r.status, createTime: r.createTime, id: r.applyId, creatorId: r.creatorId }))
+    const cf = (c.records || []).map((r) => ({ domain: '确权', no: r.applyNo, assetName: r.assetName, status: r.status, createTime: r.createTime, id: r.applyId, creatorId: r.creatorId, raw: r }))
+    const af = (a.records || []).map((r) => ({ domain: '授权', no: r.applyNo, assetName: r.assetName, status: r.status, createTime: r.createTime, id: r.applyId, creatorId: r.creatorId, raw: r }))
     let all = [...cf, ...af]
     if (onlyMine.value && me()) all = all.filter((r) => r.creatorId === me())
     all.sort((x, y) => String(y.createTime || '').localeCompare(String(x.createTime || '')))
@@ -86,8 +86,10 @@ function goProgress(row) {
   router.push(row.domain === '确权' ? '/dpr/confirm/history' : '/dpr/auth/history')
 }
 function goReopen(row) {
+  // 基于原单修改重提:暂存原单字段,向导读出预填为新申请(旧单保留已驳回终态,不重打)
+  sessionStorage.setItem('prm-reopen', JSON.stringify({ domain: row.domain, raw: row.raw || {} }))
   const base = row.domain === '确权' ? '/dpr/confirm/wizard' : '/dpr/auth/wizard'
-  router.push({ path: base, query: { reopen: row.id } })
+  router.push({ path: base, query: { reopen: '1' } })
 }
 
 onMounted(load)

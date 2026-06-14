@@ -243,8 +243,8 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, reactive, ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { autofillConfirm, saveConfirmDraft, uploadMaterial, uploadMaterialFile, materialFileUrl, listMaterialByApply, checkMaterial, runMaterialCheck, pushMaterialReview, materialExportUrl, submitConfirm, saveTableItems, getConsolidation, aiMaterialCheck } from '@/api/confirm'
 import { aitAnalyze } from '@/api/aitool'
@@ -254,6 +254,7 @@ import { AI_PHASES } from '@/lib/aiPhases'
 const aiThink = useAiThinking()
 
 const router = useRouter()
+const route = useRoute()
 const rightTypes = ['数据资源持有权', '数据加工使用权', '数据产品经营权']
 const sourceOpts = [
   { v: 'A', t: '自行生产', m: '数据来源设备/系统建设投入情况说明' },
@@ -352,6 +353,27 @@ const rules = {
   assetName: [{ required: true, message: '请输入资产名称', trigger: 'blur' }],
   rightTypes: [{ required: true, type: 'array', min: 1, message: '请至少选择一种权属类型', trigger: 'change' }]
 }
+
+// 基于原单修改重提:从被驳回确权单带入字段(新申请,旧单保留已驳回)
+onMounted(() => {
+  if (!route.query.reopen) return
+  try {
+    const o = JSON.parse(sessionStorage.getItem('prm-reopen') || '{}')
+    if (o.domain === '确权' && o.raw) {
+      const r = o.raw
+      Object.assign(form, {
+        assetId: r.assetId || '', assetName: r.assetName || '', rightHolder: r.rightHolder || '',
+        respDept: r.respDept || '', systemOwner: r.systemOwner || '', contactInfo: r.contactInfo || '',
+        registerType: r.registerType || '初始确权', regulated: r.regulated || '非管制',
+        purpose: r.purpose || '', sourceSubject: r.sourceSubject || '', sourceLimit: r.sourceLimit || '',
+        relationSubject: r.relationSubject || '', equityRisk: r.equityRisk || '',
+        rightTypes: r.rightType ? String(r.rightType).split(/[、,，]/).map(s => s.trim()).filter(Boolean) : [],
+      })
+      ElMessage.warning('已带入被驳回原单内容,请修改后重新提交(将作为新申请)')
+    }
+  } catch (e) { /* ignore */ }
+  sessionStorage.removeItem('prm-reopen')
+})
 const needTable2 = computed(() =>
   form.sourceIdent.some(c => ['B', 'C', 'D', 'E', 'F'].includes(c)) ||
   form.relationIdent.some(c => ['G', 'H', 'I', 'J'].includes(c)))

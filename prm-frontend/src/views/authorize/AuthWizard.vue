@@ -226,6 +226,23 @@ onMounted(async () => {
     if (q.cardNo) { form.equityCardId = String(q.cardNo); ElMessage.success('已从权益卡片带入资产与生效卡片,可直接补全授权信息') }
     else await onAssetPicked(form.assetId)
   }
+  // 基于原单修改重提:从被驳回授权单带入字段(新申请,旧单保留已驳回)
+  if (q.reopen) {
+    try {
+      const o = JSON.parse(sessionStorage.getItem('prm-reopen') || '{}')
+      if (o.domain === '授权' && o.raw) {
+        const r = o.raw
+        Object.assign(form, {
+          assetId: r.assetId || '', assetName: r.assetName || '', equityCardId: r.equityCardId || '',
+          granteeOrg: r.granteeOrg || '', rightType: r.rightType || '', scenario: r.scenario || '',
+          scope: r.scope || '', validDate: r.validDate || '', businessDomain: r.businessDomain || '',
+          applicantManager: r.applicantManager || '', contactInfo: r.contactInfo || '',
+        })
+        ElMessage.warning('已带入被驳回原单内容,请修改后重新提交(将作为新申请)')
+      }
+    } catch (e) { /* ignore */ }
+    sessionStorage.removeItem('prm-reopen')
+  }
 })
 function onScenarioChange(name) {
   const s = scenarioOpts.value.find(x => x.scenarioName === name)
