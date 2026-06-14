@@ -39,6 +39,20 @@ const evalJs = async (expression) => {
 }
 await new Promise((resolve) => (ws.onopen = resolve))
 await send('Page.enable')
+await send('Runtime.enable')
+
+// 登录守卫已启用:先以超管登录写 token,否则路由都被弹到 /login(只剩登录页无表单标签)
+{
+  const lr = await fetch('http://localhost:5173/api/auth/login', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: 'super', password: 'Prm@1234' }),
+  })
+  const lj = await lr.json().catch(() => ({}))
+  const token = lj?.data?.token || ''
+  await send('Page.navigate', { url: 'http://localhost:5173/login' })
+  await new Promise((r) => setTimeout(r, 1200))
+  await send('Runtime.evaluate', { expression: `localStorage.setItem('prm-token','${token}'); localStorage.setItem('prm-role','all'); localStorage.setItem('X-User-Id','super'); localStorage.setItem('X-User-Roles','all')`, returnByValue: true })
+}
 
 const CHECK = `(() => {
   const labels = [...document.querySelectorAll('.el-form-item__label')]

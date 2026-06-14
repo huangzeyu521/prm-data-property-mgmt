@@ -23,6 +23,12 @@ prm:
   # 单测确定性:先确后授网关强制走本地桩(避免与宿主机运行中的 confirm 容器耦合)
   confirm:
     gateway: stub
+  # 单测用本地规则桩 AI(确定性,不依赖实时大模型,避免 AI 材料校验测试因真调 qwen 输出漂移而飘)
+  ai:
+    provider: stub
+  # 单测不启用 RBAC 强制(无 token)
+  auth:
+    enabled: false
 
 seata:
   enabled: false
