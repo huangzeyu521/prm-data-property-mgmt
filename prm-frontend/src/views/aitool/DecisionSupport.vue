@@ -18,6 +18,7 @@
         </el-form-item>
       </el-form>
       <span class="prm-table-note">综合 材料完整性30% / 权属无冲突40% / 合规15% / 历史匹配15% 加权;RAG 检索历史确权案例与《数据二十条》/南网制度条款,由大模型给出预测结论并与规则预测对照。</span>
+      <AiThinking v-bind="aiAnalyze.state" />
     </div>
 
     <el-row v-if="d" :gutter="16">
@@ -92,9 +93,13 @@ import { useRoute } from 'vue-router'
 import * as echarts from 'echarts'
 import { ElMessage } from 'element-plus'
 import { aitAnalyze } from '@/api/aitool'
+import AiThinking from '@/components/AiThinking.vue'
+import { useAiThinking } from '@/composables/useAiThinking'
+import { AI_PHASES } from '@/lib/aiPhases'
 
 const applyId = ref('')
 const d = ref(null); const factors = ref([]); const gauge = ref()
+const aiAnalyze = useAiThinking()
 const citations = computed(() => (d.value?.ragCitations || '').split(';').filter(Boolean))
 const splitPlans = computed(() => { try { return JSON.parse(d.value?.splitPlansJson || '[]') } catch { return [] } })
 
@@ -131,27 +136,30 @@ async function runDemo() {
       purpose: '决策支持示例' })
     const mid = await uploadAitMaterial({ applyId: id, fileName: 'AST-001-确权证明-盖好.pdf',
       content: '兹证明客户用电信息表由广东电网有限责任公司自行生产,权利类型为数据资源持有权,有效期3年,范围全字段,已盖章。' })
-    ElMessage.info('示例进行中:材料已上传,正在智能解析(真调大模型约20秒)…')
+    // 解析段绑定真实进度,消灭"一键示例"前置的静默等待
+    aiAnalyze.start({ phases: AI_PHASES.materialParse, title: '大模型解析材料中', bound: true })
     await parseAitMaterial(mid)
     for (let i = 0; i < 60; i++) {
       const m = await aitProgress(mid)
+      aiAnalyze.setProgress(m.progress || 0)
       if (m.parseStatus === '成功' || m.parseStatus === '失败') break
       await new Promise(r => setTimeout(r, 1000))
     }
+    aiAnalyze.stop()
     applyId.value = id
     appliesLoaded = false
-    ElMessage.info('解析完成,正在智能研判(真调大模型约30秒)…')
     await onAnalyze()
     ElMessage.success('示例完成:已建申请并传含盖章材料,研判结果如下')
   } catch (e) {
     ElMessage.error('示例失败:' + (e?.response?.data?.message || e?.message || ''))
-  } finally { demoRunning.value = false }
+  } finally { aiAnalyze.stop(); demoRunning.value = false }
 }
 
 async function onAnalyze() {
   if (!applyId.value) { ElMessage.warning('请输入确权申请ID'); return }
   try {
-    d.value = await aitAnalyze(applyId.value)
+    d.value = await aiAnalyze.run(() => aitAnalyze(applyId.value),
+      { phases: AI_PHASES.analyze, title: '大模型研判中', stepMs: 6000 })
     factors.value = JSON.parse(d.value.factorsJson || '[]')
     await nextTick(); renderGauge(d.value.score)
     ElMessage.success('研判完成')

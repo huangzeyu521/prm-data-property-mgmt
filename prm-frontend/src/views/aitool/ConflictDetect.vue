@@ -118,6 +118,7 @@
 
     <!-- #16 冲突解决方案建议:规则 + 法规依据 + AI -->
     <el-dialog v-model="adviceDlg" title="冲突解决方案建议" width="560px" align-center>
+      <AiThinking v-bind="aiAdvice.state" />
       <template v-if="advice">
         <el-tag type="danger" effect="plain" style="margin-bottom:10px">{{ advice.conflictType }}</el-tag>
         <el-descriptions :column="1" size="small" border>
@@ -181,6 +182,9 @@ import { useRoute } from 'vue-router'
 import * as echarts from 'echarts'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { aitAddClaim, aitDetectConflict, aitConflicts, aitResolveConflict, aitConflictReport, aitConflictReportExportUrl, buildAitClaimFromMaterial, aitKgGraph, aitClaims, updateAitClaim, deleteAitClaim, syncAitHistoryClaims, aitConflictAdvice } from '@/api/aitool'
+import AiThinking from '@/components/AiThinking.vue'
+import { useAiThinking } from '@/composables/useAiThinking'
+import { AI_PHASES } from '@/lib/aiPhases'
 
 const rts = ['数据持有权', '数据加工使用权', '数据产品经营权', '所有权', '使用权']
 const claim = reactive({ assetId: 'DA-DEMO-1', subject: '', rightType: '数据持有权', authScope: '全字段', exclusive: false, sourceType: '当前申请' })
@@ -195,9 +199,11 @@ const NODE_COLOR = { 主体: '#2f6bff', 客体: '#13c2c2', 授权事项: '#722ed
 const claimList = ref([]); const editDlg = ref(false); const editClaim = reactive({ claimId: '', subject: '', rightType: '', authScope: '', exclusive: false, sourceType: '' })
 // #16 冲突解决方案建议
 const adviceDlg = ref(false); const advice = ref(null)
+const aiAdvice = useAiThinking()
 async function onAdvice(row) {
   advice.value = null; adviceDlg.value = true
-  advice.value = await aitConflictAdvice(row.conflictId)
+  advice.value = await aiAdvice.run(() => aitConflictAdvice(row.conflictId),
+    { phases: AI_PHASES.conflictAdvice, title: '大模型生成处置建议中' })
 }
 function srcTag(s) { return { 历史确权: 'info', 当前申请: 'primary', 法规政策: 'warning', 证明材料: 'success' }[s] || 'info' }
 async function onSyncHistory() {

@@ -67,20 +67,35 @@ class AuthFlowTest {
     }
 
     @Test
-    void batch_flow_three_level_should_generate_cert() {
+    void batch_flow_should_generate_cert_with_aligned_nodes() {
         AuthApply a = draft("DA-AUTH-005", "批量授权表", "EC-PRA-VALID05");
         a.setAuthMode(AuthApply.MODE_BATCH);
         String id = applyService.saveDraft(a);
         applyService.submit(id);
-        // 批量三级:合规->数字化部认定->领导小组->已生效
+        // 批量(节点对齐后):合规->主管->经理->副总->领导小组->已生效
+        // 数字化部三节点(主管/经理/副总)与一事一议同名同粒度,末节点为领导小组决策。
         assertEquals(AuthApply.STATUS_COMPLIANCE, applyService.getById(id).getStatus());
-        assertNull(applyService.approve(id, null)); // 合规->数字化部认定
-        assertEquals(AuthApply.STATUS_DEPT, applyService.getById(id).getStatus());
-        assertNull(applyService.approve(id, null)); // 数字化部认定->领导小组
+        assertNull(applyService.approve(id, null)); // 合规->主管
+        assertEquals(AuthApply.STATUS_MANAGER, applyService.getById(id).getStatus());
+        assertNull(applyService.approve(id, null)); // 主管->经理
+        assertEquals(AuthApply.STATUS_DIRECTOR, applyService.getById(id).getStatus());
+        assertNull(applyService.approve(id, null)); // 经理->副总
+        assertEquals(AuthApply.STATUS_VP, applyService.getById(id).getStatus());
+        assertNull(applyService.approve(id, null)); // 副总->领导小组
         assertEquals(AuthApply.STATUS_LEADERSHIP, applyService.getById(id).getStatus());
         String certId = applyService.approve(id, null); // 领导小组->已生效
         assertNotNull(certId, "领导小组批准应自动生成授权证书");
         assertEquals(AuthApply.STATUS_EFFECTIVE, applyService.getById(id).getStatus());
+    }
+
+    @Test
+    void submit_should_block_when_scope_exceeds_confirm_boundary() {
+        // 确权边界=约定字段(本地桩 NARROW),授权填"全字段"=超界,应被授权⊆确权边界规则拦截
+        AuthApply a = draft("DA-AUTH-006", "约定字段资产", "EC-NARROW-1");
+        a.setScope("全字段");
+        String id = applyService.saveDraft(a);
+        BizException ex = assertThrows(BizException.class, () -> applyService.submit(id));
+        assertTrue(ex.getMessage().contains("确权边界"), "授权范围超确权边界应被拦截:" + ex.getMessage());
     }
 
     @Test

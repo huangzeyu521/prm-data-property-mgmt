@@ -31,69 +31,27 @@
           <el-icon :size="16"><MagicStick /></el-icon><span>智能确权辅助工具</span>
         </el-button>
       </el-tooltip>
+      <el-tooltip content="按角色裁剪菜单与首屏(无登录环境;生产由 4A 角色映射)" placement="bottom">
+        <el-select v-model="role" class="prm-role" size="small" @change="onRoleChange">
+          <template #prefix><el-icon><UserFilled /></el-icon></template>
+          <el-option v-for="r in ROLES" :key="r.key" :label="r.label" :value="r.key" />
+        </el-select>
+      </el-tooltip>
       <work-guide />
       <notification-center />
     </el-header>
     <el-container>
       <el-aside :width="collapse ? '64px' : '220px'" class="prm-aside">
         <el-menu :default-active="$route.path" :default-openeds="openeds" :collapse="collapse" unique-opened router>
-          <el-menu-item index="/dpr/workbench/todo" class="prm-top-item"><el-icon><Compass /></el-icon><span>统一待办中心</span></el-menu-item>
-          <el-sub-menu index="01">
-            <template #title><el-icon><Document /></el-icon><span>产权信息管理</span></template>
-            <el-menu-item index="/dpr/ledger/overview">产权台账概览</el-menu-item>
-            <el-menu-item index="/dpr/ledger/archive">数据集产权档案管理</el-menu-item>
-            <el-menu-item index="/dpr/ledger/change">产权变更记录管理</el-menu-item>
-            <el-menu-item index="/dpr/ledger/statistics">产权台账统计分析</el-menu-item>
-          </el-sub-menu>
-          <el-sub-menu index="02">
-            <template #title><el-icon><Monitor /></el-icon><span>权益动态监测</span></template>
-            <el-menu-item index="/dpr/monitor/status">权益状态监控</el-menu-item>
-            <el-menu-item index="/dpr/monitor/alert">权益变动监测预警</el-menu-item>
-            <el-menu-item index="/dpr/monitor/compliance">合规性检查</el-menu-item>
-            <el-menu-item index="/dpr/monitor/rule">监测规则配置</el-menu-item>
-          </el-sub-menu>
-          <el-sub-menu index="03">
-            <template #title><el-icon><Stamp /></el-icon><span>数据确权管理</span></template>
-            <el-menu-item index="/dpr/confirm/wizard">⭐ 确权申请</el-menu-item>
-            <el-menu-item index="/dpr/confirm/guidance">确权指引管理</el-menu-item>
-            <el-menu-item index="/dpr/confirm/catalog">确权目录管理</el-menu-item>
-            <el-menu-item index="/dpr/confirm/history">申请查询</el-menu-item>
-            <el-menu-item index="/dpr/confirm/review">审核申请提交</el-menu-item>
-            <el-menu-item index="/dpr/confirm/card">权益卡片生成</el-menu-item>
-            <el-menu-item index="/dpr/confirm/cert">权益证书管理</el-menu-item>
-          </el-sub-menu>
-          <el-sub-menu index="04">
-            <template #title><el-icon><Connection /></el-icon><span>数据授权管理</span></template>
-            <!-- 办事:一站式向导 -->
-            <el-menu-item index="/dpr/auth/wizard">⭐ 一事一议授权申请</el-menu-item>
-            <el-menu-item index="/dpr/auth/batch-wizard">⭐ 批量授权申请</el-menu-item>
-            <!-- 过程:清单/校验/查询/审核 -->
-            <el-menu-item index="/dpr/auth/batch-list">批量授权清单</el-menu-item>
-            <el-menu-item index="/dpr/auth/compliance">合规校验管理</el-menu-item>
-            <el-menu-item index="/dpr/auth/history">申请历史查询</el-menu-item>
-            <el-menu-item index="/dpr/auth/review">授权审核提交</el-menu-item>
-            <!-- 协议:签章/审核/存档 -->
-            <el-menu-item index="/dpr/auth/agreement-seal">协议签章上传</el-menu-item>
-            <el-menu-item index="/dpr/auth/agreement-review">协议审核提交</el-menu-item>
-            <el-menu-item index="/dpr/auth/agreement-archive">协议存档管理</el-menu-item>
-            <!-- 权益:证书/模板/备案 -->
-            <el-menu-item index="/dpr/auth/cert">授权权益管理</el-menu-item>
-            <el-menu-item index="/dpr/auth/cert-template">授权权益证书模板管理</el-menu-item>
-            <el-menu-item index="/dpr/auth/filing">对外经营权授权备案</el-menu-item>
-          </el-sub-menu>
-          <el-sub-menu index="07">
-            <template #title><el-icon><Setting /></el-icon><span>授权配置</span></template>
-            <el-menu-item index="/dpr/auth/guidance">授权指引管理</el-menu-item>
-            <el-menu-item index="/dpr/auth/form-template">申请表单设计</el-menu-item>
-            <el-menu-item index="/dpr/auth/scenario">应用场景管理</el-menu-item>
-            <el-menu-item index="/dpr/auth/agreement-template">协议模板库</el-menu-item>
-          </el-sub-menu>
-          <el-sub-menu index="05">
-            <template #title><el-icon><DataAnalysis /></el-icon><span>综合分析管理</span></template>
-            <el-menu-item index="/dpr/dashboard/overview">数据产权全景</el-menu-item>
-            <el-menu-item index="/dpr/dashboard/confirm">确权看板</el-menu-item>
-            <el-menu-item index="/dpr/dashboard/auth">授权看板</el-menu-item>
-          </el-sub-menu>
+          <template v-for="node in menu" :key="node.group || node.path">
+            <el-menu-item v-if="node.top" :index="node.path" class="prm-top-item">
+              <el-icon><component :is="node.icon" /></el-icon><span>{{ node.title }}</span>
+            </el-menu-item>
+            <el-sub-menu v-else :index="node.index">
+              <template #title><el-icon><component :is="node.icon" /></el-icon><span>{{ node.group }}</span></template>
+              <el-menu-item v-for="it in node.items" :key="it.path" :index="it.path">{{ it.title }}</el-menu-item>
+            </el-sub-menu>
+          </template>
         </el-menu>
       </el-aside>
       <el-main class="prm-main">
@@ -118,11 +76,22 @@ import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import NotificationCenter from '@/components/NotificationCenter.vue'
 import WorkGuide from '@/components/WorkGuide.vue'
+import { ROLES, ROLE_HOME, currentRole, visibleMenu } from '@/lib/roles'
 
 const route = useRoute()
 const router = useRouter()
 const collapse = ref(false)
 const jump = ref('')
+
+// 角色:无登录环境由顶栏切换器写入 localStorage;默认 all(管理员视图,向后兼容)
+const role = ref(currentRole())
+const menu = computed(() => visibleMenu(role.value))
+function onRoleChange(r) {
+  localStorage.setItem('prm-role', r)
+  // 切换角色 → 落到该角色个性化首屏
+  const home = ROLE_HOME[r] || '/dpr/dashboard/overview'
+  if (route.path !== home) router.push(home)
+}
 
 // 智能确权辅助工具走独立外壳(AitoolShell),不渲染主平台布局
 const isAitool = computed(() => route.path.startsWith('/aitool'))
@@ -144,7 +113,7 @@ function onJump(path) {
   }
 }
 
-const AUTH_CONFIG = ['/dpr/auth/guidance', '/dpr/auth/form-template', '/dpr/auth/scenario', '/dpr/auth/agreement-template']
+const AUTH_CONFIG = ['/dpr/auth/guidance', '/dpr/auth/form-template', '/dpr/auth/scenario', '/dpr/auth/agreement-template', '/dpr/auth/cert-template']
 
 const GROUP_NAMES = {
   '/dpr/ledger': '产权信息管理',
@@ -223,6 +192,7 @@ const openeds = computed(() => {
 .prm-goal { margin-left: auto; font-size: 12px; color: #8c8c8c; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 52%; }
 .prm-spacer { flex: 1; }
 .prm-search { width: 260px; }
+.prm-role { width: 150px; flex: none; }
 .prm-ait-btn { color: var(--prm-color-primary); font-size: 13px; }
 .prm-ait-btn:hover { color: var(--prm-color-primary-light); }
 /* 侧栏:深蓝渐变+白字菜单(典型界面左导航),激活项亮蓝高亮 */

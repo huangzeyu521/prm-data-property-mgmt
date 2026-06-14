@@ -103,7 +103,9 @@ import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { pageAgreement, generateAgreement, signAgreementGrantor, signAgreementGrantee, reviewAgreement, archiveAgreement, uploadAgreementSeal, getAgreementSealLogs, agreementSealFileUrl, getAgreementReviewLogs, getAgreementArchiveLogs, recordAgreementAccess } from '@/api/authorize'
 const route = useRoute()
-const action = computed(() => route.meta.action || 'download')
+// 协议工作台(标签页)以 actionProp 复用本组件;独立路由仍读 route.meta.action
+const props = defineProps({ actionProp: { type: String, default: '' } })
+const action = computed(() => props.actionProp || route.meta.action || 'download')
 const note = computed(() => ({
   seal: '注:在线上传双方盖章协议,系统自动进行签章有效性验证(CV/CA 核验)。',
   review: '注:协议须完成签章后人工审核,核对内容与申请单一致,防篡改防"阴阳合同"。',

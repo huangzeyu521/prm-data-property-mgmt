@@ -54,9 +54,13 @@ public class PropertyArchive extends BaseEntity {
     @TableField("CEC_VALID_DATE")
     private LocalDateTime validDate;
 
-    /** 确权状态:未确权/申请中/已确权/失败 */
+    /** 确权状态(聚合):未确权/部分确权/已确权——多权时由 confirmDetail 派生 */
     @TableField("CEC_CONFIRM_STATUS")
     private String confirmStatus;
+
+    /** 按权确权明细(三权分置):"持有权:已确权;使用权:未确权;经营权:未确权" */
+    @TableField("CEC_CONFIRM_DETAIL")
+    private String confirmDetail;
 
     /** 授权状态 */
     @TableField("CEC_AUTH_STATUS")
@@ -152,6 +156,14 @@ public class PropertyArchive extends BaseEntity {
 
     public void setConfirmStatus(String confirmStatus) {
         this.confirmStatus = confirmStatus;
+    }
+
+    public String getConfirmDetail() {
+        return confirmDetail;
+    }
+
+    public void setConfirmDetail(String confirmDetail) {
+        this.confirmDetail = confirmDetail;
     }
 
     public String getAuthStatus() {

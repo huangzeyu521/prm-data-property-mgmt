@@ -39,9 +39,9 @@ public class AuthApply extends BaseEntity {
     public static final String[] CHAIN_SPECIAL = {
             STATUS_COMPLIANCE, STATUS_BUSINESS, STATUS_MANAGER, STATUS_DIRECTOR, STATUS_VP, STATUS_EFFECTIVE
     };
-    /** 批量审批链 */
+    /** 批量审批链(数字化部三节点与专项同名同粒度,末节点为领导小组决策) */
     public static final String[] CHAIN_BATCH = {
-            STATUS_COMPLIANCE, STATUS_DEPT, STATUS_LEADERSHIP, STATUS_EFFECTIVE
+            STATUS_COMPLIANCE, STATUS_MANAGER, STATUS_DIRECTOR, STATUS_VP, STATUS_LEADERSHIP, STATUS_EFFECTIVE
     };
 
     @TableId(value = "CEC_APPLY_ID", type = IdType.ASSIGN_UUID)

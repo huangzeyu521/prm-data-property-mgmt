@@ -47,6 +47,10 @@ public class EquityCard extends BaseEntity {
     @TableField("CEC_RIGHT_SOURCE")
     private String rightSource;
 
+    /** 确权范围(授权边界依据):全字段 / 约定字段(确权列了表级清单时);先确后授时授权范围不得超此边界 */
+    @TableField("CEC_SCOPE")
+    private String scope;
+
     @TableField("CEC_VALID_DATE")
     private LocalDateTime validDate;
 
@@ -116,6 +120,14 @@ public class EquityCard extends BaseEntity {
 
     public void setRightSource(String rightSource) {
         this.rightSource = rightSource;
+    }
+
+    public String getScope() {
+        return scope;
+    }
+
+    public void setScope(String scope) {
+        this.scope = scope;
     }
 
     public LocalDateTime getValidDate() {

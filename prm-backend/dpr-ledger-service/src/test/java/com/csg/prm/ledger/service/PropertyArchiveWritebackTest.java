@@ -70,4 +70,31 @@ class PropertyArchiveWritebackTest {
         assertNotNull(a);
         assertEquals("已授权", a.getAuthStatus());
     }
+
+    @Test
+    void partial_confirm_yields_partial_then_full_status() {
+        // 三权登记一个数据集(各权未确权)
+        PropertyArchive reg = new PropertyArchive();
+        reg.setAssetId("WB-ASSET-4");
+        reg.setAssetName("三权登记表");
+        reg.setRightType("数据资源持有权、数据加工使用权、数据产品经营权");
+        archiveService.create(reg);
+        PropertyArchive a0 = byAsset("WB-ASSET-4");
+        assertEquals("未确权", a0.getConfirmStatus(), "三权登记初始应为未确权");
+        assertTrue(a0.getConfirmDetail().contains("数据产品经营权:未确权"), "应有按权明细");
+
+        // 确权只确了 2/3 权 -> 部分确权
+        archiveService.applyRightsEvent(RightsEvent.confirmed(
+                "WB-ASSET-4", "三权登记表", "数据资源持有权、数据加工使用权", "广东电网", "EC-WB-4", "QQ-WB-4a"));
+        PropertyArchive a1 = byAsset("WB-ASSET-4");
+        assertEquals("部分确权", a1.getConfirmStatus(), "确2权应聚合为部分确权");
+        assertTrue(a1.getConfirmDetail().contains("数据资源持有权:已确权"), "持有权应已确权");
+        assertTrue(a1.getConfirmDetail().contains("数据产品经营权:未确权"), "经营权应仍未确权");
+
+        // 补确第3权 -> 已确权
+        archiveService.applyRightsEvent(RightsEvent.confirmed(
+                "WB-ASSET-4", "三权登记表", "数据产品经营权", "广东电网", "EC-WB-4", "QQ-WB-4b"));
+        PropertyArchive a2 = byAsset("WB-ASSET-4");
+        assertEquals("已确权", a2.getConfirmStatus(), "三权全确应聚合为已确权");
+    }
 }

@@ -135,6 +135,7 @@ import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { UploadFilled } from '@element-plus/icons-vue'
 import { pageAitMaterial, uploadAitMaterialFile, uploadAitMaterialBatch, parseAitMaterial, getAitParse, aitTermCheck, confirmAitTerm, aitCompares, aitProgress, aitParseExportUrl } from '@/api/aitool'
+import { materialParsePhaseText } from '@/lib/aiPhases'
 
 const MAX_BATCH = 50
 const MIN_BYTES = 1024
@@ -160,10 +161,7 @@ function sealTag(s) { return { 有效: 'success', 可疑: 'warning', 未检出: 
 function trustTag(t) { return { 可信: 'success', 存疑: 'warning', 不可信: 'danger' }[t] || 'info' }
 function fmtSize(kb) { if (!kb) return '-'; return kb >= 1024 ? (kb / 1024).toFixed(1) + ' MB' : kb + ' KB' }
 function stageText(p) {
-  if ((p || 0) >= 90) return '表单比对…'
-  if ((p || 0) >= 65) return '要素入库…'
-  if ((p || 0) >= 35) return '要素抽取…'
-  return '开始解析…'
+  return materialParsePhaseText(p || 0)
 }
 
 async function load() {
