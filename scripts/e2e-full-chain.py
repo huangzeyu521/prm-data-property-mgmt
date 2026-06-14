@@ -8,7 +8,7 @@ def call(method, url, body=None, params=None, timeout=120):
     if params: url += '?' + urllib.parse.urlencode(params)
     data = json.dumps(body, ensure_ascii=False).encode('utf-8') if body is not None else (b'' if method == 'POST' else None)
     req = urllib.request.Request(url, data=data, method=method,
-        headers={'Content-Type': 'application/json', 'X-User-Id': 'e2e-bot', 'X-User-Name': 'e2e-bot'})
+        headers={'Content-Type': 'application/json', 'X-User-Id': 'e2e-bot', 'X-User-Name': 'e2e-bot', 'X-User-Roles': 'review,admin,apply'})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
             res = json.loads(r.read().decode('utf-8'))

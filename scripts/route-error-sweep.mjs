@@ -31,6 +31,17 @@ const evalJs = async (e) => (await send('Runtime.evaluate', { expression: e, ret
 await new Promise((r) => (ws.onopen = r))
 await send('Page.enable'); await send('Runtime.enable'); await send('Network.enable')
 
+// 登录守卫已启用:先以超管登录取 token,写入 localStorage(否则所有路由都被弹到 /login)
+const loginResp = await fetch('http://localhost:5173/api/auth/login', {
+  method: 'POST', headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ username: 'super', password: 'Prm@1234' }),
+})
+const loginJson = await loginResp.json().catch(() => ({}))
+const token = loginJson?.data?.token || ''
+await send('Page.navigate', { url: 'http://localhost:5173/login' })
+await new Promise((r) => setTimeout(r, 1500))
+await evalJs(`localStorage.setItem('prm-token','${token}'); localStorage.setItem('prm-role','all'); localStorage.setItem('X-User-Id','super'); localStorage.setItem('X-User-Roles','all')`)
+
 let totalIssues = 0
 for (const route of ROUTES) {
   events.length = 0

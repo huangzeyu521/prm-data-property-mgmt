@@ -20,6 +20,12 @@ spring:
 
 prm:
   db-type: MYSQL
+  # 测试用本地规则桩 AI(确定性,不依赖实时大模型,避免 aitool 测试因真调 qwen 输出漂移而飘)
+  ai:
+    provider: stub
+  # 单测不启用 RBAC 强制(无 token),与生产/演示隔离
+  auth:
+    enabled: false
   # 智能确权辅助工具(独立工具)材料存储:测试写临时目录,避免污染仓库
   storage:
     dir: ${java.io.tmpdir}/prm-ait-test

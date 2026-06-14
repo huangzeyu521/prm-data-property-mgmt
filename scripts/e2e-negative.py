@@ -6,7 +6,7 @@ def call(method, url, body=None, params=None, timeout=60):
     if params: url += '?' + urllib.parse.urlencode(params)
     data = json.dumps(body, ensure_ascii=False).encode('utf-8') if body is not None else (b'' if method in ('POST','PUT') else None)
     req = urllib.request.Request(url, data=data, method=method,
-        headers={'Content-Type': 'application/json', 'X-User-Id': 'neg-bot'})
+        headers={'Content-Type': 'application/json', 'X-User-Id': 'neg-bot', 'X-User-Roles': 'review,admin,apply'})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
             return r.status, json.loads(r.read().decode('utf-8'))

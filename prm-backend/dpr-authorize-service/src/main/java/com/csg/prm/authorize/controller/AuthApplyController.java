@@ -43,11 +43,13 @@ public class AuthApplyController {
         return R.ok();
     }
 
+    @com.csg.prm.common.auth.RequiresRole({"review", "admin"})
     @PostMapping("/{applyId}/approve")
     public R<String> approve(@PathVariable String applyId, @RequestParam(required = false) String opinion) {
         return R.ok(service.approve(applyId, opinion));
     }
 
+    @com.csg.prm.common.auth.RequiresRole({"review", "admin"})
     @PostMapping("/{applyId}/reject")
     public R<Void> reject(@PathVariable String applyId, @RequestParam(required = false) String reason) {
         service.reject(applyId, reason);

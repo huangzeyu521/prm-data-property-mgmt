@@ -7,8 +7,10 @@ const request = axios.create({
   timeout: 60000 // 真调大模型接口耗时数十秒,普通接口本就秒回不受影响
 })
 
-// 请求拦截:透传用户上下文(正式环境由 4A 网关注入,此处便于本地联调)
+// 请求拦截:带 JWT(内建登录) + 透传用户上下文头(4A 网关注入/本地联调兼容)
 request.interceptors.request.use((config) => {
+  const token = localStorage.getItem('prm-token')
+  if (token) config.headers['Authorization'] = 'Bearer ' + token
   const userId = localStorage.getItem('X-User-Id')
   if (userId) {
     config.headers['X-User-Id'] = userId
@@ -32,6 +34,18 @@ request.interceptors.response.use(
     return res
   },
   (error) => {
+    const code = error?.response?.data?.code
+    if (code === 401) {
+      // 登录失效:清票据并回登录页
+      localStorage.removeItem('prm-token')
+      ElMessage({ type: 'warning', message: '登录已失效,请重新登录', grouping: true })
+      if (location.pathname !== '/login') location.href = '/login'
+      return Promise.reject(error)
+    }
+    if (code === 403) {
+      ElMessage({ type: 'error', message: error?.response?.data?.msg || '无访问权限', grouping: true })
+      return Promise.reject(error)
+    }
     ElMessage({ type: 'error', message: '网络异常,请稍后重试', grouping: true })
     return Promise.reject(error)
   }

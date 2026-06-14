@@ -79,11 +79,23 @@ const routes = [
       { path: 'decision', name: 'AitDecision', component: () => import('@/views/aitool/DecisionSupport.vue'), meta: { title: '确权决策支持', goal: '综合RAG检索/因子分析生成确权决策建议与权益分割方案' } }
     ]
   },
+  // 登录页(无平台布局)
+  { path: '/login', name: 'Login', component: () => import('@/views/Login.vue'), meta: { title: '登录', public: true } },
   // 旧路径兼容重定向(保留历史链接/收藏)
   { path: '/dpr/aitool/:page(material|conflict|decision)', redirect: (to) => ({ path: '/aitool/' + to.params.page, query: to.query }) }
 ]
 
-export default createRouter({
+const router = createRouter({
   history: createWebHistory(),
   routes
 })
+
+// 路由守卫:未登录跳登录页(public 路由放行;aitool 独立工具也需登录)
+router.beforeEach((to) => {
+  if (to.meta && to.meta.public) return true
+  const loggedIn = !!localStorage.getItem('prm-token')
+  if (!loggedIn) return { path: '/login', query: to.fullPath !== '/' ? { redirect: to.fullPath } : {} }
+  return true
+})
+
+export default router

@@ -1,6 +1,6 @@
 <template>
-  <!-- 智能确权辅助工具:独立外壳,不渲染主平台布局 -->
-  <router-view v-if="isAitool" />
+  <!-- 登录页 / 智能确权辅助工具:独立外壳,不渲染主平台布局 -->
+  <router-view v-if="isAitool || isLogin" />
   <el-container v-else style="height: 100%">
     <el-header class="prm-header">
       <el-button text class="prm-collapse-btn" @click="collapse = !collapse">
@@ -31,7 +31,7 @@
           <el-icon :size="16"><MagicStick /></el-icon><span>智能确权辅助工具</span>
         </el-button>
       </el-tooltip>
-      <el-tooltip content="按角色裁剪菜单与首屏(无登录环境;生产由 4A 角色映射)" placement="bottom">
+      <el-tooltip content="切换视角(演示):按角色裁剪菜单与首屏;真实角色由登录身份决定" placement="bottom">
         <el-select v-model="role" class="prm-role" size="small" @change="onRoleChange">
           <template #prefix><el-icon><UserFilled /></el-icon></template>
           <el-option v-for="r in ROLES" :key="r.key" :label="r.label" :value="r.key" />
@@ -39,6 +39,15 @@
       </el-tooltip>
       <work-guide />
       <notification-center />
+      <el-dropdown @command="onUserCmd">
+        <span class="prm-user"><el-icon><Avatar /></el-icon>{{ userName }}</span>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item disabled>{{ userName }}（{{ roleLabel }}）</el-dropdown-item>
+            <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
     </el-header>
     <el-container>
       <el-aside :width="collapse ? '64px' : '220px'" class="prm-aside">
@@ -77,20 +86,31 @@ import { useRoute, useRouter } from 'vue-router'
 import NotificationCenter from '@/components/NotificationCenter.vue'
 import WorkGuide from '@/components/WorkGuide.vue'
 import { ROLES, ROLE_HOME, currentRole, visibleMenu } from '@/lib/roles'
+import { currentUser, clearSession } from '@/api/auth'
 
 const route = useRoute()
 const router = useRouter()
 const collapse = ref(false)
 const jump = ref('')
+const isLogin = computed(() => route.path === '/login')
 
-// 角色:无登录环境由顶栏切换器写入 localStorage;默认 all(管理员视图,向后兼容)
+// 角色:登录身份决定真实角色(saveSession 写入 prm-role);顶栏切换器=演示视角
 const role = ref(currentRole())
 const menu = computed(() => visibleMenu(role.value))
 function onRoleChange(r) {
   localStorage.setItem('prm-role', r)
-  // 切换角色 → 落到该角色个性化首屏
   const home = ROLE_HOME[r] || '/dpr/dashboard/overview'
   if (route.path !== home) router.push(home)
+}
+
+// 登录用户展示 + 退出
+const userName = computed(() => { const u = currentUser(); return (u && u.realName) || '未登录' })
+const roleLabel = computed(() => { const r = ROLES.find((x) => x.key === role.value); return r ? r.label : role.value })
+function onUserCmd(cmd) {
+  if (cmd === 'logout') {
+    clearSession()
+    window.location.href = '/login' // 整页跳转,清干净登录态
+  }
 }
 
 // 智能确权辅助工具走独立外壳(AitoolShell),不渲染主平台布局
@@ -193,6 +213,8 @@ const openeds = computed(() => {
 .prm-spacer { flex: 1; }
 .prm-search { width: 260px; }
 .prm-role { width: 150px; flex: none; }
+.prm-user { display: inline-flex; align-items: center; gap: 4px; color: #262626; cursor: pointer; font-size: 13px; padding: 0 4px; }
+.prm-user:hover { color: var(--prm-color-primary); }
 .prm-ait-btn { color: var(--prm-color-primary); font-size: 13px; }
 .prm-ait-btn:hover { color: var(--prm-color-primary-light); }
 /* 侧栏:深蓝渐变+白字菜单(典型界面左导航),激活项亮蓝高亮 */

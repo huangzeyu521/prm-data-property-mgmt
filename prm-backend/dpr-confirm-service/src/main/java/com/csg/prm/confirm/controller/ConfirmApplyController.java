@@ -85,11 +85,13 @@ public class ConfirmApplyController {
         return R.ok(service.batchReject(applyIds, reason));
     }
 
+    @com.csg.prm.common.auth.RequiresRole({"review", "admin"})
     @PostMapping("/{applyId}/approve")
     public R<String> approve(@PathVariable String applyId) {
         return R.ok(service.approve(applyId));
     }
 
+    @com.csg.prm.common.auth.RequiresRole({"review", "admin"})
     @PostMapping("/{applyId}/reject")
     public R<Void> reject(@PathVariable String applyId, @RequestParam(required = false) String reason) {
         service.reject(applyId, reason);

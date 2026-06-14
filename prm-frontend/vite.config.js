@@ -14,6 +14,7 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
+      '/api/auth': { target: 'http://localhost:9102', changeOrigin: true },
       '/api/dpr/ledger': { target: 'http://localhost:9101', changeOrigin: true },
       '/api/dpr/monitor': { target: 'http://localhost:9101', changeOrigin: true },
       '/api/dpr/confirm': { target: 'http://localhost:9102', changeOrigin: true },
