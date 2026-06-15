@@ -241,8 +241,9 @@ public class AitElementService {
     public Map<String, Object> view(String dataTableRef, String applyId) {
         List<AitProfile> profiles;
         if (StringUtils.hasText(dataTableRef)) {
+            // 多表共附件:画像的 dataTableRef 可含多个表(T1;T2),按单表查视图用 LIKE 命中(与 1.2 归集口径一致)
             profiles = profileMapper.selectList(new LambdaQueryWrapper<AitProfile>()
-                    .eq(AitProfile::getDataTableRef, dataTableRef));
+                    .like(AitProfile::getDataTableRef, dataTableRef));
         } else if (StringUtils.hasText(applyId)) {
             List<String> ids = materialMapper.selectList(new LambdaQueryWrapper<AitMaterial>()
                             .eq(AitMaterial::getApplyId, applyId))

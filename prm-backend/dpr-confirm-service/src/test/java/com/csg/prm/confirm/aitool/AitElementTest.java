@@ -109,4 +109,15 @@ class AitElementTest {
         assertEquals(1, ((List<?>) view.get("tableLevel")).size(), "应有一条表级画像");
         assertEquals(1, ((List<?>) view.get("attachmentLevel")).size(), "应有一条附件级画像");
     }
+
+    /** #6 多表共附件:画像 dataTableRef 含多表,按其中任一表查视图都应命中(与 1.2 归集口径一致)。 */
+    @Test
+    void view_multi_table_shared_attachment_visible_under_each_table() {
+        String shared = newMaterial("共用制度附件.pdf", CORPUS, "DT-SHARE-A;DT-SHARE-B", "制度附件");
+        elementService.extract(shared, false);
+        assertTrue(((Number) elementService.view("DT-SHARE-A", null).get("profileCount")).intValue() >= 1,
+                "按 TableA 应命中共享附件画像");
+        assertTrue(((Number) elementService.view("DT-SHARE-B", null).get("profileCount")).intValue() >= 1,
+                "按 TableB 应命中共享附件画像");
+    }
 }
