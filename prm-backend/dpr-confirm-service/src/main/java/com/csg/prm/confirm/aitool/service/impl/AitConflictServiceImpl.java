@@ -43,17 +43,20 @@ public class AitConflictServiceImpl implements AitConflictService {
     private final ConfirmApplyMapper applyMapper;
     private final EquityCardMapper cardMapper;
     private final com.csg.prm.confirm.aitool.gateway.AiToolParseGateway aiGateway;
+    private final com.csg.prm.confirm.aitool.service.AitConflictRuleService ruleService;
 
     public AitConflictServiceImpl(AitKgClaimMapper claimMapper, AitConflictMapper conflictMapper,
                                   AitMaterialService materialService, ConfirmApplyMapper applyMapper,
                                   EquityCardMapper cardMapper,
-                                  com.csg.prm.confirm.aitool.gateway.AiToolParseGateway aiGateway) {
+                                  com.csg.prm.confirm.aitool.gateway.AiToolParseGateway aiGateway,
+                                  com.csg.prm.confirm.aitool.service.AitConflictRuleService ruleService) {
         this.claimMapper = claimMapper;
         this.conflictMapper = conflictMapper;
         this.materialService = materialService;
         this.applyMapper = applyMapper;
         this.cardMapper = cardMapper;
         this.aiGateway = aiGateway;
+        this.ruleService = ruleService;
     }
 
     @Override
@@ -268,9 +271,10 @@ public class AitConflictServiceImpl implements AitConflictService {
 
             // 主体冲突:同一客体被多主体声明同类权属。
             // 触发:不同主体 + 同类权利 + 该权利天然单一主体(持有权/所有权)或经营权或排他主张。
-            if (!sameSubject && sameRight && (isHolding(cur.getRightType()) || isOperation(cur.getRightType())
+            if (ruleService.enabled(AitConflict.TYPE_SUBJECT)
+                    && !sameSubject && sameRight && (isHolding(cur.getRightType()) || isOperation(cur.getRightType())
                     || Boolean.TRUE.equals(ex.getExclusive()) || Boolean.TRUE.equals(cur.getExclusive()))) {
-                found.add(emit(cur, AitConflict.TYPE_SUBJECT, "同一客体被多主体声明同类权属",
+                found.add(emit(cur, ex, AitConflict.TYPE_SUBJECT, "同一客体被多主体声明同类权属",
                         "客体「" + cur.getAssetId() + "」被多主体声明「" + cur.getRightType() + "」 —— 主体「"
                                 + ex.getSubject() + "」(" + claimContent(ex) + ") 与 主体「"
                                 + cur.getSubject() + "」(" + claimContent(cur) + ")",
@@ -278,22 +282,32 @@ public class AitConflictServiceImpl implements AitConflictService {
                         "建议补充权属证明,协商划分权利主体后再确权(数据持有权应归属单一主体)"));
             }
             // 范围冲突:对比当前授权范围与历史排他授权范围,识别 覆盖/重叠 的具体区域与影响范围
-            ScopeOverlap so = (!sameSubject && (Boolean.TRUE.equals(ex.getExclusive()) || Boolean.TRUE.equals(cur.getExclusive())))
+            ScopeOverlap so = (ruleService.enabled(AitConflict.TYPE_SCOPE)
+                    && !sameSubject && (Boolean.TRUE.equals(ex.getExclusive()) || Boolean.TRUE.equals(cur.getExclusive())))
                     ? scopeIntersect(cur.getAuthScope(), ex.getAuthScope()) : null;
             if (so != null) {
                 String kind = so.relation().contains("覆盖") ? "被覆盖" : "重叠";
-                found.add(emit(cur, AitConflict.TYPE_SCOPE, "历史排他性授权范围" + so.relation(),
+                found.add(emit(cur, ex, AitConflict.TYPE_SCOPE, "历史排他性授权范围" + so.relation(),
                         "当前授权范围「" + cur.getAuthScope() + "」与历史排他授权「" + ex.getAuthScope() + "」" + so.relation()
                                 + " —— 具体" + kind + "区域:" + so.region(),
                         "客体:" + cur.getAssetId() + ";" + kind + "区域:" + so.region(), "中",
                         "建议修订授权范围,避开排他授权的「" + so.region() + "」"));
             }
+            // 类型冲突:同一数据集存在多种权利主张并存(不同权利类型,非历史比对路径)
+            if (ruleService.enabled(AitConflict.TYPE_RIGHTTYPE)
+                    && !sameRight && !AitKgClaim.SRC_HISTORY.equals(ex.getSourceType())) {
+                found.add(emit(cur, ex, AitConflict.TYPE_RIGHTTYPE, "同一数据集多种权利主张并存",
+                        "客体「" + cur.getAssetId() + "」并存多种权利主张 —— 主体「" + ex.getSubject() + "」主张「"
+                                + ex.getRightType() + "」,主体「" + cur.getSubject() + "」主张「" + cur.getRightType() + "」",
+                        "客体:" + cur.getAssetId() + ";并存权利类型:" + ex.getRightType() + "、" + cur.getRightType(),
+                        "中", "建议核实多种权利主张是否相容(三权分置),必要时分置确权"));
+            }
             // 历史记录比对冲突:调取历史确权记录全方位比对,检测 矛盾项(归属矛盾) / 变更项 / 重叠项(重复)
-            if (AitKgClaim.SRC_HISTORY.equals(ex.getSourceType())) {
+            if (ruleService.enabled(AitConflict.TYPE_HISTORY) && AitKgClaim.SRC_HISTORY.equals(ex.getSourceType())) {
                 String hist = historyDetail(ex);
                 if (!sameRight && !sameSubject) {
                     // 矛盾项:不同主体对同一客体主张不同权利 → 权属归属矛盾(真冲突)
-                    found.add(emit(cur, AitConflict.TYPE_HISTORY, "与历史确权权属归属矛盾",
+                    found.add(emit(cur, ex, AitConflict.TYPE_HISTORY, "与历史确权权属归属矛盾",
                             "历史确权:主体「" + ex.getSubject() + "」持「" + ex.getRightType() + "」(" + hist
                                     + ");当前申请:主体「" + cur.getSubject() + "」主张「" + cur.getRightType()
                                     + "」 —— 权属归属/类型矛盾",
@@ -302,27 +316,31 @@ public class AitConflictServiceImpl implements AitConflictService {
                             "建议核实历史确权记录,厘清权属归属后再确权"));
                 } else if (!sameRight) {
                     // 同主体不同权利 → 权利类型变更(非矛盾,中风险提示)
-                    found.add(emit(cur, AitConflict.TYPE_HISTORY, "同主体权利类型较历史变更",
+                    found.add(emit(cur, ex, AitConflict.TYPE_HISTORY, "同主体权利类型较历史变更",
                             "主体「" + cur.getSubject() + "」历史确权为「" + ex.getRightType() + "」(" + hist
                                     + "),当前主张「" + cur.getRightType() + "」,属权利类型变更(非矛盾)",
                             "客体:" + cur.getAssetId() + ";权利类型:" + ex.getRightType() + "→" + cur.getRightType(),
                             "中", "建议走权利变更流程,确认是否注销/调整原确权"));
                 } else if (sameSubject) {
                     // 重叠项:同主体重复申请同一权利
-                    found.add(emit(cur, AitConflict.TYPE_HISTORY, "同一主体重复申请同一权利",
+                    found.add(emit(cur, ex, AitConflict.TYPE_HISTORY, "同一主体重复申请同一权利",
                             "主体「" + cur.getSubject() + "」已有历史确权「" + cur.getRightType() + "」(" + hist
                                     + "),本次重复申请",
                             "客体:" + cur.getAssetId() + ";重复确权:" + cur.getSubject() + "·" + cur.getRightType(),
                             "中", "建议复核是否需重新确权或走变更流程"));
                 }
             }
-            // 时效冲突:授权有效期超出客体数据生命周期/使用期限,算出超期时间范围及影响
-            if (cur.getValidDate() != null && ex.getValidDate() != null && cur.getValidDate().isAfter(ex.getValidDate())) {
+            // 时效冲突:授权有效期超出客体数据生命周期/使用期限,算出超期时间范围及影响(阈值=允许超期天数)
+            if (ruleService.enabled(AitConflict.TYPE_VALIDITY)
+                    && cur.getValidDate() != null && ex.getValidDate() != null && cur.getValidDate().isAfter(ex.getValidDate())) {
                 java.time.LocalDate lifeEnd = ex.getValidDate().toLocalDate();   // 数据生命周期到期(历史确权有效期)
                 java.time.LocalDate authEnd = cur.getValidDate().toLocalDate();  // 当前授权到期
                 long overDays = java.time.temporal.ChronoUnit.DAYS.between(lifeEnd, authEnd);
+                if (overDays <= ruleService.threshold(AitConflict.TYPE_VALIDITY)) {
+                    continue;
+                }
                 String overRange = lifeEnd.plusDays(1) + " ~ " + authEnd;       // 超期区间
-                found.add(emit(cur, AitConflict.TYPE_VALIDITY, "授权有效期超出数据生命周期",
+                found.add(emit(cur, ex, AitConflict.TYPE_VALIDITY, "授权有效期超出数据生命周期",
                         "授权有效期至「" + authEnd + "」,超出客体数据生命周期(" + nz(ex.getSourceType()) + "至「" + lifeEnd
                                 + "」)共 " + overDays + " 天;超期区间[" + overRange + "]该时段授权无对应数据生命周期支撑",
                         "客体:" + cur.getAssetId() + ";超期区间:" + overRange + "(超 " + overDays + " 天)",
@@ -333,7 +351,7 @@ public class AitConflictServiceImpl implements AitConflictService {
         return found;
     }
 
-    private AitConflict emit(AitKgClaim cur, String type, String source, String desc,
+    private AitConflict emit(AitKgClaim cur, AitKgClaim ex, String type, String source, String desc,
                              String impact, String risk, String suggestion) {
         AitConflict c = new AitConflict();
         c.setAssetId(cur.getAssetId());
@@ -344,8 +362,58 @@ public class AitConflictServiceImpl implements AitConflictService {
         c.setRiskLevel(risk);
         c.setSuggestion(suggestion);
         c.setStatus(AitConflict.STATUS_OPEN);
+        // #3 结构化追溯标注:关联记录编号 / 冲突字段 / 条款依据
+        c.setRelatedRecordNo(relatedRecordNo(ex));
+        c.setConflictFields(conflictFields(type));
+        c.setClauseRef(regulationBasis(type));
+        // #4 法律风险等级
+        c.setLegalRisk(legalRisk(risk));
         conflictMapper.insert(c);
         return c;
+    }
+
+    /** #3 关联历史确权记录/主张编号(历史来源附卡片备注)。 */
+    private String relatedRecordNo(AitKgClaim ex) {
+        if (ex == null) {
+            return null;
+        }
+        String id = ex.getClaimId() == null ? "" : ex.getClaimId();
+        String base = "主张#" + (id.length() > 8 ? id.substring(0, 8) : id);
+        if (AitKgClaim.SRC_HISTORY.equals(ex.getSourceType()) && StringUtils.hasText(ex.getRemark())) {
+            base += " | " + ex.getRemark();
+        }
+        return base.length() > 255 ? base.substring(0, 255) : base;
+    }
+
+    /** #3 各冲突类型涉及的冲突字段。 */
+    private String conflictFields(String type) {
+        if (AitConflict.TYPE_SUBJECT.equals(type)) {
+            return "权利主体、权利类型";
+        }
+        if (AitConflict.TYPE_SCOPE.equals(type)) {
+            return "授权范围";
+        }
+        if (AitConflict.TYPE_VALIDITY.equals(type)) {
+            return "有效期/保留期限";
+        }
+        if (AitConflict.TYPE_HISTORY.equals(type)) {
+            return "权利主体、权利类型、有效期";
+        }
+        if (AitConflict.TYPE_RIGHTTYPE.equals(type)) {
+            return "权利类型";
+        }
+        return "权属要素";
+    }
+
+    /** #4 法律风险等级(由风险等级映射,高风险标需法务审查)。 */
+    private String legalRisk(String risk) {
+        if ("高".equals(risk)) {
+            return "高(建议法务合规审查)";
+        }
+        if ("中".equals(risk)) {
+            return "中";
+        }
+        return "低";
     }
 
     @Override
@@ -362,10 +430,18 @@ public class AitConflictServiceImpl implements AitConflictService {
     @Override
     public List<AitConflict> conflicts(String assetId, String conflictType, String riskLevel,
                                        String startTime, String endTime, String subject) {
+        return conflicts(assetId, conflictType, riskLevel, startTime, endTime, subject, null, null);
+    }
+
+    @Override
+    public List<AitConflict> conflicts(String assetId, String conflictType, String riskLevel,
+                                       String startTime, String endTime, String subject,
+                                       String status, String dept) {
         LambdaQueryWrapper<AitConflict> w = new LambdaQueryWrapper<AitConflict>()
                 .eq(StringUtils.hasText(assetId), AitConflict::getAssetId, assetId)
                 .eq(StringUtils.hasText(conflictType), AitConflict::getConflictType, conflictType)
-                .eq(StringUtils.hasText(riskLevel), AitConflict::getRiskLevel, riskLevel);
+                .eq(StringUtils.hasText(riskLevel), AitConflict::getRiskLevel, riskLevel)
+                .eq(StringUtils.hasText(status), AitConflict::getStatus, status);
         if (StringUtils.hasText(startTime)) {
             w.ge(AitConflict::getCreateTime, LocalDate.parse(startTime).atStartOfDay());
         }
@@ -376,8 +452,47 @@ public class AitConflictServiceImpl implements AitConflictService {
         if (StringUtils.hasText(subject)) {
             w.and(q -> q.like(AitConflict::getImpactScope, subject).or().like(AitConflict::getConflictDesc, subject));
         }
+        // 按系统/部门筛选:匹配影响范围/描述/关联记录中含该关键词的冲突
+        if (StringUtils.hasText(dept)) {
+            w.and(q -> q.like(AitConflict::getImpactScope, dept).or().like(AitConflict::getConflictDesc, dept)
+                    .or().like(AitConflict::getRelatedRecordNo, dept));
+        }
         w.orderByDesc(AitConflict::getCreateTime);
         return conflictMapper.selectList(w);
+    }
+
+    /** #6 冲突记录导出 Excel(满足审计/管理查询)。 */
+    @Override
+    public byte[] exportConflictExcel(String assetId, String conflictType, String riskLevel,
+                                      String startTime, String endTime, String subject,
+                                      String status, String dept) {
+        List<AitConflict> list = conflicts(assetId, conflictType, riskLevel, startTime, endTime, subject, status, dept);
+        try (org.apache.poi.ss.usermodel.Workbook wb = new org.apache.poi.xssf.usermodel.XSSFWorkbook();
+             ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+            org.apache.poi.ss.usermodel.Sheet s = wb.createSheet("权属冲突记录");
+            String[] heads = {"资产ID", "冲突类型", "冲突字段", "冲突来源", "冲突描述", "关联记录编号",
+                    "影响范围", "风险等级", "法律风险", "状态", "条款依据", "处置建议"};
+            org.apache.poi.ss.usermodel.Row h = s.createRow(0);
+            for (int i = 0; i < heads.length; i++) {
+                h.createCell(i).setCellValue(heads[i]);
+                s.setColumnWidth(i, 5000);
+            }
+            int ri = 1;
+            for (AitConflict c : list) {
+                org.apache.poi.ss.usermodel.Row row = s.createRow(ri++);
+                String[] vals = {nz(c.getAssetId()), nz(c.getConflictType()), nz(c.getConflictFields()),
+                        nz(c.getConflictSource()), nz(c.getConflictDesc()), nz(c.getRelatedRecordNo()),
+                        nz(c.getImpactScope()), nz(c.getRiskLevel()), nz(c.getLegalRisk()), nz(c.getStatus()),
+                        nz(c.getClauseRef()), nz(c.getSuggestion())};
+                for (int i = 0; i < vals.length; i++) {
+                    row.createCell(i).setCellValue(vals[i]);
+                }
+            }
+            wb.write(bos);
+            return bos.toByteArray();
+        } catch (Exception ex) {
+            throw new BizException("导出冲突记录失败:" + ex.getMessage());
+        }
     }
 
     @Override
@@ -442,7 +557,52 @@ public class AitConflictServiceImpl implements AitConflictService {
         report.put("decision", decision);
         report.put("decisionAdvice", advice);
         report.put("conclusion", advice);
+
+        // #4 影响范围分析:资产规模 / 系统数量(以数据集为代理)/ 责任部门(涉及主体)/ 法律风险等级
+        List<String> involvedSubjects = claims.stream().map(AitKgClaim::getSubject)
+                .filter(StringUtils::hasText).distinct().collect(Collectors.toList());
+        java.util.Set<String> assets = list.stream().map(AitConflict::getAssetId)
+                .filter(StringUtils::hasText).collect(Collectors.toCollection(java.util.LinkedHashSet::new));
+        if (StringUtils.hasText(assetId)) {
+            assets.add(assetId);
+        }
+        String maxRisk = list.stream().anyMatch(c -> "高".equals(c.getRiskLevel())) ? "高"
+                : (list.stream().anyMatch(c -> "中".equals(c.getRiskLevel())) ? "中"
+                : (list.isEmpty() ? "无" : "低"));
+        Map<String, Object> impact = new LinkedHashMap<>();
+        impact.put("assetScale", assets.size() + " 个数据资产");
+        impact.put("systemCount", assets.size());
+        impact.put("depts", involvedSubjects);
+        impact.put("legalRiskLevel", legalRisk(maxRisk));
+        report.put("impactAnalysis", impact);
+
+        // #5 详细对比表:当前主张 vs 历史确权(逐要素)
+        List<Map<String, Object>> comparison = new ArrayList<>();
+        List<AitKgClaim> currents = claims.stream()
+                .filter(c -> !AitKgClaim.SRC_HISTORY.equals(c.getSourceType())).collect(Collectors.toList());
+        List<AitKgClaim> histories = claims.stream()
+                .filter(c -> AitKgClaim.SRC_HISTORY.equals(c.getSourceType())).collect(Collectors.toList());
+        for (AitKgClaim cu : currents) {
+            for (AitKgClaim hi : histories) {
+                comparison.add(compareRow("权利主体", cu.getSubject(), hi.getSubject()));
+                comparison.add(compareRow("权利类型", cu.getRightType(), hi.getRightType()));
+                comparison.add(compareRow("授权范围", cu.getAuthScope(), hi.getAuthScope()));
+                comparison.add(compareRow("有效期",
+                        cu.getValidDate() == null ? null : cu.getValidDate().toLocalDate().toString(),
+                        hi.getValidDate() == null ? null : hi.getValidDate().toLocalDate().toString()));
+            }
+        }
+        report.put("comparisonTable", comparison);
         return report;
+    }
+
+    private Map<String, Object> compareRow(String field, String current, String history) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("field", field);
+        m.put("current", current);
+        m.put("history", history);
+        m.put("consistent", java.util.Objects.equals(nz(current), nz(history)));
+        return m;
     }
 
     @Override

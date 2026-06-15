@@ -4,53 +4,79 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.ResultCode;
+import com.csg.prm.common.context.UserContextHolder;
 import com.csg.prm.common.crypto.Sm3Util;
 import com.csg.prm.common.exception.BizException;
 import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.confirm.aitool.service.AitParseConfigService;
+import com.csg.prm.confirm.aitool.service.AitParseRecordService;
 import com.csg.prm.confirm.aitool.entity.AitCompare;
+import com.csg.prm.confirm.aitool.entity.AitDocSegment;
 import com.csg.prm.confirm.aitool.entity.AitMaterial;
 import com.csg.prm.confirm.aitool.entity.AitParseResult;
 import com.csg.prm.confirm.aitool.term.AitTermLibrary;
 import com.csg.prm.confirm.aitool.gateway.AiToolParseGateway;
 import com.csg.prm.confirm.aitool.mapper.AitCompareMapper;
+import com.csg.prm.confirm.aitool.mapper.AitDocSegmentMapper;
 import com.csg.prm.confirm.aitool.mapper.AitMaterialMapper;
 import com.csg.prm.confirm.aitool.mapper.AitParseResultMapper;
 import com.csg.prm.confirm.aitool.service.AitMaterialService;
 import com.csg.prm.confirm.aitool.storage.FileStorageGateway;
 import com.csg.prm.confirm.entity.ConfirmApply;
 import com.csg.prm.confirm.mapper.ConfirmApplyMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.xwpf.usermodel.XWPFTable;
+import org.apache.poi.xwpf.usermodel.XWPFTableCell;
+import org.apache.poi.xwpf.usermodel.XWPFTableRow;
 import org.apache.poi.xwpf.extractor.XWPFWordExtractor;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Service
 public class AitMaterialServiceImpl implements AitMaterialService {
 
-    /** 允许的文件格式(#1) */
-    private static final Set<String> ALLOWED_EXT = Set.of("pdf", "doc", "docx", "jpg", "jpeg", "png");
+    /** 允许的文件格式(#1:Excel/Word/PDF/扫描PDF/图片) */
+    private static final Set<String> ALLOWED_EXT = Set.of("pdf", "doc", "docx", "xls", "xlsx", "jpg", "jpeg", "png");
+    /** 图片格式(#2 走 OCR) */
+    private static final Set<String> IMAGE_EXT = Set.of("jpg", "jpeg", "png");
+    /** OCR 渲染最大页数(扫描 PDF):防超大文件拖垮;超出部分不 OCR 并提示。 */
+    private static final int OCR_MAX_PAGES = 10;
+    /** 单元格粒度片段上限(#5):防超大表格爆量;超出截断并提示。 */
+    private static final int MAX_CELL_SEGMENTS = 2000;
     /** 单文件大小:下限 1KB 仅防空文件(质量交解析分类判定),上限 50MB 与确权材料一致 */
     private static final long MIN_BYTES = 1024L;
     private static final long MAX_BYTES = 50L * 1024 * 1024;
     /** 抽取置信度阈值(#3 对齐可研"准确率≥95%"):低于则标"需人工复核"。 */
     private static final double CONFIDENCE_THRESHOLD = 0.95;
+
+    private static final ObjectMapper OM = new ObjectMapper();
 
     private final AitMaterialMapper materialMapper;
     private final AitParseResultMapper parseMapper;
@@ -58,16 +84,24 @@ public class AitMaterialServiceImpl implements AitMaterialService {
     private final AiToolParseGateway parseGateway;
     private final ConfirmApplyMapper applyMapper;
     private final FileStorageGateway storage;
+    private final AitDocSegmentMapper segmentMapper;
+    private final AitParseRecordService recordService;
+    private final AitParseConfigService configService;
 
     public AitMaterialServiceImpl(AitMaterialMapper materialMapper, AitParseResultMapper parseMapper,
                                   AitCompareMapper compareMapper, AiToolParseGateway parseGateway,
-                                  ConfirmApplyMapper applyMapper, FileStorageGateway storage) {
+                                  ConfirmApplyMapper applyMapper, FileStorageGateway storage,
+                                  AitDocSegmentMapper segmentMapper, AitParseRecordService recordService,
+                                  AitParseConfigService configService) {
         this.materialMapper = materialMapper;
         this.parseMapper = parseMapper;
         this.compareMapper = compareMapper;
         this.parseGateway = parseGateway;
         this.applyMapper = applyMapper;
         this.storage = storage;
+        this.segmentMapper = segmentMapper;
+        this.recordService = recordService;
+        this.configService = configService;
     }
 
     @Override
@@ -98,7 +132,7 @@ public class AitMaterialServiceImpl implements AitMaterialService {
         }
         String ext = extOf(fileName);
         if (!ALLOWED_EXT.contains(ext)) {
-            throw new BizException("不支持的文件格式:" + ext + ",仅支持 PDF/Word/JPG/PNG");
+            throw new BizException("不支持的文件格式:" + ext + ",仅支持 Excel/Word/PDF/JPG/PNG");
         }
         if (data.length < MIN_BYTES) {
             throw new BizException("文件过小(" + data.length + "B),单文件不低于 1KB");
@@ -106,9 +140,11 @@ public class AitMaterialServiceImpl implements AitMaterialService {
         if (data.length > MAX_BYTES) {
             throw new BizException("文件过大(" + (data.length / 1024 / 1024) + "MB),单文件不超过 50MB");
         }
+        // #6 内容指纹(SHA-256 over 原始字节):路径无关、可判真重复
+        String contentHash = sha256(data);
         // 存储二进制
         String storagePath = storage.save(fileName, data);
-        // 抽取正文(PDF/Word;图片/旧版doc 留待 OCR,正文暂空)
+        // 抽取正文(PDF/Word/Excel;图片/扫描件 留待解析阶段 OCR,正文暂空)
         String content = extractText(fileName, data);
 
         AitMaterial m = new AitMaterial();
@@ -118,13 +154,67 @@ public class AitMaterialServiceImpl implements AitMaterialService {
         m.setApplyId(applyId);
         m.setStoragePath(storagePath);
         m.setContent(content);
-        m.setFileHash(Sm3Util.hashHex(fileName + "|" + data.length + "|" + storagePath));
+        m.setFileHash(contentHash);
+        // #6 重复检测:同内容指纹已存在 → 记录命中的原材料ID(不拦截上传,标注供前端提示/去重)
+        m.setDuplicateOf(findDuplicate(contentHash));
+        // #4 归集:材料类别 + 所属数据表标识
+        m.setCategory(safeClassify(fileName, content));
+        m.setDataTableRef(resolveDataTableRef(applyId, fileName));
         m.setBatchNo(StringUtils.hasText(batchNo) ? batchNo
                 : "BATCH-" + m.getFileHash().substring(0, 8).toUpperCase());
+        m.setOcrUsed(0);
         m.setParseStatus(AitMaterial.PARSE_PENDING);
         m.setProgress(0);
         materialMapper.insert(m);
         return m.getMaterialId();
+    }
+
+    /** #6 内容指纹 SHA-256(hex)。 */
+    private static String sha256(byte[] data) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] d = md.digest(data);
+            StringBuilder sb = new StringBuilder(d.length * 2);
+            for (byte b : d) {
+                sb.append(Character.forDigit((b >> 4) & 0xF, 16)).append(Character.forDigit(b & 0xF, 16));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            return Sm3Util.hashHex(String.valueOf(data.length));
+        }
+    }
+
+    /** #6 按内容指纹查重:返回最早一条同指纹材料ID,无则 null。 */
+    private String findDuplicate(String contentHash) {
+        if (!StringUtils.hasText(contentHash)) {
+            return null;
+        }
+        AitMaterial dup = materialMapper.selectOne(new LambdaQueryWrapper<AitMaterial>()
+                .eq(AitMaterial::getFileHash, contentHash)
+                .orderByAsc(AitMaterial::getCreateTime)
+                .last("LIMIT 1"));
+        return dup == null ? null : dup.getMaterialId();
+    }
+
+    /** #4 材料类别:优先模型(qwen),失败回退规则。 */
+    private String safeClassify(String fileName, String content) {
+        try {
+            String c = parseGateway.classifyCategory(fileName, content);
+            return StringUtils.hasText(c) ? c : "其他";
+        } catch (RuntimeException e) {
+            return "其他";
+        }
+    }
+
+    /** #4 所属数据表标识:有确权申请则取其资产(assetId:assetName),否则用文件名主干。 */
+    private String resolveDataTableRef(String applyId, String fileName) {
+        if (StringUtils.hasText(applyId)) {
+            ConfirmApply a = applyMapper.selectById(applyId);
+            if (a != null && StringUtils.hasText(a.getAssetId())) {
+                return a.getAssetId() + (StringUtils.hasText(a.getAssetName()) ? ":" + a.getAssetName() : "");
+            }
+        }
+        return StringUtils.hasText(fileName) ? fileName.replaceAll("\\.[a-zA-Z]+$", "") : null;
     }
 
     @Override
@@ -136,7 +226,7 @@ public class AitMaterialServiceImpl implements AitMaterialService {
         return storage.load(m.getStoragePath());
     }
 
-    /** 抽取文件正文:PDF 用 PDFBox,.docx 用 POI;其余(图片/旧版doc)留待 OCR,返回空。异常优雅降级。 */
+    /** 抽取文件正文:PDF=PDFBox,.docx=POI,.xls/.xlsx=POI;图片/扫描件 留待解析阶段 OCR,返回空。异常优雅降级。 */
     private String extractText(String fileName, byte[] data) {
         String ext = extOf(fileName);
         try {
@@ -153,11 +243,44 @@ public class AitMaterialServiceImpl implements AitMaterialService {
                     return text == null ? "" : text.trim();
                 }
             }
+            if ("xls".equals(ext) || "xlsx".equals(ext)) {
+                return extractExcelText(data);
+            }
         } catch (Exception e) {
             // 抽取失败不阻断上传(正文留空,后续可由 OCR/人工补充)
             return "";
         }
         return "";
+    }
+
+    /** Excel 正文抽取(#1):WorkbookFactory 兼容 .xls/.xlsx,逐 sheet/行/单元格拼接为可读文本。 */
+    private String extractExcelText(byte[] data) {
+        DataFormatter fmt = new DataFormatter();
+        StringBuilder sb = new StringBuilder();
+        try (Workbook wb = WorkbookFactory.create(new ByteArrayInputStream(data))) {
+            for (int si = 0; si < wb.getNumberOfSheets(); si++) {
+                Sheet sheet = wb.getSheetAt(si);
+                sb.append("【工作表】").append(sheet.getSheetName()).append('\n');
+                for (Row row : sheet) {
+                    StringBuilder line = new StringBuilder();
+                    for (Cell cell : row) {
+                        String v = fmt.formatCellValue(cell);
+                        if (StringUtils.hasText(v)) {
+                            if (line.length() > 0) {
+                                line.append('\t');
+                            }
+                            line.append(v.trim());
+                        }
+                    }
+                    if (line.length() > 0) {
+                        sb.append(line).append('\n');
+                    }
+                }
+            }
+        } catch (Exception e) {
+            return "";
+        }
+        return sb.toString().trim();
     }
 
     private String extOf(String fileName) {
@@ -195,15 +318,21 @@ public class AitMaterialServiceImpl implements AitMaterialService {
         AitMaterial m = require(materialId);
         try {
             tick(materialId, async, 10);   // 开始
-            // 文件损坏检测:PDF/Word 正文抽取为空 → 损坏或纯图片(需OCR),无法解析
-            if (TEXT_FORMATS.contains(extOf(m.getFileName())) && !StringUtils.hasText(m.getContent())) {
+            // #2/#3 确保正文 + 版面分析:文本层为空且为图片/扫描PDF → OCR;Excel/Word 无正文 → 损坏
+            ensureContentAndLayout(m);
+            if (!StringUtils.hasText(m.getContent())) {
                 throw new ParseBrokenException("文件损坏或无法解析正文:未能从 " + inferType(m.getFileName())
-                        + " 提取到文字,可能文件损坏或为纯图片扫描件(需 OCR)");
+                        + " 提取到文字,且 OCR 未识别出内容,可能文件损坏或不含可识别文字");
             }
             tick(materialId, async, 35);   // 解析中(要素抽取)
             AiToolParseGateway.ParsedElements e = parseWithTimeout(m.getFileName(), m.getContent());
-            tick(materialId, async, 65);   // 要素抽取完成
+            tick(materialId, async, 55);   // 要素抽取完成
             AitParseResult r = saveResult(materialId, e);
+            // 1.4#1 解析记录档:逐字段留档(时间/文档名/字段/值/置信度/操作人)
+            recordParse(m, r);
+            // #5 多粒度片段(按页/段/表格单元),统一文档对象的标准化切片
+            buildSegments(m);
+            tick(materialId, async, 70);
             if (StringUtils.hasText(m.getApplyId())) {
                 compareWithForm(r, m.getApplyId());
             }
@@ -216,6 +345,343 @@ public class AitMaterialServiceImpl implements AitMaterialService {
                 throw new BizException("材料解析失败:" + reason);
             }
         }
+    }
+
+    /**
+     * #2/#3 确保材料正文与版面分析就绪:
+     * - 有文本层(PDF/Word/Excel 已抽取)→ 仅做轻量版面(印章关键词/页类型)并落库;
+     * - 无文本层 + 图片 → 调 qwen-vl OCR;无文本层 + PDF → 逐页渲染后 OCR(扫描件)。
+     * 就地更新 m 的 content/layoutJson/ocrUsed/pageCount 并持久化。
+     */
+    private void ensureContentAndLayout(AitMaterial m) {
+        String ext = extOf(m.getFileName());
+        if (StringUtils.hasText(m.getContent())) {
+            persistExtract(m, m.getContent(), deriveTextLayoutJson(m), 0, pageCountSafe(m, null));
+            return;
+        }
+        if (!StringUtils.hasText(m.getStoragePath())) {
+            return; // 无原件可 OCR;由 runParse 判损坏
+        }
+        byte[] bytes;
+        try {
+            bytes = storage.load(m.getStoragePath());
+        } catch (RuntimeException e) {
+            return;
+        }
+        if (IMAGE_EXT.contains(ext)) {
+            AiToolParseGateway.OcrLayout o = parseGateway.ocrAndLayout(bytes, mimeOf(ext), m.getFileName());
+            if (o != null) {
+                persistExtract(m, o.text(), layoutJson(o, "ocr"), 1, 1);
+            }
+            return;
+        }
+        if ("pdf".equals(ext)) {
+            ocrScannedPdf(m, bytes);
+        }
+        // 其余(xls/xlsx/doc/docx)无正文 → 不 OCR,保持空 → 判损坏
+    }
+
+    /** 扫描 PDF:逐页渲染为图片 → qwen-vl OCR,合并正文与版面(印章/标题)。超 OCR_MAX_PAGES 页截断并提示。 */
+    private void ocrScannedPdf(AitMaterial m, byte[] bytes) {
+        try (PDDocument doc = PDDocument.load(bytes)) {
+            int pages = doc.getNumberOfPages();
+            PDFRenderer renderer = new PDFRenderer(doc);
+            StringBuilder text = new StringBuilder();
+            List<AiToolParseGateway.Seal> seals = new ArrayList<>();
+            List<String> titles = new ArrayList<>();
+            String pageType = "正文页";
+            double conf = 0.0;
+            int n = Math.min(pages, OCR_MAX_PAGES);
+            for (int i = 0; i < n; i++) {
+                BufferedImage img = renderer.renderImageWithDPI(i, 150);
+                byte[] png = toPng(img);
+                AiToolParseGateway.OcrLayout o = parseGateway.ocrAndLayout(png, "image/png",
+                        m.getFileName() + " 第" + (i + 1) + "页");
+                if (o != null) {
+                    if (StringUtils.hasText(o.text())) {
+                        text.append("【第").append(i + 1).append("页】\n").append(o.text()).append('\n');
+                    }
+                    if (o.seals() != null) {
+                        seals.addAll(o.seals());
+                    }
+                    if (o.titles() != null) {
+                        titles.addAll(o.titles());
+                    }
+                    if (i == 0 && StringUtils.hasText(o.pageType())) {
+                        pageType = o.pageType();
+                    }
+                    conf = Math.max(conf, o.confidence());
+                }
+            }
+            if (pages > OCR_MAX_PAGES) {
+                text.append("\n（注:共 ").append(pages).append(" 页,超过 ").append(OCR_MAX_PAGES)
+                        .append(" 页上限,其余页未 OCR)");
+            }
+            AiToolParseGateway.OcrLayout merged = new AiToolParseGateway.OcrLayout(
+                    text.toString().trim(), titles, List.of(), seals, pageType, 1, conf);
+            persistExtract(m, merged.text(), layoutJson(merged, "ocr"), 1, pages);
+        } catch (Exception e) {
+            // OCR/渲染失败 → 正文留空,runParse 判损坏
+        }
+    }
+
+    private static byte[] toPng(BufferedImage img) throws java.io.IOException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        ImageIO.write(img, "png", bos);
+        return bos.toByteArray();
+    }
+
+    private static String mimeOf(String ext) {
+        return ("png".equals(ext)) ? "image/png" : "image/jpeg";
+    }
+
+    /** 文本层材料的轻量版面 JSON:印章关键词 + 页类型(正文页),供 #3 展示与印章交叉校验。 */
+    private String deriveTextLayoutJson(AitMaterial m) {
+        String content = m.getContent() == null ? "" : m.getContent();
+        List<AiToolParseGateway.Seal> seals = new ArrayList<>();
+        if (content.contains("骑缝")) {
+            seals.add(new AiToolParseGateway.Seal("骑缝章", "跨页接缝处", "正文检出骑缝章表述"));
+        }
+        if (content.contains("合同章")) {
+            seals.add(new AiToolParseGateway.Seal("合同章", "落款区", "正文检出合同章表述"));
+        }
+        if (content.contains("公章") || content.contains("盖章") || content.contains("加盖") || content.contains("印鉴")) {
+            seals.add(new AiToolParseGateway.Seal("公章", "落款区", "正文检出公章/盖章表述"));
+        }
+        String firstLine = content.lines().filter(StringUtils::hasText).findFirst().orElse("");
+        AiToolParseGateway.OcrLayout o = new AiToolParseGateway.OcrLayout(
+                "", firstLine.isEmpty() ? List.of() : List.of(firstLine.length() > 60 ? firstLine.substring(0, 60) : firstLine),
+                List.of(), seals, "正文页", 1, 0.95);
+        return layoutJson(o, "text-layer");
+    }
+
+    /** 序列化版面分析为 JSON(含来源标记 source=ocr|text-layer);text 字段不入库(正文另存 content)。 */
+    private String layoutJson(AiToolParseGateway.OcrLayout o, String source) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("source", source);
+        map.put("titles", o.titles());
+        map.put("tables", o.tables());
+        List<Map<String, String>> seals = new ArrayList<>();
+        if (o.seals() != null) {
+            for (AiToolParseGateway.Seal s : o.seals()) {
+                Map<String, String> sm = new LinkedHashMap<>();
+                sm.put("type", s.type());
+                sm.put("location", s.location());
+                sm.put("desc", s.desc());
+                seals.add(sm);
+            }
+        }
+        map.put("seals", seals);
+        map.put("pageType", o.pageType());
+        map.put("columnCount", o.columnCount());
+        map.put("confidence", o.confidence());
+        try {
+            return OM.writeValueAsString(map);
+        } catch (Exception e) {
+            return "{}";
+        }
+    }
+
+    private Integer pageCountSafe(AitMaterial m, Integer dft) {
+        if ("pdf".equals(extOf(m.getFileName())) && StringUtils.hasText(m.getStoragePath())) {
+            try (PDDocument doc = PDDocument.load(storage.load(m.getStoragePath()))) {
+                return doc.getNumberOfPages();
+            } catch (Exception e) {
+                return dft;
+            }
+        }
+        return dft;
+    }
+
+    private void persistExtract(AitMaterial m, String content, String layoutJson, int ocrUsed, Integer pageCount) {
+        m.setContent(content);
+        m.setLayoutJson(layoutJson);
+        m.setOcrUsed(ocrUsed);
+        m.setPageCount(pageCount);
+        AitMaterial upd = new AitMaterial();
+        upd.setMaterialId(m.getMaterialId());
+        upd.setContent(content);
+        upd.setLayoutJson(layoutJson);
+        upd.setOcrUsed(ocrUsed);
+        upd.setPageCount(pageCount);
+        materialMapper.updateById(upd);
+    }
+
+    /**
+     * #5 生成多粒度片段(覆盖式:先清旧):
+     * PDF=按页(PAGE)+段(PARAGRAPH);Excel=按单元格(CELL);Word=段+表格单元;图片/扫描件=OCR行(PARAGRAPH)。
+     * 另把版面标题落为 TITLE 片段。统一文档对象=AitMaterial,其下挂标准化片段。
+     */
+    private void buildSegments(AitMaterial m) {
+        segmentMapper.delete(new LambdaQueryWrapper<AitDocSegment>()
+                .eq(AitDocSegment::getMaterialId, m.getMaterialId()));
+        String ext = extOf(m.getFileName());
+        byte[] bytes = null;
+        if (StringUtils.hasText(m.getStoragePath())) {
+            try {
+                bytes = storage.load(m.getStoragePath());
+            } catch (RuntimeException ignore) {
+                bytes = null;
+            }
+        }
+        int[] seq = {0};
+        try {
+            if ("pdf".equals(ext) && bytes != null && (m.getOcrUsed() == null || m.getOcrUsed() == 0)) {
+                segPdf(m, bytes, seq);
+            } else if (("xls".equals(ext) || "xlsx".equals(ext)) && bytes != null) {
+                segExcel(m, bytes, seq);
+            } else if ("docx".equals(ext) && bytes != null) {
+                segDocx(m, bytes, seq);
+            } else {
+                segByParagraph(m, m.getContent(), seq); // 图片/扫描PDF(OCR正文)/兜底
+            }
+        } catch (Exception e) {
+            segByParagraph(m, m.getContent(), seq); // 结构化失败兜底为段粒度
+        }
+        // 版面标题 → TITLE 片段
+        addTitleSegments(m, seq);
+    }
+
+    private void segPdf(AitMaterial m, byte[] bytes, int[] seq) throws Exception {
+        try (PDDocument doc = PDDocument.load(bytes)) {
+            int pages = doc.getNumberOfPages();
+            PDFTextStripper stripper = new PDFTextStripper();
+            for (int p = 1; p <= pages; p++) {
+                stripper.setStartPage(p);
+                stripper.setEndPage(p);
+                String pageText = stripper.getText(doc);
+                if (StringUtils.hasText(pageText)) {
+                    addSeg(m, AitDocSegment.G_PAGE, p, seq[0]++, null, null, null, pageText.trim());
+                    for (String para : pageText.split("\\r?\\n\\s*\\r?\\n")) {
+                        if (StringUtils.hasText(para)) {
+                            addSeg(m, AitDocSegment.G_PARAGRAPH, p, seq[0]++, null, null, null, para.trim());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void segExcel(AitMaterial m, byte[] bytes, int[] seq) throws Exception {
+        DataFormatter fmt = new DataFormatter();
+        int cells = 0;
+        try (Workbook wb = WorkbookFactory.create(new ByteArrayInputStream(bytes))) {
+            for (int si = 0; si < wb.getNumberOfSheets() && cells < MAX_CELL_SEGMENTS; si++) {
+                Sheet sheet = wb.getSheetAt(si);
+                String sheetName = sheet.getSheetName();
+                for (Row row : sheet) {
+                    for (Cell cell : row) {
+                        String v = fmt.formatCellValue(cell);
+                        if (StringUtils.hasText(v)) {
+                            addSeg(m, AitDocSegment.G_CELL, null, seq[0]++, sheetName,
+                                    row.getRowNum() + 1, cell.getColumnIndex() + 1, v.trim());
+                            if (++cells >= MAX_CELL_SEGMENTS) {
+                                addSeg(m, AitDocSegment.G_PARAGRAPH, null, seq[0]++, sheetName, null, null,
+                                        "(注:单元格超过 " + MAX_CELL_SEGMENTS + " 上限,其余未切片)");
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void segDocx(AitMaterial m, byte[] bytes, int[] seq) throws Exception {
+        try (XWPFDocument doc = new XWPFDocument(new ByteArrayInputStream(bytes))) {
+            for (XWPFParagraph p : doc.getParagraphs()) {
+                String t = p.getText();
+                if (StringUtils.hasText(t)) {
+                    addSeg(m, AitDocSegment.G_PARAGRAPH, null, seq[0]++, null, null, null, t.trim());
+                }
+            }
+            int ti = 0;
+            for (XWPFTable table : doc.getTables()) {
+                ti++;
+                int rIdx = 0;
+                for (XWPFTableRow row : table.getRows()) {
+                    rIdx++;
+                    int cIdx = 0;
+                    for (XWPFTableCell cell : row.getTableCells()) {
+                        cIdx++;
+                        String t = cell.getText();
+                        if (StringUtils.hasText(t)) {
+                            addSeg(m, AitDocSegment.G_CELL, null, seq[0]++, "表格" + ti, rIdx, cIdx, t.trim());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void segByParagraph(AitMaterial m, String content, int[] seq) {
+        if (!StringUtils.hasText(content)) {
+            return;
+        }
+        for (String line : content.split("\\r?\\n")) {
+            if (StringUtils.hasText(line)) {
+                addSeg(m, AitDocSegment.G_PARAGRAPH, null, seq[0]++, null, null, null, line.trim());
+            }
+        }
+    }
+
+    private void addTitleSegments(AitMaterial m, int[] seq) {
+        if (!StringUtils.hasText(m.getLayoutJson())) {
+            return;
+        }
+        try {
+            com.fasterxml.jackson.databind.JsonNode titles = OM.readTree(m.getLayoutJson()).get("titles");
+            if (titles != null && titles.isArray()) {
+                for (com.fasterxml.jackson.databind.JsonNode t : titles) {
+                    if (StringUtils.hasText(t.asText())) {
+                        addSeg(m, AitDocSegment.G_TITLE, null, seq[0]++, null, null, null, t.asText());
+                    }
+                }
+            }
+        } catch (Exception ignore) {
+            // 标题片段非关键,失败忽略
+        }
+    }
+
+    private void addSeg(AitMaterial m, String granularity, Integer pageNo, int idx,
+                        String sheetName, Integer rowNum, Integer colNum, String content) {
+        AitDocSegment s = new AitDocSegment();
+        s.setMaterialId(m.getMaterialId());
+        s.setGranularity(granularity);
+        s.setPageNo(pageNo);
+        s.setSegIndex(idx);
+        s.setSheetName(sheetName);
+        s.setRowIdx(rowNum);
+        s.setColIdx(colNum);
+        s.setContent(content.length() > 4000 ? content.substring(0, 4000) : content);
+        segmentMapper.insert(s);
+    }
+
+    @Override
+    public List<AitDocSegment> segments(String materialId, String granularity) {
+        LambdaQueryWrapper<AitDocSegment> w = new LambdaQueryWrapper<AitDocSegment>()
+                .eq(AitDocSegment::getMaterialId, materialId)
+                .eq(StringUtils.hasText(granularity), AitDocSegment::getGranularity, granularity)
+                .orderByAsc(AitDocSegment::getSegIndex);
+        return segmentMapper.selectList(w);
+    }
+
+    @Override
+    public List<MaterialGroup> aggregate(String applyId, String dataTableRef) {
+        LambdaQueryWrapper<AitMaterial> w = new LambdaQueryWrapper<AitMaterial>()
+                .eq(StringUtils.hasText(applyId), AitMaterial::getApplyId, applyId)
+                .eq(StringUtils.hasText(dataTableRef), AitMaterial::getDataTableRef, dataTableRef)
+                .orderByDesc(AitMaterial::getCreateTime);
+        List<AitMaterial> all = materialMapper.selectList(w);
+        // #4 按"数据表标识"归集,组内按材料类别关联
+        Map<String, MaterialGroup> groups = new LinkedHashMap<>();
+        for (AitMaterial m : all) {
+            String key = StringUtils.hasText(m.getDataTableRef()) ? m.getDataTableRef() : "(未归集)";
+            m.setContent(null); // 列表不回传大正文
+            m.setLayoutJson(null);
+            groups.computeIfAbsent(key, k -> new MaterialGroup(k, new ArrayList<>())).materials().add(m);
+        }
+        return new ArrayList<>(groups.values());
     }
 
     private void tick(String materialId, boolean async, int pct) {
@@ -257,7 +723,7 @@ public class AitMaterialServiceImpl implements AitMaterialService {
         }
         String ext = extOf(m.getFileName());
         if (!ALLOWED_EXT.contains(ext)) {
-            return "格式不支持:仅支持 PDF/Word/JPG/PNG(当前 ." + ext + ")";
+            return "格式不支持:仅支持 Excel/Word/PDF/JPG/PNG(当前 ." + ext + ")";
         }
         if (ex instanceof ParseBrokenException) {
             return ex.getMessage();
@@ -295,8 +761,9 @@ public class AitMaterialServiceImpl implements AitMaterialService {
         String[] seal = crossValidateSeal(e, m);
         r.setSealValid(seal[0]);
         r.setSealDesc(seal[1]);
-        // 置信度 ≥ 阈值(对齐可研"准确率≥95%")→ 自动通过;否则需人工复核
-        r.setReviewStatus(e.confidence() >= CONFIDENCE_THRESHOLD ? "自动通过" : "需人工复核");
+        // 置信度 ≥ 阈值(1.4#4 管理员可配,默认 0.95)→ 自动通过;否则需人工复核
+        double threshold = configThreshold();
+        r.setReviewStatus(e.confidence() >= threshold ? "自动通过" : "需人工复核");
         // #5 材料可信度评级:印章 + 置信度 + 要素完整性 综合
         int score = trustScore(seal[0], e);
         r.setTrustScore(score);
@@ -584,6 +1051,62 @@ public class AitMaterialServiceImpl implements AitMaterialService {
         return PageResult.of(p);
     }
 
+    private double configThreshold() {
+        try {
+            return configService.threshold(com.csg.prm.confirm.aitool.entity.AitParseConfig.DEFAULT_SCENE);
+        } catch (RuntimeException e) {
+            return CONFIDENCE_THRESHOLD;
+        }
+    }
+
+    private void recordParse(AitMaterial m, AitParseResult r) {
+        try {
+            var ctx = UserContextHolder.get();
+            String opId = ctx == null ? null : ctx.getUserId();
+            String opName = ctx == null ? null : ctx.getUserName();
+            recordService.record(m, r, opId, opName);
+        } catch (RuntimeException ignore) {
+            // 留档失败不阻断解析
+        }
+    }
+
+    @Override
+    public int batchParse(String batchNo) {
+        if (!StringUtils.hasText(batchNo)) {
+            throw new BizException("批次号不能为空");
+        }
+        List<AitMaterial> list = materialMapper.selectList(new LambdaQueryWrapper<AitMaterial>()
+                .eq(AitMaterial::getBatchNo, batchNo)
+                .ne(AitMaterial::getParseStatus, AitMaterial.PARSE_SUCCESS));
+        for (AitMaterial m : list) {
+            submitParse(m.getMaterialId()); // @Async:自动排队逐个解析
+        }
+        return list.size();
+    }
+
+    @Override
+    public BatchProgress batchProgress(String batchNo) {
+        List<AitMaterial> list = materialMapper.selectList(new LambdaQueryWrapper<AitMaterial>()
+                .eq(AitMaterial::getBatchNo, batchNo)
+                .orderByAsc(AitMaterial::getFileName));
+        int done = 0;
+        int failed = 0;
+        int running = 0;
+        int pending = 0;
+        List<BatchItem> items = new ArrayList<>();
+        for (AitMaterial m : list) {
+            switch (m.getParseStatus() == null ? "" : m.getParseStatus()) {
+                case AitMaterial.PARSE_SUCCESS -> done++;
+                case AitMaterial.PARSE_FAILED -> failed++;
+                case AitMaterial.PARSE_RUNNING -> running++;
+                default -> pending++;
+            }
+            items.add(new BatchItem(m.getMaterialId(), m.getFileName(), m.getParseStatus(),
+                    m.getProgress() == null ? 0 : m.getProgress(), m.getFailReason()));
+        }
+        return new BatchProgress(list.size(), done, failed, running, pending, items);
+    }
+
     private void updateStatus(String id, String status, Integer progress, String reason) {
         AitMaterial upd = new AitMaterial();
         upd.setMaterialId(id);
@@ -600,6 +1123,9 @@ public class AitMaterialServiceImpl implements AitMaterialService {
         }
         if (f.endsWith(".doc") || f.endsWith(".docx")) {
             return "WORD";
+        }
+        if (f.endsWith(".xls") || f.endsWith(".xlsx")) {
+            return "EXCEL";
         }
         if (f.endsWith(".jpg") || f.endsWith(".jpeg")) {
             return "JPG";

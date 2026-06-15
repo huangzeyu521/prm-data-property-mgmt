@@ -62,6 +62,43 @@ public class AitMaterial extends BaseEntity {
     @TableField("CEC_CONTENT")
     private String content;
 
+    /** 材料类别(#4 归集):元数据/制度附件/授权材料/合同材料/来源说明/确权证明/其他 */
+    @TableField("CEC_CATEGORY")
+    private String category;
+
+    /** 所属数据表标识(#4 关联键:同一数据表的材料归为一组) */
+    @TableField("CEC_DATA_TABLE_REF")
+    private String dataTableRef;
+
+    /** 版面分析结果 JSON(#3:印章区域/表格/标题/分栏/页类型) */
+    @TableField("CEC_LAYOUT_JSON")
+    private String layoutJson;
+
+    /** 重复检测(#6):命中的原材料ID(同内容指纹);为空表示非重复 */
+    @TableField("CEC_DUPLICATE_OF")
+    private String duplicateOf;
+
+    /** 页数(PDF/扫描件) */
+    @TableField("CEC_PAGE_COUNT")
+    private Integer pageCount;
+
+    /** 是否经 OCR 识别(#2):0 否 / 1 是 */
+    @TableField("CEC_OCR_USED")
+    private Integer ocrUsed;
+
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
+    public String getDataTableRef() { return dataTableRef; }
+    public void setDataTableRef(String dataTableRef) { this.dataTableRef = dataTableRef; }
+    public String getLayoutJson() { return layoutJson; }
+    public void setLayoutJson(String layoutJson) { this.layoutJson = layoutJson; }
+    public String getDuplicateOf() { return duplicateOf; }
+    public void setDuplicateOf(String duplicateOf) { this.duplicateOf = duplicateOf; }
+    public Integer getPageCount() { return pageCount; }
+    public void setPageCount(Integer pageCount) { this.pageCount = pageCount; }
+    public Integer getOcrUsed() { return ocrUsed; }
+    public void setOcrUsed(Integer ocrUsed) { this.ocrUsed = ocrUsed; }
+
     public Integer getProgress() {
         return progress;
     }

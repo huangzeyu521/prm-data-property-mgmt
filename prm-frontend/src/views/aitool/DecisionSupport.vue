@@ -13,6 +13,8 @@
           </el-select>
         </el-form-item>
         <el-form-item><el-button type="primary" @click="onAnalyze">智能研判</el-button></el-form-item>
+        <el-form-item><el-button type="success" :loading="agentRunning" @click="onAgentAudit">Agent 多阶段审核</el-button></el-form-item>
+        <el-form-item><el-button @click="onLedger">审核台账</el-button></el-form-item>
         <el-form-item>
           <el-button type="warning" plain :loading="demoRunning" @click="runDemo">一键示例并研判(测试/演示)</el-button>
         </el-form-item>
@@ -84,20 +86,134 @@
         <el-descriptions-item label="证据链(SM3)"><code class="hash">{{ d.evidenceChain }}</code></el-descriptions-item>
       </el-descriptions>
     </el-card>
+
+    <!-- 3.1 智能确权 Agent 多阶段审核 -->
+    <el-dialog v-model="agentDlg" title="智能确权 Agent · 多阶段审核与推理决策" width="820px" align-center>
+      <template v-if="agent">
+        <el-alert :type="agent.channel==='快速通道' ? 'success' : 'warning'" :closable="false" style="margin-bottom:10px"
+          :title="`审核通道:${agent.channel} · 授权建议:${agent.authAdvice} · 风险等级:${agent.riskLevel}`"
+          :description="agent.reason" show-icon />
+        <el-descriptions :column="2" border size="small">
+          <el-descriptions-item label="数据分类">{{ agent.dataClass }}</el-descriptions-item>
+          <el-descriptions-item label="数据级别">{{ agent.dataGrade }}</el-descriptions-item>
+          <el-descriptions-item label="权利类型">{{ agent.rightType }}</el-descriptions-item>
+          <el-descriptions-item label="综合评分">{{ agent.score }}</el-descriptions-item>
+          <el-descriptions-item label="限制条件" :span="2">{{ agent.restrictions }}</el-descriptions-item>
+          <el-descriptions-item label="补正建议" :span="2">{{ agent.supplement || '—' }}</el-descriptions-item>
+          <el-descriptions-item label="命中依据" :span="2">{{ agent.citations || '—' }}</el-descriptions-item>
+          <el-descriptions-item label="建议动作" :span="2"><el-tag type="primary">{{ agent.action }}</el-tag></el-descriptions-item>
+        </el-descriptions>
+        <div style="margin-top:12px;font-weight:600">审核阶段链路(Agent 编排)</div>
+        <el-steps direction="vertical" :active="agentStages.length" style="margin-top:8px">
+          <el-step v-for="(s,i) in agentStages" :key="i" :title="s.stage" :description="`${s.summary}　[${s.by}]`" status="finish" />
+        </el-steps>
+        <div style="margin-top:8px;font-weight:600">工具调用链</div>
+        <div>
+          <el-tag v-for="(t,i) in agentTools" :key="i" size="small" style="margin:2px">{{ t.tool }}<span v-if="t.model!=='-'"> · {{ t.model }}</span></el-tag>
+        </div>
+        <div style="margin-top:12px">
+          <el-button size="small" @click="openUrl(reportUrl(agent.applyId))">审核报告</el-button>
+          <el-button size="small" @click="openUrl(registrationUrl(agent.applyId))">确权登记辅助</el-button>
+          <el-button size="small" @click="openUrl(legalUrl(agent.applyId))">法律意见辅助</el-button>
+          <el-button size="small" type="info" @click="onEvidence(agent.applyId)">查看证据链</el-button>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- 3.2 审核台账 -->
+    <el-dialog v-model="ledgerDlg" title="智能确权审核台账(查询/筛选/汇总/导出)" width="900px" align-center>
+      <div style="margin-bottom:10px">
+        <el-select v-model="ledgerFilter.riskLevel" placeholder="风险等级" clearable size="small" style="width:110px" @change="loadLedger">
+          <el-option label="高" value="高" /><el-option label="中" value="中" /><el-option label="低" value="低" />
+        </el-select>
+        <el-select v-model="ledgerFilter.channel" placeholder="通道" clearable size="small" style="width:130px;margin-left:8px" @change="loadLedger">
+          <el-option label="快速通道" value="快速通道" /><el-option label="深度审核" value="深度审核" />
+        </el-select>
+        <el-button size="small" type="primary" style="margin-left:8px" @click="openUrl(ledgerExportUrl())">导出Excel</el-button>
+        <span v-if="ledgerStats" class="prm-table-note" style="margin-left:10px">
+          共 {{ ledgerStats.total }} · 风险 {{ statStr(ledgerStats.byRisk) }} · 通道 {{ statStr(ledgerStats.byChannel) }}
+        </span>
+      </div>
+      <el-table :data="ledgerRows" border size="small" max-height="420">
+        <el-table-column prop="assetId" label="资产" width="150" show-overflow-tooltip />
+        <el-table-column prop="channel" label="通道" width="90" />
+        <el-table-column prop="dataClass" label="数据分类" width="110" />
+        <el-table-column prop="dataGrade" label="级别" width="70" />
+        <el-table-column prop="authAdvice" label="确权结论" width="100" />
+        <el-table-column prop="authLevel" label="授权级别" width="140" show-overflow-tooltip />
+        <el-table-column prop="riskLevel" label="风险" width="60" align="center">
+          <template #default="{ row }"><el-tag size="small" :type="row.riskLevel==='高'?'danger':(row.riskLevel==='中'?'warning':'success')">{{ row.riskLevel }}</el-tag></template>
+        </el-table-column>
+        <el-table-column prop="score" label="评分" width="70" align="center" />
+      </el-table>
+    </el-dialog>
+
+    <!-- 3.2 审核证据链 -->
+    <el-dialog v-model="evDlg" title="审核证据链档案(可复核·可留痕·可审计)" width="760px" align-center>
+      <template v-if="evidence">
+        <el-descriptions :column="1" border size="small">
+          <el-descriptions-item label="最终结论">{{ evidence.conclusion }}</el-descriptions-item>
+          <el-descriptions-item label="SM3 留痕"><code class="hash">{{ evidence.sm3Hash }}</code></el-descriptions-item>
+          <el-descriptions-item label="大模型判断理由">{{ evidence.modelReason }}</el-descriptions-item>
+        </el-descriptions>
+        <div style="margin-top:10px;font-weight:600">规则命中项</div>
+        <pre class="ev-pre">{{ pretty(evidence.ruleHitsJson) }}</pre>
+        <div style="font-weight:600">知识库命中片段</div>
+        <pre class="ev-pre">{{ pretty(evidence.kbHitsJson) }}</pre>
+        <div style="font-weight:600">输入材料片段</div>
+        <pre class="ev-pre">{{ pretty(evidence.materialSnippetsJson) }}</pre>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, nextTick, computed, onMounted } from 'vue'
+import { ref, reactive, nextTick, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import * as echarts from 'echarts'
 import { ElMessage } from 'element-plus'
-import { aitAnalyze } from '@/api/aitool'
+import { aitAnalyze, aitAgentAudit, aitAgentEvidence, aitAgentLedgerPage, aitAgentLedgerStats,
+  aitAgentLedgerExportUrl, aitAgentReportUrl, aitAgentRegistrationUrl, aitAgentLegalUrl } from '@/api/aitool'
 import AiThinking from '@/components/AiThinking.vue'
 import { useAiThinking } from '@/composables/useAiThinking'
 import { AI_PHASES } from '@/lib/aiPhases'
 
 const applyId = ref('')
+// 3.1 Agent 多阶段审核
+const agentDlg = ref(false); const agentRunning = ref(false); const agent = ref(null)
+const agentStages = computed(() => { try { return JSON.parse(agent.value?.stageTraceJson || '[]') } catch { return [] } })
+const agentTools = computed(() => { try { return JSON.parse(agent.value?.toolTraceJson || '[]') } catch { return [] } })
+async function onAgentAudit() {
+  if (!applyId.value) { ElMessage.warning('请先选择/输入确权申请ID'); return }
+  agentRunning.value = true
+  try {
+    agent.value = await aitAgentAudit(applyId.value)
+    agentDlg.value = true
+    ElMessage.success('Agent 审核完成:' + agent.value.channel)
+  } catch (e) {
+    ElMessage.error('Agent 审核失败:' + (e?.message || ''))
+  } finally {
+    agentRunning.value = false
+  }
+}
+// 3.2 审核台账 / 报告 / 证据链
+function openUrl(u) { window.open(u, '_blank') }
+function reportUrl(id) { return aitAgentReportUrl(id) }
+function registrationUrl(id) { return aitAgentRegistrationUrl(id) }
+function legalUrl(id) { return aitAgentLegalUrl(id) }
+function ledgerExportUrl() { return aitAgentLedgerExportUrl() }
+function pretty(json) { try { return JSON.stringify(JSON.parse(json || '[]'), null, 2) } catch { return json } }
+function statStr(m) { return m ? Object.entries(m).map(([k, v]) => `${k}:${v}`).join(' ') : '' }
+const evDlg = ref(false); const evidence = ref(null)
+async function onEvidence(id) { evidence.value = await aitAgentEvidence(id); evDlg.value = true }
+const ledgerDlg = ref(false); const ledgerRows = ref([]); const ledgerStats = ref(null)
+const ledgerFilter = reactive({ riskLevel: '', channel: '' })
+async function onLedger() { ledgerDlg.value = true; await loadLedger() }
+async function loadLedger() {
+  const r = await aitAgentLedgerPage({ current: 1, size: 100, riskLevel: ledgerFilter.riskLevel, channel: ledgerFilter.channel })
+  ledgerRows.value = r.records || []
+  ledgerStats.value = await aitAgentLedgerStats()
+}
 const d = ref(null); const factors = ref([]); const gauge = ref()
 const aiAnalyze = useAiThinking()
 const citations = computed(() => (d.value?.ragCitations || '').split(';').filter(Boolean))

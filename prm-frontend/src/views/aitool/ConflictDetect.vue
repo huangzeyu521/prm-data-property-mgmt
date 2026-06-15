@@ -1,5 +1,61 @@
 <template>
   <div class="prm-page">
+    <div style="margin-bottom:12px">
+      <el-button type="primary" plain @click="kbDlg = true">产权知识库 · 检索增强(RAG)</el-button>
+      <el-button plain @click="onRuleConfig">冲突识别规则配置</el-button>
+      <el-button plain @click="openUrl(conflictExcelUrl())">导出冲突记录(Excel)</el-button>
+      <span class="cd-tip" style="margin-left:8px">规则可启停/调阈值;冲突记录支持多条件查询与 Excel 导出</span>
+    </div>
+
+    <el-dialog v-model="ruleDlg" title="冲突识别规则配置(主体/权限重叠/期限交叉/历史/类型)" width="720px" align-center>
+      <el-table :data="rules" border size="small">
+        <el-table-column prop="ruleType" label="规则类型" width="130" />
+        <el-table-column prop="ruleName" label="规则名称" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="priority" label="优先级" width="90" align="center" />
+        <el-table-column label="阈值" width="120" align="center">
+          <template #default="{ row }">
+            <el-input-number v-model="row.threshold" :min="0" :controls="false" size="small" style="width:90px"
+              @change="onRuleSave(row)" />
+          </template>
+        </el-table-column>
+        <el-table-column label="启用" width="90" align="center">
+          <template #default="{ row }">
+            <el-switch :model-value="row.enabled===1" @change="(v)=>onRuleToggle(row, v)" />
+          </template>
+        </el-table-column>
+      </el-table>
+      <div class="cd-tip" style="margin-top:8px">说明:期限交叉阈值=允许超期天数;优先级越小越先识别。</div>
+    </el-dialog>
+
+    <el-dialog v-model="kbDlg" title="产权知识库 · 检索增强(法规/标准/制度/审核规则/典型案例)" width="820px" align-center>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+        <el-input v-model="kbQuery" placeholder="输入检索问题,如:含个人信息数据如何确权" clearable style="flex:1" @keyup.enter="onKbSearch" />
+        <el-select v-model="kbMode" style="width:120px">
+          <el-option label="混合检索" value="hybrid" /><el-option label="语义检索" value="semantic" /><el-option label="关键词" value="keyword" />
+        </el-select>
+        <el-select v-model="kbDomain" clearable placeholder="知识域" style="width:140px">
+          <el-option label="数据安全" value="数据安全" /><el-option label="个人信息保护" value="个人信息保护" />
+          <el-option label="网络安全" value="网络安全" /><el-option label="数据确权" value="数据确权" />
+        </el-select>
+        <el-button type="primary" :loading="kbLoading" @click="onKbSearch">检索</el-button>
+        <el-button :loading="kbRagLoading" @click="onKbRag">RAG 生成</el-button>
+      </div>
+      <el-alert v-if="kbAnswer" type="success" :closable="false" style="margin-bottom:10px"
+        title="RAG 知识增强结论(基于检索依据)" :description="kbAnswer" show-icon />
+      <div v-if="kbCitations.length" style="margin-bottom:8px;font-size:12px;color:#606266">引用依据:{{ kbCitations.join('；') }}</div>
+      <el-table :data="kbHits" border size="small" max-height="340">
+        <el-table-column prop="docType" label="类型" width="90" />
+        <el-table-column prop="domain" label="知识域" width="110" />
+        <el-table-column label="依据" min-width="260" show-overflow-tooltip>
+          <template #default="{ row }"><b>{{ row.citation }}</b> {{ row.content }}</template>
+        </el-table-column>
+        <el-table-column prop="effectiveDate" label="生效日期" width="100" />
+        <el-table-column prop="score" label="相关度" width="80" align="center">
+          <template #default="{ row }">{{ (row.score*100).toFixed(0) }}%</template>
+        </el-table-column>
+      </el-table>
+    </el-dialog>
+
     <el-row :gutter="16">
       <el-col :span="10">
         <el-card header="登记权属主张(构建知识图谱)" shadow="hover">
@@ -262,7 +318,33 @@ async function loadGraph() {
 
 // 资产台账搜索(三处联动:主张表单/右侧查询/图谱)
 import { pageArchive } from '@/api/propertyArchive'
-import { pageAitMaterial } from '@/api/aitool'
+import { pageAitMaterial, aitKbSearch, aitKbRag, aitConflictExcelUrl, aitConflictRuleList, aitConflictRuleSave, aitConflictRuleToggle } from '@/api/aitool'
+
+function openUrl(u) { window.open(u, '_blank') }
+// 权属冲突识别与分析:规则配置 + Excel 导出
+const ruleDlg = ref(false); const rules = ref([])
+function conflictExcelUrl() { return aitConflictExcelUrl({ assetId: assetId.value }) }
+async function onRuleConfig() { ruleDlg.value = true; rules.value = await aitConflictRuleList() || [] }
+async function onRuleToggle(row, on) { await aitConflictRuleToggle(row.ruleId, on); row.enabled = on ? 1 : 0; ElMessage.success(on ? '已启用' : '已停用') }
+async function onRuleSave(row) { await aitConflictRuleSave(row); ElMessage.success('阈值已保存') }
+
+// 2.1 产权知识库检索增强
+const kbDlg = ref(false); const kbQuery = ref(''); const kbMode = ref('hybrid'); const kbDomain = ref('')
+const kbHits = ref([]); const kbAnswer = ref(''); const kbCitations = ref([]); const kbLoading = ref(false); const kbRagLoading = ref(false)
+async function onKbSearch() {
+  if (!kbQuery.value) { ElMessage.warning('请输入检索问题'); return }
+  kbLoading.value = true; kbAnswer.value = ''; kbCitations.value = []
+  try { kbHits.value = await aitKbSearch({ query: kbQuery.value, mode: kbMode.value, domain: kbDomain.value, topK: 8 }) || [] }
+  finally { kbLoading.value = false }
+}
+async function onKbRag() {
+  if (!kbQuery.value) { ElMessage.warning('请输入检索问题'); return }
+  kbRagLoading.value = true
+  try {
+    const r = await aitKbRag({ query: kbQuery.value, domain: kbDomain.value })
+    kbAnswer.value = r.answer || ''; kbHits.value = r.hits || []; kbCitations.value = r.citations || []
+  } finally { kbRagLoading.value = false }
+}
 const assetOpts = ref([])
 const assetSearching = ref(false)
 async function searchAssets(kw) {

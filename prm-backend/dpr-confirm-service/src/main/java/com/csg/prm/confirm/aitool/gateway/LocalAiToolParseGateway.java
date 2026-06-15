@@ -29,6 +29,90 @@ public class LocalAiToolParseGateway implements AiToolParseGateway {
         return "（规则引擎建议）" + plan;
     }
 
+    /**
+     * 本地 OCR/版面分析桩(无像素识别能力):基于 hint(文件名/页码)产出确定性结构,便于离线联调与契约测试。
+     * 生产由 qwen-vl 多模态 @Primary 覆盖,做真实 OCR + 版面分析。置信度给 0.6(低)以标"需人工复核"。
+     */
+    @Override
+    public OcrLayout ocrAndLayout(byte[] imageBytes, String mime, String hint) {
+        String h = hint == null ? "" : hint;
+        java.util.List<Seal> seals = new java.util.ArrayList<>();
+        if (h.contains("骑缝")) {
+            seals.add(new Seal("骑缝章", "跨页接缝处", "(本地桩)检出骑缝章表述"));
+        }
+        if (h.contains("合同")) {
+            seals.add(new Seal("合同章", "落款区", "(本地桩)检出合同章表述"));
+        }
+        if (h.contains("章") || h.contains("盖章") || h.contains("印")) {
+            seals.add(new Seal("公章", "落款区", "(本地桩)检出公章表述"));
+        }
+        String pageType = h.contains("目录") ? "目录页" : "正文页";
+        String text = "（本地OCR桩,无真实像素识别）材料:" + h;
+        return new OcrLayout(text, java.util.List.of(h.isEmpty() ? "材料" : h),
+                java.util.List.of(), seals, pageType, 1, 0.6);
+    }
+
+    /** 本地确定性 hash 向量(2.1#3 离线语义检索):字符 bigram 散列到固定维度 + L2 归一,余弦≈词面重叠。 */
+    private static final int LOCAL_DIM = 256;
+
+    @Override
+    public float[] embed(String text) {
+        float[] v = new float[LOCAL_DIM];
+        if (text == null || text.isEmpty()) {
+            return v;
+        }
+        String t = text.trim();
+        for (int i = 0; i < t.length(); i++) {
+            // 单字 + 相邻 bigram 两种特征,增强重叠区分度
+            bump(v, t.substring(i, i + 1));
+            if (i + 1 < t.length()) {
+                bump(v, t.substring(i, i + 2));
+            }
+        }
+        double norm = 0;
+        for (float x : v) {
+            norm += x * x;
+        }
+        norm = Math.sqrt(norm);
+        if (norm > 0) {
+            for (int i = 0; i < v.length; i++) {
+                v[i] /= (float) norm;
+            }
+        }
+        return v;
+    }
+
+    private static void bump(float[] v, String token) {
+        int h = token.hashCode();
+        int idx = Math.floorMod(h, v.length);
+        v[idx] += 1f;
+    }
+
+    /** 本地材料类别规则分类(#4):按文件名/正文关键词归类。 */
+    @Override
+    public String classifyCategory(String fileName, String content) {
+        String t = (fileName == null ? "" : fileName) + " " + (content == null ? "" : content);
+        if (t.contains("合同") || t.contains("协议")) {
+            return "合同材料";
+        }
+        if (t.contains("授权")) {
+            return "授权材料";
+        }
+        if (t.contains("制度") || t.contains("办法") || t.contains("规定") || t.contains("规范")) {
+            return "制度附件";
+        }
+        if (t.contains("来源") || t.contains("采集") || t.contains("生产说明")) {
+            return "来源说明";
+        }
+        if (t.contains("元数据") || t.contains("字段") || t.contains("表结构") || t.contains("数据字典")) {
+            return "元数据";
+        }
+        if (t.contains("确权") || t.contains("权属") || t.contains("证明")) {
+            return "确权证明";
+        }
+        return "其他";
+    }
+
     @Override
     public ParsedElements parse(String fileName, String content) {
         String t = (fileName == null ? "" : fileName) + " " + (content == null ? "" : content);

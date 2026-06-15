@@ -4,8 +4,10 @@ import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.R;
 import com.csg.prm.common.query.PageQuery;
 import com.csg.prm.confirm.aitool.entity.AitCompare;
+import com.csg.prm.confirm.aitool.entity.AitDocSegment;
 import com.csg.prm.confirm.aitool.entity.AitMaterial;
 import com.csg.prm.confirm.aitool.entity.AitParseResult;
+import com.csg.prm.confirm.aitool.service.AitAccuracyService;
 import com.csg.prm.confirm.aitool.service.AitMaterialService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -34,9 +36,11 @@ import java.util.List;
 public class AitMaterialController {
 
     private final AitMaterialService service;
+    private final AitAccuracyService accuracyService;
 
-    public AitMaterialController(AitMaterialService service) {
+    public AitMaterialController(AitMaterialService service, AitAccuracyService accuracyService) {
         this.service = service;
+        this.accuracyService = accuracyService;
     }
 
     /** 批量上传单次最多文件数(#1) */
@@ -153,5 +157,37 @@ public class AitMaterialController {
                                            @RequestParam(required = false) String parseStatus,
                                            @RequestParam(required = false) String applyId) {
         return R.ok(service.page(query, batchNo, parseStatus, applyId));
+    }
+
+    /** #5 多粒度解析片段(granularity 可空=全部:PAGE/PARAGRAPH/CELL/TABLE/TITLE) */
+    @GetMapping("/{materialId}/segments")
+    public R<List<AitDocSegment>> segments(@PathVariable String materialId,
+                                           @RequestParam(required = false) String granularity) {
+        return R.ok(service.segments(materialId, granularity));
+    }
+
+    /** #4 按数据表归集关联(applyId 或 dataTableRef 任一过滤) */
+    @GetMapping("/aggregate")
+    public R<List<AitMaterialService.MaterialGroup>> aggregate(@RequestParam(required = false) String applyId,
+                                                               @RequestParam(required = false) String dataTableRef) {
+        return R.ok(service.aggregate(applyId, dataTableRef));
+    }
+
+    /** #7 解析准确度评测:对标注样本集逐字段比对,输出整体/分字段准确率与是否达标(≥95%)。 */
+    @GetMapping("/accuracy")
+    public R<AitAccuracyService.AccuracyReport> accuracy() {
+        return R.ok(accuracyService.evaluate());
+    }
+
+    /** 1.4#2 批量解析:按批次号排队解析其下全部未成功材料,返回派发数量。 */
+    @PostMapping("/batch-parse")
+    public R<Integer> batchParse(@RequestParam String batchNo) {
+        return R.ok(service.batchParse(batchNo));
+    }
+
+    /** 1.4#2 批量解析聚合进度(总数/已完成/失败/进行中/待解析 + 明细)。 */
+    @GetMapping("/batch-progress")
+    public R<AitMaterialService.BatchProgress> batchProgress(@RequestParam String batchNo) {
+        return R.ok(service.batchProgress(batchNo));
     }
 }

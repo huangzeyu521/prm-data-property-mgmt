@@ -3,6 +3,7 @@ package com.csg.prm.confirm.aitool.service;
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.query.PageQuery;
 import com.csg.prm.confirm.aitool.entity.AitCompare;
+import com.csg.prm.confirm.aitool.entity.AitDocSegment;
 import com.csg.prm.confirm.aitool.entity.AitMaterial;
 import com.csg.prm.confirm.aitool.entity.AitParseResult;
 
@@ -15,6 +16,18 @@ public interface AitMaterialService {
 
     /** 术语库匹配建议项 */
     record TermSuggestion(String field, String value, String standardTerm, boolean standard) {
+    }
+
+    /** #4 材料归集分组:同一数据表标识下的一组材料(按类别关联) */
+    record MaterialGroup(String dataTableRef, List<AitMaterial> materials) {
+    }
+
+    /** 1.4#2 批量解析进度明细项 */
+    record BatchItem(String materialId, String fileName, String parseStatus, int progress, String failReason) {
+    }
+
+    /** 1.4#2 批量解析聚合进度 */
+    record BatchProgress(int total, int done, int failed, int running, int pending, List<BatchItem> items) {
     }
 
     /** 上传材料(文档哈希去重 + 批次),返回材料ID */
@@ -53,4 +66,16 @@ public interface AitMaterialService {
     List<AitCompare> compares(String materialId);
 
     PageResult<AitMaterial> page(PageQuery query, String batchNo, String parseStatus, String applyId);
+
+    /** #5 取材料的多粒度解析片段(granularity 可空=全部:PAGE/PARAGRAPH/CELL/TABLE/TITLE) */
+    List<AitDocSegment> segments(String materialId, String granularity);
+
+    /** #4 按数据表标识归集材料(applyId 或 dataTableRef 任一过滤,均空=全部) */
+    List<MaterialGroup> aggregate(String applyId, String dataTableRef);
+
+    /** 1.4#2 批量解析:按批次号排队解析其下全部未成功材料,返回派发数。 */
+    int batchParse(String batchNo);
+
+    /** 1.4#2 批量解析聚合进度。 */
+    BatchProgress batchProgress(String batchNo);
 }

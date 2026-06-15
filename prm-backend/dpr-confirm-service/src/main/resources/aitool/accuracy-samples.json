@@ -1,0 +1,67 @@
+[
+  {
+    "fileName": "中国南方电网有限责任公司-数据持有权确权证明.pdf",
+    "content": "本材料为数据持有权确权证明,数据来源为自行生产,涉及电网生产数据,有效期3年,授权范围约定字段,已加盖公章。",
+    "expected": {
+      "rightSubject": "中国南方电网有限责任公司",
+      "rightObject": "中国南方电网有限责任公司-数据持有权确权证明",
+      "rightType": "数据持有权",
+      "rightTerm": "3年",
+      "authScope": "约定字段",
+      "dataSource": "自行生产",
+      "sensitiveType": "电网生产数据"
+    }
+  },
+  {
+    "fileName": "广州供电局-数据加工使用权授权材料.xlsx",
+    "content": "数据加工使用权授权材料。数据来源交易采购,涉及商业秘密,有效期5年,授权范围全字段,合同已盖章。",
+    "expected": {
+      "rightSubject": "广州供电局",
+      "rightObject": "广州供电局-数据加工使用权授权材料",
+      "rightType": "数据加工使用权",
+      "rightTerm": "5年",
+      "authScope": "全字段",
+      "dataSource": "交易采购",
+      "sensitiveType": "商业秘密"
+    }
+  },
+  {
+    "fileName": "中国南方电网有限责任公司数据产品经营权证明.pdf",
+    "content": "数据产品经营权材料。数据来源公开采集,涉及个人信息,长期有效,授权范围全网。",
+    "expected": {
+      "rightSubject": "中国南方电网有限责任公司",
+      "rightObject": "中国南方电网有限责任公司数据产品经营权证明",
+      "rightType": "数据产品经营权",
+      "rightTerm": "长期",
+      "authScope": "全网",
+      "dataSource": "公开采集",
+      "sensitiveType": "个人信息"
+    }
+  },
+  {
+    "fileName": "中国南方电网有限责任公司所有权登记表.xls",
+    "content": "数据所有权登记。数据来源共同生产,涉及监管数据,有效期2年,授权范围约定字段。",
+    "expected": {
+      "rightSubject": "中国南方电网有限责任公司",
+      "rightObject": "中国南方电网有限责任公司所有权登记表",
+      "rightType": "所有权",
+      "rightTerm": "2年",
+      "authScope": "约定字段",
+      "dataSource": "共同生产",
+      "sensitiveType": "监管数据"
+    }
+  },
+  {
+    "fileName": "中国南方电网有限责任公司授权使用权协议.docx",
+    "content": "授权使用权协议。数据来源公共数据授权,涉及内部运营数据,有效期3年,授权范围约定字段,合同章齐全。",
+    "expected": {
+      "rightSubject": "中国南方电网有限责任公司",
+      "rightObject": "中国南方电网有限责任公司授权使用权协议",
+      "rightType": "授权使用权",
+      "rightTerm": "3年",
+      "authScope": "约定字段",
+      "dataSource": "公共数据授权",
+      "sensitiveType": "内部运营数据"
+    }
+  }
+]

@@ -17,6 +17,7 @@ public class AitConflict extends BaseEntity {
     public static final String TYPE_SCOPE = "范围冲突";
     public static final String TYPE_VALIDITY = "时效冲突";
     public static final String TYPE_HISTORY = "历史记录冲突";
+    public static final String TYPE_RIGHTTYPE = "类型冲突";
 
     public static final String STATUS_OPEN = "待处置";
     public static final String STATUS_RESOLVED = "已处置";
@@ -52,6 +53,31 @@ public class AitConflict extends BaseEntity {
 
     @TableField("CEC_STATUS")
     private String status;
+
+    /** #3 追溯:关联历史确权记录/主张编号 */
+    @TableField("CEC_RELATED_RECORD_NO")
+    private String relatedRecordNo;
+
+    /** #3 追溯:涉及的具体冲突字段 */
+    @TableField("CEC_CONFLICT_FIELDS")
+    private String conflictFields;
+
+    /** #3 追溯:相关协议条款/法规依据引用 */
+    @TableField("CEC_CLAUSE_REF")
+    private String clauseRef;
+
+    /** #4 影响:法律风险等级 */
+    @TableField("CEC_LEGAL_RISK")
+    private String legalRisk;
+
+    public String getRelatedRecordNo() { return relatedRecordNo; }
+    public void setRelatedRecordNo(String relatedRecordNo) { this.relatedRecordNo = relatedRecordNo; }
+    public String getConflictFields() { return conflictFields; }
+    public void setConflictFields(String conflictFields) { this.conflictFields = conflictFields; }
+    public String getClauseRef() { return clauseRef; }
+    public void setClauseRef(String clauseRef) { this.clauseRef = clauseRef; }
+    public String getLegalRisk() { return legalRisk; }
+    public void setLegalRisk(String legalRisk) { this.legalRisk = legalRisk; }
 
     public String getConflictId() {
         return conflictId;

@@ -41,6 +41,14 @@ public interface AitConflictService {
     List<AitConflict> conflicts(String assetId, String conflictType, String riskLevel,
                                 String startTime, String endTime, String subject);
 
+    /** 多维筛选冲突(增加 状态/系统部门 维度)(权属冲突识别与分析 #6) */
+    List<AitConflict> conflicts(String assetId, String conflictType, String riskLevel,
+                                String startTime, String endTime, String subject, String status, String dept);
+
+    /** 冲突记录导出 Excel(#6) */
+    byte[] exportConflictExcel(String assetId, String conflictType, String riskLevel,
+                               String startTime, String endTime, String subject, String status, String dept);
+
     void resolve(String conflictId, String feedback);
 
     /** 冲突解决方案建议(#16):规则建议 + 法规依据 + AI 生成建议(规则+AI,非案例库检索)。 */

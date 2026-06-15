@@ -90,15 +90,36 @@ public class AitConflictController {
         return R.ok(service.claims(assetId));
     }
 
-    /** 冲突列表(支持 资产/冲突类型/风险等级/起止时间 多维筛选)(#17) */
+    /** 冲突列表(支持 资产/冲突类型/风险等级/起止时间/主体/状态/系统部门 多维筛选)(#6) */
     @GetMapping("/list")
     public R<List<AitConflict>> list(@RequestParam(required = false) String assetId,
                                      @RequestParam(required = false) String conflictType,
                                      @RequestParam(required = false) String riskLevel,
                                      @RequestParam(required = false) String startTime,
                                      @RequestParam(required = false) String endTime,
-                                     @RequestParam(required = false) String subject) {
-        return R.ok(service.conflicts(assetId, conflictType, riskLevel, startTime, endTime, subject));
+                                     @RequestParam(required = false) String subject,
+                                     @RequestParam(required = false) String status,
+                                     @RequestParam(required = false) String dept) {
+        return R.ok(service.conflicts(assetId, conflictType, riskLevel, startTime, endTime, subject, status, dept));
+    }
+
+    /** 冲突记录导出 Excel(#6,满足审计/管理查询) */
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> exportConflicts(@RequestParam(required = false) String assetId,
+                                                  @RequestParam(required = false) String conflictType,
+                                                  @RequestParam(required = false) String riskLevel,
+                                                  @RequestParam(required = false) String startTime,
+                                                  @RequestParam(required = false) String endTime,
+                                                  @RequestParam(required = false) String subject,
+                                                  @RequestParam(required = false) String status,
+                                                  @RequestParam(required = false) String dept) {
+        byte[] data = service.exportConflictExcel(assetId, conflictType, riskLevel, startTime, endTime, subject, status, dept);
+        String fn = URLEncoder.encode("权属冲突记录.xlsx", StandardCharsets.UTF_8).replace("+", "%20");
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + fn)
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(data);
     }
 
     @PostMapping("/{conflictId}/resolve")
