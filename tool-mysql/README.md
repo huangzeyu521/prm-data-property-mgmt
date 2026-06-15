@@ -1,24 +1,28 @@
 # 智能确权辅助工具 · MySQL 库表脚本
 
-工具为**独立模块**：六张 `IM_AIT_*` 表自包含，与确权主流程仅通过 `CEC_APPLY_ID` **弱关联**（可空、无外键、不依赖主库任何表），可随工具独立建库部署。
+工具为**独立模块**：全部 `IM_AIT_*` 表自包含，与确权主流程仅通过 `CEC_APPLY_ID` **弱关联**（可空、无外键、不依赖主库任何表），可随工具独立建库部署。
+
+> 达梦(DM8)版本见 `../tool-dm8/`。本目录已同步最新改动(22 张表,覆盖可研 1.1.1.1~3.3 九大组功能点)。
 
 ## 文件
 
 | 文件 | 内容 | 必需 |
 |---|---|---|
-| `01_aitool_schema.sql` | 建库(prm/utf8mb4) + 六表 DDL | ✅ |
+| `01_aitool_schema.sql` | 建库(prm/utf8mb4) + 22 张表 DDL | ✅ |
 | `02_aitool_seed.sql` | 演示种子（1 材料+解析、2 对立主张、1 主体冲突，三页开箱有内容） | 可选，生产跳过 |
 
-## 表清单
+## 表清单(22 张)
 
-| 表 | 用途 |
+| 分组 | 表 |
 |---|---|
-| `IM_AIT_MATERIAL` | 材料：文件元数据+正文、SM3 哈希、解析状态/进度/失败原因分类 |
-| `IM_AIT_PARSE_RESULT` | 解析结果：5 要素抽取、印章交叉校验、复核标记、材料可信度 |
-| `IM_AIT_COMPARE` | 表单比对：材料值 vs 表单值、差异类型、原文定位(offset/snippet) |
-| `IM_AIT_KG_CLAIM` | 权属主张（知识图谱）：主体/类型/范围/排他/来源四类 |
-| `IM_AIT_CONFLICT` | 权属冲突：主体/范围/时效/历史四类、风险等级、处置建议 |
-| `IM_AIT_DECISION` | 决策建议：4 因子加权、规则+AI 预测对照、RAG 建议/引用、权益分割双方案、SM3 证据链 |
+| 材料解析(1.1.1.1) | `IM_AIT_MATERIAL`、`IM_AIT_DOC_SEGMENT`、`IM_AIT_PARSE_RESULT`、`IM_AIT_COMPARE` |
+| 数据清洗(1.2) | `IM_AIT_AUDIT_BASE`、`IM_AIT_CLEAN_LOG` |
+| 要素抽取(1.3) | `IM_AIT_PROFILE`、`IM_AIT_PROFILE_SUBJECT`、`IM_AIT_CONSTRAINT` |
+| 材料管理(1.4) | `IM_AIT_PARSE_RECORD`、`IM_AIT_DOC_TEMPLATE`、`IM_AIT_PARSE_CONFIG` |
+| 知识库RAG(2.1) | `IM_AIT_KB_DOC`、`IM_AIT_KB_CHUNK` |
+| 冲突识别与分析 | `IM_AIT_KG_CLAIM`、`IM_AIT_CONFLICT`、`IM_AIT_CONFLICT_RULE` |
+| 确权决策(3.1/3.2) | `IM_AIT_DECISION`、`IM_AIT_AUDIT_RESULT`、`IM_AIT_EVIDENCE` |
+| 运行支撑(3.3) | `IM_AIT_TASK`、`IM_AIT_RUN_LOG` |
 
 ## 执行
 
