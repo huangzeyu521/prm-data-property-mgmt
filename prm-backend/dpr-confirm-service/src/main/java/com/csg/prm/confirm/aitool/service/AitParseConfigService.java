@@ -97,6 +97,31 @@ public class AitParseConfigService implements ApplicationRunner {
         return out;
     }
 
+    /** 提取逻辑配置(1.4#4):enableModel=是否启用模型语义、enableOcr=是否启用 OCR;缺省皆为 true。 */
+    public record ExtractLogic(boolean enableModel, boolean enableOcr) {
+    }
+
+    /** 生效的提取逻辑配置(供解析流水线据此决定是否走 OCR/模型);JSON 缺失或非法 → 默认全开。 */
+    public ExtractLogic extractLogic(String scene) {
+        boolean model = true;
+        boolean ocr = true;
+        String json = effective(scene).getExtractLogicJson();
+        if (StringUtils.hasText(json)) {
+            try {
+                JsonNode n = OM.readTree(json);
+                if (n.has("enableModel")) {
+                    model = n.get("enableModel").asBoolean(true);
+                }
+                if (n.has("enableOcr")) {
+                    ocr = n.get("enableOcr").asBoolean(true);
+                }
+            } catch (Exception ignore) {
+                // 配置 JSON 非法 → 视为默认全开
+            }
+        }
+        return new ExtractLogic(model, ocr);
+    }
+
     public List<AitParseConfig> list() {
         return mapper.selectList(new LambdaQueryWrapper<AitParseConfig>()
                 .orderByDesc(AitParseConfig::getUpdateTime));

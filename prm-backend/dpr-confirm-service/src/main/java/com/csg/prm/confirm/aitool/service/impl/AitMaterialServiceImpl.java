@@ -368,6 +368,15 @@ public class AitMaterialServiceImpl implements AitMaterialService {
         } catch (RuntimeException e) {
             return;
         }
+        // 1.4#4 提取逻辑配置:OCR(qwen-vl 视觉模型)仅在 enableOcr 且 enableModel 同时开启时执行
+        if (IMAGE_EXT.contains(ext) || "pdf".equals(ext)) {
+            AitParseConfigService.ExtractLogic logic =
+                    configService.extractLogic(com.csg.prm.confirm.aitool.entity.AitParseConfig.DEFAULT_SCENE);
+            if (!logic.enableOcr() || !logic.enableModel()) {
+                throw new ParseBrokenException("OCR 已按解析配置关闭(enableOcr/enableModel),"
+                        + "图片/扫描件无法提取正文,如需识别请在解析配置中开启");
+            }
+        }
         if (IMAGE_EXT.contains(ext)) {
             AiToolParseGateway.OcrLayout o = parseGateway.ocrAndLayout(bytes, mimeOf(ext), m.getFileName());
             if (o != null) {

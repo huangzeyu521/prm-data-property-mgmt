@@ -19,6 +19,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
+import javax.imageio.ImageIO;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -141,6 +145,54 @@ class AitParseMgmtTest {
                 .filter(a -> "tableName".equals(a.getTemplateField())).findFirst().orElse(null);
         assertNotNull(tableName);
         assertEquals("ORDER_T", tableName.getCleanValue(), "配置字段映射应使自定义字段名对齐到表名");
+    }
+
+    /** #4 提取逻辑配置:enableOcr=false 时图片/扫描件按配置关闭 OCR(不再静默走模型),开启后恢复。 */
+    @Test
+    void extract_logic_config_toggles_ocr() throws Exception {
+        AitParseConfig def = configService.effective(AitParseConfig.DEFAULT_SCENE);
+        String saved = def.getExtractLogicJson();
+        try {
+            // 关闭 OCR → 图片无法提取正文 → 解析失败且原因说明按配置关闭
+            def.setExtractLogicJson("{\"enableModel\":true,\"enableOcr\":false}");
+            configService.save(def);
+            String off = materialService.uploadBinary("扫描件-禁OCR.png", pngBytes("OCR-OFF"), null, null);
+            try {
+                materialService.parse(off);
+            } catch (RuntimeException ignore) {
+                // 同步解析对失败会抛,状态已落"失败"
+            }
+            AitMaterial mOff = materialService.getMaterial(off);
+            assertEquals(AitMaterial.PARSE_FAILED, mOff.getParseStatus(), "关闭 OCR 后图片应解析失败");
+            assertTrue(mOff.getFailReason() != null && mOff.getFailReason().contains("配置"),
+                    "失败原因应说明 OCR 按配置关闭,实际=" + mOff.getFailReason());
+
+            // 开启 OCR → 同类图片可成功(测试桩 OCR)
+            def.setExtractLogicJson("{\"enableModel\":true,\"enableOcr\":true}");
+            configService.save(def);
+            String on = materialService.uploadBinary("扫描件-启OCR.png", pngBytes("OCR-ON"), null, null);
+            materialService.parse(on);
+            assertEquals(AitMaterial.PARSE_SUCCESS, materialService.getMaterial(on).getParseStatus(),
+                    "开启 OCR 后图片应解析成功");
+        } finally {
+            def.setExtractLogicJson(saved == null ? "{\"enableModel\":true,\"enableOcr\":true}" : saved);
+            configService.save(def);
+        }
+    }
+
+    private byte[] pngBytes(String text) throws Exception {
+        BufferedImage img = new BufferedImage(360, 200, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = img.createGraphics();
+        g.setColor(Color.WHITE);
+        g.fillRect(0, 0, 360, 200);
+        g.setColor(Color.BLACK);
+        for (int i = 0; i < 6; i++) {
+            g.drawString(text + " 确权扫描件 line " + i, 12, 30 + i * 26);
+        }
+        g.dispose();
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        ImageIO.write(img, "png", bos);
+        return bos.toByteArray();
     }
 
     private byte[] docx(String text) throws Exception {
