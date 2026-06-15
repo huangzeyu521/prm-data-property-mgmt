@@ -1,0 +1,140 @@
+[ {
+  "path" : "01_格式覆盖/确权证明.docx",
+  "format" : "DOCX",
+  "sizeKB" : 2,
+  "scenario" : "材料解析#1 Word导入",
+  "expectParse" : "成功",
+  "note" : "标准确权证明,含盖章表述"
+}, {
+  "path" : "01_格式覆盖/数据资产清单.xlsx",
+  "format" : "XLSX",
+  "sizeKB" : 3,
+  "scenario" : "材料解析#1 Excel导入;按单元格多粒度切片",
+  "expectParse" : "成功"
+}, {
+  "path" : "01_格式覆盖/确权证明_文本层.pdf",
+  "format" : "PDF",
+  "sizeKB" : 1,
+  "scenario" : "材料解析#1 PDF文本层;走 PDFTextStripper 抽取",
+  "expectParse" : "成功",
+  "note" : "纯 ASCII 文本层(容器无中文字体);中文内容见 INDEX/扫描件"
+}, {
+  "path" : "01_格式覆盖/确权书_扫描件.pdf",
+  "format" : "PDF",
+  "sizeKB" : 14,
+  "scenario" : "材料解析#2 扫描版PDF;走 OCR(qwen-vl/本地桩)",
+  "expectParse" : "成功(OCR)",
+  "note" : "图片页(无文本层),模拟扫描件"
+}, {
+  "path" : "01_格式覆盖/权属证明_盖章扫描.png",
+  "format" : "PNG",
+  "sizeKB" : 10,
+  "scenario" : "材料解析#2 图片;走 OCR",
+  "expectParse" : "成功(OCR)"
+}, {
+  "path" : "01_格式覆盖/OCR正样本_英文清晰.png",
+  "format" : "PNG",
+  "sizeKB" : 21,
+  "scenario" : "材料解析#2 OCR 正样本(清晰ASCII);qwen-vl 应逐字读出唯一标记 OCR-SAMPLE-20260615",
+  "expectParse" : "成功(OCR)"
+}, {
+  "path" : "01_格式覆盖/OCR正样本_英文清晰_扫描.pdf",
+  "format" : "PDF",
+  "sizeKB" : 22,
+  "scenario" : "材料解析#2 OCR 正样本(扫描PDF,清晰ASCII)",
+  "expectParse" : "成功(OCR)",
+  "note" : "图片页(无文本层),模拟扫描件"
+}, {
+  "path" : "02_数据清洗/脏数据清单.xlsx",
+  "format" : "XLSX",
+  "sizeKB" : 3,
+  "scenario" : "数据清洗1.2 去噪/全半角/空值/非标枚举/重复行/布尔",
+  "expectParse" : "—"
+}, {
+  "path" : "02_数据清洗/自定义字段名清单.xlsx",
+  "format" : "XLSX",
+  "sizeKB" : 3,
+  "scenario" : "数据清洗1.2 字段映射对齐(非内置别名)",
+  "expectParse" : "—"
+}, {
+  "path" : "03_要素抽取/要素齐全_持有权.docx",
+  "format" : "DOCX",
+  "sizeKB" : 2,
+  "scenario" : "要素抽取1.3 五类主体+五类约束+来源+特征",
+  "expectParse" : "成功",
+  "note" : "要素齐全,无个人/敏感"
+}, {
+  "path" : "03_要素抽取/要素齐全_经营权个人信息.docx",
+  "format" : "DOCX",
+  "sizeKB" : 2,
+  "scenario" : "要素抽取1.3 经营权+个人信息(高分级/法律校验)",
+  "expectParse" : "成功",
+  "note" : "含个人信息,数据级别敏感"
+}, {
+  "path" : "03_要素抽取/要素齐全_使用权商密.docx",
+  "format" : "DOCX",
+  "sizeKB" : 2,
+  "scenario" : "要素抽取1.3 使用权+商业秘密(核心级)",
+  "expectParse" : "成功",
+  "note" : "含商业秘密,数据级别核心"
+}, {
+  "path" : "04_批量解析/批量_01.docx",
+  "format" : "DOCX",
+  "sizeKB" : 2,
+  "scenario" : "材料管理1.4 批量解析(同批)",
+  "expectParse" : "成功"
+}, {
+  "path" : "04_批量解析/批量_02.xlsx",
+  "format" : "XLSX",
+  "sizeKB" : 3,
+  "scenario" : "材料管理1.4 批量解析(同批)",
+  "expectParse" : "成功"
+}, {
+  "path" : "04_批量解析/批量_03.docx",
+  "format" : "DOCX",
+  "sizeKB" : 2,
+  "scenario" : "材料管理1.4 批量解析(同批)",
+  "expectParse" : "成功"
+}, {
+  "path" : "05_冲突场景/历史持有权证明.docx",
+  "format" : "DOCX",
+  "sizeKB" : 2,
+  "scenario" : "冲突识别 历史排他主张",
+  "expectParse" : "成功",
+  "note" : "与当前主体冲突"
+}, {
+  "path" : "05_冲突场景/当前持有权申请.docx",
+  "format" : "DOCX",
+  "sizeKB" : 2,
+  "scenario" : "冲突识别 当前主张(与历史对立)",
+  "expectParse" : "成功",
+  "note" : "触发主体/范围/时效冲突"
+}, {
+  "path" : "06_重复检测/原件.docx",
+  "format" : "DOCX",
+  "sizeKB" : 2,
+  "scenario" : "材料解析1.1#6 内容指纹查重(原件)",
+  "expectParse" : "成功",
+  "note" : "与副本内容一致"
+}, {
+  "path" : "06_重复检测/原件_副本.docx",
+  "format" : "DOCX",
+  "sizeKB" : 2,
+  "scenario" : "材料解析1.1#6 内容指纹查重(副本)",
+  "expectParse" : "成功(标记重复)",
+  "note" : "应命中原件为重复"
+}, {
+  "path" : "07_异常负面/无章证明.docx",
+  "format" : "DOCX",
+  "sizeKB" : 2,
+  "scenario" : "材料解析 印章交叉校验(无章→存疑)",
+  "expectParse" : "成功",
+  "note" : "印章应判可疑/未检出"
+}, {
+  "path" : "07_异常负面/空白文件.docx",
+  "format" : "DOCX",
+  "sizeKB" : 2,
+  "scenario" : "负面:空内容→解析失败(需OCR/损坏)",
+  "expectParse" : "失败",
+  "note" : "正文为空,应判失败"
+} ]
