@@ -668,20 +668,41 @@ public class AitMaterialServiceImpl implements AitMaterialService {
 
     @Override
     public List<MaterialGroup> aggregate(String applyId, String dataTableRef) {
+        // #4 多表共附件:dataTableRef 可含多个数据表(分隔符 ;；,，、|),指定表过滤用 LIKE 命中其一
         LambdaQueryWrapper<AitMaterial> w = new LambdaQueryWrapper<AitMaterial>()
                 .eq(StringUtils.hasText(applyId), AitMaterial::getApplyId, applyId)
-                .eq(StringUtils.hasText(dataTableRef), AitMaterial::getDataTableRef, dataTableRef)
+                .like(StringUtils.hasText(dataTableRef), AitMaterial::getDataTableRef, dataTableRef)
                 .orderByDesc(AitMaterial::getCreateTime);
         List<AitMaterial> all = materialMapper.selectList(w);
-        // #4 按"数据表标识"归集,组内按材料类别关联
+        // #4 附件↔主表关联索引:按数据表标识归集 —— 一表多附件(同表多材料归一组)+ 多表共附件(一材料拆挂其所属每个表分组)
         Map<String, MaterialGroup> groups = new LinkedHashMap<>();
         for (AitMaterial m : all) {
-            String key = StringUtils.hasText(m.getDataTableRef()) ? m.getDataTableRef() : "(未归集)";
             m.setContent(null); // 列表不回传大正文
             m.setLayoutJson(null);
-            groups.computeIfAbsent(key, k -> new MaterialGroup(k, new ArrayList<>())).materials().add(m);
+            for (String key : splitTables(m.getDataTableRef())) {
+                if (StringUtils.hasText(dataTableRef)
+                        && !key.contains(dataTableRef) && !dataTableRef.contains(key)) {
+                    continue; // 指定表过滤时,多表共附件只保留命中的表分组
+                }
+                groups.computeIfAbsent(key, k -> new MaterialGroup(k, new ArrayList<>())).materials().add(m);
+            }
         }
         return new ArrayList<>(groups.values());
+    }
+
+    /** #4 拆分材料所属数据表(多表共附件):按 ;；,，、| 分隔;空则归"(未归集)"。 */
+    private static List<String> splitTables(String ref) {
+        if (!StringUtils.hasText(ref)) {
+            return List.of("(未归集)");
+        }
+        List<String> out = new ArrayList<>();
+        for (String p : ref.split("[;；,，、|]")) {
+            String t = p.trim();
+            if (StringUtils.hasText(t)) {
+                out.add(t);
+            }
+        }
+        return out.isEmpty() ? List.of("(未归集)") : out;
     }
 
     private void tick(String materialId, boolean async, int pct) {

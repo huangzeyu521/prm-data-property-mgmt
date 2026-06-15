@@ -104,6 +104,40 @@ class AitMaterialAdvancedTest {
         assertTrue(r.pass(), "应判定达标");
     }
 
+    /** #4 附件↔主表关联索引:一表多附件(同表多材料归一组)+ 多表共附件(一材料挂多表分组)。 */
+    @Test
+    void aggregate_one_table_many_attachments_and_shared_attachment() {
+        String tag = "AGG-" + System.nanoTime();
+        String tA = tag + "_TableA";
+        String tB = tag + "_TableB";
+        String m1 = uploadMeta("元数据A.xlsx", "内容1-" + tag, tA);              // 一表多附件:T_A
+        String m2 = uploadMeta("制度附件A.docx", "内容2-" + tag, tA);            // 一表多附件:T_A
+        String shared = uploadMeta("共用来源说明.pdf", "内容3-" + tag, tA + ";" + tB); // 多表共附件:T_A 与 T_B
+
+        List<AitMaterialService.MaterialGroup> groups = service.aggregate(null, null);
+        var gA = groups.stream().filter(g -> tA.equals(g.dataTableRef())).findFirst().orElseThrow();
+        var gB = groups.stream().filter(g -> tB.equals(g.dataTableRef())).findFirst().orElseThrow();
+        var ids = gA.materials().stream().map(AitMaterial::getMaterialId).toList();
+        assertTrue(ids.contains(m1) && ids.contains(m2) && ids.contains(shared),
+                "一表多附件:TableA 组应含全部 3 份材料");
+        assertTrue(gB.materials().stream().anyMatch(x -> shared.equals(x.getMaterialId())),
+                "多表共附件:共享附件应同时出现在 TableB 组");
+
+        // 指定表过滤:只回该表分组,且共享附件命中
+        List<AitMaterialService.MaterialGroup> onlyB = service.aggregate(null, tB);
+        assertEquals(1, onlyB.size(), "按 TableB 过滤应只回一个分组");
+        assertTrue(onlyB.get(0).materials().stream().anyMatch(x -> shared.equals(x.getMaterialId())),
+                "按 TableB 过滤应命中共享附件");
+    }
+
+    private String uploadMeta(String fileName, String content, String dataTableRef) {
+        AitMaterial m = new AitMaterial();
+        m.setFileName(fileName);
+        m.setContent(content);
+        m.setDataTableRef(dataTableRef);
+        return service.upload(m);
+    }
+
     // ---- 测试夹具 ----
 
     private byte[] xlsxBytes() throws Exception {
