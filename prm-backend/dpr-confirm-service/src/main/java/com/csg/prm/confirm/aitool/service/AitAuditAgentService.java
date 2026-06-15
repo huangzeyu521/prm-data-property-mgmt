@@ -328,7 +328,7 @@ public class AitAuditAgentService {
         return PageResult.of(p);
     }
 
-    /** 3.2#5 汇总统计:按 风险等级/数据级别/授权建议/通道 分组计数。 */
+    /** 3.2#5 汇总统计:按 风险等级/业务域(数据分类)/数据级别/授权建议/通道/系统(责任部门) 分组计数。 */
     public Map<String, Object> ledgerStats() {
         List<AitAuditResult> all = auditMapper.selectList(new LambdaQueryWrapper<>());
         Map<String, Object> stats = new LinkedHashMap<>();
@@ -337,8 +337,19 @@ public class AitAuditAgentService {
         stats.put("byGrade", group(all, AitAuditResult::getDataGrade));
         stats.put("byAdvice", group(all, AitAuditResult::getAuthAdvice));
         stats.put("byChannel", group(all, AitAuditResult::getChannel));
-        stats.put("byDataClass", group(all, AitAuditResult::getDataClass));
+        stats.put("byDataClass", group(all, AitAuditResult::getDataClass)); // 业务域维度
+        // 系统/部门维度:由审核结果关联确权申请的责任部门派生(无新增列)
+        stats.put("byDept", group(all, r -> deptOf(r.getApplyId())));
         return stats;
+    }
+
+    /** 审核结果所属系统/责任部门:取关联确权申请的责任部门;无则"未知"。 */
+    private String deptOf(String applyId) {
+        if (!StringUtils.hasText(applyId)) {
+            return "未知";
+        }
+        ConfirmApply a = applyMapper.selectById(applyId);
+        return a != null && StringUtils.hasText(a.getRespDept()) ? a.getRespDept() : "未知";
     }
 
     private Map<String, Long> group(List<AitAuditResult> all, java.util.function.Function<AitAuditResult, String> f) {

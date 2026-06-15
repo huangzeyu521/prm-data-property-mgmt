@@ -100,7 +100,14 @@ class AitAuditLedgerTest {
     @Test
     void ledger_stats_filter_and_export() {
         String asset = "DA-LED-ST-" + System.nanoTime();
-        String applyId = newApply(asset);
+        String dept = "数字化部-" + System.nanoTime();
+        ConfirmApply a = new ConfirmApply();
+        a.setAssetId(asset);
+        a.setAssetName(asset + "数据集");
+        a.setRightType("数据持有权");
+        a.setRightHolder("广东电网");
+        a.setRespDept(dept); // #5 系统/责任部门维度
+        String applyId = applyService.saveDraft(a);
         sealedMaterial(applyId, asset + "-盖章.pdf");
         agent.audit(applyId);
 
@@ -108,6 +115,10 @@ class AitAuditLedgerTest {
         assertTrue(((Number) stats.get("total")).intValue() >= 1);
         assertFalse(((Map<?, ?>) stats.get("byRisk")).isEmpty(), "应有按风险等级汇总");
         assertFalse(((Map<?, ?>) stats.get("byChannel")).isEmpty(), "应有按通道汇总");
+        assertFalse(((Map<?, ?>) stats.get("byDataClass")).isEmpty(), "应有按业务域汇总");
+        Map<?, ?> byDept = (Map<?, ?>) stats.get("byDept");
+        assertNotNull(byDept, "应有按系统/责任部门汇总维度");
+        assertTrue(byDept.containsKey(dept), "byDept 应含该申请的责任部门 " + dept);
 
         assertTrue(agent.exportLedgerExcel(null, null, null, null, null).length > 0, "台账应可导出 Excel");
         // 按通道筛选
