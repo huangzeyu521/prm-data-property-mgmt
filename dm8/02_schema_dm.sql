@@ -2,7 +2,7 @@
 -- 数据产权管理模块 (IM-DAM-DPR) · 达梦 DM8 库表 DDL
 -- 数据资产管理平台 V3.6 · 中国南方电网
 -- 由 MySQL schema 转换: DATETIME→TIMESTAMP, TEXT/LONGTEXT→CLOB, TINYINT(1)→SMALLINT
--- 共 43 张表(含 IM_CONFIRM_TABLE_ITEM/M02 及 IM_SYS_USER)
+-- 共 60 张表(含 IM_CONFIRM_TABLE_ITEM/M02、IM_SYS_USER、IM_SYS_OPLOG 及智能确权辅助工具九大组 18 张 IM_AIT_* 新表)
 -- 字段前缀 CEC_ 沿用平台规范; CEC_DEL_FLAG 逻辑删除(0=正常,1=已删)
 -- 执行前先跑 01_create_tablespace.sql 建表空间与用户
 -- 执行:  disql PRM_DPR/PRM_DPR2024!@localhost:5236 @02_schema_dm.sql
@@ -1944,5 +1944,5 @@ CREATE TABLE IM_SYS_OPLOG (
 COMMENT ON TABLE IM_SYS_OPLOG IS '系统操作日志';
 
 -- =====================================================================
--- 完。44 张表。测试数据见 03_data_dm.sql
+-- 完。60 张表。测试数据见 03_data_dm.sql
 -- =====================================================================
