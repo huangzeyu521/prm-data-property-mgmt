@@ -81,10 +81,27 @@ public class AitMaterialController {
             throw new BizException("文件为空");
         }
         try {
-            return service.uploadBinary(file.getOriginalFilename(), file.getBytes(), applyId, batchNo);
+            return service.uploadBinary(fixFilename(file.getOriginalFilename()), file.getBytes(), applyId, batchNo);
         } catch (IOException e) {
             throw new BizException("读取上传文件失败:" + e.getMessage());
         }
+    }
+
+    /**
+     * 还原 multipart 文件名编码。Tomcat 默认按 ISO-8859-1 解码 Content-Disposition 的 filename,
+     * 中文 UTF-8 字节被误读成乱码。仅当文件名所有字符都落在 Latin-1 区间(即典型的误解码特征)时,
+     * 才按 ISO-8859-1→UTF-8 重解;若已含真实 CJK 字符(>0xFF)则原样返回,避免破坏已正确的文件名。
+     */
+    static String fixFilename(String name) {
+        if (name == null || name.isEmpty()) {
+            return name;
+        }
+        boolean allLatin1 = name.chars().allMatch(c -> c <= 0xFF);
+        if (!allLatin1) {
+            return name;
+        }
+        String recovered = new String(name.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
+        return recovered.indexOf('�') >= 0 ? name : recovered;
     }
 
     /** 下载/预览已上传的原件(#1) */
