@@ -135,8 +135,8 @@ public class LocalAiToolParseGateway implements AiToolParseGateway {
         boolean sealed = t.contains("章") || t.contains("盖章") || t.contains("印");
         String sealValid = sealed ? "有效" : "未检出";
         String sealDesc = sealed ? "检出企业公章,印章纹理与备案样本一致" : "未检出印章区域";
-        return new ParsedElements(subject, object, rightType, term, scope, dataSource, sensitive,
-                sealValid, sealDesc, 0.92);
+        return AiToolParseGateway.normalize(new ParsedElements(subject, object, rightType, term, scope, dataSource, sensitive,
+                sealValid, sealDesc, 0.92), content);
     }
 
     private String extract(String text, String dflt, String... kws) {

@@ -66,7 +66,7 @@ public class QwenAiToolParseGateway implements AiToolParseGateway {
                     + "sensitiveType(个人信息/敏感个人信息/商业秘密/监管数据/电网生产数据/内部运营数据),"
                     + "sealValid(有效/可疑/未检出),sealDesc(印章说明),confidence(0-1小数)。不要输出多余文本。";
             String out = chat(sys, usr);
-            return mapElements(out);
+            return AiToolParseGateway.normalize(mapElements(out), content);
         } catch (RuntimeException e) {
             log.warn("[智能确权-大瓦特] qwen 解析失败,回退本地桩: {}", e.getMessage());
             return fallback.parse(fileName, content);

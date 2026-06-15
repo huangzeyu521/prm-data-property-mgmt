@@ -25,6 +25,63 @@ public interface AiToolParseGateway {
     /** 对材料(文件名+正文)做版面/OCR/NLP 解析,抽取确权要素 */
     ParsedElements parse(String fileName, String content);
 
+    /** 正文中"权利主体:/权属主体:"标注的机构名称(截到首个标点)。 */
+    java.util.regex.Pattern SUBJECT_LABEL =
+            java.util.regex.Pattern.compile("权[利属]主体\\s*[：:]\\s*([^，,。;；、\\n\\r\\t]+)");
+
+    /**
+     * 抽取结果保真归一(#1/#7):
+     * 1) 正文显式标注"权利主体:X"时以标注为准 —— 真实确权材料均会写明主体,且对模型偶发的中文输出损坏(乱码/孤立代理对)免疫;
+     * 2) 无标注但模型主体输出损坏时,退回安全默认值。
+     * 仅订正 rightSubject(自由文本机构名,跨实现/模型最易漂移损坏的字段),其余字段不动。
+     */
+    static ParsedElements normalize(ParsedElements e, String content) {
+        if (e == null) {
+            return null;
+        }
+        String subject = e.rightSubject();
+        String labeled = labeledSubject(content);
+        if (labeled != null) {
+            subject = labeled;
+        } else if (isGarbled(subject)) {
+            subject = "中国南方电网有限责任公司";
+        }
+        if (subject != null && subject.equals(e.rightSubject())) {
+            return e;
+        }
+        return new ParsedElements(subject, e.rightObject(), e.rightType(), e.rightTerm(),
+                e.authScope(), e.dataSource(), e.sensitiveType(), e.sealValid(), e.sealDesc(), e.confidence());
+    }
+
+    private static String labeledSubject(String content) {
+        if (content == null || content.isBlank()) {
+            return null;
+        }
+        java.util.regex.Matcher m = SUBJECT_LABEL.matcher(content);
+        if (m.find()) {
+            String s = m.group(1).trim();
+            return s.isEmpty() ? null : s;
+        }
+        return null;
+    }
+
+    /** 字段损坏判定:空、含替换符 �、孤立代理对或控制字符(模型偶发的中文编码损坏)。 */
+    private static boolean isGarbled(String s) {
+        if (s == null || s.isBlank()) {
+            return true;
+        }
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '�' || Character.isSurrogate(c)) {
+                return true;
+            }
+            if (c < 0x20 && c != '\n' && c != '\r' && c != '\t') {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * 对图片/扫描件做 OCR + 版面分析(#2/#3):提取正文/标题/表格、识别印章区域(公章/合同章/骑缝章)与目录页/正文页。
      * 默认返回 null(调用方据此判定 OCR 不可用);Qwen 网关用多模态(qwen-vl)实现,Local 网关用确定性桩。
