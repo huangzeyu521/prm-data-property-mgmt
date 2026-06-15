@@ -71,6 +71,14 @@ export const MENU = [
       { path: '/dpr/dashboard/auth', title: '授权看板', roles: ['view', 'review'] },
     ],
   },
+  {
+    // 系统管理(管理员专属):用户/角色/操作日志
+    group: '系统管理', icon: 'Setting', index: '08', items: [
+      { path: '/dpr/system/user', title: '用户管理', roles: ['admin'] },
+      { path: '/dpr/system/role', title: '角色管理', roles: ['admin'] },
+      { path: '/dpr/system/oplog', title: '操作日志', roles: ['admin'] },
+    ],
+  },
 ]
 
 // 个性化首屏:每角色登录/切换后落到最相关的页面

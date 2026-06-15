@@ -1551,6 +1551,21 @@ COMMENT ON COLUMN IM_SYS_USER.CEC_ROLE IS '角色(apply/review/admin/view/all)';
 COMMENT ON COLUMN IM_SYS_USER.CEC_PROVINCE_CODE IS '省公司代码';
 COMMENT ON COLUMN IM_SYS_USER.CEC_STATUS IS '状态';
 
+-- 系统操作日志(系统管理:登录 + 用户管理类操作留痕)
+CREATE TABLE IM_SYS_OPLOG (
+  CEC_LOG_ID        VARCHAR(64)  NOT NULL,
+  CEC_USER_ID       VARCHAR(64),
+  CEC_USER_NAME     VARCHAR(64),
+  CEC_ACTION        VARCHAR(50),
+  CEC_TARGET        VARCHAR(255),
+  CEC_DETAIL        VARCHAR(1000),
+  CEC_IP            VARCHAR(64),
+  CEC_RESULT        VARCHAR(20),
+  CEC_CREATE_TIME   TIMESTAMP,
+  PRIMARY KEY (CEC_LOG_ID)
+);
+COMMENT ON TABLE IM_SYS_OPLOG IS '系统操作日志';
+
 -- =====================================================================
--- 完。43 张表。测试数据见 03_data_dm.sql
+-- 完。44 张表。测试数据见 03_data_dm.sql
 -- =====================================================================

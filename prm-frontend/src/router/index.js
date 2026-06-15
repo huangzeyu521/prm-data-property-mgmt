@@ -68,6 +68,10 @@ const routes = [
   { path: '/dpr/dashboard/overview', name: 'DataPropertyOverview', component: () => import('@/views/dashboard/DataPropertyOverview.vue'), meta: { title: '数据产权全景(综合)', goal: '全景洞察数据产权规模/趋势/分布,辅助决策' } },
   { path: '/dpr/dashboard/confirm', name: 'ConfirmDashboard', component: () => import('@/views/dashboard/ConfirmDashboard.vue'), meta: { title: '确权看板', goal: '看板跟踪确权进展与质量' } },
   { path: '/dpr/dashboard/auth', name: 'AuthDashboard', component: () => import('@/views/dashboard/AuthDashboard.vue'), meta: { title: '授权看板', goal: '看板跟踪授权运行情况' } },
+  // 系统管理(管理员)
+  { path: '/dpr/system/user', name: 'SysUser', component: () => import('@/views/system/UserList.vue'), meta: { title: '用户管理', goal: '维护系统账号:新增/编辑/启停/重置密码,分配角色' } },
+  { path: '/dpr/system/role', name: 'SysRole', component: () => import('@/views/system/RoleList.vue'), meta: { title: '角色管理', goal: '查看角色目录与权限说明、各角色用户数统计' } },
+  { path: '/dpr/system/oplog', name: 'SysOpLog', component: () => import('@/views/system/OpLogList.vue'), meta: { title: '操作日志', goal: '审计登录与用户管理类操作留痕,支持多维查询' } },
   // 智能确权辅助工具:独立工具(独立外壳,不挂主导航),业务流程可带 applyId/assetId 调用
   {
     path: '/aitool',

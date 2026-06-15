@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.csg.prm.common.auth.JwtUtil;
 import com.csg.prm.common.crypto.Sm3Util;
 import com.csg.prm.common.exception.BizException;
+import com.csg.prm.confirm.system.SysOpLogService;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Service;
@@ -23,9 +24,11 @@ public class AuthService implements ApplicationRunner {
     private static final long TTL = 8 * 3600; // 8 小时
 
     private final SysUserMapper mapper;
+    private final SysOpLogService opLog;
 
-    public AuthService(SysUserMapper mapper) {
+    public AuthService(SysUserMapper mapper, SysOpLogService opLog) {
         this.mapper = mapper;
+        this.opLog = opLog;
     }
 
     @Override
@@ -59,12 +62,16 @@ public class AuthService implements ApplicationRunner {
         SysUser u = mapper.selectOne(new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getUsername, username).last("LIMIT 1"));
         if (u == null || !Sm3Util.hashHex(password).equals(u.getPasswordHash())) {
+            opLog.record(u == null ? null : u.getUserId(), u == null ? username : u.getRealName(),
+                    "登录", username, "用户名或密码错误", "失败", null);
             throw new BizException("用户名或密码错误");
         }
         if (u.getStatus() != null && !"启用".equals(u.getStatus())) {
+            opLog.record(u.getUserId(), u.getRealName(), "登录", username, "账号已停用", "失败", null);
             throw new BizException("账号已停用");
         }
         String token = JwtUtil.issue(u.getUserId(), u.getRealName(), u.getRole(), u.getProvinceCode(), TTL);
+        opLog.record(u.getUserId(), u.getRealName(), "登录", username, "登录成功", "成功", null);
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("token", token);
         out.put("user", info(u));

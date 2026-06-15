@@ -12,7 +12,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @SpringBootApplication(scanBasePackages = "com.csg.prm")
 @EnableDiscoveryClient
 @EnableAsync
-@MapperScan({"com.csg.prm.confirm.mapper", "com.csg.prm.confirm.aitool.mapper", "com.csg.prm.confirm.auth", "com.csg.prm.common.evidence.mapper"})
+@MapperScan({"com.csg.prm.confirm.mapper", "com.csg.prm.confirm.aitool.mapper", "com.csg.prm.confirm.auth", "com.csg.prm.confirm.system", "com.csg.prm.common.evidence.mapper"})
 public class ConfirmApplication {
 
     public static void main(String[] args) {

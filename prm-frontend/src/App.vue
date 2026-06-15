@@ -140,7 +140,8 @@ const GROUP_NAMES = {
   '/dpr/monitor': '权益动态监测',
   '/dpr/confirm': '数据确权管理',
   '/dpr/auth': '数据授权管理',
-  '/dpr/dashboard': '综合分析管理'
+  '/dpr/dashboard': '综合分析管理',
+  '/dpr/system': '系统管理'
 }
 
 // 当前一级分组名(面包屑第二级)
@@ -157,7 +158,7 @@ const pageTitle = computed(() => route.meta.title || '')
 const pageGoal = computed(() => route.meta.goal || '')
 
 // 平台既有功能集成位(评审2:体现"平台内一级子菜单"而非独立工具)
-const PLAT_MENUS = ['数据资产目录', '数据资产卡片', '数据服务']
+const PLAT_MENUS = []
 
 // 手风琴:根据当前路由自动展开所属一级分组(unique-opened 负责切换时互斥折叠)
 const openeds = computed(() => {
@@ -169,6 +170,7 @@ const openeds = computed(() => {
   if (AUTH_CONFIG.includes(p)) return ['07']
   if (p.startsWith('/dpr/auth')) return ['04']
   if (p.startsWith('/dpr/dashboard')) return ['05']
+  if (p.startsWith('/dpr/system')) return ['08']
   return ['01']
 })
 </script>

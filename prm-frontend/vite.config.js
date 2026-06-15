@@ -18,6 +18,7 @@ export default defineConfig({
       '/api/dpr/ledger': { target: 'http://localhost:9101', changeOrigin: true },
       '/api/dpr/monitor': { target: 'http://localhost:9101', changeOrigin: true },
       '/api/dpr/confirm': { target: 'http://localhost:9102', changeOrigin: true },
+      '/api/dpr/system': { target: 'http://localhost:9102', changeOrigin: true },
       '/api/dpr/auth': { target: 'http://localhost:9103', changeOrigin: true }
     }
   }
