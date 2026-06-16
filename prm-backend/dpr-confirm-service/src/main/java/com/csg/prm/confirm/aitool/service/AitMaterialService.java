@@ -14,8 +14,8 @@ import java.util.List;
  */
 public interface AitMaterialService {
 
-    /** 术语库匹配建议项 */
-    record TermSuggestion(String field, String value, String standardTerm, boolean standard) {
+    /** 术语库匹配建议项;sourceLocation=该值在材料正文中的定位(1.3#1 来源字段:标注所在位置) */
+    record TermSuggestion(String field, String value, String standardTerm, boolean standard, String sourceLocation) {
     }
 
     /** #4 材料归集分组:同一数据表标识下的一组材料(按类别关联) */

@@ -104,11 +104,11 @@
           <el-tag :type="parse.reviewStatus==='自动通过'?'success':'warning'">{{ parse.reviewStatus || '—' }}</el-tag>
         </el-descriptions-item>
       </el-descriptions>
-      <div style="margin-top:14px;font-weight:600">术语库匹配 · 南网/电力专属术语库（非标可一键采用标准术语）</div>
+      <div style="margin-top:14px;font-weight:600">要素来源定位 · 抽取值在材料中的所在位置（数据来源等来源字段标注定位）</div>
       <el-table :data="terms" border size="small">
         <el-table-column prop="field" label="字段" width="110" />
-        <el-table-column prop="value" label="抽取值" />
-        <el-table-column prop="standardTerm" label="标准术语建议" />
+        <el-table-column prop="value" label="抽取值" width="140" show-overflow-tooltip />
+        <el-table-column prop="sourceLocation" label="来源（材料中所在位置）" show-overflow-tooltip />
         <el-table-column label="规范" width="90" align="center">
           <template #default="{ row }"><el-tag :type="row.standard?'success':'warning'">{{ row.standard?'标准':'建议修正' }}</el-tag></template>
         </el-table-column>
@@ -407,6 +407,12 @@
       <div style="margin-bottom:10px">
         <el-switch v-model="cleanUseModel" active-text="规则+模型混合" inactive-text="仅规则" />
         <el-button type="primary" size="small" :loading="cleaning" style="margin-left:12px" @click="runClean">运行清洗</el-button>
+        <el-upload :show-file-list="false" :multiple="true" :http-request="onTplUpload"
+          accept=".xlsx,.xls,.docx,.csv,.txt" style="display:inline-block;margin-left:12px">
+          <el-button size="small" type="success" :loading="tplUploading">上传结构化模板</el-button>
+        </el-upload>
+        <el-button size="small" :disabled="!tplCompareRows.length" style="margin-left:8px"
+          @click="onDownloadTplCompare">下载对比结果</el-button>
         <span v-if="cleanStats" class="prm-table-note" style="margin-left:12px">
           共 {{ cleanStats.fields }} 字段 · 正常 {{ cleanStats.ok }} · 缺失 {{ cleanStats.missing }} · 冲突 {{ cleanStats.conflict }} · 异常 {{ cleanStats.abnormal }} · 重复 {{ cleanStats.duplicate }}
         </span>
@@ -446,6 +452,24 @@
             </el-table-column>
           </el-table>
         </el-tab-pane>
+        <el-tab-pane :label="`对比日志 (${tplCompareRows.length})`" name="tpl">
+          <div class="prm-table-note" style="margin-bottom:6px">
+            上传结构化模板后,模板字段与材料抽取内容自动关联审核;支持多模板累积,可下载对比结果。
+          </div>
+          <el-empty v-if="!tplCompareRows.length" :image-size="48" description="尚无对比记录,请点击上方“上传结构化模板”" />
+          <el-table v-else :data="tplCompareRows" border size="small" max-height="380">
+            <el-table-column prop="templateName" label="模板" width="150" show-overflow-tooltip />
+            <el-table-column prop="tplField" label="模板字段" width="110" show-overflow-tooltip />
+            <el-table-column prop="tplValue" label="模板值" show-overflow-tooltip />
+            <el-table-column prop="materialValue" label="材料抽取值" show-overflow-tooltip />
+            <el-table-column label="一致性" width="84" align="center">
+              <template #default="{ row }">
+                <el-tag size="small" :type="row.consistency==='一致'?'success':(row.consistency==='不一致'?'danger':'info')">{{ row.consistency }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="sourceLocation" label="材料中所在位置" show-overflow-tooltip />
+          </el-table>
+        </el-tab-pane>
       </el-tabs>
     </el-dialog>
 
@@ -471,7 +495,8 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { UploadFilled } from '@element-plus/icons-vue'
 import { pageAitMaterial, uploadAitMaterialFile, uploadAitMaterialBatch, parseAitMaterial, getAitParse, aitTermCheck, confirmAitTerm, aitCompares, aitProgress, aitParseExportUrl, aitSegments, aitAggregate, aitAccuracy, aitClean, aitCleanPending, aitCleanLog, aitExtractElements, aitProfile,
   aitRecordPage, aitRecordExportUrl, aitBatchParse, aitBatchProgress, aitTemplatePage, aitTemplateCreate, aitTemplateUpdate, aitTemplateNewVersion, aitTemplateDownloadUrl, aitParseConfigList, aitParseConfigSave, aitParseConfigDelete,
-  aitOpsCapabilities, aitOpsModelConfig, aitOpsTaskPage, aitOpsTaskRun, aitOpsRunLogPage, aitOpsRunLogStats } from '@/api/aitool'
+  aitOpsCapabilities, aitOpsModelConfig, aitOpsTaskPage, aitOpsTaskRun, aitOpsRunLogPage, aitOpsRunLogStats,
+  aitTplCompareUpload, aitTplCompareLog, aitTplCompareExportUrl } from '@/api/aitool'
 import { materialParsePhaseText } from '@/lib/aiPhases'
 
 const MAX_BATCH = 50
@@ -489,6 +514,7 @@ const aggDlg = ref(false); const aggGroups = ref([])
 const accDlg = ref(false); const acc = ref(null)
 const cleanDlg = ref(false); const cleaning = ref(false); const cleanUseModel = ref(true); const cleanTab = ref('base')
 const cleanBase = ref([]); const cleanPending = ref([]); const cleanLogs = ref([]); const cleanStats = ref(null)
+const tplCompareRows = ref([]); const tplUploading = ref(false)
 const profileDlg = ref(false); const profiling = ref(false); const profileUseModel = ref(true); const profile = ref(null)
 // 1.4 材料解析与管理
 const recDlg = ref(false); const records = ref([]); const recTotal = ref(0); const recQuery = reactive({ current: 1, size: 10, fileName: '', operator: '' })
@@ -694,9 +720,29 @@ function cleanStTag(s) { return { 正常: 'success', 缺失: 'warning', 冲突: 
 async function onClean(row) {
   curMaterialId.value = row.materialId
   cleanBase.value = []; cleanPending.value = []; cleanLogs.value = []; cleanStats.value = null
+  tplCompareRows.value = []
   cleanTab.value = 'base'
   cleanDlg.value = true
   await runClean()
+  try { tplCompareRows.value = await aitTplCompareLog(curMaterialId.value) || [] } catch (e) { /* 忽略 */ }
+}
+// 1.1.1.1#4 上传结构化模板 → 与材料抽取内容自动关联审核 → 对比日志(支持多模板累积)
+async function onTplUpload({ file }) {
+  tplUploading.value = true
+  try {
+    const fd = new FormData(); fd.append('files', file)
+    await aitTplCompareUpload(curMaterialId.value, fd)
+    tplCompareRows.value = await aitTplCompareLog(curMaterialId.value) || []
+    cleanTab.value = 'tpl'
+    ElMessage.success(`模板「${file.name}」已对比,共 ${tplCompareRows.value.length} 条`)
+  } catch (e) {
+    ElMessage.error('模板对比失败:' + (e?.message || ''))
+  } finally {
+    tplUploading.value = false
+  }
+}
+function onDownloadTplCompare() {
+  window.open(aitTplCompareExportUrl(curMaterialId.value), '_blank')
 }
 async function runClean() {
   cleaning.value = true

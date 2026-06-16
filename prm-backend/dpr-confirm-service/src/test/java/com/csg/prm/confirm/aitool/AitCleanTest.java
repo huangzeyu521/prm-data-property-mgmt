@@ -147,4 +147,53 @@ class AitCleanTest {
         assertNotNull(rtLog.getRule());
         assertEquals(AitCleanLog.METHOD_RULE, rtLog.getMethod());
     }
+
+    /** 1.1.1.1#4 结构化模板上传 → 与材料抽取内容自动关联审核 → 对比日志 + 下载。 */
+    @Test
+    void template_compare_maps_audits_and_logs() {
+        AitMaterial m = new AitMaterial();
+        m.setFileName("确权材料-模板对比.docx");
+        m.setContent("权利主体:广东电网有限责任公司,数据持有权,自行生产,电网生产数据,有效期3年,已盖章");
+        String id = materialService.upload(m);
+        materialService.parse(id);
+
+        String tpl = "权利类型：数据持有权\n数据来源：自行生产\n敏感类型：电网生产数据\n授权范围：不存在的范围XYZ";
+        AitCleanService.TplCompareResult r = cleanService.templateCompare(
+                id, "结构化模板.txt", tpl.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        assertNotNull(r);
+        assertFalse(r.rows().isEmpty(), "应生成对比行");
+        assertTrue(r.matched() >= 1, "权利类型/数据来源应判一致");
+
+        List<com.csg.prm.confirm.aitool.entity.AitTplCompare> log = cleanService.templateCompareLog(id);
+        assertEquals(r.rows().size(), log.size(), "对比日志应落库");
+        var rtRow = log.stream().filter(x -> x.getTplField().contains("权利类型")).findFirst().orElse(null);
+        assertNotNull(rtRow, "应含权利类型对比行");
+        assertEquals(com.csg.prm.confirm.aitool.entity.AitTplCompare.C_MATCH, rtRow.getConsistency());
+
+        cleanService.templateCompare(id, "模板2.txt",
+                "权利主体：广东电网有限责任公司".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        assertTrue(cleanService.templateCompareLog(id).size() > log.size(), "多模板应累积");
+
+        byte[] csv = cleanService.exportTemplateCompare(id);
+        String text = new String(csv, java.nio.charset.StandardCharsets.UTF_8);
+        assertTrue(text.contains("模板名称,模板字段,模板值,材料抽取值,一致性,材料中所在位置"), "CSV 应含表头");
+        assertTrue(text.contains("数据持有权"), "CSV 应含对比值");
+    }
+
+    /** 1.3#1 来源字段:termCheck 返回值在材料中的定位(sourceLocation)。 */
+    @Test
+    void term_check_returns_source_location() {
+        AitMaterial m = new AitMaterial();
+        m.setFileName("来源定位.docx");
+        m.setContent("本材料数据来源为自行生产,涉及电网生产数据,数据持有权,有效期3年。");
+        String id = materialService.upload(m);
+        materialService.parse(id);
+        List<AitMaterialService.TermSuggestion> terms = materialService.termCheck(id);
+        assertFalse(terms.isEmpty());
+        assertTrue(terms.stream().allMatch(t -> t.sourceLocation() != null), "每项应带来源定位");
+        var ds = terms.stream().filter(t -> "数据来源".equals(t.field())).findFirst().orElse(null);
+        assertNotNull(ds);
+        assertTrue(ds.sourceLocation().contains("偏移") || ds.sourceLocation().contains("未在"),
+                "来源应标注所在位置,实际=" + ds.sourceLocation());
+    }
 }

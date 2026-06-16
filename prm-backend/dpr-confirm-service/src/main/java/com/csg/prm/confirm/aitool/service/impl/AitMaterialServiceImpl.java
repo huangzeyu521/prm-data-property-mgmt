@@ -1017,18 +1017,35 @@ public class AitMaterialServiceImpl implements AitMaterialService {
     @Override
     public List<TermSuggestion> termCheck(String materialId) {
         AitParseResult r = getParse(materialId);
+        AitMaterial m = require(materialId);
+        String content = m.getContent() == null ? "" : m.getContent();
         List<TermSuggestion> out = new ArrayList<>();
-        // 多要素与内置南网/电力术语库匹配:非标/模糊→标注 + 标准术语建议
-        addTerm(out, AitTermLibrary.F_RIGHT_TYPE, r.getRightType());
-        addTerm(out, AitTermLibrary.F_AUTH_SCOPE, r.getAuthScope());
-        addTerm(out, AitTermLibrary.F_DATA_SOURCE, r.getDataSource());
-        addTerm(out, AitTermLibrary.F_SENSITIVE, r.getSensitiveType());
+        // 多要素与内置南网/电力术语库匹配 + 来源字段在材料中所在位置(1.3#1)
+        addTerm(out, AitTermLibrary.F_RIGHT_TYPE, r.getRightType(), content);
+        addTerm(out, AitTermLibrary.F_AUTH_SCOPE, r.getAuthScope(), content);
+        addTerm(out, AitTermLibrary.F_DATA_SOURCE, r.getDataSource(), content);
+        addTerm(out, AitTermLibrary.F_SENSITIVE, r.getSensitiveType(), content);
         return out;
     }
 
-    private void addTerm(List<TermSuggestion> out, String field, String value) {
+    private void addTerm(List<TermSuggestion> out, String field, String value, String content) {
         AitTermLibrary.Match m = AitTermLibrary.match(field, value);
-        out.add(new TermSuggestion(field, value, m.standardTerm(), m.standard()));
+        out.add(new TermSuggestion(field, value, m.standardTerm(), m.standard(), locateValue(content, value)));
+    }
+
+    /** 1.3#1 来源字段定位:返回值在材料正文中的所在位置(上下文片段 + 字符偏移);未命中给出说明。 */
+    private String locateValue(String content, String value) {
+        if (!StringUtils.hasText(value) || !StringUtils.hasText(content)) {
+            return "未在材料正文中定位(可能来自文件名/OCR版面)";
+        }
+        int idx = content.indexOf(value.trim());
+        if (idx < 0) {
+            return "未在材料正文中定位";
+        }
+        int from = Math.max(0, idx - 12);
+        int to = Math.min(content.length(), idx + value.trim().length() + 12);
+        String snippet = (from > 0 ? "…" : "") + content.substring(from, to) + (to < content.length() ? "…" : "");
+        return "「" + snippet.replaceAll("\\s+", " ") + "」(偏移 " + idx + ")";
     }
 
     @Override

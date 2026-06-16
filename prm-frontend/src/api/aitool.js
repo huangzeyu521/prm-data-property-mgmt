@@ -33,6 +33,11 @@ export const aitClean = (id, body) => request.post(`/dpr/confirm/aitool/clean/${
 export const aitAuditBase = (id) => request.get(`/dpr/confirm/aitool/clean/${id}/audit-base`)
 export const aitCleanPending = (id) => request.get(`/dpr/confirm/aitool/clean/${id}/pending`)
 export const aitCleanLog = (id) => request.get(`/dpr/confirm/aitool/clean/${id}/log`)
+// 1.1.1.1#4 结构化模板上传对比(多模板)/ 对比日志 / 下载对比结果
+export const aitTplCompareUpload = (id, formData) =>
+  request.post(`/dpr/confirm/aitool/clean/${id}/template-compare`, formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 120000 })
+export const aitTplCompareLog = (id) => request.get(`/dpr/confirm/aitool/clean/${id}/template-compare`)
+export const aitTplCompareExportUrl = (id) => `/api/dpr/confirm/aitool/clean/${id}/template-compare/export`
 
 // 1.3 确权要素识别与特征抽取
 export const aitExtractElements = (id, useModel) => request.post(`/dpr/confirm/aitool/element/${id}/extract`, null, { params: { useModel }, timeout: 120000 })

@@ -8,16 +8,31 @@ import com.csg.prm.confirm.aitool.entity.AitCleanLog;
 import com.csg.prm.confirm.aitool.entity.AitMaterial;
 import com.csg.prm.confirm.aitool.entity.AitParseConfig;
 import com.csg.prm.confirm.aitool.entity.AitParseResult;
+import com.csg.prm.confirm.aitool.entity.AitTplCompare;
 import com.csg.prm.confirm.aitool.gateway.AiToolParseGateway;
 import com.csg.prm.confirm.aitool.mapper.AitAuditBaseMapper;
 import com.csg.prm.confirm.aitool.mapper.AitCleanLogMapper;
 import com.csg.prm.confirm.aitool.mapper.AitMaterialMapper;
 import com.csg.prm.confirm.aitool.mapper.AitParseResultMapper;
+import com.csg.prm.confirm.aitool.mapper.AitTplCompareMapper;
 import com.csg.prm.confirm.aitool.term.AitTermLibrary;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.xwpf.usermodel.XWPFTable;
+import org.apache.poi.xwpf.usermodel.XWPFTableRow;
+import org.apache.poi.xwpf.extractor.XWPFWordExtractor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -68,16 +83,19 @@ public class AitCleanService {
     private final AitAuditBaseMapper auditMapper;
     private final AiToolParseGateway gateway;
     private final AitParseConfigService configService;
+    private final AitTplCompareMapper tplCmpMapper;
 
     public AitCleanService(AitMaterialMapper materialMapper, AitParseResultMapper parseMapper,
                            AitCleanLogMapper logMapper, AitAuditBaseMapper auditMapper,
-                           AiToolParseGateway gateway, AitParseConfigService configService) {
+                           AiToolParseGateway gateway, AitParseConfigService configService,
+                           AitTplCompareMapper tplCmpMapper) {
         this.materialMapper = materialMapper;
         this.parseMapper = parseMapper;
         this.logMapper = logMapper;
         this.auditMapper = auditMapper;
         this.gateway = gateway;
         this.configService = configService;
+        this.tplCmpMapper = tplCmpMapper;
     }
 
     /** 1.4#4 管理员配置的额外字段映射(原始字段名 → 模板字段键),并入字段对齐。 */
@@ -472,6 +490,228 @@ public class AitCleanService {
     private static void put(Map<String, String> m, String tkey, String... aliases) {
         for (String a : aliases) {
             m.put(normKey(a), tkey);
+        }
+    }
+
+    // ============ 1.1.1.1#4 结构化模板上传 → 与材料抽取内容自动关联审核 → 对比日志 ============
+
+    public record TplCompareResult(String batchNo, String templateName, int matched, int mismatched, int missing,
+                                   List<AitTplCompare> rows) {
+    }
+
+    /**
+     * 上传结构化模板与材料抽取内容自动关联审核,生成对比日志(支持多模板累积)。
+     * 模板解析:Excel(字段|值 两列或 表头+数据行) / Word(字段:值 行) / 文本(字段:值)。
+     */
+    @Transactional
+    public TplCompareResult templateCompare(String materialId, String templateName, byte[] data) {
+        AitMaterial m = materialMapper.selectById(materialId);
+        if (m == null) {
+            throw new BizException("材料不存在");
+        }
+        if (data == null || data.length == 0) {
+            throw new BizException("模板文件为空");
+        }
+        Map<String, String> tpl = parseTemplate(templateName, data);
+        if (tpl.isEmpty()) {
+            throw new BizException("未能从模板解析出“字段:值”,请检查模板格式(Excel两列/Word或文本“字段:值”)");
+        }
+        Map<String, String> matVals = materialFieldValues(materialId, m);
+        String content = m.getContent() == null ? "" : m.getContent();
+        String batchNo = "TPL-" + UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
+        int rowNo = 0;
+        int matched = 0;
+        int mismatched = 0;
+        int missing = 0;
+        List<AitTplCompare> rows = new ArrayList<>();
+        for (Map.Entry<String, String> e : tpl.entrySet()) {
+            rowNo++;
+            String tplField = e.getKey();
+            String tplValue = e.getValue();
+            String matVal = matchMaterialValue(tplField, matVals);
+            String consistency;
+            if (!StringUtils.hasText(matVal)) {
+                consistency = AitTplCompare.C_MISSING;
+                missing++;
+            } else if (norm(matVal).contains(norm(tplValue)) || norm(tplValue).contains(norm(matVal))) {
+                consistency = AitTplCompare.C_MATCH;
+                matched++;
+            } else {
+                consistency = AitTplCompare.C_MISMATCH;
+                mismatched++;
+            }
+            AitTplCompare c = new AitTplCompare();
+            c.setMaterialId(materialId);
+            c.setBatchNo(batchNo);
+            c.setTemplateName(templateName);
+            c.setRowNo(rowNo);
+            c.setTplField(tplField);
+            c.setTplValue(tplValue);
+            c.setMaterialValue(matVal);
+            c.setConsistency(consistency);
+            c.setSourceLocation(locateInContent(content, StringUtils.hasText(matVal) ? matVal : tplValue));
+            tplCmpMapper.insert(c);
+            rows.add(c);
+        }
+        return new TplCompareResult(batchNo, templateName, matched, mismatched, missing, rows);
+    }
+
+    public List<AitTplCompare> templateCompareLog(String materialId) {
+        return tplCmpMapper.selectList(new LambdaQueryWrapper<AitTplCompare>()
+                .eq(AitTplCompare::getMaterialId, materialId)
+                .orderByAsc(AitTplCompare::getCreateTime).orderByAsc(AitTplCompare::getRowNo));
+    }
+
+    /** 对比结果下载(CSV,UTF-8 BOM,Excel 友好)。 */
+    public byte[] exportTemplateCompare(String materialId) {
+        List<AitTplCompare> list = templateCompareLog(materialId);
+        StringBuilder sb = new StringBuilder("﻿模板名称,模板字段,模板值,材料抽取值,一致性,材料中所在位置\n");
+        for (AitTplCompare c : list) {
+            sb.append(csv(c.getTemplateName())).append(',').append(csv(c.getTplField())).append(',')
+                    .append(csv(c.getTplValue())).append(',').append(csv(c.getMaterialValue())).append(',')
+                    .append(csv(c.getConsistency())).append(',').append(csv(c.getSourceLocation())).append('\n');
+        }
+        return sb.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    private static String csv(String v) {
+        if (v == null) {
+            return "";
+        }
+        return (v.contains(",") || v.contains("\"") || v.contains("\n")) ? "\"" + v.replace("\"", "\"\"") + "\"" : v;
+    }
+
+    /** 材料抽取的字段→值(来自解析结果 + 清洗审核底表),键统一归一化便于匹配。 */
+    private Map<String, String> materialFieldValues(String materialId, AitMaterial m) {
+        Map<String, String> v = new LinkedHashMap<>();
+        AitParseResult r = parseMapper.selectOne(
+                new LambdaQueryWrapper<AitParseResult>().eq(AitParseResult::getMaterialId, materialId));
+        if (r != null) {
+            v.put(normKey("权利主体"), r.getRightSubject());
+            v.put(normKey("权利客体"), r.getRightObject());
+            v.put(normKey("权利类型"), r.getRightType());
+            v.put(normKey("权利期限"), r.getRightTerm());
+            v.put(normKey("授权范围"), r.getAuthScope());
+            v.put(normKey("数据来源"), r.getDataSource());
+            v.put(normKey("敏感类型"), r.getSensitiveType());
+            v.put(normKey("印章真伪"), r.getSealValid());
+        }
+        v.put(normKey("表名"), m.getDataTableRef() == null ? m.getFileName() : m.getDataTableRef());
+        // 叠加清洗审核底表的字段级清洗后值
+        for (AitAuditBase a : auditMapper.selectList(new LambdaQueryWrapper<AitAuditBase>()
+                .eq(AitAuditBase::getMaterialId, materialId))) {
+            if (StringUtils.hasText(a.getCleanValue())) {
+                v.putIfAbsent(normKey(a.getFieldLabel()), a.getCleanValue());
+            }
+        }
+        v.values().removeIf(x -> !StringUtils.hasText(x));
+        return v;
+    }
+
+    /** 模板字段名 → 材料值:先走清洗别名表归一,再按归一键匹配。 */
+    private String matchMaterialValue(String tplField, Map<String, String> matVals) {
+        String nk = normKey(tplField);
+        if (matVals.containsKey(nk)) {
+            return matVals.get(nk);
+        }
+        String alias = ALIAS.get(nk);  // 别名→模板键(tableName/rightType/dataSource...)
+        if (alias != null) {
+            // 别名键再映回中文标准字段名探测
+            for (Map.Entry<String, String> e : matVals.entrySet()) {
+                if (e.getKey().equals(nk)) {
+                    return e.getValue();
+                }
+            }
+        }
+        // 模糊:键互相包含
+        for (Map.Entry<String, String> e : matVals.entrySet()) {
+            if (e.getKey().contains(nk) || nk.contains(e.getKey())) {
+                return e.getValue();
+            }
+        }
+        return null;
+    }
+
+    private static String locateInContent(String content, String value) {
+        if (!StringUtils.hasText(content) || !StringUtils.hasText(value)) {
+            return "未在材料正文中定位";
+        }
+        int idx = content.indexOf(value.trim());
+        if (idx < 0) {
+            return "未在材料正文中定位";
+        }
+        int from = Math.max(0, idx - 10);
+        int to = Math.min(content.length(), idx + value.trim().length() + 10);
+        return "「" + (from > 0 ? "…" : "") + content.substring(from, to).replaceAll("\\s+", " ")
+                + (to < content.length() ? "…" : "") + "」(偏移 " + idx + ")";
+    }
+
+    /** 解析结构化模板为 字段→值。 */
+    private Map<String, String> parseTemplate(String fileName, byte[] data) {
+        String ext = fileName == null ? "" : fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase();
+        Map<String, String> out = new LinkedHashMap<>();
+        try {
+            if ("xls".equals(ext) || "xlsx".equals(ext)) {
+                DataFormatter fmt = new DataFormatter();
+                try (Workbook wb = WorkbookFactory.create(new ByteArrayInputStream(data))) {
+                    for (int si = 0; si < wb.getNumberOfSheets(); si++) {
+                        Sheet sheet = wb.getSheetAt(si);
+                        for (Row row : sheet) {
+                            String k = null;
+                            String val = null;
+                            int ci = 0;
+                            for (Cell cell : row) {
+                                String cv = fmt.formatCellValue(cell).trim();
+                                if (ci == 0) {
+                                    k = cv;
+                                } else if (ci == 1) {
+                                    val = cv;
+                                }
+                                ci++;
+                            }
+                            if (StringUtils.hasText(k) && StringUtils.hasText(val) && !"字段".equals(k)) {
+                                out.put(k, val);
+                            }
+                        }
+                    }
+                }
+            } else if ("docx".equals(ext)) {
+                try (XWPFDocument doc = new XWPFDocument(new ByteArrayInputStream(data))) {
+                    for (XWPFParagraph p : doc.getParagraphs()) {
+                        addKv(out, p.getText());
+                    }
+                    for (XWPFTable t : doc.getTables()) {
+                        for (XWPFTableRow row : t.getRows()) {
+                            var cells = row.getTableCells();
+                            if (cells.size() >= 2) {
+                                String k = cells.get(0).getText().trim();
+                                String val = cells.get(1).getText().trim();
+                                if (StringUtils.hasText(k) && StringUtils.hasText(val) && !"字段".equals(k)) {
+                                    out.put(k, val);
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                String text = new String(data, StandardCharsets.UTF_8);
+                for (String line : text.split("\\r?\\n")) {
+                    addKv(out, line);
+                }
+            }
+        } catch (Exception e) {
+            // 解析失败返回已得到的键值(可能为空 → 上层提示)
+        }
+        return out;
+    }
+
+    private static void addKv(Map<String, String> out, String line) {
+        if (!StringUtils.hasText(line)) {
+            return;
+        }
+        java.util.regex.Matcher mt = java.util.regex.Pattern.compile("^\\s*([^:：]{1,30})[:：]\\s*(.+?)\\s*$").matcher(line);
+        if (mt.find()) {
+            out.put(mt.group(1).trim(), mt.group(2).trim());
         }
     }
 }

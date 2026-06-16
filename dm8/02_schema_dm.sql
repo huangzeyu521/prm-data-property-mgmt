@@ -1946,3 +1946,26 @@ COMMENT ON TABLE IM_SYS_OPLOG IS '系统操作日志';
 -- =====================================================================
 -- 完。60 张表。测试数据见 03_data_dm.sql
 -- =====================================================================
+
+-- 1.1.1.1#4 结构化模板对比日志
+CREATE TABLE IM_AIT_TPL_COMPARE (
+  CEC_TPL_CMP_ID     VARCHAR(64),
+  CEC_MATERIAL_ID    VARCHAR(64),
+  CEC_BATCH_NO       VARCHAR(64),
+  CEC_TEMPLATE_NAME  VARCHAR(255),
+  CEC_ROW_NO         INT,
+  CEC_TPL_FIELD      VARCHAR(128),
+  CEC_TPL_VALUE      VARCHAR(2000),
+  CEC_MATERIAL_VALUE VARCHAR(2000),
+  CEC_CONSISTENCY    VARCHAR(20),
+  CEC_SOURCE_LOCATION VARCHAR(1000),
+  CEC_PROVINCE_CODE  VARCHAR(32),
+  CEC_BUREAU_CODE    VARCHAR(32),
+  CEC_CREATOR_ID     VARCHAR(64),
+  CEC_CREATE_TIME    TIMESTAMP,
+  CEC_UPDATER_ID     VARCHAR(64),
+  CEC_UPDATE_TIME    TIMESTAMP,
+  CEC_DEL_FLAG       INT NOT NULL DEFAULT 0,
+  PRIMARY KEY (CEC_TPL_CMP_ID)
+);
+COMMENT ON TABLE IM_AIT_TPL_COMPARE IS '智能工具-结构化模板对比日志';
