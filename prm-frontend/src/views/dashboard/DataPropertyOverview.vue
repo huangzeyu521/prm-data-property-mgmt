@@ -78,7 +78,7 @@ async function load() {
     yAxis: [{ type: 'value', name: '登记数' }, { type: 'value', name: '%', axisLabel: { formatter: '{value}%' } }],
     series: [
       { name: '确权登记数', type: 'bar', data: tr.map(p => p.count), itemStyle: { color: '#2f6bff' } },
-      { name: '环比MoM%', type: 'line', yAxisIndex: 1, smooth: true, data: tr.map(p => p.momRate), itemStyle: { color: '#e6a23c' } },
+      { name: '环比MoM%', type: 'line', yAxisIndex: 1, smooth: true, data: tr.map(p => p.momRate), itemStyle: { color: '#ff7800' } },
       { name: '同比YoY%', type: 'line', yAxisIndex: 1, smooth: true, data: tr.map(p => p.yoyRate), itemStyle: { color: '#67c23a' } }
     ]
   })

@@ -64,8 +64,8 @@
         <el-timeline-item v-for="l in logs" :key="l.logId" :timestamp="fmt(l.createTime)" placement="top"
           :type="l.toStatus === '已驳回' ? 'danger' : (l.toStatus === '已完成' ? 'success' : 'primary')">
           <div style="font-weight:600">{{ l.nodeName }}{{ l.node ? '（节点' + l.node + '）' : '' }}：{{ l.fromStatus }} → {{ l.toStatus }}</div>
-          <div style="font-size:12px;color:#666;margin-top:2px">责任人：{{ l.responder || '-' }}</div>
-          <div v-if="l.opinion" style="font-size:12px;color:#666;margin-top:2px">意见：{{ l.opinion }}</div>
+          <div style="font-size:12px;color:#71717a;margin-top:2px">责任人：{{ l.responder || '-' }}</div>
+          <div v-if="l.opinion" style="font-size:12px;color:#71717a;margin-top:2px">意见：{{ l.opinion }}</div>
           <div style="font-size:12px;color:#2f6bff;margin-top:4px"><el-icon style="vertical-align:-2px"><Bell /></el-icon> {{ l.pushChannel }}：{{ l.notifyContent }}</div>
         </el-timeline-item>
       </el-timeline>

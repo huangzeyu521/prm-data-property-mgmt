@@ -176,21 +176,21 @@ const openeds = computed(() => {
 </script>
 
 <style scoped>
-/* 顶栏:白底(数研院典型界面),左 logo+蓝色平台名,水平平台导航,右侧深色图标组 */
+/* 顶栏:主蓝通栏(数研院典型界面母版),左 logo+白字平台名,水平平台导航,右侧白色图标组 */
 .prm-header {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #fff;
-  color: var(--prm-color-text);
-  border-bottom: 1px solid #e8e8e8;
+  background: var(--prm-color-primary);
+  color: #fff;
+  border-bottom: none;
 }
-.prm-collapse-btn { color: #666; padding: 4px; }
-.prm-collapse-btn:hover { color: var(--prm-color-primary); }
+.prm-collapse-btn { color: #fff; padding: 4px; }
+.prm-collapse-btn:hover { color: rgba(255, 255, 255, 0.75); }
 .prm-logo { display: flex; flex-direction: column; line-height: 1.15; }
-.prm-logo-csg { font-size: 11px; color: #8c8c8c; letter-spacing: 1px; }
-.prm-logo-name { font-size: 17px; font-weight: 700; color: var(--prm-color-primary); white-space: nowrap; }
-/* 平台一级导航:水平菜单,激活项蓝字+底部蓝条(典型界面顶部导航) */
+.prm-logo-csg { font-size: 11px; color: rgba(255, 255, 255, 0.75); letter-spacing: 1px; }
+.prm-logo-name { font-size: 17px; font-weight: 700; color: #fff; white-space: nowrap; }
+/* 平台一级导航:水平菜单,激活项白字+底部白条(蓝顶导航) */
 .prm-plat-nav { display: flex; align-items: stretch; gap: 2px; margin-left: 20px; height: 100%; }
 .plat-item {
   font-size: 14px;
@@ -200,8 +200,8 @@ const openeds = computed(() => {
   white-space: nowrap;
   position: relative;
 }
-.plat-item.disabled { color: #8c8c8c; cursor: not-allowed; }
-.plat-item.active { color: var(--prm-color-primary); font-weight: 600; }
+.plat-item.disabled { color: rgba(255, 255, 255, 0.5); cursor: not-allowed; }
+.plat-item.active { color: #fff; font-weight: 600; }
 .plat-item.active::after {
   content: "";
   position: absolute;
@@ -209,35 +209,42 @@ const openeds = computed(() => {
   right: 12px;
   bottom: 0;
   height: 2px;
-  background: var(--prm-color-primary);
+  background: #fff;
 }
 .prm-goal { margin-left: auto; font-size: 12px; color: #8c8c8c; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 52%; }
 .prm-spacer { flex: 1; }
 .prm-search { width: 260px; }
 .prm-role { width: 150px; flex: none; }
-.prm-user { display: inline-flex; align-items: center; gap: 4px; color: #262626; cursor: pointer; font-size: 13px; padding: 0 4px; }
-.prm-user:hover { color: var(--prm-color-primary); }
-.prm-ait-btn { color: var(--prm-color-primary); font-size: 13px; }
-.prm-ait-btn:hover { color: var(--prm-color-primary-light); }
-/* 侧栏:深蓝渐变+白字菜单(典型界面左导航),激活项亮蓝高亮 */
+.prm-user { display: inline-flex; align-items: center; gap: 4px; color: #fff; cursor: pointer; font-size: 13px; padding: 0 4px; }
+.prm-user:hover { color: rgba(255, 255, 255, 0.8); }
+.prm-ait-btn { color: #fff; font-size: 13px; }
+.prm-ait-btn:hover { color: rgba(255, 255, 255, 0.8); }
+/* 顶栏内铃铛/工作指引触发器:蓝底上改白 */
+.prm-header :deep(.nc-bell),
+.prm-header :deep(.wg-trigger) { color: #fff; }
+.prm-header :deep(.nc-bell:hover),
+.prm-header :deep(.wg-trigger:hover) { color: rgba(255, 255, 255, 0.8); }
+/* 侧栏:白底菜单(数研院典型界面母版),激活项主色文字+浅蓝底+左主色竖条 */
 .prm-aside {
-  background: linear-gradient(180deg, #2b62d9 0%, #1d4ab4 55%, #16357f 100%);
+  background: #fff;
+  border-right: 1px solid #e8e8e8;
   transition: width 0.25s;
   overflow-x: hidden;
 }
 .prm-aside :deep(.el-menu) {
   border-right: none;
   background: transparent;
-  --el-menu-text-color: rgba(255, 255, 255, 0.85);
-  --el-menu-hover-text-color: #fff;
-  --el-menu-active-color: #fff;
+  --el-menu-text-color: var(--prm-color-text);
+  --el-menu-hover-text-color: var(--prm-color-primary);
+  --el-menu-active-color: var(--prm-color-primary);
   --el-menu-bg-color: transparent;
-  --el-menu-hover-bg-color: rgba(255, 255, 255, 0.12);
+  --el-menu-hover-bg-color: var(--prm-color-selected-bg);
 }
-.prm-aside :deep(.el-sub-menu .el-menu) { background: rgba(0, 0, 0, 0.12); }
+.prm-aside :deep(.el-sub-menu .el-menu) { background: #fafafa; }
 .prm-aside :deep(.el-menu-item.is-active) {
-  background: var(--prm-color-primary);
-  color: #fff;
+  background: var(--prm-color-selected-bg);
+  color: var(--prm-color-primary);
+  font-weight: 600;
   position: relative;
 }
 .prm-aside :deep(.el-menu-item.is-active)::before {
@@ -247,10 +254,10 @@ const openeds = computed(() => {
   top: 0;
   bottom: 0;
   width: 3px;
-  background: #82b2ff;
+  background: var(--prm-color-primary);
 }
 .prm-aside :deep(.el-sub-menu__title:hover),
-.prm-aside :deep(.el-menu-item:hover) { background: rgba(255, 255, 255, 0.12); }
+.prm-aside :deep(.el-menu-item:hover) { background: var(--prm-color-selected-bg); }
 .prm-main { padding: 0; display: flex; flex-direction: column; }
 .prm-crumb {
   position: sticky;

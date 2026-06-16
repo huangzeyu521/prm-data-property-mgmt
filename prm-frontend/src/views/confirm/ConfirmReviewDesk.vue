@@ -52,7 +52,7 @@
         <el-timeline-item v-for="l in logs" :key="l.logId" :timestamp="fmt(l.createTime)" placement="top"
           :type="l.toStatus === '已驳回' ? 'danger' : (l.toStatus === '已完成' ? 'success' : 'primary')">
           {{ l.nodeName }}：{{ l.fromStatus }} → {{ l.toStatus }} · 责任人 {{ l.responder }}
-          <div v-if="l.opinion" style="font-size:12px;color:#666">意见：{{ l.opinion }}</div>
+          <div v-if="l.opinion" style="font-size:12px;color:#71717a">意见：{{ l.opinion }}</div>
         </el-timeline-item>
       </el-timeline>
       <el-empty v-else :image-size="50" description="暂无流转记录" />
@@ -120,5 +120,5 @@ onMounted(load)
 
 <style scoped>
 .rv-h { font-weight: 600; margin: 16px 0 8px; }
-:deep(.hl-row) { background: var(--prm-color-selected-bg, #eff7ff) !important; outline: 1px solid var(--prm-color-primary, #126cfd); }
+:deep(.hl-row) { background: var(--prm-color-selected-bg, #eff7ff) !important; outline: 1px solid var(--prm-color-primary, #1886ff); }
 </style>

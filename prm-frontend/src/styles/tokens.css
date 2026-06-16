@@ -1,20 +1,23 @@
 /* 设计令牌 —— 对齐《数研院-电脑端用户界面设计规范 V1.0》与数据中心工具平台典型界面切图标注。
-   令牌值自官方 Adobe XD 标注精确解码:主色 #126CFD;文字 #262626/#666/#8C8C8C;
-   边框 #D8D8D8;底 #F5F8FA;选中 #EFF7FF;警示 #E21F0C;圆角 2px;微软雅黑 14px。 */
+   主色 #1886FF 取自落地标注物《数据中心相关工具平台-典型界面切图标注文件202605》app.css(主蓝出现 91 次);
+   选中浅蓝 #E5F4FF、强调橙 #FF7800 同源;文字 #262626/#71717A/#8C8C8C;边框 #D8D8D8;底 #F5F5F6;
+   警示 #E21F0C;圆角 2px;微软雅黑 14px。 */
 :root {
   --prm-font-family: "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
-  --prm-color-primary: #126cfd;
-  --prm-color-primary-light: #1e87f0;
+  --prm-color-primary: #1886ff;
+  --prm-color-primary-light: #46a3ff;
   --prm-color-primary-pale: #82b2ff;
-  --prm-color-selected-bg: #eff7ff;
+  --prm-color-selected-bg: #e5f4ff;
   --prm-color-text: #262626;
-  --prm-color-text-secondary: #666666;
+  --prm-color-text-secondary: #71717a;
   --prm-color-text-weak: #8c8c8c;
   --prm-color-text-disabled: #b4b4b4;
   --prm-color-border: #d8d8d8;
-  --prm-color-bg: #f5f8fa;
+  --prm-color-bg: #f5f5f6;
   --prm-color-danger: #e21f0c;
   --prm-color-danger-light: #fd5a43;
+  /* 强调橙(切图 app.css #FF7800):安全等级/有条件共享等语义标识 */
+  --prm-color-accent: #ff7800;
   --prm-radius: 2px;
   --prm-font-size-base: 14px;
   --prm-font-size-min: 12px;
@@ -25,6 +28,14 @@
   /* Element Plus 全局变量对齐规范 */
   --el-color-primary: var(--prm-color-primary);
   --el-color-danger: var(--prm-color-danger);
+  /* 警示橙:Element warning 全调色板对齐规范强调橙 #FF7800(替换默认琥珀 #E6A23C) */
+  --el-color-warning: var(--prm-color-accent);
+  --el-color-warning-light-3: #ffa14d;
+  --el-color-warning-light-5: #ffbc80;
+  --el-color-warning-light-7: #ffd7b3;
+  --el-color-warning-light-8: #ffe4cc;
+  --el-color-warning-light-9: #fff2e6;
+  --el-color-warning-dark-2: #cc6000;
   --el-border-radius-base: var(--prm-radius);
   --el-border-radius-small: var(--prm-radius);
   --el-font-size-base: var(--prm-font-size-base);

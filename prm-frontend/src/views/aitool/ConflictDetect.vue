@@ -298,7 +298,7 @@ async function loadGraph() {
   graphEmpty.value = nodes.length <= 1
   const links = (g.edges || []).map(e => ({
     source: e.from, target: e.to,
-    label: { show: true, formatter: e.relation, fontSize: 11, color: e.relation === '冲突' ? '#d03050' : '#666' },
+    label: { show: true, formatter: e.relation, fontSize: 11, color: e.relation === '冲突' ? '#d03050' : '#71717a' },
     lineStyle: { color: e.relation === '冲突' ? '#d03050' : '#bbb', width: e.relation === '冲突' ? 2.5 : 1.2, type: e.relation === '冲突' ? 'dashed' : 'solid', curveness: 0.1 }
   }))
   const cats = ['主体', '客体', '授权事项', '有效期'].map(t => ({ name: t, itemStyle: { color: NODE_COLOR[t] } }))
@@ -430,7 +430,7 @@ function onResolve(row) {
 .conflict-filter { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
 .print-only { display: none; }
 .print-head h2 { text-align: center; margin: 0 0 6px; font-size: 18px; }
-.print-head div { text-align: center; color: #666; font-size: 12px; margin-bottom: 10px; }
+.print-head div { text-align: center; color: #71717a; font-size: 12px; margin-bottom: 10px; }
 .cd-tip { font-size: 12px; color: #8c8c8c; line-height: 1.6; }
 </style>
 
