@@ -1,24 +1,24 @@
 /* 设计令牌 —— 对齐《数研院-电脑端用户界面设计规范 V1.0》与数据中心工具平台典型界面切图标注。
    主色 #1886FF 取自落地标注物《数据中心相关工具平台-典型界面切图标注文件202605》app.css(主蓝出现 91 次);
-   选中浅蓝 #E5F4FF、强调橙 #FF7800 同源;文字 #262626/#71717A/#8C8C8C;边框 #D8D8D8;底 #F5F5F6;
-   警示 #E21F0C;圆角 2px;微软雅黑 14px。 */
+   选中浅蓝 #E5F4FF、强调橙 #FF7800 同源;文字 #25262B/#71717A/#8A8A8A;边框 #D8D8D8;底 #F5F5F6;
+   警示 #F53F3F;圆角 4px;微软雅黑 14px。(均以 202605 切图为准,冲突时优先于旧 PDF V1.0) */
 :root {
   --prm-font-family: "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
   --prm-color-primary: #1886ff;
   --prm-color-primary-light: #46a3ff;
   --prm-color-primary-pale: #82b2ff;
   --prm-color-selected-bg: #e5f4ff;
-  --prm-color-text: #262626;
+  --prm-color-text: #25262b;
   --prm-color-text-secondary: #71717a;
-  --prm-color-text-weak: #8c8c8c;
-  --prm-color-text-disabled: #b4b4b4;
+  --prm-color-text-weak: #8a8a8a;
+  --prm-color-text-disabled: #b8b8b8;
   --prm-color-border: #d8d8d8;
   --prm-color-bg: #f5f5f6;
-  --prm-color-danger: #e21f0c;
-  --prm-color-danger-light: #fd5a43;
+  --prm-color-danger: #f53f3f;
+  --prm-color-danger-light: #ff7a7a;
   /* 强调橙(切图 app.css #FF7800):安全等级/有条件共享等语义标识 */
   --prm-color-accent: #ff7800;
-  --prm-radius: 2px;
+  --prm-radius: 4px;
   --prm-font-size-base: 14px;
   --prm-font-size-min: 12px;
   --prm-space-sm: 8px;
@@ -127,7 +127,7 @@ body {
   border-color: #efefef;
 }
 .el-card__header {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--prm-color-text);
   padding: 12px 16px;

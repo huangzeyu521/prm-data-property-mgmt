@@ -8,7 +8,7 @@
             <el-option v-for="a in applyOpts" :key="a.applyId" :value="a.applyId"
               :label="(a.applyNo || a.applyId.slice(0, 12)) + '　' + (a.assetName || '')">
               <span>{{ a.applyNo || a.applyId.slice(0, 12) }}</span>
-              <span style="float:right;color:#8c8c8c;font-size:12px">{{ a.assetName }} · {{ a.status }}</span>
+              <span style="float:right;color:#8a8a8a;font-size:12px">{{ a.assetName }} · {{ a.status }}</span>
             </el-option>
           </el-select>
         </el-form-item>

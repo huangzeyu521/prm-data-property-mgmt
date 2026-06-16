@@ -72,7 +72,7 @@ function phaseClass(i) {
   font-variant-numeric: tabular-nums;
 }
 .ai-hint {
-  color: var(--prm-color-text-weak, #8c8c8c);
+  color: var(--prm-color-text-weak, #8a8a8a);
   font-size: 12px;
   margin: 6px 0 8px;
 }
@@ -87,7 +87,7 @@ function phaseClass(i) {
   gap: 8px;
   padding: 3px 0;
   font-size: 13px;
-  color: var(--prm-color-text-weak, #8c8c8c);
+  color: var(--prm-color-text-weak, #8a8a8a);
   transition: color 0.2s;
 }
 .ai-phases li .ai-dot {

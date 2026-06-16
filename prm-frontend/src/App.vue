@@ -211,7 +211,7 @@ const openeds = computed(() => {
   height: 2px;
   background: #fff;
 }
-.prm-goal { margin-left: auto; font-size: 12px; color: #8c8c8c; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 52%; }
+.prm-goal { margin-left: auto; font-size: 12px; color: #8a8a8a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 52%; }
 .prm-spacer { flex: 1; }
 .prm-search { width: 260px; }
 .prm-role { width: 150px; flex: none; }

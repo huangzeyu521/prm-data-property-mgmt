@@ -65,7 +65,7 @@
                 :remote-method="searchAssets" :loading="assetSearching" style="width:100%"
                 placeholder="输名称/ID 搜台账,如 用电 / AST-001" @change="onAssetPicked">
                 <el-option v-for="a in assetOpts" :key="a.assetId" :value="a.assetId" :label="a.assetId + '　' + a.assetName">
-                  <span>{{ a.assetId }}</span><span style="float:right;color:#8c8c8c;font-size:12px">{{ a.assetName }}</span>
+                  <span>{{ a.assetId }}</span><span style="float:right;color:#8a8a8a;font-size:12px">{{ a.assetName }}</span>
                 </el-option>
               </el-select>
               <div class="cd-tip">选定后右侧查询与下方图谱自动跟随该资产;
@@ -93,7 +93,7 @@
             <el-select v-model="semMaterialId" filterable clearable style="flex:1"
               placeholder="选择已解析成功的材料(无需记材料ID)" @focus="loadParsedMaterials">
               <el-option v-for="m in parsedMats" :key="m.materialId" :value="m.materialId" :label="m.fileName">
-                <span>{{ m.fileName }}</span><span style="float:right;color:#8c8c8c;font-size:12px">{{ m.materialId.slice(0, 8) }}…</span>
+                <span>{{ m.fileName }}</span><span style="float:right;color:#8a8a8a;font-size:12px">{{ m.materialId.slice(0, 8) }}…</span>
               </el-option>
             </el-select>
             <el-button type="success" :disabled="!semMaterialId" @click="onSemanticClaim">语义建主张</el-button>
@@ -173,7 +173,7 @@
     </el-row>
 
     <!-- #16 冲突解决方案建议:规则 + 法规依据 + AI -->
-    <el-dialog v-model="adviceDlg" title="冲突解决方案建议" width="560px" align-center>
+    <prm-dialog v-model="adviceDlg" variant="detail" title="冲突解决方案建议" width="560px">
       <AiThinking v-bind="aiAdvice.state" />
       <template v-if="advice">
         <el-tag type="danger" effect="plain" style="margin-bottom:10px">{{ advice.conflictType }}</el-tag>
@@ -185,8 +185,7 @@
           </el-descriptions-item>
         </el-descriptions>
       </template>
-      <template #footer><el-button @click="adviceDlg=false">关闭</el-button></template>
-    </el-dialog>
+    </prm-dialog>
 
     <!-- #9 知识图谱结构化输出:节点(主体/客体/授权事项/有效期) + 关系(授权/归属/有效期/冲突) -->
     <el-card shadow="hover" style="margin-top:16px">
@@ -239,6 +238,7 @@ import * as echarts from 'echarts'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { aitAddClaim, aitDetectConflict, aitConflicts, aitResolveConflict, aitConflictReport, aitConflictReportExportUrl, buildAitClaimFromMaterial, aitKgGraph, aitClaims, updateAitClaim, deleteAitClaim, syncAitHistoryClaims, aitConflictAdvice } from '@/api/aitool'
 import AiThinking from '@/components/AiThinking.vue'
+import PrmDialog from '@/components/PrmDialog.vue'
 import { useAiThinking } from '@/composables/useAiThinking'
 import { AI_PHASES } from '@/lib/aiPhases'
 
@@ -431,7 +431,7 @@ function onResolve(row) {
 .print-only { display: none; }
 .print-head h2 { text-align: center; margin: 0 0 6px; font-size: 18px; }
 .print-head div { text-align: center; color: #71717a; font-size: 12px; margin-bottom: 10px; }
-.cd-tip { font-size: 12px; color: #8c8c8c; line-height: 1.6; }
+.cd-tip { font-size: 12px; color: #8a8a8a; line-height: 1.6; }
 </style>
 
 <!-- #17 PDF 打印优化:只输出报告区(报告抬头+汇总+冲突表),隐藏表单/图谱/操作/对话框 -->

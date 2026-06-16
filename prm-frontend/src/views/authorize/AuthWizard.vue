@@ -38,7 +38,7 @@
                 placeholder="输入资产名称/ID 搜索台账,如 用电 / AST-001" @change="onAssetPicked">
                 <el-option v-for="a in assetOpts" :key="a.assetId" :value="a.assetId" :label="a.assetId + '　' + a.assetName">
                   <span>{{ a.assetId }}</span>
-                  <span style="float:right;color:#8c8c8c;font-size:12px">{{ a.assetName }}</span>
+                  <span style="float:right;color:#8a8a8a;font-size:12px">{{ a.assetName }}</span>
                 </el-option>
               </el-select>
               <el-button :loading="assetLoading" @click="onAssetBlur">引用资产信息</el-button>
@@ -426,5 +426,5 @@ function reset() {
 .wz-body { min-height: 320px; }
 .wz-foot { margin-top: 18px; display: flex; gap: 12px; justify-content: center; }
 .wz-flow { background: #f7f9ff; border-radius: 8px; padding: 10px 16px; color: #4a5160; font-size: 13px; display: inline-block; }
-.auth-tip { font-size: 12px; color: #8c8c8c; line-height: 1.6; }
+.auth-tip { font-size: 12px; color: #8a8a8a; line-height: 1.6; }
 </style>

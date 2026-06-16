@@ -129,5 +129,5 @@ onMounted(load)
 <style scoped>
 .prm-page { padding: 16px; }
 .prm-query-bar { margin-bottom: 16px; }
-.prm-table-card { background: #fff; padding: 16px; border-radius: 4px; }
+.prm-table-card { background: #fff; padding: 16px; border-radius: var(--prm-radius); }
 </style>

@@ -37,7 +37,7 @@
         <el-table-column prop="rightType" label="产权类型(三权分置·可多)" min-width="200">
           <template #default="{ row }">
             <el-tag v-for="t in splitRights(row.rightType)" :key="t" size="small" style="margin:1px 4px 1px 0">{{ t }}</el-tag>
-            <span v-if="!splitRights(row.rightType).length" style="color:#8c8c8c">—</span>
+            <span v-if="!splitRights(row.rightType).length" style="color:#8a8a8a">—</span>
           </template>
         </el-table-column>
         <el-table-column prop="rightSubject" label="权利主体" min-width="150" show-overflow-tooltip />

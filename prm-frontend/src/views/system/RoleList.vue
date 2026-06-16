@@ -50,6 +50,6 @@ onMounted(load)
 
 <style scoped>
 .prm-page { padding: 16px; }
-.prm-table-card { background: #fff; padding: 16px; border-radius: 4px; }
-.prm-table-note { margin-top: 12px; font-size: 12px; color: #8c8c8c; }
+.prm-table-card { background: #fff; padding: 16px; border-radius: var(--prm-radius); }
+.prm-table-note { margin-top: 12px; font-size: 12px; color: #8a8a8a; }
 </style>

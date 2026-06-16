@@ -55,7 +55,7 @@
                   :remote-method="searchAssets" :loading="assetSearching" style="width:100%"
                   placeholder="输名称/ID 搜台账,如 台区 / AST-002" @change="onItemAssetPicked">
                   <el-option v-for="a in assetOpts" :key="a.assetId" :value="a.assetId" :label="a.assetId + '　' + a.assetName">
-                    <span>{{ a.assetId }}</span><span style="float:right;color:#8c8c8c;font-size:12px">{{ a.assetName }}</span>
+                    <span>{{ a.assetId }}</span><span style="float:right;color:#8a8a8a;font-size:12px">{{ a.assetName }}</span>
                   </el-option>
                 </el-select>
               </el-form-item>

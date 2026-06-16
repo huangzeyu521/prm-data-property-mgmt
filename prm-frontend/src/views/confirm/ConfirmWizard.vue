@@ -30,7 +30,7 @@
                 <el-option v-for="a in assetOpts" :key="a.assetId" :value="a.assetId"
                   :label="a.assetId + '　' + a.assetName">
                   <span>{{ a.assetId }}</span>
-                  <span style="float:right;color:#8c8c8c;font-size:12px">{{ a.assetName }}</span>
+                  <span style="float:right;color:#8a8a8a;font-size:12px">{{ a.assetName }}</span>
                 </el-option>
               </el-select>
               <el-button type="primary" plain :loading="autoLoading" @click="onAutofill">元数据自动填充</el-button>

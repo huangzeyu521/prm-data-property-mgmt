@@ -29,7 +29,7 @@
       </el-table-column>
     </el-table>
 
-    <div v-if="!loading && view.length===0" style="text-align:center;padding:32px;color:#8c8c8c">
+    <div v-if="!loading && view.length===0" style="text-align:center;padding:32px;color:#8a8a8a">
       暂无申请。可前往
       <el-link type="primary" @click="$router.push('/dpr/confirm/wizard')">确权申请</el-link> 或
       <el-link type="primary" @click="$router.push('/dpr/auth/wizard')">一事一议授权申请</el-link> 发起。
