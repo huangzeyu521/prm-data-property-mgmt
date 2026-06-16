@@ -14,6 +14,8 @@ import com.csg.prm.confirm.aitool.mapper.AitKbDocMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -28,6 +30,7 @@ import java.util.List;
  * 检索结果关联输出依据(#4)、RAG 知识增强生成(#5)、增量/失效替换/版本回溯(#6)。
  */
 @Service
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class AitKbService implements ApplicationRunner {
 
     public static final String MODE_KEYWORD = "keyword";

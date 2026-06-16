@@ -80,7 +80,8 @@ class AitKbTest {
         d1.setTitle(title);
         d1.setContent("第一条 旧版条款ALPHA内容");
         kb.addDoc(d1, d1.getContent());
-        assertFalse(kb.search("ALPHA", AitKbService.MODE_KEYWORD, null, null, 5).isEmpty(), "新增后应可检索");
+        assertTrue(kb.search("ALPHA", AitKbService.MODE_KEYWORD, null, null, 5).stream()
+                .anyMatch(h -> h.content().contains("ALPHA")), "新增后应可检索");
 
         AitKbDoc d2 = new AitKbDoc();
         d2.setDocType("内部制度");
@@ -90,21 +91,27 @@ class AitKbTest {
         kb.newVersion(d2, d2.getContent());
 
         assertTrue(kb.versions(title).size() >= 2, "应有两个版本");
-        assertFalse(kb.search("BETA", AitKbService.MODE_KEYWORD, null, null, 5).isEmpty(), "应检索到新版");
-        assertTrue(kb.search("ALPHA", AitKbService.MODE_KEYWORD, null, null, 5).isEmpty(), "旧版条款应已失效");
+        assertTrue(kb.search("BETA", AitKbService.MODE_KEYWORD, null, null, 5).stream()
+                .anyMatch(h -> h.content().contains("BETA")), "应检索到新版");
+        assertTrue(kb.search("ALPHA", AitKbService.MODE_KEYWORD, null, null, 5).stream()
+                .noneMatch(h -> h.content().contains("ALPHA")), "旧版条款应已失效");
 
         // 失效条款替换
         String latestDocId = kb.versions(title).get(0).getDocId();
         kb.replaceClause(latestDocId, "第一条", "第一条 替换条款GAMMA内容");
-        assertFalse(kb.search("GAMMA", AitKbService.MODE_KEYWORD, null, null, 5).isEmpty(), "替换后应检索到新条款");
-        assertTrue(kb.search("BETA", AitKbService.MODE_KEYWORD, null, null, 5).isEmpty(), "被替换条款应失效");
+        assertTrue(kb.search("GAMMA", AitKbService.MODE_KEYWORD, null, null, 5).stream()
+                .anyMatch(h -> h.content().contains("GAMMA")), "替换后应检索到新条款");
+        assertTrue(kb.search("BETA", AitKbService.MODE_KEYWORD, null, null, 5).stream()
+                .noneMatch(h -> h.content().contains("BETA")), "被替换条款应失效");
 
         // 整篇失效
         kb.invalidate(latestDocId);
-        assertTrue(kb.search("GAMMA", AitKbService.MODE_KEYWORD, null, null, 5).isEmpty(), "失效后不应检索到");
+        assertTrue(kb.search("GAMMA", AitKbService.MODE_KEYWORD, null, null, 5).stream()
+                .noneMatch(h -> h.content().contains("GAMMA")), "失效后不应检索到");
 
         // 版本回溯(恢复该版本)
         kb.rollback(latestDocId);
-        assertFalse(kb.search("GAMMA", AitKbService.MODE_KEYWORD, null, null, 5).isEmpty(), "回溯后应恢复检索");
+        assertTrue(kb.search("GAMMA", AitKbService.MODE_KEYWORD, null, null, 5).stream()
+                .anyMatch(h -> h.content().contains("GAMMA")), "回溯后应恢复检索");
     }
 }

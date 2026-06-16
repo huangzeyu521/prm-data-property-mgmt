@@ -1,0 +1,32 @@
+[
+  {
+    "docType": "内部制度",
+    "domain": "数据确权",
+    "title": "中国南方电网有限责任公司数据确权授权业务指导书",
+    "source": "中国南方电网",
+    "effectiveDate": "2024-01-01",
+    "scope": "南网数据资产确权授权",
+    "version": "v1",
+    "file": "F-确权授权业务指导书.txt"
+  },
+  {
+    "docType": "内部制度",
+    "domain": "数据确权",
+    "title": "中国南方电网有限责任公司数据对外开放管理业务指导书",
+    "source": "中国南方电网",
+    "effectiveDate": "2024-01-01",
+    "scope": "数据对外开放",
+    "version": "v1",
+    "file": "G-数据对外开放管理业务指导书.txt"
+  },
+  {
+    "docType": "内部制度",
+    "domain": "数据确权",
+    "title": "中国南方电网有限责任公司数据产品管理业务指导书",
+    "source": "中国南方电网",
+    "effectiveDate": "2024-01-01",
+    "scope": "数据产品管理",
+    "version": "v1",
+    "file": "H-数据产品管理业务指导书.txt"
+  }
+]
