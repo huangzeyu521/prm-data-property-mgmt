@@ -82,7 +82,8 @@ public class EquityCardServiceImpl implements EquityCardService {
         card.setScope(deriveScope(apply.getApplyId()));
         card.setValidDate(apply.getValidDate());
         card.setCardStatus(EquityCard.STATUS_NORMAL);
-        // 权益归集原则(F指导书):分省/分子公司确权通过后,权益统一归口网级——中国南方电网有限责任公司
+        // 权益归集原则(F指导书):确权时网公司直接取得权益、直接归属中国南方电网有限责任公司
+        //(五所口径:不存在"分省先确权再转让"的动作,确权即直接确给网公司)
         card.setConsolidatedUnit("中国南方电网有限责任公司");
         mapper.insert(card);
         recordLog(card.getCardId(), "生成", null, EquityCard.STATUS_NORMAL, "确权终审通过自动制卡");

@@ -66,7 +66,7 @@
               <el-radio value="管制业务">管制业务</el-radio>
               <el-radio value="非管制">非管制</el-radio>
             </el-radio-group>
-            <div class="form-tip">权益归集判定关键输入:管制单位默认没有限经营权;自行生产且不涉第三方时,管制单位经营权调整为有并归集网公司</div>
+            <div class="form-tip">权益归集判定关键输入:管制单位默认没有限经营权;自行生产且不涉第三方时,管制单位经营权调整为有,确权时直接归属网公司(无转让动作)</div>
           </el-form-item>
           <el-form-item label="申请模式">
             <el-radio-group v-model="form.applyMode">

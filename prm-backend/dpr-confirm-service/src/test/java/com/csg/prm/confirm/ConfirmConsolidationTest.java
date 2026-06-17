@@ -16,6 +16,7 @@ import java.io.ByteArrayInputStream;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -87,8 +88,10 @@ class ConfirmConsolidationTest {
         service.saveTableItems(id, List.of(item("MEETING_ROOM_INFO", "日程会议室表", "工作秘密", "A 自行生产数据", "否", "否")));
         ConsolidationResult r = service.judgeConsolidation(id);
         assertEquals("1.1", r.rule());
-        assertEquals("有", r.operateRight(), "管制单位经营权应调整为有并归集网公司");
-        assertTrue(r.reason().contains("归集至网公司"));
+        assertEquals("有", r.operateRight(), "管制单位经营权应调整为有,确权时直接归属网公司");
+        assertTrue(r.reason().contains("确权时直接归属网公司"), "应表述为确权直接归属(无转让):" + r.reason());
+        assertFalse(r.reason().contains("可转移") || r.reason().contains("转移后") || r.reason().contains("转移判定"),
+                "不应含转让/转移动作叙事:" + r.reason());
         assertTrue(r.reason().contains("确权授权工作指引"));
     }
 

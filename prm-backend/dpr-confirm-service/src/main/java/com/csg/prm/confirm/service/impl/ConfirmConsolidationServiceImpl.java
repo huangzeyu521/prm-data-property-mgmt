@@ -26,7 +26,7 @@ public class ConfirmConsolidationServiceImpl implements ConfirmConsolidationServ
     private static final String NW_COMPANY = "中国南方电网有限责任公司";
     private static final String REGULATED = "管制业务";
     private static final String REASON_BASE =
-            "根据公司确权授权工作指引,在不违反法律法规合同约定前提下,网公司合法取得分公司及全资子公司所有数据相应权益;";
+            "根据公司确权授权工作指引,在不违反法律法规合同约定前提下,确权时网公司直接合法取得分公司及全资子公司所有数据相应权益(无转让/转移动作);";
 
     /** 《数据确权信息汇总表》表头(32列,对齐官方模板) */
     private static final String[] CONFIRM_HEADERS = {
@@ -79,19 +79,19 @@ public class ConfirmConsolidationServiceImpl implements ConfirmConsolidationServ
         boolean involvesThird = involvesThird(apply, items);
         boolean hasOperateClaim = apply.getRightType() != null && apply.getRightType().contains("经营");
 
-        // 《权益内部管理汇总表》说明页 5 条归集判定规则
+        // 《权益内部管理汇总表》说明页 5 条权属判定规则(确权时直接判定网公司权益,无转让/转移动作)
         if (!involvesThird) {
             if (regulated) {
                 return new ConsolidationResult("1.1", "有", "有", "有", false, apply.getRegulated(),
-                        REASON_BASE + "自行生产且全部不涉及第三方,管制单位经营权调整为有,归集至网公司(不涉及第三方,默认可转移)。");
+                        REASON_BASE + "自行生产且全部不涉及第三方,管制单位经营权调整为有,确权时直接归属网公司(不涉及第三方)。");
             }
             return new ConsolidationResult("1.2", "有", "有", hasOperateClaim ? "有" : "无", false, apply.getRegulated(),
-                    REASON_BASE + "自行生产且全部不涉及第三方,非管制单位,相应权利同步给网公司(不涉及第三方,默认可转移)。");
+                    REASON_BASE + "自行生产且全部不涉及第三方,非管制单位,相应权利确权时直接归属网公司(不涉及第三方)。");
         }
         if (!regulated) {
             if (hasOperateClaim) {
-                return new ConsolidationResult("2.1", "有", "有", "依权益转移判定", true, apply.getRegulated(),
-                        REASON_BASE + "涉及第三方权益,非管制单位且有经营权,经营权依权益转移判定后归集。");
+                return new ConsolidationResult("2.1", "有", "有", "依权益判定", true, apply.getRegulated(),
+                        REASON_BASE + "涉及第三方权益,非管制单位且有经营权,经营权依权益判定确权时直接归属网公司(涉第三方须合规处置)。");
             }
             return new ConsolidationResult("2.2", "有", "有", "无", true, apply.getRegulated(),
                     REASON_BASE + "涉及第三方权益,非管制单位且无经营权,网公司无经营权。");
@@ -99,7 +99,7 @@ public class ConfirmConsolidationServiceImpl implements ConfirmConsolidationServ
         boolean otherRestriction = items.stream().anyMatch(i -> "是".equals(i.getIFlag()) || "是".equals(i.getJFlag()));
         return new ConsolidationResult("3.1", "有", "有", otherRestriction ? "无" : "依权益判定", true, apply.getRegulated(),
                 REASON_BASE + "涉及第三方权益,管制单位先恢复经营权(去掉管制因素)再判定:"
-                        + (otherRestriction ? "存在其他无经营权约束,网公司无经营权。" : "有经营权,依权益判定归集。"));
+                        + (otherRestriction ? "存在其他无经营权约束,网公司无经营权。" : "有经营权,确权时直接归属网公司。"));
     }
 
     @Override
