@@ -35,12 +35,14 @@ public class AuthApplyServiceImpl implements AuthApplyService {
     private final com.csg.prm.common.writeback.LedgerWritebackGateway ledgerWriteback;
     private final ProcessFlowEngine flowEngine;
     private final com.csg.prm.authorize.service.AuthFlowLogService flowLogService;
+    private final com.csg.prm.authorize.gateway.ConfirmWritebackGateway cardWriteback;
 
     public AuthApplyServiceImpl(AuthApplyMapper mapper, AuthCertService authCertService,
                                EquityCardGateway equityCardGateway, OpenCatalogGateway openCatalogGateway,
                                com.csg.prm.common.writeback.LedgerWritebackGateway ledgerWriteback,
                                ProcessFlowEngine flowEngine,
-                               com.csg.prm.authorize.service.AuthFlowLogService flowLogService) {
+                               com.csg.prm.authorize.service.AuthFlowLogService flowLogService,
+                               com.csg.prm.authorize.gateway.ConfirmWritebackGateway cardWriteback) {
         this.mapper = mapper;
         this.authCertService = authCertService;
         this.equityCardGateway = equityCardGateway;
@@ -48,6 +50,7 @@ public class AuthApplyServiceImpl implements AuthApplyService {
         this.ledgerWriteback = ledgerWriteback;
         this.flowEngine = flowEngine;
         this.flowLogService = flowLogService;
+        this.cardWriteback = cardWriteback;
     }
 
     /** 各审批状态对应的责任人(节点处理人/角色)。 */
@@ -166,6 +169,8 @@ public class AuthApplyServiceImpl implements AuthApplyService {
             // P0-① 产权事件回写:授权生效 -> 台账更新授权状态 + 变更留痕
             ledgerWriteback.apply(com.csg.prm.common.writeback.RightsEvent.authorized(
                     apply.getAssetId(), apply.getRightType(), apply.getGranteeOrg(), applyId));
+            // 授权完成 -> 触发确权服务把产权/权益结论写回平台资产卡片(非致命,失败不影响授权)
+            cardWriteback.writeback(apply.getAssetId());
             return certId;
         }
         updateStatus(applyId, t.nextState(), t.stepIndex(), null);
