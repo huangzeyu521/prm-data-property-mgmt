@@ -49,6 +49,14 @@ public interface DawatAiGateway {
         return null;
     }
 
+    /**
+     * 确权申请材料 AI 校验:输入 申请要素+逐份材料正文,输出与 {@link #reviewAuthMaterials} 同结构严格 JSON。
+     * 默认复用授权材料校验实现(qwen3-max 真调 / Local 桩),供确权侧内生调用,不依赖独立工具网关。
+     */
+    default String reviewMaterials(String context) {
+        return reviewAuthMaterials(context);
+    }
+
     /** 授权合规 AI 预审:输入 规则校验结果+申请上下文,输出预审意见文本(规则门禁的补充意见,非门禁) */
     default String preReviewAuth(String context) {
         return null;

@@ -121,7 +121,25 @@
       <el-card v-show="step === 1" shadow="never">
         <div class="prm-table-note" style="margin-bottom:10px">
           按所选来源/关联(A–J)应交材料清单。"上传原件"真实上传文件(仅 PDF/Word/JPG/PNG,自动格式验证);或"仅登记"占位。
+          <el-button size="small" type="warning" plain style="margin-left:12px" :loading="parsing" @click="runParse">
+            <el-icon><MagicStick /></el-icon> 智能解析材料(要素抽取/敏感判定/内容查重)
+          </el-button>
         </div>
+        <!-- 智能解析:确权内生 AI(走 confirm-service /ai/parse,不依赖独立工具) -->
+        <el-alert v-if="parseResult" type="info" :closable="false" style="margin-bottom:10px">
+          <div><b>智能解析:</b>{{ parseResult.summary }}</div>
+          <el-table :data="parseResult.items" border size="small" style="margin-top:8px">
+            <el-table-column prop="materialName" label="材料" min-width="160" />
+            <el-table-column prop="rightHolder" label="识别权属主体" min-width="140" />
+            <el-table-column prop="rightType" label="识别权类" width="110" />
+            <el-table-column label="敏感" width="72" align="center">
+              <template #default="{ row }"><el-tag v-if="row.sensitiveHit" type="danger" size="small">敏感</el-tag><span v-else>—</span></template>
+            </el-table-column>
+            <el-table-column label="查重" width="120" align="center">
+              <template #default="{ row }"><el-tag v-if="row.duplicateOf" type="warning" size="small">疑与「{{ row.duplicateOf }}」重复</el-tag><span v-else>—</span></template>
+            </el-table-column>
+          </el-table>
+        </el-alert>
         <el-table :data="checklist" border>
           <el-table-column type="index" label="序号" width="60" align="center" />
           <el-table-column prop="code" label="标识" width="70" align="center" />
@@ -149,8 +167,28 @@
         <el-button type="warning" :loading="aiMatChecking" @click="runAiMaterialCheck" style="margin-bottom:12px;margin-left:8px">
           <el-icon><MagicStick /></el-icon> AI 材料校验(qwen3-max)
         </el-button>
+        <el-button type="warning" plain :loading="aiChecking" @click="runAiCheck" style="margin-bottom:12px;margin-left:8px">
+          <el-icon><MagicStick /></el-icon> AI 决策研判
+        </el-button>
+        <el-button type="warning" plain :loading="conflictChecking" @click="runConflict" style="margin-bottom:12px;margin-left:8px">
+          <el-icon><MagicStick /></el-icon> 权属冲突识别
+        </el-button>
         <el-button :disabled="!checkReport" @click="onExportCheck" style="margin-bottom:12px;margin-left:8px">导出校验结果</el-button>
         <AiThinking v-bind="aiThink.state" />
+        <!-- AI 决策研判:确权内生 AI(走 confirm-service /ai/decision) -->
+        <el-alert v-if="aiResult" :type="aiResult.prediction === '建议通过' ? 'success' : 'warning'" :closable="false" style="margin-bottom:12px">
+          <div><b>AI 决策研判:{{ aiResult.prediction }}</b>(综合评分 {{ aiResult.score }})</div>
+          <div style="margin-top:4px">AI 预测:{{ aiResult.aiPrediction || '未生成' }}</div>
+          <div v-if="aiResult.supplementMaterials && aiResult.supplementMaterials.length" style="margin-top:4px">需补材料:{{ aiResult.supplementMaterials.join('、') }}</div>
+          <div v-if="aiResult.pendingConflicts && aiResult.pendingConflicts.length" style="margin-top:4px">待处理冲突:{{ aiResult.pendingConflicts.join('、') }}</div>
+          <div style="margin-top:4px;color:#909399">依据:{{ aiResult.basis }}</div>
+        </el-alert>
+        <!-- 权属冲突识别:确权内生 AI(走 confirm-service /ai/conflict) -->
+        <el-alert v-if="conflictResult" :type="conflictResult.hasConflict ? 'error' : 'success'" :closable="false" style="margin-bottom:12px">
+          <div><b>权属冲突识别:{{ conflictResult.hasConflict ? '发现冲突' : '未发现冲突' }}</b>(风险:{{ conflictResult.riskLevel }})</div>
+          <div v-if="conflictResult.conflicts && conflictResult.conflicts.length" style="margin-top:4px">冲突:{{ conflictResult.conflicts.join('、') }}</div>
+          <div v-if="conflictResult.suggestion" style="margin-top:4px;color:#909399">建议:{{ conflictResult.suggestion }}</div>
+        </el-alert>
         <!-- AI 材料校验:大模型逐份校验 完整性/合规性/与表单一致性 -->
         <el-alert v-if="aiMatResult" :type="aiMatResult.overall === '通过' ? 'success' : (aiMatResult.overall === '不通过' ? 'error' : 'warning')" :closable="false" style="margin-bottom:12px">
           <div><b>AI 材料校验:{{ aiMatResult.overall }}</b> — {{ aiMatResult.overallDesc }}</div>
@@ -235,7 +273,7 @@
 import { computed, reactive, ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { autofillConfirm, saveConfirmDraft, uploadMaterial, uploadMaterialFile, materialFileUrl, listMaterialByApply, checkMaterial, runMaterialCheck, pushMaterialReview, materialExportUrl, submitConfirm, saveTableItems, getConsolidation, aiMaterialCheck, listMaterialRules } from '@/api/confirm'
+import { autofillConfirm, saveConfirmDraft, uploadMaterial, uploadMaterialFile, materialFileUrl, listMaterialByApply, checkMaterial, runMaterialCheck, pushMaterialReview, materialExportUrl, submitConfirm, saveTableItems, getConsolidation, aiMaterialCheck, listMaterialRules, aiParseConfirm, aiDecisionConfirm, aiConflictConfirm } from '@/api/confirm'
 import AiThinking from '@/components/AiThinking.vue'
 import { useAiThinking } from '@/composables/useAiThinking'
 import { AI_PHASES } from '@/lib/aiPhases'
@@ -283,6 +321,51 @@ async function runAiMaterialCheck() {
   } catch (e) {
     ElMessage.warning('AI 材料校验失败:' + (e?.response?.data?.message || e?.message || '请先上传材料'))
   } finally { aiMatChecking.value = false }
+}
+
+// 智能解析材料(确权内生 AI,走 confirm-service /ai/parse):要素抽取/敏感判定/内容查重
+const parsing = ref(false)
+const parseResult = ref(null)
+async function runParse() {
+  if (!applyId.value) { ElMessage.warning('请先完成步骤1暂存申请并上传材料'); return }
+  parsing.value = true
+  try {
+    parseResult.value = await aiThink.run(() => aiParseConfirm(applyId.value),
+      { phases: AI_PHASES.materialCheck, title: '大模型智能解析中' })
+    ElMessage.success('智能解析完成')
+  } catch (e) {
+    ElMessage.warning('智能解析失败:' + (e?.response?.data?.message || e?.message || '请先上传材料'))
+  } finally { parsing.value = false }
+}
+
+// AI 决策研判(确权内生 AI,走 confirm-service /ai/decision):预测/需补材料/冲突/评分
+const aiChecking = ref(false)
+const aiResult = ref(null)
+async function runAiCheck() {
+  if (!applyId.value) { ElMessage.warning('请先完成步骤1暂存申请'); return }
+  aiChecking.value = true
+  try {
+    aiResult.value = await aiThink.run(() => aiDecisionConfirm(applyId.value),
+      { phases: AI_PHASES.analyze, title: '大模型决策研判中' })
+    ElMessage.success('AI 决策研判完成')
+  } catch (e) {
+    ElMessage.warning('AI 决策研判失败:' + (e?.response?.data?.message || e?.message || '请先暂存申请'))
+  } finally { aiChecking.value = false }
+}
+
+// 权属冲突识别(确权内生 AI,走 confirm-service /ai/conflict)
+const conflictChecking = ref(false)
+const conflictResult = ref(null)
+async function runConflict() {
+  if (!applyId.value) { ElMessage.warning('请先完成步骤1暂存申请'); return }
+  conflictChecking.value = true
+  try {
+    conflictResult.value = await aiThink.run(() => aiConflictConfirm(applyId.value),
+      { phases: AI_PHASES.analyze, title: '大模型权属冲突识别中' })
+    ElMessage.success('权属冲突识别完成')
+  } catch (e) {
+    ElMessage.warning('权属冲突识别失败:' + (e?.response?.data?.message || e?.message || '请先暂存申请'))
+  } finally { conflictChecking.value = false }
 }
 
 const checklist = ref([])

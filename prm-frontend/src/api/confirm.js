@@ -63,6 +63,11 @@ export const pageMaterial = (params) => request.get('/dpr/confirm/material/page'
 // 应交材料清单规则(可配置·单一真源):前端据此生成 A–J 应交清单,不再硬编码
 export const listMaterialRules = (scene = '确权') => request.get('/dpr/confirm/material/rule', { params: { scene } })
 
+// 确权内生 AI 能力(走 confirm-service 自有 /ai/*,共享 prm-common 大瓦特网关,不依赖独立工具)
+export const aiParseConfirm = (applyId) => request.post('/dpr/confirm/ai/parse', null, { params: { applyId }, timeout: 120000 })
+export const aiDecisionConfirm = (applyId) => request.post('/dpr/confirm/ai/decision', null, { params: { applyId }, timeout: 120000 })
+export const aiConflictConfirm = (applyId) => request.post('/dpr/confirm/ai/conflict', null, { params: { applyId }, timeout: 120000 })
+
 // 权益证书 + 模板
 export const issueCert = (params) => request.post('/dpr/confirm/cert/issue', null, { params })
 export const revokeCert = (certId) => request.post(`/dpr/confirm/cert/${certId}/revoke`)

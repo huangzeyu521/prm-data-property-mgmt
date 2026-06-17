@@ -74,7 +74,7 @@ public class ConfirmDashboardServiceImpl implements ConfirmDashboardService {
 
         // 流程瓶颈识别:各审批中节点积压 + 瓶颈环节(最大积压)
         Map<String, Long> nodeBacklog = applies.stream()
-                .filter(a -> IN_REVIEW.contains(a.getStatus()))
+                .filter(a -> a.getStatus() != null && IN_REVIEW.contains(a.getStatus()))
                 .collect(Collectors.groupingBy(ConfirmApply::getStatus, Collectors.counting()));
         vo.setNodeBacklog(nodeBacklog);
         vo.setBottleneckNode(nodeBacklog.entrySet().stream()

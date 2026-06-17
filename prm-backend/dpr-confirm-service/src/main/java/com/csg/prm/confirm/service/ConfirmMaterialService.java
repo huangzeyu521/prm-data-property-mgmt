@@ -29,6 +29,9 @@ public interface ConfirmMaterialService {
     /** 材料 AI 校验(qwen3-max 逐份校验完整性/合规性/一致性,stub 回退),返回严格 JSON 字符串 */
     String aiCheck(String applyId);
 
+    /** 抽取某份材料正文(供确权内生 AI 能力复用);无法抽取返回空串 */
+    String materialText(String materialId);
+
     /** 推送审核(后端门禁):材料校验全通过且无缺失才提交审核,否则拒并返回缺失/不合规清单。 */
     void pushReview(String applyId);
 

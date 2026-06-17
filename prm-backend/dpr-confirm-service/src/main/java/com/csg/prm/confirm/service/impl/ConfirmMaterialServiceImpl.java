@@ -35,15 +35,22 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
     private final ConfirmMaterialMapper mapper;
     private final ConfirmApplyService applyService;
     private final ConfirmMaterialRuleService ruleService;
-    private final com.csg.prm.confirm.aitool.gateway.AiToolParseGateway aiGateway;
+    // 内生 AI 能力走 prm-common 共享网关(qwen3-max/Local 桩),不依赖独立工具的 aitool 包
+    private final com.csg.prm.common.ai.DawatAiGateway aiGateway;
 
     public ConfirmMaterialServiceImpl(ConfirmMaterialMapper mapper, ConfirmApplyService applyService,
                                       ConfirmMaterialRuleService ruleService,
-                                      com.csg.prm.confirm.aitool.gateway.AiToolParseGateway aiGateway) {
+                                      com.csg.prm.common.ai.DawatAiGateway aiGateway) {
         this.mapper = mapper;
         this.applyService = applyService;
         this.ruleService = ruleService;
         this.aiGateway = aiGateway;
+    }
+
+    /** 抽取某份材料正文(供确权内生 AI 能力复用),按 ID 重取完整记录;无法抽取返回空串。 */
+    @Override
+    public String materialText(String materialId) {
+        return extractText(mapper.selectById(materialId));
     }
 
     /**
