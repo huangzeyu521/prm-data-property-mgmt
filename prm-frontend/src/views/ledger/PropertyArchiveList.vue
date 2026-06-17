@@ -75,6 +75,7 @@
         </el-descriptions-item>
         <el-descriptions-item label="个人隐私(H)">
           <el-tag size="small" :type="prop?.involvesPrivacy ? 'warning' : 'info'">{{ prop?.involvesPrivacy ? '是' : '否' }}</el-tag>
+          <span v-if="prop?.privacyInfo" class="dim-note">{{ prop.privacyInfo }}</span>
         </el-descriptions-item>
         <el-descriptions-item label="第三方商密(I)">
           <el-tag size="small" :type="prop?.involvesTradeSecret ? 'warning' : 'info'">{{ prop?.involvesTradeSecret ? '是' : '否' }}</el-tag>

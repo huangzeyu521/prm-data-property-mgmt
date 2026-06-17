@@ -23,6 +23,7 @@ public record AssetPropertyVO(
         Boolean involvesRegulation,         // G 是否涉及行政监管要求
         String regulated,                   // G 说明(监管机构/主体)
         Boolean involvesPrivacy,            // H 是否涉及用户个人/家庭隐私
+        String privacyInfo,                 // H 说明(隐私关联主体)
         Boolean involvesTradeSecret,        // I 是否涉及第三方商业机密
         String thirdPartyInfo,              // I 说明
         Boolean involvesThirdPartyAgreement,// J 是否存在其他数据权益约束协议
@@ -39,14 +40,14 @@ public record AssetPropertyVO(
     public static AssetPropertyVO of(ConfirmApply a, String state, String message) {
         String rel = a.getRelationIdentification() == null ? "" : a.getRelationIdentification().toUpperCase();
         boolean g = rel.contains("G") || hasText(a.getRegulated());
-        boolean h = rel.contains("H");
+        boolean h = rel.contains("H") || hasText(a.getPrivacyInfo());
         boolean i = rel.contains("I") || Boolean.TRUE.equals(a.getInvolvesThirdParty());
         boolean j = rel.contains("J");
         return new AssetPropertyVO(
                 a.getAssetId(), a.getAssetName(), state, a.getRegisterType(),
                 a.getRightType(), a.getRightHolder(), a.getRespDept(),
                 a.getSourceIdentification(), a.getSourceSubject(), a.getSourceLimit(),
-                g, a.getRegulated(), h, i, a.getThirdPartyInfo(), j, a.getRelationSubject(),
+                g, a.getRegulated(), h, a.getPrivacyInfo(), i, a.getThirdPartyInfo(), j, a.getRelationSubject(),
                 a.getRecognitionOpinion(), a.getEquityRisk(),
                 a.getValidDate(), a.getUpdateTime(), a.getSourceRef(), a.getApplyNo(), message);
     }
@@ -54,7 +55,7 @@ public record AssetPropertyVO(
     /** 无确权记录时的占位契约(卡片不空白)。 */
     public static AssetPropertyVO placeholder(String assetId, String state, String message) {
         return new AssetPropertyVO(assetId, null, state, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, message);
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, message);
     }
 
     private static boolean hasText(String s) {

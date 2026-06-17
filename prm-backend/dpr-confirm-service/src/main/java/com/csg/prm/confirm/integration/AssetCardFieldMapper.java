@@ -58,7 +58,7 @@ public class AssetCardFieldMapper {
         o.put("CHECK_DESC", v.regulated());
         // H 用户个人/家庭隐私
         o.put("IS_PRIVACY", bool01(v.involvesPrivacy()));
-        o.put("PRIVACY_DESC", null);
+        o.put("PRIVACY_DESC", v.privacyInfo());
         // I 第三方商业机密
         o.put("IS_BUS_SECRET", bool01(v.involvesTradeSecret()));
         o.put("BUS_SECRET_DESC", v.thirdPartyInfo());

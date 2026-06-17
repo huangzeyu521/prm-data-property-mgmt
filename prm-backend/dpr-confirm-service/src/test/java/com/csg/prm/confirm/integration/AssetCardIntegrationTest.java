@@ -141,12 +141,14 @@ class AssetCardIntegrationTest {
         a.setRelationIdentification("G,H,I,J");
         a.setInvolvesThirdParty(true);
         a.setThirdPartyInfo("涉及供应商采购信息");
+        a.setPrivacyInfo("涉及用户个人信息");
         a.setRelationSubject("某供应商");
         applyMapper.updateById(a);
 
         Map<String, Object> m = service.propertyForPlatform(asset);
         assertEquals(1, m.get("IS_CHECK"));
         assertEquals(1, m.get("IS_PRIVACY"));
+        assertEquals("涉及用户个人信息", m.get("PRIVACY_DESC"));
         assertEquals(1, m.get("IS_BUS_SECRET"));
         assertEquals("涉及供应商采购信息", m.get("BUS_SECRET_DESC"));
         assertEquals(1, m.get("IS_EQUITY"));
