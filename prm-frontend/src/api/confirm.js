@@ -60,6 +60,8 @@ export const runMaterialCheck = (applyId) => request.post('/dpr/confirm/material
 export const pushMaterialReview = (applyId) => request.post('/dpr/confirm/material/push-review', null, { params: { applyId } })
 export const materialExportUrl = (applyId) => `/api/dpr/confirm/material/export?applyId=${applyId}`
 export const pageMaterial = (params) => request.get('/dpr/confirm/material/page', { params })
+// 应交材料清单规则(可配置·单一真源):前端据此生成 A–J 应交清单,不再硬编码
+export const listMaterialRules = (scene = '确权') => request.get('/dpr/confirm/material/rule', { params: { scene } })
 
 // 权益证书 + 模板
 export const issueCert = (params) => request.post('/dpr/confirm/cert/issue', null, { params })

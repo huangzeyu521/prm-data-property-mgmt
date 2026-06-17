@@ -11,6 +11,7 @@ import com.csg.prm.confirm.entity.ConfirmApply;
 import com.csg.prm.confirm.entity.ConfirmMaterial;
 import com.csg.prm.confirm.mapper.ConfirmMaterialMapper;
 import com.csg.prm.confirm.service.ConfirmApplyService;
+import com.csg.prm.confirm.service.ConfirmMaterialRuleService;
 import com.csg.prm.confirm.service.ConfirmMaterialService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +21,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,33 +32,17 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
     private static final Set<String> ALLOWED_EXT = Set.of("pdf", "doc", "docx", "jpg", "jpeg", "png");
     private static final long MAX_BYTES = 50L * 1024 * 1024;
 
-    /** 应交材料预设规则:基础项 + 表2(涉第三方) + A–J 来源/关联识别对应材料(与申请填报清单一致)。 */
-    private static final List<String> BASE_REQUIRED = List.of(
-            "《表1 数据确权信息清单(系统级)》", "数据确权证明材料(权属/来源凭证)");
-    private static final String TABLE2 = "《表2 数据确权信息清单(涉及第三方权益)》";
-    private static final Map<String, String> CODE_MATERIAL = new LinkedHashMap<>();
-
-    static {
-        CODE_MATERIAL.put("A", "数据来源设备/系统建设投入情况说明");
-        CODE_MATERIAL.put("B", "公共采集情况说明(方式/方法/来源)");
-        CODE_MATERIAL.put("C", "公共数据授权说明");
-        CODE_MATERIAL.put("D", "共享/共同生产情况说明");
-        CODE_MATERIAL.put("E", "交易采购情况说明");
-        CODE_MATERIAL.put("F", "其他来源情况说明");
-        CODE_MATERIAL.put("G", "行政监管要求补充说明");
-        CODE_MATERIAL.put("H", "个人/家庭隐私授权说明(如用户入网协议)");
-        CODE_MATERIAL.put("I", "第三方商业机密授权说明");
-        CODE_MATERIAL.put("J", "其他第三方机构协议");
-    }
-
     private final ConfirmMaterialMapper mapper;
     private final ConfirmApplyService applyService;
+    private final ConfirmMaterialRuleService ruleService;
     private final com.csg.prm.confirm.aitool.gateway.AiToolParseGateway aiGateway;
 
     public ConfirmMaterialServiceImpl(ConfirmMaterialMapper mapper, ConfirmApplyService applyService,
+                                      ConfirmMaterialRuleService ruleService,
                                       com.csg.prm.confirm.aitool.gateway.AiToolParseGateway aiGateway) {
         this.mapper = mapper;
         this.applyService = applyService;
+        this.ruleService = ruleService;
         this.aiGateway = aiGateway;
     }
 
@@ -293,25 +277,7 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
     }
 
     private List<String> requiredMaterials(ConfirmApply apply) {
-        List<String> req = new ArrayList<>(BASE_REQUIRED);
-        if (Boolean.TRUE.equals(apply.getInvolvesThirdParty())) {
-            req.add(TABLE2);
-        }
-        addCodes(req, apply.getSourceIdentification());
-        addCodes(req, apply.getRelationIdentification());
-        return req;
-    }
-
-    private void addCodes(List<String> req, String idents) {
-        if (!StringUtils.hasText(idents)) {
-            return;
-        }
-        for (String c : idents.split("[,，]")) {
-            String mat = CODE_MATERIAL.get(c.trim());
-            if (mat != null && !req.contains(mat)) {
-                req.add(mat);
-            }
-        }
+        return ruleService.requiredNames(apply);
     }
 
     private void updateCheck(String materialId, String result, String desc) {

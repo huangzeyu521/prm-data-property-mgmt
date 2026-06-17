@@ -5,6 +5,8 @@ import com.csg.prm.common.api.R;
 import com.csg.prm.confirm.entity.ConfirmMaterial;
 import com.csg.prm.common.exception.BizException;
 import com.csg.prm.confirm.dto.MaterialCheckReport;
+import com.csg.prm.confirm.entity.ConfirmMaterialRule;
+import com.csg.prm.confirm.service.ConfirmMaterialRuleService;
 import com.csg.prm.confirm.service.ConfirmMaterialService;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.MediaType;
@@ -29,9 +31,18 @@ import java.util.List;
 public class ConfirmMaterialController {
 
     private final ConfirmMaterialService service;
+    private final ConfirmMaterialRuleService ruleService;
 
-    public ConfirmMaterialController(ConfirmMaterialService service) {
+    public ConfirmMaterialController(ConfirmMaterialService service, ConfirmMaterialRuleService ruleService) {
         this.service = service;
+        this.ruleService = ruleService;
+    }
+
+    /** 应交材料清单规则(单一真源):前端据此构建 A–J 应交清单,不再前端硬编码。 */
+    @GetMapping("/rule")
+    public R<List<ConfirmMaterialRule>> rules(
+            @RequestParam(defaultValue = "确权") String scene) {
+        return R.ok(ruleService.listEnabled(scene));
     }
 
     @PostMapping

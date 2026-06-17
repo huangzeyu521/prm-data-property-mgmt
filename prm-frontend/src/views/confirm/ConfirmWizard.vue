@@ -248,7 +248,7 @@
 import { computed, reactive, ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { autofillConfirm, saveConfirmDraft, uploadMaterial, uploadMaterialFile, materialFileUrl, listMaterialByApply, checkMaterial, runMaterialCheck, pushMaterialReview, materialExportUrl, submitConfirm, saveTableItems, getConsolidation, aiMaterialCheck } from '@/api/confirm'
+import { autofillConfirm, saveConfirmDraft, uploadMaterial, uploadMaterialFile, materialFileUrl, listMaterialByApply, checkMaterial, runMaterialCheck, pushMaterialReview, materialExportUrl, submitConfirm, saveTableItems, getConsolidation, aiMaterialCheck, listMaterialRules } from '@/api/confirm'
 import { aitAnalyze } from '@/api/aitool'
 import AiThinking from '@/components/AiThinking.vue'
 import { useAiThinking } from '@/composables/useAiThinking'
@@ -324,6 +324,7 @@ async function runAiCheck() {
   } finally { aiChecking.value = false }
 }
 const checklist = ref([])
+const materialRules = ref([]) // 后端可配置应交材料规则(单一真源)
 const checkReport = ref(null)
 const materials = ref([])
 
@@ -362,7 +363,16 @@ const rules = {
 }
 
 // 基于原单修改重提:从被驳回确权单带入字段(新申请,旧单保留已驳回)
+// 拉取可配置应交材料规则(单一真源);失败则回退内置默认,保证向导可用
+async function loadMaterialRules() {
+  try {
+    const rules = await listMaterialRules('确权')
+    if (Array.isArray(rules) && rules.length) materialRules.value = rules
+  } catch (e) { /* 回退内置默认 */ }
+}
+
 onMounted(() => {
+  loadMaterialRules()
   if (!route.query.reopen) return
   try {
     const o = JSON.parse(sessionStorage.getItem('prm-reopen') || '{}')
@@ -474,7 +484,29 @@ async function next0() {
   step.value = 1
 }
 
+// 应交清单由后端可配置规则(单一真源)按 场景×触发条件(A–J/涉三方)生成,前端仅渲染。
+// 触发判定与后端 ConfirmMaterialRuleService 一致:ALWAYS 常交 / TABLE2 涉三方 / SOURCE-RELATION 选中码。
 function buildChecklist() {
+  if (!materialRules.value.length) { buildChecklistFallback(); return }
+  const t2 = needTable2.value
+  const hit = (r) => {
+    if (r.triggerType === 'ALWAYS') return true
+    if (r.triggerType === 'TABLE2') return t2
+    if (r.triggerType === 'SOURCE') return form.sourceIdent.includes(r.triggerCode)
+    if (r.triggerType === 'RELATION') return form.relationIdent.includes(r.triggerCode)
+    return false
+  }
+  checklist.value = materialRules.value.filter(hit).map((r, i) => ({
+    code: r.triggerCode || (r.triggerType === 'TABLE2' ? '表2' : '核心'),
+    name: r.materialName,
+    m: r.triggerLabel || r.evidenceType || '材料',
+    required: r.required, detail: r.detail,
+    id: 'ck' + i, done: false
+  }))
+}
+
+// 规则接口不可用时的内置兜底(与默认规则一致),保证向导可离线生成清单
+function buildChecklistFallback() {
   const base = [{ code: '表1', name: '《表1 数据确权信息清单(系统级)》', m: '表1' }, { code: '证明', name: '数据确权证明材料(权属/来源凭证)', m: '证明材料' }]
   if (needTable2.value) base.push({ code: '表2', name: '《表2 数据确权信息清单(涉及第三方权益)》', m: '表2' })
   const picked = [
