@@ -50,16 +50,16 @@
         <el-row :gutter="16">
           <el-col :span="11">
             <el-form ref="itemRef" :model="item" :rules="itemRules" label-width="100px">
-              <el-form-item label="关联资产ID" prop="assetId">
-                <el-select v-model="item.assetId" filterable remote allow-create default-first-option clearable
+              <el-form-item label="关联数据资产卡片" prop="assetId">
+                <el-select v-model="item.assetId" filterable remote clearable
                   :remote-method="searchAssets" :loading="assetSearching" style="width:100%"
-                  placeholder="输名称/ID 搜台账,如 台区 / AST-002" @change="onItemAssetPicked">
-                  <el-option v-for="a in assetOpts" :key="a.assetId" :value="a.assetId" :label="a.assetId + '　' + a.assetName">
-                    <span>{{ a.assetId }}</span><span style="float:right;color:#8a8a8a;font-size:12px">{{ a.assetName }}</span>
+                  placeholder="搜索已确权资产(名称/卡片号)选取,先确后授" @change="onItemAssetPicked">
+                  <el-option v-for="a in assetOpts" :key="a.assetId" :value="a.assetId" :label="a.assetName || a.assetId">
+                    <span>{{ a.assetName || a.assetId }}</span><span style="float:right;color:#8a8a8a;font-size:12px">{{ a.cardNo }}</span>
                   </el-option>
                 </el-select>
               </el-form-item>
-              <el-form-item label="资产名称" prop="assetName"><el-input v-model="item.assetName" /></el-form-item>
+              <el-form-item label="资产名称" prop="assetName"><el-input v-model="item.assetName" readonly placeholder="选取卡片后自动带出" /></el-form-item>
               <el-form-item label="权益卡片ID" prop="equityCardId"><el-input v-model="item.equityCardId" placeholder="先确后授,如 EC-BAT-0002" /></el-form-item>
               <el-form-item label="被授权方" prop="granteeOrg"><el-input v-model="item.granteeOrg" /></el-form-item>
               <el-form-item label="权益类型" prop="rightType">
@@ -151,7 +151,6 @@ import AiThinking from '@/components/AiThinking.vue'
 import { useAiThinking } from '@/composables/useAiThinking'
 import { AI_PHASES } from '@/lib/aiPhases'
 const aiThink = useAiThinking()
-import { pageArchive } from '@/api/propertyArchive'
 import { pageEquityCard } from '@/api/confirm'
 import { getPropertyTree } from '@/api/ledger'
 
@@ -285,12 +284,19 @@ function findUsableCard(assetId) {
   const c = cardOpts.value.find(x => x.assetId === assetId && CARD_OK.includes(x.cardStatus))
   return c ? (c.cardNo || c.cardId) : ''
 }
+// 选择源=已确权资产(可用权益卡片),扣住先确后授;不再搜台账、不再手填
 async function searchAssets(kw) {
-  if (!kw) { assetOpts.value = []; return }
   assetSearching.value = true
   try {
-    const r = await pageArchive({ current: 1, size: 10, assetName: kw })
-    assetOpts.value = r.records || []
+    await loadCards()
+    const k = (kw || '').trim()
+    const seen = new Set()
+    assetOpts.value = cardOpts.value
+      .filter(c => CARD_OK.includes(c.cardStatus))
+      .filter(c => !k || (c.assetName || '').includes(k) || (c.assetId || '').includes(k) || (c.cardNo || '').includes(k))
+      .filter(c => { if (seen.has(c.assetId)) return false; seen.add(c.assetId); return true })
+      .map(c => ({ assetId: c.assetId, assetName: c.assetName, cardNo: c.cardNo }))
+      .slice(0, 20)
   } finally { assetSearching.value = false }
 }
 async function onItemAssetPicked(id) {
@@ -303,9 +309,10 @@ async function onItemAssetPicked(id) {
   else ElMessage.warning('该资产暂无生效权益卡片,请先完成确权(先确后授)')
 }
 async function resolveAssetByName(name) {
-  const r = await pageArchive({ current: 1, size: 3, assetName: name })
-  const recs = r.records || []
-  return recs.find(x => x.assetName === name) || recs[0] || null
+  await loadCards()
+  const usable = cardOpts.value.filter(c => CARD_OK.includes(c.cardStatus))
+  const c = usable.find(x => x.assetName === name) || usable.find(x => (x.assetName || '').includes(name))
+  return c ? { assetId: c.assetId, assetName: c.assetName } : null
 }
 
 // 一键示例:建清单+3条明细全自动(生效卡自动匹配,对齐 test/批量授权申请 手册)

@@ -31,21 +31,21 @@
             </div>
           </el-form-item>
           <el-divider style="margin:4px 0" />
-          <el-form-item label="关联资产ID" prop="assetId">
+          <el-form-item label="关联数据资产卡片" prop="assetId">
             <div style="display:flex;gap:8px;width:100%">
-              <el-select v-model="form.assetId" filterable remote allow-create default-first-option clearable
+              <el-select v-model="form.assetId" filterable remote clearable
                 :remote-method="searchAssets" :loading="assetSearching" style="flex:1"
-                placeholder="输入资产名称/ID 搜索台账,如 用电 / AST-001" @change="onAssetPicked">
-                <el-option v-for="a in assetOpts" :key="a.assetId" :value="a.assetId" :label="a.assetId + '　' + a.assetName">
-                  <span>{{ a.assetId }}</span>
-                  <span style="float:right;color:#8a8a8a;font-size:12px">{{ a.assetName }}</span>
+                placeholder="搜索已确权资产(名称/卡片号)选取,先确后授" @change="onAssetPicked">
+                <el-option v-for="a in assetOpts" :key="a.assetId" :value="a.assetId" :label="a.assetName || a.assetId">
+                  <span>{{ a.assetName || a.assetId }}</span>
+                  <span style="float:right;color:#8a8a8a;font-size:12px">{{ a.cardNo }}</span>
                 </el-option>
               </el-select>
               <el-button :loading="assetLoading" @click="onAssetBlur">引用资产信息</el-button>
             </div>
-            <div class="auth-tip">选资产后自动带出该资产的"生效"权益卡片(先确后授);不清楚ID输名称关键词即可搜索</div>
+            <div class="auth-tip">从已确权资产中选取,自动带出"生效"权益卡片(先确后授);仅已确权资产可被授权</div>
           </el-form-item>
-          <el-form-item label="资产名称" prop="assetName"><el-input v-model="form.assetName" /></el-form-item>
+          <el-form-item label="资产名称" prop="assetName"><el-input v-model="form.assetName" readonly placeholder="选取卡片后自动带出" /></el-form-item>
           <el-alert v-if="assetRef" type="success" :closable="false" style="margin:0 0 12px 0">
             已引用外部资产信息 — 系统:{{ assetRef.systemName || '-' }} / 模式:{{ assetRef.schemaName || '-' }} / 安全等级:{{ assetRef.securityLevel || '-' }} / 责任部门:{{ assetRef.respDept || '-' }}
           </el-alert>
@@ -193,7 +193,6 @@ import AiThinking from '@/components/AiThinking.vue'
 import { useAiThinking } from '@/composables/useAiThinking'
 import { AI_PHASES } from '@/lib/aiPhases'
 const aiThink = useAiThinking()
-import { pageArchive } from '@/api/propertyArchive'
 import { pageEquityCard } from '@/api/confirm'
 import { getAsset } from '@/api/ledger'
 
@@ -254,12 +253,19 @@ const assetRef = ref(null); const assetLoading = ref(false)
 // 资产远程搜索(产权台账)+选资产自动带生效卡片(先确后授,一选三填)
 const assetOpts = ref([])
 const assetSearching = ref(false)
+// 选择源=已确权资产(可用权益卡片),扣住先确后授;不再搜台账、不再手填
 async function searchAssets(kw) {
-  if (!kw) { assetOpts.value = []; return }
   assetSearching.value = true
   try {
-    const r = await pageArchive({ current: 1, size: 10, assetName: kw })
-    assetOpts.value = r.records || []
+    await loadCards()
+    const k = (kw || '').trim()
+    const seen = new Set()
+    assetOpts.value = cardOpts.value
+      .filter(c => CARD_OK.includes(c.cardStatus))
+      .filter(c => !k || (c.assetName || '').includes(k) || (c.assetId || '').includes(k) || (c.cardNo || '').includes(k))
+      .filter(c => { if (seen.has(c.assetId)) return false; seen.add(c.assetId); return true })
+      .map(c => ({ assetId: c.assetId, assetName: c.assetName, cardNo: c.cardNo }))
+      .slice(0, 20)
   } finally { assetSearching.value = false }
 }
 async function onAssetPicked(id) {
