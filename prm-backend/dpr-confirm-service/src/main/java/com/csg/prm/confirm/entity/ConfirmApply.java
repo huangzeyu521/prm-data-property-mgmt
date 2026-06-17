@@ -87,6 +87,10 @@ public class ConfirmApply extends BaseEntity {
     @TableField("CEC_THIRD_PARTY_INFO")
     private String thirdPartyInfo;
 
+    /** 个人/家庭隐私(H)关联主体说明(工单 M02:涉及个人隐私时必填) */
+    @TableField("CEC_PRIVACY_INFO")
+    private String privacyInfo;
+
     /** 权益认定意见(合规管控小组/经理在节点50/70形成) */
     @TableField("CEC_RECOGNITION_OPINION")
     private String recognitionOpinion;
@@ -261,6 +265,14 @@ public class ConfirmApply extends BaseEntity {
 
     public void setThirdPartyInfo(String thirdPartyInfo) {
         this.thirdPartyInfo = thirdPartyInfo;
+    }
+
+    public String getPrivacyInfo() {
+        return privacyInfo;
+    }
+
+    public void setPrivacyInfo(String privacyInfo) {
+        this.privacyInfo = privacyInfo;
     }
 
     public String getRecognitionOpinion() {

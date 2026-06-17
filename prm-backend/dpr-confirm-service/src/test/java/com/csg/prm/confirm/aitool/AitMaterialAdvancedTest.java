@@ -36,11 +36,20 @@ class AitMaterialAdvancedTest {
     @Autowired private AitMaterialService service;
     @Autowired private AitAccuracyService accuracyService;
 
+    /** #4 资产级归集:上传带 assetId 落库,支撑资产级材料归集/查重(确权向导→aitool 材料入口贯通)。 */
+    @Test
+    void upload_persists_asset_and_apply_id() throws Exception {
+        String id = service.uploadBinary("非车险理赔-确权证明.xlsx", xlsxBytes(), "AP-DEMO", "ASSET-NCLAIM-2026", null);
+        AitMaterial m = service.getMaterial(id);
+        assertEquals("ASSET-NCLAIM-2026", m.getAssetId(), "材料应持久化关联资产ID");
+        assertEquals("AP-DEMO", m.getApplyId(), "材料应持久化关联申请ID");
+    }
+
     /** #1 Excel 导入 + 抽取正文;#5 按单元格多粒度切片。 */
     @Test
     void excel_import_and_cell_segments() throws Exception {
         byte[] xlsx = xlsxBytes();
-        String id = service.uploadBinary("数据资产清单.xlsx", xlsx, null, null);
+        String id = service.uploadBinary("数据资产清单.xlsx", xlsx, null, null, null);
         AitMaterial m = service.getMaterial(id);
         assertEquals("EXCEL", m.getFileType(), "应识别为 Excel");
         assertTrue(m.getContent() != null && m.getContent().contains("电力计量数据"), "应抽取出 Excel 单元格正文");
@@ -57,7 +66,7 @@ class AitMaterialAdvancedTest {
     @Test
     void docx_paragraph_segments() throws Exception {
         byte[] docx = docxBytes("数据持有权确权证明,数据来源自行生产,有效期3年,已加盖公章。");
-        String id = service.uploadBinary("确权证明.docx", docx, null, null);
+        String id = service.uploadBinary("确权证明.docx", docx, null, null, null);
         service.parse(id);
         List<AitDocSegment> paras = service.segments(id, AitDocSegment.G_PARAGRAPH);
         assertFalse(paras.isEmpty(), "Word 应产出段落粒度片段");
@@ -67,7 +76,7 @@ class AitMaterialAdvancedTest {
     @Test
     void image_goes_through_ocr_and_layout() throws Exception {
         byte[] png = pngBytes();
-        String id = service.uploadBinary("盖章扫描件.png", png, null, null);
+        String id = service.uploadBinary("盖章扫描件.png", png, null, null, null);
         service.parse(id);
         AitMaterial m = service.getMaterial(id);
         assertEquals(AitMaterial.PARSE_SUCCESS, m.getParseStatus(), "图片应经 OCR 解析成功");
@@ -79,7 +88,7 @@ class AitMaterialAdvancedTest {
     /** #4 材料类别归集:按内容/文件名归类。 */
     @Test
     void category_classified() throws Exception {
-        String id = service.uploadBinary("数据授权材料.xlsx", xlsxBytes(), null, null);
+        String id = service.uploadBinary("数据授权材料.xlsx", xlsxBytes(), null, null, null);
         assertEquals("授权材料", service.getMaterial(id).getCategory());
     }
 
@@ -87,8 +96,8 @@ class AitMaterialAdvancedTest {
     @Test
     void duplicate_detection_by_content_hash() throws Exception {
         byte[] xlsx = uniqueXlsxBytes("DEDUP-MARKER-" + System.nanoTime()); // 独有内容,避免与其他用例哈希相同
-        String first = service.uploadBinary("清单A.xlsx", xlsx, null, null);
-        String second = service.uploadBinary("清单A-副本.xlsx", xlsx, null, null);
+        String first = service.uploadBinary("清单A.xlsx", xlsx, null, null, null);
+        String second = service.uploadBinary("清单A-副本.xlsx", xlsx, null, null, null);
         assertNull(service.getMaterial(first).getDuplicateOf(), "首份不应判重");
         assertEquals(first, service.getMaterial(second).getDuplicateOf(), "同内容第二份应命中首份为重复");
         assertEquals(service.getMaterial(first).getFileHash(), service.getMaterial(second).getFileHash(),

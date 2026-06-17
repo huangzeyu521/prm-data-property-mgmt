@@ -29,6 +29,10 @@ public class AitMaterial extends BaseEntity {
     @TableField("CEC_APPLY_ID")
     private String applyId;
 
+    /** 关联数据资产ID(支持资产级材料归集/查重) */
+    @TableField("CEC_ASSET_ID")
+    private String assetId;
+
     @TableField("CEC_FILE_NAME")
     private String fileName;
 
@@ -137,6 +141,14 @@ public class AitMaterial extends BaseEntity {
 
     public void setApplyId(String applyId) {
         this.applyId = applyId;
+    }
+
+    public String getAssetId() {
+        return assetId;
+    }
+
+    public void setAssetId(String assetId) {
+        this.assetId = assetId;
     }
 
     public String getFileName() {

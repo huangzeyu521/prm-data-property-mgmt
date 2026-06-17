@@ -67,4 +67,10 @@ public class EquityCardController {
     public R<PageResult<EquityCard>> page(@RequestBody PageQuery query) {
         return R.ok(service.page(query));
     }
+
+    /** 待重确权清单(F指导书"按季度定期重新确权"/权益到期):有效期在 daysAhead 天内(含已到期)的正常卡片。 */
+    @GetMapping("/re-confirm-due")
+    public R<List<EquityCard>> reConfirmDue(@RequestParam(required = false, defaultValue = "90") int daysAhead) {
+        return R.ok(service.listReConfirmDue(daysAhead));
+    }
 }

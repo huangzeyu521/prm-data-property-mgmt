@@ -74,8 +74,8 @@ class AitParseMgmtTest {
     @Test
     void batch_parse_queues_and_aggregates_progress() throws Exception {
         String batch = "BATCH-MGMT-" + System.nanoTime();
-        materialService.uploadBinary("批量A.docx", docx("数据持有权,自行生产,3年,已盖章 A"), null, batch);
-        materialService.uploadBinary("批量B.docx", docx("数据加工使用权,交易采购,5年,已盖章 B"), null, batch);
+        materialService.uploadBinary("批量A.docx", docx("数据持有权,自行生产,3年,已盖章 A"), null, null, batch);
+        materialService.uploadBinary("批量B.docx", docx("数据加工使用权,交易采购,5年,已盖章 B"), null, null, batch);
 
         int dispatched = materialService.batchParse(batch);
         assertEquals(2, dispatched, "应派发 2 个材料解析");
@@ -156,7 +156,7 @@ class AitParseMgmtTest {
             // 关闭 OCR → 图片无法提取正文 → 解析失败且原因说明按配置关闭
             def.setExtractLogicJson("{\"enableModel\":true,\"enableOcr\":false}");
             configService.save(def);
-            String off = materialService.uploadBinary("扫描件-禁OCR.png", pngBytes("OCR-OFF"), null, null);
+            String off = materialService.uploadBinary("扫描件-禁OCR.png", pngBytes("OCR-OFF"), null, null, null);
             try {
                 materialService.parse(off);
             } catch (RuntimeException ignore) {
@@ -170,7 +170,7 @@ class AitParseMgmtTest {
             // 开启 OCR → 同类图片可成功(测试桩 OCR)
             def.setExtractLogicJson("{\"enableModel\":true,\"enableOcr\":true}");
             configService.save(def);
-            String on = materialService.uploadBinary("扫描件-启OCR.png", pngBytes("OCR-ON"), null, null);
+            String on = materialService.uploadBinary("扫描件-启OCR.png", pngBytes("OCR-ON"), null, null, null);
             materialService.parse(on);
             assertEquals(AitMaterial.PARSE_SUCCESS, materialService.getMaterial(on).getParseStatus(),
                     "开启 OCR 后图片应解析成功");

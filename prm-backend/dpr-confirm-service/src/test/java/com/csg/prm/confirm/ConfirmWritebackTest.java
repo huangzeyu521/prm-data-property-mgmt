@@ -56,6 +56,7 @@ class ConfirmWritebackTest {
         a.setAssetId("WB-CFM-1");
         a.setAssetName("回写联动表");
         a.setRightType("数据持有权");
+        a.setSourceIdentification("A自行生产数据");
         a.setRightHolder("广东电网");
         String id = applyService.saveDraft(a);
         applyService.submit(id);          // -> 合规审核中(元数据质量达标)

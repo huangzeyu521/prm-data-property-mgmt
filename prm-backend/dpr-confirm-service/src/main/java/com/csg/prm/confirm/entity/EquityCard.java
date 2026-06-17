@@ -58,6 +58,10 @@ public class EquityCard extends BaseEntity {
     @TableField("CEC_CARD_STATUS")
     private String cardStatus;
 
+    /** 权益归口单位(权益归集原则:分省确权通过后统一归口网级/中国南方电网有限责任公司) */
+    @TableField("CEC_CONSOLIDATED_UNIT")
+    private String consolidatedUnit;
+
     public String getCardId() {
         return cardId;
     }
@@ -144,5 +148,13 @@ public class EquityCard extends BaseEntity {
 
     public void setCardStatus(String cardStatus) {
         this.cardStatus = cardStatus;
+    }
+
+    public String getConsolidatedUnit() {
+        return consolidatedUnit;
+    }
+
+    public void setConsolidatedUnit(String consolidatedUnit) {
+        this.consolidatedUnit = consolidatedUnit;
     }
 }

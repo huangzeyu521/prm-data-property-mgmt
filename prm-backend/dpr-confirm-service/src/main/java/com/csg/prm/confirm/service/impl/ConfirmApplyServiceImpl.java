@@ -28,22 +28,27 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
     /** 元数据质量门禁阈值:<80 自动驳回确权(需求§5.5 接口③) */
     private static final int QUALITY_THRESHOLD = 80;
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ConfirmApplyServiceImpl.class);
+
     private final ConfirmApplyMapper mapper;
     private final EquityCardService equityCardService;
     private final ConfirmSummaryService summaryService;
     private final MetadataGateway metadataGateway;
     private final ProcessFlowEngine flowEngine;
     private final ConfirmFlowLogService flowLogService;
+    private final com.csg.prm.confirm.integration.AssetCardWritebackService cardWriteback;
 
     public ConfirmApplyServiceImpl(ConfirmApplyMapper mapper, EquityCardService equityCardService,
                                    ConfirmSummaryService summaryService, MetadataGateway metadataGateway,
-                                   ProcessFlowEngine flowEngine, ConfirmFlowLogService flowLogService) {
+                                   ProcessFlowEngine flowEngine, ConfirmFlowLogService flowLogService,
+                                   com.csg.prm.confirm.integration.AssetCardWritebackService cardWriteback) {
         this.mapper = mapper;
         this.equityCardService = equityCardService;
         this.summaryService = summaryService;
         this.metadataGateway = metadataGateway;
         this.flowEngine = flowEngine;
         this.flowLogService = flowLogService;
+        this.cardWriteback = cardWriteback;
     }
 
     /** 各审批状态对应的责任人(节点处理人/角色)。 */
@@ -123,10 +128,8 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
             throw new BizException("仅草稿状态可提交");
         }
         validate(apply);
-        // 表2:勾选 B–F 来源识别或 G–J 关联识别(涉第三方/敏感)时,必须补充第三方权益信息(表2)
-        if (requiresTable2(apply) && !StringUtils.hasText(apply.getThirdPartyInfo())) {
-            throw new BizException("涉第三方/敏感数据(来源B–F或关联G–J),须填写表2第三方权益信息");
-        }
+        // 资料完整性归集审查(节点40,对齐南网补录工单 M01/M02 填报口径:来源方式/来源主体/G–J 逐维说明)
+        validateRegistration(apply);
         // 元数据质量门禁:质量评分<80 自动驳回确权(需求§5.5 接口③)。
         // 注意:此处"持久化驳回"而非抛异常——抛异常会令本事务回滚,驳回状态无法落库。
         int score = metadataGateway.qualityScore(apply.getAssetId());
@@ -170,7 +173,17 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
         // 流转留痕 + 进度通知(责任人=本节点审批人)
         flowLogService.record(apply, from, t.nextState(), responderOf(from), opinion);
         // 终态(节点80制卡):生成权益卡片并回写台账(EquityCardService 内完成)
-        return t.terminal() ? equityCardService.generateFromApply(apply) : null;
+        if (!t.terminal()) {
+            return null;
+        }
+        String cardId = equityCardService.generateFromApply(apply);
+        // 确权完成 → 把产权信息/权益基本信息写回平台资产卡片(单向 PRM→平台;非致命,失败不回滚确权)
+        try {
+            cardWriteback.writeback(apply.getAssetId());
+        } catch (RuntimeException e) {
+            log.warn("[资产卡片写回] 确权完成写回失败(不影响确权): assetId={}, 原因={}", apply.getAssetId(), e.getMessage());
+        }
+        return cardId;
     }
 
     /** 确权状态 -> 附录F 节点编号(纯映射,非流程逻辑) */
@@ -342,20 +355,39 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
         return apply;
     }
 
-    /** 表2 触发判定:来源识别含 B–F 或 关联识别含 G–J(涉第三方/敏感) */
-    private boolean requiresTable2(ConfirmApply apply) {
-        if (Boolean.TRUE.equals(apply.getInvolvesThirdParty())) {
-            return true;
-        }
+    /**
+     * 确权登记完整性校验(对齐南网补录工单 M01/M02 填报规则):
+     * ① 来源方式 A–F 至少选一("ABCDEF中至少填一个");
+     * ② 来源含 B–F(非纯自行生产)须填来源主体名称;
+     * ③ 关联识别 G/H/I/J 涉及则对应主体说明逐维必填("填是则后两列必填")。
+     */
+    private void validateRegistration(ConfirmApply apply) {
         String src = apply.getSourceIdentification() == null ? "" : apply.getSourceIdentification().toUpperCase();
         String rel = apply.getRelationIdentification() == null ? "" : apply.getRelationIdentification().toUpperCase();
-        for (String c : new String[]{"B", "C", "D", "E", "F"}) {
-            if (src.contains(c)) {
-                return true;
-            }
+        if (!containsAny(src, "A", "B", "C", "D", "E", "F")) {
+            throw new BizException("请至少选择一种数据来源方式(A自行生产/B公开采集/C公共授权/D公共生产/E交易采购/F其他)");
         }
-        for (String c : new String[]{"G", "H", "I", "J"}) {
-            if (rel.contains(c)) {
+        if (containsAny(src, "B", "C", "D", "E", "F") && !StringUtils.hasText(apply.getSourceSubject())) {
+            throw new BizException("数据来源涉及公开采集/受让/委托/交易等(B–F),须填写来源主体名称");
+        }
+        if (rel.contains("G") && !StringUtils.hasText(apply.getRegulated())) {
+            throw new BizException("涉及行政监管要求(G),须填写监管要求/关联主体说明");
+        }
+        if (rel.contains("H") && !StringUtils.hasText(apply.getPrivacyInfo())) {
+            throw new BizException("涉及用户个人/家庭隐私(H),须填写隐私关联主体说明");
+        }
+        if ((rel.contains("I") || Boolean.TRUE.equals(apply.getInvolvesThirdParty()))
+                && !StringUtils.hasText(apply.getThirdPartyInfo())) {
+            throw new BizException("涉及第三方商业机密(I),须填写第三方权益信息");
+        }
+        if (rel.contains("J") && !StringUtils.hasText(apply.getRelationSubject())) {
+            throw new BizException("存在其他数据权益约束协议(J),须填写关联主体说明");
+        }
+    }
+
+    private static boolean containsAny(String s, String... codes) {
+        for (String c : codes) {
+            if (s.contains(c)) {
                 return true;
             }
         }

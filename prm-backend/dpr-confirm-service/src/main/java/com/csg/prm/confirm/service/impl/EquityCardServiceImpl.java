@@ -82,6 +82,8 @@ public class EquityCardServiceImpl implements EquityCardService {
         card.setScope(deriveScope(apply.getApplyId()));
         card.setValidDate(apply.getValidDate());
         card.setCardStatus(EquityCard.STATUS_NORMAL);
+        // 权益归集原则(F指导书):分省/分子公司确权通过后,权益统一归口网级——中国南方电网有限责任公司
+        card.setConsolidatedUnit("中国南方电网有限责任公司");
         mapper.insert(card);
         recordLog(card.getCardId(), "生成", null, EquityCard.STATUS_NORMAL, "确权终审通过自动制卡");
         // 关键节点上链存证(确权制卡):SM3 指纹锚定上链,防篡改、可追溯
@@ -168,6 +170,17 @@ public class EquityCardServiceImpl implements EquityCardService {
         wrapper.orderByDesc(EquityCard::getCreateTime);
         IPage<EquityCard> page = mapper.selectPage(query.toPage(), wrapper);
         return PageResult.of(page);
+    }
+
+    @Override
+    public List<EquityCard> listReConfirmDue(int daysAhead) {
+        java.time.LocalDateTime threshold = java.time.LocalDateTime.now()
+                .plusDays(daysAhead <= 0 ? 90 : daysAhead);
+        return mapper.selectList(new LambdaQueryWrapper<EquityCard>()
+                .eq(EquityCard::getCardStatus, EquityCard.STATUS_NORMAL)
+                .isNotNull(EquityCard::getValidDate)
+                .le(EquityCard::getValidDate, threshold)
+                .orderByAsc(EquityCard::getValidDate));
     }
 
     /** 全局唯一权益资产编码(生产可替换为雪花算法) */

@@ -34,6 +34,7 @@ class ConfirmRefinementsTest {
         a.setAssetId(assetId);
         a.setAssetName("精化测试表");
         a.setRightType("数据资源持有权");
+        a.setSourceIdentification("A自行生产数据");
         a.setRightHolder("广东电网");
         return a;
     }
@@ -55,20 +56,47 @@ class ConfirmRefinementsTest {
 
     @Test
     void p2_table2_required_when_third_party_relation_selected() {
-        // 关联识别含 H(个人隐私)-> 须填表2(thirdPartyInfo);缺失则提交被拦截
+        // 关联识别含 H(个人隐私)-> 须填隐私关联主体说明;缺失则提交被拦截
         ConfirmApply a = base("DA-T2-001");
         a.setRelationIdentification("H");
         String id = applyService.saveDraft(a);
         BizException ex = assertThrows(BizException.class, () -> applyService.submit(id));
-        assertTrue(ex.getMessage().contains("表2"), "涉第三方/敏感须填表2");
+        assertTrue(ex.getMessage().contains("隐私"), "涉个人隐私须填说明:" + ex.getMessage());
 
-        // 补充表2信息后可正常进入合规审核
+        // 补充隐私关联主体说明后可正常进入合规审核
         ConfirmApply ok = base("DA-T2-002");
         ok.setRelationIdentification("H");
-        ok.setThirdPartyInfo("涉用户隐私,已取得数据主体授权");
+        ok.setPrivacyInfo("涉用户隐私,已取得数据主体授权");
         String id2 = applyService.saveDraft(ok);
         applyService.submit(id2);
         assertEquals(ConfirmApply.STATUS_COMPLIANCE, applyService.getById(id2).getStatus());
+    }
+
+    /** 工单规则:来源方式 A–F 至少选一;来源含 B–F 须填来源主体(资料完整性归集审查)。 */
+    @Test
+    void p5_source_method_completeness_required() {
+        // 未选来源方式 -> 拦截
+        ConfirmApply none = base("DA-SRC-NONE");
+        none.setSourceIdentification(null);
+        String idN = applyService.saveDraft(none);
+        BizException e1 = assertThrows(BizException.class, () -> applyService.submit(idN));
+        assertTrue(e1.getMessage().contains("来源方式"), "未选来源方式应拦截:" + e1.getMessage());
+
+        // 含 B–F 但缺来源主体 -> 拦截
+        ConfirmApply bf = base("DA-SRC-BF");
+        bf.setSourceIdentification("B公开采集数据");
+        String idB = applyService.saveDraft(bf);
+        BizException e2 = assertThrows(BizException.class, () -> applyService.submit(idB));
+        assertTrue(e2.getMessage().contains("来源主体"), "B–F 缺来源主体应拦截:" + e2.getMessage());
+
+        // 含 B–F 且填来源主体(+表2)-> 通过进入合规审核
+        ConfirmApply ok = base("DA-SRC-OK");
+        ok.setSourceIdentification("B公开采集数据");
+        ok.setSourceSubject("某政府信息中心");
+        ok.setThirdPartyInfo("公开采集,已履行免责声明");
+        String idOk = applyService.saveDraft(ok);
+        applyService.submit(idOk);
+        assertEquals(ConfirmApply.STATUS_COMPLIANCE, applyService.getById(idOk).getStatus());
     }
 
     @Test

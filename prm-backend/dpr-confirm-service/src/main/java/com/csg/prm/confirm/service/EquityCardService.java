@@ -33,4 +33,10 @@ public interface EquityCardService {
     List<EquityCardLog> listLogs(String cardId);
 
     PageResult<EquityCard> page(PageQuery query);
+
+    /**
+     * 待重确权清单(F指导书"按季度定期重新确权"/权益到期):
+     * 列出正常状态、有效期在 daysAhead 天内(含已到期)的权益卡片,供季度重确权提醒。
+     */
+    List<EquityCard> listReConfirmDue(int daysAhead);
 }

@@ -30,6 +30,7 @@ class ConfirmDashboardTest {
         a.setAssetId("DA-DASH-001");
         a.setAssetName("看板测试表");
         a.setRightType("数据资源持有权");
+        a.setSourceIdentification("A自行生产数据");
         a.setRightHolder("广东电网有限责任公司");
         String id = applyService.saveDraft(a);
         applyService.submit(id);

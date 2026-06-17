@@ -37,6 +37,7 @@ class ConfirmFlowTest {
         a.setAssetId(assetId);
         a.setAssetName(name);
         a.setRightType("数据资源持有权");
+        a.setSourceIdentification("A自行生产数据");
         a.setRightHolder("广东电网有限责任公司");
         a.setRespDept("数字化管理部门");
         a.setInvolvesThirdParty(Boolean.TRUE);
@@ -74,6 +75,7 @@ class ConfirmFlowTest {
         assertEquals("DA-CFM-001", card.getAssetId());
         assertEquals(EquityCard.STATUS_NORMAL, card.getCardStatus());
         assertEquals(id, card.getApplyId());
+        assertEquals("中国南方电网有限责任公司", card.getConsolidatedUnit(), "确权制卡应归口网级(权益归集原则)");
         assertTrue(summaryService.listByApply(id).stream()
                 .anyMatch(s -> s.getSummaryType().contains("表3")), "应含表3汇总");
     }

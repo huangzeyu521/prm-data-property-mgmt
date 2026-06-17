@@ -12,8 +12,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 /**
- * 大瓦特 AI 智能辅助接口(⑨):OCR 权属识别 / 权属冲突检测 / 授权意图识别 / RAG 知识问答。
- * 经 {@link DawatAiGateway} 端口对接;provider=stub 本地桩 / provider=qwen 阿里云百炼 qwen3-max。
+ * 大瓦特 AI 智能辅助接口(⑨):授权意图识别 + AI 提供方诊断。
+ * 对齐说明:OCR 权属识别 / 权属冲突检测 / RAG 知识问答 已统一收敛至智能确权辅助工具(aitool)的完整能力
+ * (材料智能解析 / 冲突识别与分析 / 知识库与 RAG),主模块不再维护这三项早期简版端点;
+ * 授权意图识别 aitool 暂无等价能力,保留于此。经 {@link DawatAiGateway} 共享端口对接。
  */
 @RestController
 @RequestMapping("/api/dpr/confirm/ai")
@@ -38,25 +40,8 @@ public class AiAssistController {
                 "impl", ai.getClass().getSimpleName()));
     }
 
-    @PostMapping("/ocr-ownership")
-    public R<DawatAiGateway.OcrOwnership> ocrOwnership(@RequestParam String fileUrl) {
-        return R.ok(ai.recognizeOwnership(fileUrl));
-    }
-
-    @PostMapping("/detect-conflict")
-    public R<DawatAiGateway.ConflictResult> detectConflict(@RequestParam String assetId,
-                                                           @RequestParam(required = false) String rightHolder,
-                                                           @RequestParam(required = false) String rightType) {
-        return R.ok(ai.detectConflict(assetId, rightHolder, rightType));
-    }
-
     @PostMapping("/auth-intent")
     public R<DawatAiGateway.AuthIntent> authIntent(@RequestParam String text) {
         return R.ok(ai.recognizeAuthIntent(text));
-    }
-
-    @GetMapping("/ask")
-    public R<DawatAiGateway.RagAnswer> ask(@RequestParam String question) {
-        return R.ok(ai.ask(question));
     }
 }

@@ -54,14 +54,16 @@ public class AitMaterialController {
     /** 真实文件上传(单)(#1):multipart 表单字段 file,可选 applyId */
     @PostMapping("/upload-file")
     public R<String> uploadFile(@RequestParam("file") MultipartFile file,
-                                @RequestParam(required = false) String applyId) {
-        return R.ok(saveOne(file, applyId, null));
+                                @RequestParam(required = false) String applyId,
+                                @RequestParam(required = false) String assetId) {
+        return R.ok(saveOne(file, applyId, assetId, null));
     }
 
     /** 真实文件批量上传(#1):multipart 字段 files[],单次≤50 个 */
     @PostMapping("/upload-batch")
     public R<List<String>> uploadBatch(@RequestParam("files") MultipartFile[] files,
-                                       @RequestParam(required = false) String applyId) {
+                                       @RequestParam(required = false) String applyId,
+                                       @RequestParam(required = false) String assetId) {
         if (files == null || files.length == 0) {
             throw new BizException("未选择文件");
         }
@@ -71,17 +73,17 @@ public class AitMaterialController {
         String batchNo = "BATCH-" + System.currentTimeMillis();
         List<String> ids = new ArrayList<>();
         for (MultipartFile f : files) {
-            ids.add(saveOne(f, applyId, batchNo));
+            ids.add(saveOne(f, applyId, assetId, batchNo));
         }
         return R.ok(ids);
     }
 
-    private String saveOne(MultipartFile file, String applyId, String batchNo) {
+    private String saveOne(MultipartFile file, String applyId, String assetId, String batchNo) {
         if (file == null || file.isEmpty()) {
             throw new BizException("文件为空");
         }
         try {
-            return service.uploadBinary(fixFilename(file.getOriginalFilename()), file.getBytes(), applyId, batchNo);
+            return service.uploadBinary(fixFilename(file.getOriginalFilename()), file.getBytes(), applyId, assetId, batchNo);
         } catch (IOException e) {
             throw new BizException("读取上传文件失败:" + e.getMessage());
         }

@@ -5,6 +5,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * 数据确权管理服务(F-02)启动类。
@@ -12,6 +13,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @SpringBootApplication(scanBasePackages = "com.csg.prm")
 @EnableDiscoveryClient
 @EnableAsync
+@EnableScheduling
 @MapperScan({"com.csg.prm.confirm.mapper", "com.csg.prm.confirm.aitool.mapper", "com.csg.prm.confirm.auth", "com.csg.prm.confirm.system", "com.csg.prm.common.evidence.mapper"})
 public class ConfirmApplication {
 

@@ -37,7 +37,7 @@ public interface AitMaterialService {
      * 真实文件上传(#1):校验格式/大小 -> 存储二进制 -> 抽取正文 -> 建材料,返回材料ID。
      * 格式仅限 PDF/Word/JPG/PNG,单文件 100KB–500MB。
      */
-    String uploadBinary(String fileName, byte[] data, String applyId, String batchNo);
+    String uploadBinary(String fileName, byte[] data, String applyId, String assetId, String batchNo);
 
     /** 读取已上传文件原件字节 */
     byte[] loadFile(String materialId);

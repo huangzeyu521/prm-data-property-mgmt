@@ -55,7 +55,7 @@ class TestMaterialConsumeTest {
             byte[] bytes = Files.readAllBytes(p);
             String id;
             try {
-                id = materialService.uploadBinary(name, bytes, null, null);
+                id = materialService.uploadBinary(name, bytes, null, null, null);
             } catch (RuntimeException e) {
                 unexpected.add(name + " 上传失败:" + e.getMessage());
                 continue;

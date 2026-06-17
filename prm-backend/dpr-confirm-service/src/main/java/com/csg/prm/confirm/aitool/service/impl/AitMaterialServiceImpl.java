@@ -123,7 +123,7 @@ public class AitMaterialServiceImpl implements AitMaterialService {
 
     @Override
     @Transactional
-    public String uploadBinary(String fileName, byte[] data, String applyId, String batchNo) {
+    public String uploadBinary(String fileName, byte[] data, String applyId, String assetId, String batchNo) {
         if (!StringUtils.hasText(fileName)) {
             throw new BizException(ResultCode.PARAM_ERROR.getCode(), "文件名不能为空");
         }
@@ -152,6 +152,7 @@ public class AitMaterialServiceImpl implements AitMaterialService {
         m.setFileType(inferType(fileName));
         m.setSizeKb(Math.max(1L, data.length / 1024L));
         m.setApplyId(applyId);
+        m.setAssetId(assetId);
         m.setStoragePath(storagePath);
         m.setContent(content);
         m.setFileHash(contentHash);
