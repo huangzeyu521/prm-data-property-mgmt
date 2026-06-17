@@ -3,6 +3,9 @@ import request from './request'
 // 数据资产卡片集成:档案只读查询 + 单卡产权/权益明细(确权服务暴露,assetId 为键)
 const BASE = '/dpr/confirm/asset'
 
+/** 按 名称/编码/系统·表 搜索可关联的数据资产卡片(选卡片而非手填ID;平台为源,台账兜底) */
+export const searchAssetCards = (keyword, limit = 10) => request.get(`${BASE}/cards`, { params: { keyword, limit } })
+
 /** 档案分页查询(只读):params = { current, size, keyword, state } */
 export const pageAssetArchive = (params) => request.get(`${BASE}/archive`, { params })
 

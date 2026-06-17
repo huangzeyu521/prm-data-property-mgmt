@@ -22,25 +22,27 @@
           </template>
         </el-alert>
         <el-form ref="formRef" :model="form" :rules="rules" label-width="150px" :disabled="!!applyId" style="max-width:640px">
-          <el-form-item label="关联资产ID" prop="assetId">
+          <el-form-item label="关联数据资产卡片" prop="assetId">
             <div style="display:flex;gap:8px;width:100%">
-              <el-select v-model="form.assetId" filterable remote allow-create default-first-option clearable
+              <el-select v-model="form.assetId" filterable remote clearable
                 :remote-method="searchAssets" :loading="assetSearching" style="flex:1"
-                placeholder="输入资产名称/ID 搜索台账,或直接输入,如 AST-001" @change="onAssetPicked">
-                <el-option v-for="a in assetOpts" :key="a.assetId" :value="a.assetId"
-                  :label="a.assetId + '　' + a.assetName">
-                  <span>{{ a.assetId }}</span>
-                  <span style="float:right;color:#8a8a8a;font-size:12px">{{ a.assetName }}</span>
+                placeholder="搜索卡片名称/编码/系统,选取数据资产卡片" @change="onAssetPicked">
+                <el-option v-for="a in assetOpts" :key="a.assetId" :value="a.assetId" :label="a.assetName || a.assetId">
+                  <span>{{ a.assetName || a.assetId }}</span>
+                  <span style="float:right;color:#8a8a8a;font-size:12px">{{ a.cardCode || a.systemName || a.assetId }}</span>
                 </el-option>
               </el-select>
               <el-button type="primary" plain :loading="autoLoading" @click="onAutofill">元数据自动填充</el-button>
             </div>
-            <div class="form-tip">不清楚资产ID?输入名称关键词(如"用电")即可搜索产权台账;也可在"产权台账概览"页查询</div>
+            <div class="form-tip">在数据资产管理平台卡片中按 名称/编码/系统 搜索选取;关联键为平台卡片ID,选取后自动带出名称/系统/表(不手填)。平台未接入时回退产权台账。</div>
+            <div v-if="pickedCard && (pickedCard.systemName || pickedCard.schemaName || pickedCard.tableName)" class="form-tip" style="color:#71717a">
+              已选卡片:{{ [pickedCard.systemName, pickedCard.schemaName, pickedCard.tableName].filter(Boolean).join(' / ') }}
+            </div>
             <el-tag v-if="quality !== null" :type="quality < 80 ? 'danger' : 'success'" effect="plain" style="margin-top:6px">
               元数据质量评分 {{ quality }}{{ quality < 80 ? ' · 低于80,提交将被自动驳回(请先治理元数据)' : '' }}
             </el-tag>
           </el-form-item>
-          <el-form-item label="资产名称" prop="assetName"><el-input v-model="form.assetName" /></el-form-item>
+          <el-form-item label="资产名称" prop="assetName"><el-input v-model="form.assetName" readonly placeholder="选取卡片后自动带出" /></el-form-item>
           <el-form-item label="权属类型" prop="rightTypes">
             <el-select v-model="form.rightTypes" multiple style="width:100%" placeholder="可多选,多种权属类型合并一份申请">
               <el-option v-for="t in rightTypes" :key="t" :label="t" :value="t" />
@@ -383,21 +385,22 @@ const needTable2 = computed(() =>
   form.sourceIdent.some(c => ['B', 'C', 'D', 'E', 'F'].includes(c)) ||
   form.relationIdent.some(c => ['G', 'H', 'I', 'J'].includes(c)))
 
-// 资产远程搜索(产权台账):降低"不知道填什么ID"的首填门槛
-import { pageArchive } from '@/api/propertyArchive'
+// 关联数据资产卡片:按 名称/编码/系统 搜索平台卡片并选取(平台为源,台账兜底);存ID、带出名,不手填
+import { searchAssetCards } from '@/api/assetCard'
 const assetOpts = ref([])
 const assetSearching = ref(false)
+const pickedCard = ref(null)
 async function searchAssets(kw) {
   if (!kw) { assetOpts.value = []; return }
   assetSearching.value = true
   try {
-    const r = await pageArchive({ current: 1, size: 10, assetName: kw })
-    assetOpts.value = r.records || []
+    assetOpts.value = (await searchAssetCards(kw, 10)) || []
   } finally { assetSearching.value = false }
 }
 function onAssetPicked(id) {
   const hit = assetOpts.value.find(a => a.assetId === id)
-  if (hit) form.assetName = hit.assetName
+  pickedCard.value = hit || null
+  if (hit) form.assetName = hit.assetName || hit.assetId
   if (id) onAutofill(true)
 }
 

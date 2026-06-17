@@ -52,6 +52,26 @@ class AssetCardArchiveWritebackTest {
         return asset;
     }
 
+    /** 卡片搜索(平台未接入→台账兜底):按名称关键词找到已登记资产,存ID带出名。 */
+    @Test
+    void search_cards_falls_back_to_registered_assets() {
+        String asset = seedDone("SRCH");
+        var hit = archive.searchCards("档案测试-SRCH", 10).stream()
+                .filter(c -> asset.equals(c.assetId())).findFirst();
+        assertTrue(hit.isPresent(), "应按名称搜到已登记卡片");
+        assertTrue(hit.get().assetName() != null && hit.get().assetName().contains("档案测试"), "应带出卡片名称");
+        assertTrue(archive.searchCards("绝无此卡片关键词ZZZ", 10).stream()
+                .noneMatch(c -> asset.equals(c.assetId())), "不匹配关键词不应命中");
+    }
+
+    /** 引用完整性:平台未接入(stub)时不阻断(返回 true);空 assetId 返回 false。 */
+    @Test
+    void asset_card_resolvable_when_platform_unavailable() {
+        assertTrue(archive.assetCardResolvable("ANY-ASSET-ID"), "平台未接入应放行(无权威源)");
+        assertFalse(archive.assetCardResolvable(""), "空 assetId 不可解析");
+        assertFalse(archive.assetCardResolvable(null), "null assetId 不可解析");
+    }
+
     /** 档案查询:已确权资产出现在列表,行含状态/权益数;只读、无新增。 */
     @Test
     void archive_lists_confirmed_assets() {

@@ -6,6 +6,7 @@ import com.csg.prm.common.query.PageQuery;
 import com.csg.prm.confirm.integration.dto.AssetArchiveRowVO;
 import com.csg.prm.confirm.integration.dto.AssetEquityVO;
 import com.csg.prm.confirm.integration.dto.AssetPropertyVO;
+import com.csg.prm.confirm.integration.dto.PlatformCardRef;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,6 +35,13 @@ public class AssetCardIntegrationController {
         this.service = service;
         this.archiveService = archiveService;
         this.writebackService = writebackService;
+    }
+
+    /** 关联数据资产卡片:按 名称/编码/系统·表 搜索可关联卡片(选卡片而非手填ID;平台为源,台账兜底)。 */
+    @GetMapping("/cards")
+    public R<List<PlatformCardRef>> searchCards(@RequestParam(required = false) String keyword,
+                                                @RequestParam(required = false, defaultValue = "10") int limit) {
+        return R.ok(archiveService.searchCards(keyword, limit));
     }
 
     /** 数据集产权档案管理:只读分页查询可见卡片的确权/授权概要(无新增)。 */

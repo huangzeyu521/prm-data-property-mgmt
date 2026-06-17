@@ -37,11 +37,13 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
     private final ProcessFlowEngine flowEngine;
     private final ConfirmFlowLogService flowLogService;
     private final com.csg.prm.confirm.integration.AssetCardWritebackService cardWriteback;
+    private final com.csg.prm.confirm.integration.AssetCardArchiveService cardArchive;
 
     public ConfirmApplyServiceImpl(ConfirmApplyMapper mapper, EquityCardService equityCardService,
                                    ConfirmSummaryService summaryService, MetadataGateway metadataGateway,
                                    ProcessFlowEngine flowEngine, ConfirmFlowLogService flowLogService,
-                                   com.csg.prm.confirm.integration.AssetCardWritebackService cardWriteback) {
+                                   com.csg.prm.confirm.integration.AssetCardWritebackService cardWriteback,
+                                   com.csg.prm.confirm.integration.AssetCardArchiveService cardArchive) {
         this.mapper = mapper;
         this.equityCardService = equityCardService;
         this.summaryService = summaryService;
@@ -49,6 +51,7 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
         this.flowEngine = flowEngine;
         this.flowLogService = flowLogService;
         this.cardWriteback = cardWriteback;
+        this.cardArchive = cardArchive;
     }
 
     /** 各审批状态对应的责任人(节点处理人/角色)。 */
@@ -128,6 +131,10 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
             throw new BizException("仅草稿状态可提交");
         }
         validate(apply);
+        // 引用完整性:关联资产ID 必须能解析到平台真实数据资产卡片(平台未接入则不阻断)。杜绝幽灵资产。
+        if (!cardArchive.assetCardResolvable(apply.getAssetId())) {
+            throw new BizException("关联的数据资产卡片在平台不存在,请重新搜索并选择有效卡片");
+        }
         // 资料完整性归集审查(节点40,对齐南网补录工单 M01/M02 填报口径:来源方式/来源主体/G–J 逐维说明)
         validateRegistration(apply);
         // 元数据质量门禁:质量评分<80 自动驳回确权(需求§5.5 接口③)。

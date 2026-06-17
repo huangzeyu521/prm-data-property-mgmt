@@ -1,5 +1,7 @@
 package com.csg.prm.confirm.integration;
 
+import com.csg.prm.confirm.integration.dto.PlatformCardRef;
+
 import java.util.List;
 import java.util.Map;
 
@@ -17,6 +19,12 @@ public interface PlatformCardClient {
 
     /** 入站:平台按当前账户数据权限返回可见卡片资产ID集;空=未接入(回退 PRM 本地)。 */
     List<String> listVisibleAssetIds();
+
+    /** 入站:按关键词(卡片名称/编码/系统·表)在平台卡片中搜索,供"选卡片而非填ID"。空=未接入。 */
+    List<PlatformCardRef> searchCards(String keyword, int limit);
+
+    /** 入站:校验某 assetId 是否对应平台真实卡片(引用完整性,杜绝幽灵资产)。 */
+    boolean cardExists(String assetId);
 
     /** 出站:把某资产的产权/权益结论单向写回平台卡片。返回 true=平台已接收。 */
     boolean pushPropertyAndEquity(String assetId, Map<String, Object> property, List<Map<String, Object>> equity);

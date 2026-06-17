@@ -6,11 +6,14 @@ import com.csg.prm.common.query.PageQuery;
 import com.csg.prm.confirm.entity.ConfirmApply;
 import com.csg.prm.confirm.integration.dto.AssetArchiveRowVO;
 import com.csg.prm.confirm.integration.dto.AssetPropertyVO;
+import com.csg.prm.confirm.integration.dto.PlatformCardRef;
 import com.csg.prm.confirm.mapper.ConfirmApplyMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 数据集产权档案管理:只读查询当前账户可见的数据资产卡片的确权/授权概要。
@@ -47,6 +50,49 @@ public class AssetCardArchiveService {
         int from = (int) Math.min((current - 1) * size, rows.size());
         int to = (int) Math.min(from + size, rows.size());
         return new PageResult<>(rows.size(), current, size, rows.subList(from, to));
+    }
+
+    /**
+     * 按关键词搜索可关联的数据资产卡片(卡片名称/编码/系统·表)。
+     * 平台已接入则搜平台卡片;未接入回退 PRM 已登记资产(仅 assetId+assetName 可得)。
+     */
+    public List<PlatformCardRef> searchCards(String keyword, int limit) {
+        int lim = limit <= 0 ? 10 : Math.min(limit, 50);
+        if (platform.platformAvailable()) {
+            return platform.searchCards(keyword, lim);
+        }
+        Map<String, String> seen = new LinkedHashMap<>();
+        for (ConfirmApply a : applyMapper.selectList(new LambdaQueryWrapper<ConfirmApply>()
+                .isNotNull(ConfirmApply::getAssetId).orderByDesc(ConfirmApply::getCreateTime))) {
+            if (!StringUtils.hasText(a.getAssetId())) {
+                continue;
+            }
+            if (StringUtils.hasText(keyword)
+                    && !safe(a.getAssetId()).contains(keyword) && !safe(a.getAssetName()).contains(keyword)) {
+                continue;
+            }
+            seen.putIfAbsent(a.getAssetId(), a.getAssetName());
+            if (seen.size() >= lim) {
+                break;
+            }
+        }
+        return seen.entrySet().stream()
+                .map(e -> new PlatformCardRef(e.getKey(), e.getValue(), null, null, null, null, null))
+                .toList();
+    }
+
+    /**
+     * assetId 引用完整性:平台已接入时校验对应卡片真实存在(杜绝幽灵资产);
+     * 平台未接入则不阻断(无权威源可校验,放行草稿/dev)。
+     */
+    public boolean assetCardResolvable(String assetId) {
+        if (!StringUtils.hasText(assetId)) {
+            return false;
+        }
+        if (!platform.platformAvailable()) {
+            return true;
+        }
+        return platform.cardExists(assetId);
     }
 
     /** PRM 兜底:已发起确权的资产ID(去重,最近确权在前)。平台清单接入后此分支不再走。 */
