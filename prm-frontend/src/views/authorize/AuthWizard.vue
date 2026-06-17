@@ -89,11 +89,26 @@
           <el-form-item v-if="form.thirdPartySource" label="第三方许可凭证" required>
             <el-input v-model="form.thirdPartyLicense" type="textarea" :rows="2" placeholder="第三方许可凭证或说明(涉第三方必填)" />
           </el-form-item>
-          <el-form-item label="信息授权协议"><el-input v-model="form.infoAuthAgreement" placeholder="信息授权协议名称/地址" /></el-form-item>
+          <el-form-item label="信息授权协议" :required="!!(form.sensitiveType && form.sensitiveType.trim() && form.sensitiveType !== '无')">
+            <el-input v-model="form.infoAuthAgreement" placeholder="信息授权协议名称/地址(涉个人隐私/商密必填)" />
+          </el-form-item>
           <el-form-item label="需保密承诺函"><el-switch v-model="form.needConfidentiality" /><span style="margin-left:8px;color:#909399;font-size:12px">附录E</span></el-form-item>
           <el-form-item v-if="form.needConfidentiality" label="保密承诺函"><el-input v-model="form.confidentialityFile" placeholder="保密承诺函文件地址" /></el-form-item>
         </el-form>
         <el-divider />
+        <div v-if="requiredChecklist.length" style="margin-bottom:12px">
+          <div style="font-weight:600;margin-bottom:8px">应交材料清单（按当前申请自动判定 · 可配置规则单一真源）</div>
+          <el-table :data="requiredChecklist" border size="small" style="max-width:680px">
+            <el-table-column type="index" label="序号" width="56" align="center" />
+            <el-table-column prop="materialName" label="应交材料" min-width="180" />
+            <el-table-column prop="required" label="要求" width="90" align="center">
+              <template #default="{ row }">
+                <el-tag :type="row.required === '必填' ? 'danger' : 'warning'" effect="light" size="small">{{ row.required }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="detail" label="内容与要求明细" min-width="240" />
+          </el-table>
+        </div>
         <div style="font-weight:600;margin-bottom:8px">申请材料（上传相关材料，先暂存草稿后上传）</div>
         <el-upload :show-file-list="false" :http-request="(o)=>doUploadMaterial(o.file)" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
           <el-button type="primary" plain :loading="matUploading">上传材料</el-button>
@@ -183,10 +198,10 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted } from 'vue'
+import { reactive, ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { saveAuthDraft, submitAuth, runAuthCompliance, pageScenario, uploadAuthMaterialFile, listAuthMaterial, deleteAuthMaterial, authMaterialFileUrl } from '@/api/authorize'
+import { saveAuthDraft, submitAuth, runAuthCompliance, pageScenario, uploadAuthMaterialFile, listAuthMaterial, deleteAuthMaterial, authMaterialFileUrl, listAuthMaterialRules } from '@/api/authorize'
 import { aiAuthIntent } from '@/api/confirm'
 import { aiAuthMaterialCheck, aiAuthPreReview } from '@/api/authorize'
 import AiThinking from '@/components/AiThinking.vue'
@@ -214,7 +229,26 @@ function empty() {
 const form = reactive(empty())
 const scenarioOpts = ref([])
 const selectedReason = ref('')
+
+// 应交材料清单由后端可配置规则(单一真源·场景一事一议)按 涉第三方/涉敏感 触发生成,前端仅渲染
+const materialRules = ref([])
+const requiredChecklist = computed(() => {
+  const tp = !!(form.thirdPartySource && form.thirdPartySource.trim())
+  const sv = !!(form.sensitiveType && form.sensitiveType.trim() && form.sensitiveType !== '无')
+  const hit = (r) => r.triggerType === 'ALWAYS'
+    || (r.triggerType === 'THIRD_PARTY' && tp)
+    || (r.triggerType === 'SENSITIVE' && sv)
+  return materialRules.value.filter(hit)
+})
+async function loadAuthMaterialRules() {
+  try {
+    const rules = await listAuthMaterialRules('一事一议')
+    if (Array.isArray(rules) && rules.length) materialRules.value = rules
+  } catch (e) { /* 规则不可用则不展示清单面板,不阻断流程 */ }
+}
+
 onMounted(async () => {
+  loadAuthMaterialRules()
   const r = await pageScenario({ status: '生效中', size: 100 })
   scenarioOpts.value = r.records || []
   // 先确后授一键衔接:从权益卡片页"发起授权"带来 资产+卡号,直接预填(免去重新搜索选卡)
@@ -374,6 +408,7 @@ async function onAiFill() {
 async function next0() {
   await formRef.value.validate()
   if (form.thirdPartySource && !form.thirdPartyLicense) { ElMessage.warning('涉及第三方来源,须填第三方许可凭证或说明'); return }
+  if (form.sensitiveType && form.sensitiveType.trim() && form.sensitiveType !== '无' && !form.infoAuthAgreement) { ElMessage.warning('涉个人隐私/商密,须填信息授权协议'); return }
   if (!applyId.value) {
     saving.value = true
     try { applyId.value = await saveAuthDraft({ authMode: '一事一议', ...form }) }

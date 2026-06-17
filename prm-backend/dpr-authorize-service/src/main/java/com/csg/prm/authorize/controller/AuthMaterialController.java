@@ -1,6 +1,8 @@
 package com.csg.prm.authorize.controller;
 
 import com.csg.prm.authorize.entity.AuthMaterial;
+import com.csg.prm.authorize.entity.AuthMaterialRule;
+import com.csg.prm.authorize.service.AuthMaterialRuleService;
 import com.csg.prm.authorize.service.AuthMaterialService;
 import com.csg.prm.common.api.R;
 import com.csg.prm.common.exception.BizException;
@@ -26,9 +28,17 @@ import java.util.List;
 public class AuthMaterialController {
 
     private final AuthMaterialService service;
+    private final AuthMaterialRuleService ruleService;
 
-    public AuthMaterialController(AuthMaterialService service) {
+    public AuthMaterialController(AuthMaterialService service, AuthMaterialRuleService ruleService) {
         this.service = service;
+        this.ruleService = ruleService;
+    }
+
+    /** 应交材料清单规则(单一真源):前端据此构建应交清单,不再前端硬编码。scene=批量/一事一议。 */
+    @GetMapping("/rule")
+    public R<List<AuthMaterialRule>> rules(@RequestParam(defaultValue = "批量") String scene) {
+        return R.ok(ruleService.listEnabled(scene));
     }
 
     /** 上传申请材料(multipart:file + applyId/材料名/类型/上传人)。 */

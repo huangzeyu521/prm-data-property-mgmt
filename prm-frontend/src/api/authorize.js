@@ -112,6 +112,8 @@ export const uploadAuthMaterialFile = (formData) =>
   request.post('/dpr/auth/material/upload-file', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
 export const listAuthMaterial = (applyId) => request.get(`/dpr/auth/material/by-apply/${applyId}`)
 export const deleteAuthMaterial = (id) => request.delete(`/dpr/auth/material/${id}`)
+// 应交材料清单规则(可配置·单一真源):前端据此生成应交清单,不再硬编码。scene=批量/一事一议
+export const listAuthMaterialRules = (scene = '批量') => request.get('/dpr/auth/material/rule', { params: { scene } })
 export const authMaterialFileUrl = (id) => `/api/dpr/auth/material/${id}/file`
 
 // 授权协议模板库(可研 3.2.2.1.1.3.3.1)

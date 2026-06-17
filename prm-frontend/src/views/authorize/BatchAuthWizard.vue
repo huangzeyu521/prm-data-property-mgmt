@@ -46,6 +46,19 @@
             </el-table-column>
           </el-table>
         </div>
+        <div v-if="requiredChecklist.length" style="margin:8px 0 4px">
+          <div style="font-weight:600;margin-bottom:8px">应交材料清单（按全单授权项自动判定 · 可配置规则单一真源）</div>
+          <el-table :data="requiredChecklist" border size="small" style="max-width:680px">
+            <el-table-column type="index" label="序号" width="56" align="center" />
+            <el-table-column prop="materialName" label="应交材料" min-width="180" />
+            <el-table-column prop="required" label="要求" width="90" align="center">
+              <template #default="{ row }">
+                <el-tag :type="row.required === '必填' ? 'danger' : 'warning'" effect="light" size="small">{{ row.required }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="detail" label="内容与要求明细" min-width="240" />
+          </el-table>
+        </div>
         <el-divider />
         <el-row :gutter="16">
           <el-col :span="11">
@@ -143,10 +156,10 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { reactive, ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { createBatchList, saveAuthDraft, submitBatchList, aiBatchIntent, aiBatchPreReview } from '@/api/authorize'
+import { createBatchList, saveAuthDraft, submitBatchList, aiBatchIntent, aiBatchPreReview, listAuthMaterialRules } from '@/api/authorize'
 import AiThinking from '@/components/AiThinking.vue'
 import { useAiThinking } from '@/composables/useAiThinking'
 import { AI_PHASES } from '@/lib/aiPhases'
@@ -173,6 +186,24 @@ const itemRules = {
 function emptyItem() {
   return { assetId: '', assetName: '', equityCardId: '', granteeOrg: '', rightType: '', scenario: '', thirdPartySource: '', sensitiveType: '', crossRegion: false }
 }
+
+// 应交材料清单由后端可配置规则(单一真源·场景批量)按全单 涉第三方/涉敏感 触发生成
+const materialRules = ref([])
+const requiredChecklist = computed(() => {
+  const all = [...items.value, item]
+  const tp = all.some(x => x.thirdPartySource && String(x.thirdPartySource).trim())
+  const sv = all.some(x => x.sensitiveType && String(x.sensitiveType).trim() && x.sensitiveType !== '无')
+  const hit = (r) => r.triggerType === 'ALWAYS'
+    || (r.triggerType === 'THIRD_PARTY' && tp)
+    || (r.triggerType === 'SENSITIVE' && sv)
+  return materialRules.value.filter(hit)
+})
+onMounted(async () => {
+  try {
+    const rules = await listAuthMaterialRules('批量')
+    if (Array.isArray(rules) && rules.length) materialRules.value = rules
+  } catch (e) { /* 规则不可用则不展示清单面板,不阻断流程 */ }
+})
 
 async function next0() {
   if (!listForm.listYear) { ElMessage.warning('请填写授权年度'); return }
