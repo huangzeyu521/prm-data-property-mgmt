@@ -507,7 +507,7 @@ const ALLOWED_EXT = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png']
 const q = reactive({ current: 1, size: 10 })
 const rows = ref([]); const total = ref(0); const loading = ref(false)
 const dlg = ref(false)
-const uploadRef = ref(); const fileList = ref([]); const uploadApplyId = ref(''); const uploading = ref(false)
+const uploadRef = ref(); const fileList = ref([]); const uploadApplyId = ref(''); const uploadAssetId = ref(''); const uploading = ref(false)
 const viewDlg = ref(false); const parse = ref(null); const terms = ref([]); const compares = ref([]); const curMaterialId = ref('')
 const layout = ref(null); const segments = ref([]); const segGran = ref('')
 const aggDlg = ref(false); const aggGroups = ref([])
@@ -586,6 +586,7 @@ async function onUpload() {
   try {
     const fd = new FormData()
     if (uploadApplyId.value) fd.append('applyId', uploadApplyId.value)
+    if (uploadAssetId.value) fd.append('assetId', uploadAssetId.value)
     if (raws.length === 1) {
       fd.append('file', raws[0])
       await uploadAitMaterialFile(fd)
@@ -780,6 +781,9 @@ async function onLocate(row) {
 const route = useRoute()
 onMounted(() => {
   load()
+  if (route.query.assetId) {
+    uploadAssetId.value = String(route.query.assetId)
+  }
   if (route.query.applyId) {
     uploadApplyId.value = String(route.query.applyId)
     dlg.value = true

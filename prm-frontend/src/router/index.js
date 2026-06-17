@@ -19,7 +19,7 @@ const routes = [
     path: '/dpr/ledger/archive',
     name: 'PropertyArchive',
     component: () => import('@/views/ledger/PropertyArchiveList.vue'),
-    meta: { title: '数据集产权档案管理', goal: '登记维护"一数一档"产权档案,确权状态由确权流程驱动' }
+    meta: { title: '数据集产权档案管理', goal: '只读查询权限可见的数据资产卡片确权/授权信息(卡片来自数据资产管理平台,不在此新增)' }
   },
   { path: '/dpr/ledger/dataset', name: 'DatasetDetail', component: () => import('@/views/ledger/DatasetDetail.vue'), meta: { title: '数据集详情展示', goal: '查看数据集明细与产权要素,核对资产信息' } },
   { path: '/dpr/ledger/change', name: 'ChangeRecord', component: () => import('@/views/ledger/ChangeRecordList.vue'), meta: { title: '产权变更记录管理', goal: '追溯产权变更历史与上链凭证,保障全程可审计' } },

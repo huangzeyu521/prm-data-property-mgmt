@@ -120,7 +120,7 @@
         <div class="prm-table-note" style="margin-bottom:10px">
           按所选来源/关联(A–J)应交材料清单。"上传原件"真实上传文件(仅 PDF/Word/JPG/PNG,自动格式验证);或"仅登记"占位。
           <el-button size="small" type="warning" plain style="margin-left:12px" @click="invokeAitool">
-            <el-icon><MagicStick /></el-icon> 调用智能确权辅助工具(解析/比对本申请材料)
+            <el-icon><MagicStick /></el-icon> 智能解析材料(OCR印章/归集/查重/模板对比/批量)
           </el-button>
         </div>
         <el-table :data="checklist" border>
@@ -281,9 +281,14 @@ const quality = ref(null)
 const applyId = ref('')
 const applyNo = ref('')
 
-// 调用独立智能确权辅助工具,带本申请上下文(新标签打开)
+// 调用独立智能确权辅助工具的材料智能解析(新标签打开),带本申请+资产上下文。
+// 高级材料能力(Excel导入/OCR印章/版面/归集分类/内容指纹查重/模板对比/批量解析/解析记录)统一由 aitool 承接,
+// 主模块向导仅做轻量"随申请登记/上传",不重复造材料管理。
 function invokeAitool() {
-  window.open('/aitool/material?applyId=' + encodeURIComponent(applyId.value || ''), '_blank')
+  const params = new URLSearchParams()
+  if (applyId.value) params.set('applyId', applyId.value)
+  if (form.assetId) params.set('assetId', form.assetId)
+  window.open('/aitool/material?' + params.toString(), '_blank')
 }
 
 // AI 材料校验:qwen3-max 逐份校验 完整性/合规性/与表单一致性(stub 回退)

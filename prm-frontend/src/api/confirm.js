@@ -30,12 +30,8 @@ export const equityCardLogs = (cardId) => request.get(`/dpr/confirm/card/${cardI
 // 确权看板
 export const getConfirmDashboard = (params) => request.get('/dpr/confirm/dashboard', { params })
 
-// 大瓦特 AI 智能辅助(⑨)
-export const aiProvider = () => request.get('/dpr/confirm/ai/provider')
-export const aiOcrOwnership = (fileUrl) => request.post('/dpr/confirm/ai/ocr-ownership', null, { params: { fileUrl } })
-export const aiDetectConflict = (params) => request.post('/dpr/confirm/ai/detect-conflict', null, { params })
+// 授权意图识别(⑨;OCR权属识别/冲突检测/RAG问答 已收敛至智能确权辅助工具 aitool,见 api/aitool.js)
 export const aiAuthIntent = (text) => request.post('/dpr/confirm/ai/auth-intent', null, { params: { text }, timeout: 120000 })
-export const aiAsk = (question) => request.get('/dpr/confirm/ai/ask', { params: { question } })
 
 // 确权汇总表(表3/表4)
 export const listConfirmSummary = (applyId) => request.get(`/dpr/confirm/summary/by-apply/${applyId}`)

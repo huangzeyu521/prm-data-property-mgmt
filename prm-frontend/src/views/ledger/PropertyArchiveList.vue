@@ -1,19 +1,15 @@
 <template>
   <div class="prm-page">
-    <!-- 查询条件区(查询条件不带必填星号) -->
+    <!-- 只读查询:当前账户权限可见的数据资产卡片的确权/授权信息。卡片来自数据资产管理平台,本模块不新增卡片。 -->
     <div class="prm-query-bar">
-      <el-form :inline="true" :model="query" @submit.prevent>
-        <el-form-item label="资产名称">
-          <el-input v-model="query.assetName" placeholder="请输入资产名称" clearable style="width: 200px" />
-        </el-form-item>
-        <el-form-item label="产权类型">
-          <el-select v-model="query.rightType" placeholder="全部" clearable style="width: 180px">
-            <el-option v-for="t in rightTypes" :key="t" :label="t" :value="t" />
-          </el-select>
+      <el-form :inline="true" @submit.prevent>
+        <el-form-item label="资产名称/ID">
+          <el-input v-model="q.keyword" placeholder="按资产名称或资产ID检索" clearable style="width: 240px"
+                    @keyup.enter="onSearch" />
         </el-form-item>
         <el-form-item label="确权状态">
-          <el-select v-model="query.confirmStatus" placeholder="全部" clearable style="width: 160px">
-            <el-option v-for="s in confirmStatuses" :key="s" :label="s" :value="s" />
+          <el-select v-model="q.state" placeholder="全部" clearable style="width: 150px">
+            <el-option v-for="s in STATES" :key="s" :label="s" :value="s" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -23,255 +19,157 @@
       </el-form>
     </div>
 
-    <!-- 列表区 -->
     <div class="prm-table-card">
-      <div style="margin-bottom: 12px">
-        <el-button type="primary" @click="onCreate">新增</el-button>
-        <el-button type="primary" plain @click="batchDlg = true">批量新增</el-button>
-        <el-button @click="onExport">导出</el-button>
-      </div>
-
       <el-table :data="rows" v-loading="loading" border stripe>
-        <el-table-column type="index" label="序号" width="64" align="center" />
+        <el-table-column type="index" label="序号" width="60" align="center" />
+        <el-table-column prop="assetId" label="资产ID" min-width="150" show-overflow-tooltip />
         <el-table-column prop="assetName" label="资产名称" min-width="180" show-overflow-tooltip />
-        <el-table-column prop="rightType" label="产权类型(三权分置·可多)" min-width="200">
+        <el-table-column label="确权状态" width="110" align="center">
           <template #default="{ row }">
-            <el-tag v-for="t in splitRights(row.rightType)" :key="t" size="small" style="margin:1px 4px 1px 0">{{ t }}</el-tag>
-            <span v-if="!splitRights(row.rightType).length" style="color:#8a8a8a">—</span>
+            <el-tag :type="stateTag(row.state)">{{ row.state }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="rightSubject" label="权利主体" min-width="150" show-overflow-tooltip />
-        <el-table-column prop="respDept" label="责任部门" width="130" show-overflow-tooltip />
-        <el-table-column prop="confirmStatus" label="确权状态(按权)" width="130" align="center">
-          <template #default="{ row }">
-            <el-tooltip v-if="row.confirmDetail" placement="top">
-              <template #content>
-                <div v-for="d in parseDetail(row.confirmDetail)" :key="d.right">{{ d.right }}：{{ d.status }}</div>
-              </template>
-              <el-tag :type="statusTag(row.confirmStatus)">{{ row.confirmStatus }}</el-tag>
-            </el-tooltip>
-            <el-tag v-else :type="statusTag(row.confirmStatus)">{{ row.confirmStatus }}</el-tag>
-          </template>
+        <el-table-column prop="rightType" label="权属类型" width="120" />
+        <el-table-column prop="rightHolder" label="权利主体" min-width="140" show-overflow-tooltip />
+        <el-table-column prop="registerType" label="登记类型" width="110" />
+        <el-table-column prop="respDept" label="责任部门" min-width="120" show-overflow-tooltip />
+        <el-table-column label="有效期" width="120" align="center">
+          <template #default="{ row }">{{ fmtDate(row.validDate) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="180" fixed="right">
+        <el-table-column prop="equityCount" label="权益条目" width="90" align="center" />
+        <el-table-column label="操作" width="100" align="center" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="onEdit(row)">修改</el-button>
-            <el-button link type="danger" @click="onDelete(row)">删除</el-button>
+            <el-button link type="primary" @click="onView(row)">查看</el-button>
           </template>
         </el-table-column>
       </el-table>
-
-      <div class="prm-table-note">注:产权档案依据"三权分置"建立"一数一档",删除前需先解除关联授权;新增/批量新增仅作登记(确权状态为"未确权"),确权状态由确权流程驱动;分省上报的数据产权确权通过后统一归口中国南方电网有限责任公司。</div>
-
       <el-pagination
-        style="margin-top: 16px; justify-content: flex-end"
+        class="prm-pager"
         background
-        layout="total, sizes, prev, pager, next, jumper"
+        layout="total, sizes, prev, pager, next"
         :total="total"
-        :current-page="query.current"
-        :page-size="query.size"
-        :page-sizes="[10, 20, 50, 100]"
-        @current-change="onPageChange"
-        @size-change="onSizeChange"
+        :current-page="q.current"
+        :page-size="q.size"
+        :page-sizes="[10, 20, 50]"
+        @current-change="onPage"
+        @size-change="onSize"
       />
+      <div class="prm-table-note">注:本页仅只读展示数据资产卡片的确权/授权信息;卡片是数据资产管理平台主数据,产权模块不在此新增/批量新增。未确权资产显示"待确权"。</div>
     </div>
 
-    <!-- 新增/修改弹窗(屏幕居中、屏蔽背景) -->
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="560px" align-center :close-on-click-modal="false">
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
-        <el-form-item label="关联资产ID" prop="assetId">
-          <el-input v-model="form.assetId" placeholder="请输入关联资产ID" />
-        </el-form-item>
-        <el-form-item label="资产名称" prop="assetName">
-          <el-input v-model="form.assetName" placeholder="请输入资产名称" />
-        </el-form-item>
-        <el-form-item label="产权类型">
-          <el-select v-model="form.rightType" multiple placeholder="可多选(三权分置:一个数据集可同时主张多权)" style="width: 100%">
-            <el-option v-for="t in rightTypes" :key="t" :label="t" :value="t" />
-          </el-select>
-          <div class="form-tip">三权分置:一个数据集可同时主张持有/使用/经营多权;登记仅为申报,各权确权状态由确权流程逐权驱动</div>
-        </el-form-item>
-        <el-form-item label="权利主体">
-          <el-input v-model="form.rightSubject" placeholder="申报权利主体(分省上报最终归口网公司)" />
-        </el-form-item>
-        <el-form-item label="责任部门">
-          <el-input v-model="form.respDept" placeholder="请输入责任部门" />
-        </el-form-item>
-        <el-form-item label="确权状态">
-          <el-tag :type="statusTag(form.confirmStatus || '未确权')">{{ form.confirmStatus || '未确权' }}</el-tag>
-          <span class="form-tip" style="margin-left:8px">确权状态由"数据确权管理"流程驱动变更,不可手工设定</span>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button type="primary" @click="onSubmit">确定</el-button>
-        <el-button @click="dialogVisible = false">取消</el-button>
-      </template>
-    </el-dialog>
+    <!-- 卡片产权/权益明细(只读) -->
+    <prm-dialog v-model="dlg" variant="detail" :title="`产权档案 · ${cur?.assetName || cur?.assetId || ''}`" width="760px">
+      <el-descriptions title="产权信息" :column="2" size="small" border v-loading="detailLoading">
+        <el-descriptions-item label="确权状态">
+          <el-tag size="small" :type="stateTag(prop?.state)">{{ prop?.state || '-' }}</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="登记类型">{{ prop?.registerType || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="权属类型">{{ prop?.rightType || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="权利主体">{{ prop?.rightHolder || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="数据责任部门">{{ prop?.respDept || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="来源方式">{{ prop?.sourceMethod || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="来源主体">{{ prop?.sourceSubject || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="行政监管(G)">
+          <el-tag size="small" :type="prop?.involvesRegulation ? 'warning' : 'info'">{{ prop?.involvesRegulation ? '是' : '否' }}</el-tag>
+          <span v-if="prop?.regulated" class="dim-note">{{ prop.regulated }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="个人隐私(H)">
+          <el-tag size="small" :type="prop?.involvesPrivacy ? 'warning' : 'info'">{{ prop?.involvesPrivacy ? '是' : '否' }}</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="第三方商密(I)">
+          <el-tag size="small" :type="prop?.involvesTradeSecret ? 'warning' : 'info'">{{ prop?.involvesTradeSecret ? '是' : '否' }}</el-tag>
+          <span v-if="prop?.thirdPartyInfo" class="dim-note">{{ prop.thirdPartyInfo }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="第三方协议(J)">
+          <el-tag size="small" :type="prop?.involvesThirdPartyAgreement ? 'warning' : 'info'">{{ prop?.involvesThirdPartyAgreement ? '是' : '否' }}</el-tag>
+          <span v-if="prop?.relationSubject" class="dim-note">{{ prop.relationSubject }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="有效期">{{ fmtDate(prop?.validDate) }}</el-descriptions-item>
+        <el-descriptions-item label="确权时间">{{ fmtDateTime(prop?.confirmTime) }}</el-descriptions-item>
+        <el-descriptions-item label="确权凭证(上链)">{{ prop?.evidenceRef || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="认定意见/确权结论" :span="2">{{ prop?.recognitionOpinion || '-' }}</el-descriptions-item>
+        <el-descriptions-item v-if="prop?.message" label="说明" :span="2">{{ prop.message }}</el-descriptions-item>
+      </el-descriptions>
 
-    <!-- 批量新增(评审7.3):多行粘贴登记,确权状态统一"未确权" -->
-    <el-dialog v-model="batchDlg" title="批量新增产权档案" width="640px" align-center :close-on-click-modal="false">
-      <el-alert type="info" :closable="false" style="margin-bottom:10px"
-        title="每行一条:资产ID,资产名称[,产权类型][,权利主体][,责任部门];产权类型可多权用「|」分隔(如 数据资源持有权|数据加工使用权);批量登记各权确权状态统一「未确权」,由确权流程逐权驱动" />
-      <el-input v-model="batchText" type="textarea" :rows="8"
-        placeholder="DA-1001,营销用电量明细,数据资源持有权|数据加工使用权,中国南方电网有限责任公司,市场部&#10;DA-1002,配网负荷曲线" />
-      <template #footer>
-        <el-button type="primary" :loading="batchLoading" @click="onBatchCreate">批量登记</el-button>
-        <el-button @click="batchDlg = false">取消</el-button>
-      </template>
-    </el-dialog>
+      <div class="eq-title">权益基本信息</div>
+      <el-table :data="equity" border size="small" empty-text="暂无权益条目">
+        <el-table-column prop="cardNo" label="权益编号" min-width="150" show-overflow-tooltip />
+        <el-table-column prop="rightType" label="权益类型" width="120" />
+        <el-table-column prop="rightOwner" label="权益主体" min-width="120" show-overflow-tooltip />
+        <el-table-column prop="scope" label="权益范围" width="110" />
+        <el-table-column label="有效期" width="120" align="center">
+          <template #default="{ row }">{{ fmtDate(row.validDate) }}</template>
+        </el-table-column>
+        <el-table-column prop="cardStatus" label="状态" width="90" align="center" />
+      </el-table>
+    </prm-dialog>
   </div>
 </template>
 
 <script setup>
-import { reactive, ref, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { pageArchive, createArchive, updateArchive, deleteArchive } from '@/api/propertyArchive'
+import { reactive, ref } from 'vue'
+import { pageAssetArchive, getAssetProperty, getAssetEquity } from '@/api/assetCard'
+import PrmDialog from '@/components/PrmDialog.vue'
 
-const rightTypes = ['数据资源持有权', '数据加工使用权', '数据产品经营权']
-const confirmStatuses = ['未确权', '部分确权', '已确权']
+const STATES = ['待确权', '确权中', '已确权', '已驳回']
 
-// 产权类型多值串拆分(顿号/竖线等分隔,去重保序)——三权分置一数集可多权
-function splitRights(joined) {
-  if (!joined) return []
-  return [...new Set(String(joined).split(/[、,，;；/|]/).map(s => s.trim()).filter(Boolean))]
-}
-// 按权确权明细解析:"持有权:已确权;使用权:未确权" -> [{right,status}]
-function parseDetail(detail) {
-  if (!detail) return []
-  return String(detail).split(';').map(s => s.trim()).filter(Boolean).map(seg => {
-    const i = seg.lastIndexOf(':')
-    return i < 0 ? { right: seg, status: '未确权' } : { right: seg.slice(0, i).trim(), status: seg.slice(i + 1).trim() }
-  })
-}
-
-const query = reactive({ current: 1, size: 10, assetName: '', rightType: '', confirmStatus: '' })
+const q = reactive({ keyword: '', state: '', current: 1, size: 10 })
 const rows = ref([])
 const total = ref(0)
 const loading = ref(false)
 
-const dialogVisible = ref(false)
-const dialogTitle = ref('新增产权档案')
-const formRef = ref()
-const form = reactive(emptyForm())
-const rules = {
-  assetId: [{ required: true, message: '请输入关联资产ID', trigger: 'blur' }],
-  assetName: [{ required: true, message: '请输入资产名称', trigger: 'blur' }]
-}
-
-function emptyForm() {
-  // rightType 在表单内为数组(多选),提交/编辑时与后端顿号串互转
-  return { archiveId: '', assetId: '', assetName: '', rightType: [], rightSubject: '', respDept: '', confirmStatus: '' }
-}
-
-function statusTag(s) {
-  return { 已确权: 'success', 部分确权: 'warning', 申请中: 'warning', 失败: 'danger' }[s] || 'info'
-}
-
 async function load() {
   loading.value = true
   try {
-    const res = await pageArchive({ ...query })
-    rows.value = res.records || []
-    total.value = res.total || 0
+    const page = await pageAssetArchive({
+      current: q.current, size: q.size,
+      keyword: q.keyword || undefined, state: q.state || undefined
+    })
+    rows.value = page.records || []
+    total.value = page.total || 0
   } finally {
     loading.value = false
   }
 }
 
-function onSearch() {
-  query.current = 1
-  load()
-}
-function onReset() {
-  query.assetName = ''
-  query.rightType = ''
-  query.confirmStatus = ''
-  onSearch()
-}
-function onPageChange(p) {
-  query.current = p
-  load()
-}
-function onSizeChange(s) {
-  query.size = s
-  query.current = 1
-  load()
-}
+function onSearch() { q.current = 1; load() }
+function onReset() { q.keyword = ''; q.state = ''; q.current = 1; load() }
+function onPage(p) { q.current = p; load() }
+function onSize(s) { q.size = s; q.current = 1; load() }
 
-function onCreate() {
-  Object.assign(form, emptyForm())
-  form.confirmStatus = '未确权'
-  dialogTitle.value = '新增产权档案'
-  dialogVisible.value = true
-}
+// 明细
+const dlg = ref(false)
+const cur = ref(null)
+const prop = ref(null)
+const equity = ref([])
+const detailLoading = ref(false)
 
-// 批量新增(评审7.3):多行解析逐条登记,确权状态统一未确权
-const batchDlg = ref(false)
-const batchText = ref('')
-const batchLoading = ref(false)
-async function onBatchCreate() {
-  const lines = batchText.value.split('\n').map(l => l.trim()).filter(Boolean)
-  if (!lines.length) { ElMessage.warning('请粘贴至少一行数据'); return }
-  batchLoading.value = true
-  let ok = 0
-  const fails = []
+async function onView(row) {
+  cur.value = row
+  prop.value = null
+  equity.value = []
+  dlg.value = true
+  detailLoading.value = true
   try {
-    for (const [i, line] of lines.entries()) {
-      const [assetId, assetName, rightType, rightSubject, respDept] = line.split(/[,，]/).map(s => (s || '').trim())
-      if (!assetId || !assetName) { fails.push(`第${i + 1}行:缺少资产ID或资产名称`); continue }
-      // 产权类型多权用「|」分隔 -> 统一顿号串落库
-      const rightTypeJoined = splitRights(rightType).join('、')
-      try {
-        await createArchive({ assetId, assetName, rightType: rightTypeJoined, rightSubject: rightSubject || '',
-          respDept: respDept || '', confirmStatus: '未确权' })
-        ok++
-      } catch (e) { fails.push(`第${i + 1}行(${assetId}):${e?.response?.data?.message || '登记失败'}`) }
-    }
-  } finally { batchLoading.value = false }
-  ElMessage[fails.length ? 'warning' : 'success'](`批量登记完成:成功 ${ok} 条` + (fails.length ? `,失败 ${fails.length} 条(${fails[0]}…)` : ''))
-  if (ok) { batchDlg.value = false; batchText.value = ''; load() }
-}
-function onEdit(row) {
-  Object.assign(form, row)
-  form.rightType = splitRights(row.rightType) // 顿号串 -> 多选数组
-  dialogTitle.value = '修改产权档案'
-  dialogVisible.value = true
-}
-
-async function onSubmit() {
-  await formRef.value.validate()
-  const rightTypeJoined = Array.isArray(form.rightType) ? form.rightType.join('、') : (form.rightType || '')
-  if (form.archiveId) {
-    await updateArchive({ ...form, rightType: rightTypeJoined })
-    ElMessage.success('保存成功')
-  } else {
-    // 新增仅登记:各权确权状态由确权流程逐权驱动(评审7.1/7.4)
-    await createArchive({ ...form, rightType: rightTypeJoined, confirmStatus: '未确权' })
-    ElMessage.success('新增成功(各权未确权,请通过确权申请流程逐权确权)')
+    const [p, e] = await Promise.all([getAssetProperty(row.assetId), getAssetEquity(row.assetId)])
+    prop.value = p
+    equity.value = e || []
+  } finally {
+    detailLoading.value = false
   }
-  dialogVisible.value = false
-  load()
 }
 
-function onDelete(row) {
-  ElMessageBox.confirm(`确认删除产权档案"${row.assetName}"吗`, '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning'
-  }).then(async () => {
-    await deleteArchive(row.archiveId)
-    ElMessage.success('删除成功')
-    load()
-  }).catch(() => {})
+function stateTag(state) {
+  return { 已确权: 'success', 确权中: 'warning', 待确权: 'info', 已驳回: 'danger' }[state] || 'info'
 }
+function fmtDate(v) { return v ? String(v).slice(0, 10) : '-' }
+function fmtDateTime(v) { return v ? String(v).replace('T', ' ').slice(0, 19) : '-' }
 
-function onExport() {
-  ElMessage.info('导出功能将按当前筛选条件生成 Excel(后续接入导出服务)')
-}
-
-onMounted(load)
+load()
 </script>
 
 <style scoped>
-.form-tip { font-size: 12px; color: #909399; line-height: 1.6; }
+.prm-pager { margin-top: 12px; justify-content: flex-end; }
+.eq-title { margin: 16px 0 8px; font-size: 14px; font-weight: 600; color: var(--prm-color-text); }
+.dim-note { margin-left: 6px; font-size: 12px; color: var(--prm-color-text-secondary); }
 </style>
