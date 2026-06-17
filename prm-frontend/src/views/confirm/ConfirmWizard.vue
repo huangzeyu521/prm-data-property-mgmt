@@ -163,7 +163,14 @@
       <!-- 步骤3:材料校验(规则校验 + AI 智能校验,评审8.4) -->
       <el-card v-show="step === 2" shadow="never">
         <div class="prm-table-note" style="margin-bottom:10px">基于预设规则(应交清单)自动校验完整性与合规性 + AI 智能校验(qwen3-max);全部通过方可推送审核。</div>
-        <el-button type="primary" :loading="checking" @click="runCheck" style="margin-bottom:12px">规则校验全部材料</el-button>
+        <!-- 校验状态条:让"能否提交"一眼可见,消灭"点了必然被拒"的死路 -->
+        <div style="margin-bottom:10px">
+          校验状态:<el-tag :type="checkStatus.type" effect="dark" size="small">{{ checkStatus.text }}</el-tag>
+          <span v-if="needRecheck" style="margin-left:8px;color:#f56c6c;font-size:12px">材料已变更,请重新校验后再提交</span>
+        </div>
+        <el-button :type="needRecheck ? 'danger' : 'primary'" :loading="checking" @click="runCheck" style="margin-bottom:12px">
+          {{ checkReport ? '重新校验' : '规则校验全部材料' }}
+        </el-button>
         <el-button type="warning" :loading="aiMatChecking" @click="runAiMaterialCheck" style="margin-bottom:12px;margin-left:8px">
           <el-icon><MagicStick /></el-icon> AI 材料校验(qwen3-max)
         </el-button>
@@ -208,6 +215,24 @@
           <div v-if="checkReport.missing && checkReport.missing.length" style="margin-top:4px">缺失项:{{ checkReport.missing.join('、') }}</div>
           <div v-if="checkReport.nonCompliant && checkReport.nonCompliant.length" style="margin-top:4px">不合规项:{{ checkReport.nonCompliant.join('、') }}</div>
         </el-alert>
+        <!-- 闭环:校验未通过 → 就地补充材料(无需返回上一步)→ 重新校验,直至通过 -->
+        <el-card v-if="checkReport && !checkReport.allPass && failItems.length" shadow="never" style="margin-bottom:12px;border:1px solid #fde2e2;background:#fff8f8">
+          <div style="font-weight:600;color:#f56c6c;margin-bottom:8px">需补充/修正以下材料(就地上传后点上方「重新校验」)</div>
+          <el-table :data="failItems" border size="small">
+            <el-table-column prop="name" label="材料" min-width="220" />
+            <el-table-column prop="kind" label="问题" width="100" align="center">
+              <template #default="{ row }"><el-tag type="danger" size="small">{{ row.kind }}</el-tag></template>
+            </el-table-column>
+            <el-table-column prop="reason" label="说明" min-width="160" />
+            <el-table-column label="补充原件" width="140" align="center">
+              <template #default="{ row }">
+                <el-upload :auto-upload="false" :show-file-list="false" :on-change="(f) => onFixUpload(row, f)" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" style="display:inline-block">
+                  <el-button link type="primary">上传补充</el-button>
+                </el-upload>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-card>
         <el-table :data="materials" border>
           <el-table-column type="index" label="序号" width="60" align="center" />
           <el-table-column prop="materialName" label="材料名称" min-width="240" />
@@ -264,7 +289,10 @@
       <el-button v-if="step > 0 && step < 3" @click="step--">上一步</el-button>
       <el-button v-if="step === 0" type="primary" :loading="saving" @click="next0">下一步:上传材料</el-button>
       <el-button v-if="step === 1" type="primary" @click="next1">下一步:材料校验</el-button>
-      <el-button v-if="step === 2" type="primary" :loading="submitting" @click="next2">提交审核</el-button>
+      <el-tooltip v-if="step === 2 && !canSubmit" content="请先通过材料校验(全部应交项完整且合规)" placement="top">
+        <span><el-button type="primary" disabled>提交审核</el-button></span>
+      </el-tooltip>
+      <el-button v-else-if="step === 2" type="primary" :loading="submitting" @click="next2">提交审核</el-button>
     </div>
   </div>
 </template>
@@ -371,6 +399,26 @@ async function runConflict() {
 const checklist = ref([])
 const materialRules = ref([]) // 后端可配置应交材料规则(单一真源)
 const checkReport = ref(null)
+const needRecheck = ref(false) // 材料变更后置脏:必须重新校验才能提交(闭环)
+
+// 提交门禁:校验通过且无未结变更,才允许提交(消灭"点了必然被拒"的死路)
+const canSubmit = computed(() => !!checkReport.value && checkReport.value.allPass && !needRecheck.value)
+// 校验状态条:一眼看清能否提交
+const checkStatus = computed(() => {
+  if (needRecheck.value) return { type: 'warning', text: '材料已变更,需重新校验' }
+  if (!checkReport.value) return { type: 'info', text: '未校验' }
+  if (checkReport.value.allPass) return { type: 'success', text: '✅ 全部通过,可提交' }
+  const miss = checkReport.value.missing?.length || 0
+  const bad = checkReport.value.nonCompliant?.length || checkReport.value.failCount || 0
+  return { type: 'danger', text: `未通过(缺${miss}·不合规${bad})` }
+})
+// 失败项 → 可就地补充的行
+const failItems = computed(() => {
+  if (!checkReport.value) return []
+  const miss = (checkReport.value.missing || []).map(n => ({ name: n, kind: '缺失', reason: '未提交,请补充原件' }))
+  const bad = (checkReport.value.nonCompliant || []).map(n => ({ name: n, kind: '不合规', reason: '校验未通过,请重新上传' }))
+  return [...miss, ...bad]
+})
 const materials = ref([])
 
 // 表级清单(M02)批量粘贴解析
@@ -567,6 +615,7 @@ async function registerMaterial(row) {
     fileUrl: `/files/dev/${applyId.value}-${row.code}.pdf`, owner: form.rightHolder
   })
   row.done = true
+  if (checkReport.value) needRecheck.value = true // 已校验过又改材料 → 置脏
   ElMessage.success('已登记')
 }
 
@@ -580,6 +629,7 @@ async function onUploadFile(row, file) {
   fd.append('owner', form.rightHolder || '')
   await uploadMaterialFile(fd) // 后端格式验证不通过会抛错(拦截器toast)
   row.done = true
+  if (checkReport.value) needRecheck.value = true // 已校验过又改材料 → 置脏
   ElMessage.success('原件已上传并通过格式验证')
 }
 
@@ -592,6 +642,9 @@ function onExportCheck() {
 
 async function next1() {
   materials.value = await listMaterialByApply(applyId.value) || []
+  // ②→③ 门禁:所有"必填"应交项须先登记,挡住明显漏交(应交清单 required 单一真源)
+  const missRequired = checklist.value.filter(c => c.required === '必填' && !c.done)
+  if (missRequired.length) { ElMessage.warning('必填材料未齐,请先登记/上传:' + missRequired.map(c => c.name).join('、')); return }
   if (materials.value.length === 0) { ElMessage.warning('请先至少登记一项材料'); return }
   step.value = 2
 }
@@ -601,9 +654,25 @@ async function runCheck() {
   try {
     checkReport.value = await runMaterialCheck(applyId.value) // 后端规则校验:缺失/不合规自动识别
     materials.value = await listMaterialByApply(applyId.value) || []
+    needRecheck.value = false // 校验已刷新,清除脏标
     if (checkReport.value.allPass) ElMessage.success('材料校验全部通过,可推送审核')
-    else ElMessage.warning(`校验未通过:缺失 ${checkReport.value.missing.length} / 不合规 ${checkReport.value.failCount} 项`)
+    else ElMessage.warning(`校验未通过:缺失 ${checkReport.value.missing.length} / 不合规 ${checkReport.value.failCount} 项,请就地补充后重新校验`)
   } finally { checking.value = false }
+}
+
+// 闭环:校验失败项就地补充原件 → 置脏 → 引导重新校验,直至通过
+async function onFixUpload(item, file) {
+  if (!file || !file.raw) return
+  const fd = new FormData()
+  fd.append('file', file.raw)
+  fd.append('applyId', applyId.value)
+  fd.append('materialName', item.name)
+  fd.append('materialType', '补充')
+  fd.append('owner', form.rightHolder || '')
+  await uploadMaterialFile(fd) // 后端格式验证不过会抛错
+  needRecheck.value = true
+  materials.value = await listMaterialByApply(applyId.value) || []
+  ElMessage.success(`已补充「${item.name}」,请点上方「重新校验」`)
 }
 
 async function next2() {
