@@ -121,9 +121,6 @@
       <el-card v-show="step === 1" shadow="never">
         <div class="prm-table-note" style="margin-bottom:10px">
           按所选来源/关联(A–J)应交材料清单。"上传原件"真实上传文件(仅 PDF/Word/JPG/PNG,自动格式验证);或"仅登记"占位。
-          <el-button size="small" type="warning" plain style="margin-left:12px" @click="invokeAitool">
-            <el-icon><MagicStick /></el-icon> 智能解析材料(OCR印章/归集/查重/模板对比/批量)
-          </el-button>
         </div>
         <el-table :data="checklist" border>
           <el-table-column type="index" label="序号" width="60" align="center" />
@@ -147,13 +144,10 @@
 
       <!-- 步骤3:材料校验(规则校验 + AI 智能校验,评审8.4) -->
       <el-card v-show="step === 2" shadow="never">
-        <div class="prm-table-note" style="margin-bottom:10px">基于预设规则(应交清单)自动校验完整性与合规性 + AI 智能校验(智能确权辅助工具);全部通过方可推送审核。</div>
+        <div class="prm-table-note" style="margin-bottom:10px">基于预设规则(应交清单)自动校验完整性与合规性 + AI 智能校验(qwen3-max);全部通过方可推送审核。</div>
         <el-button type="primary" :loading="checking" @click="runCheck" style="margin-bottom:12px">规则校验全部材料</el-button>
         <el-button type="warning" :loading="aiMatChecking" @click="runAiMaterialCheck" style="margin-bottom:12px;margin-left:8px">
           <el-icon><MagicStick /></el-icon> AI 材料校验(qwen3-max)
-        </el-button>
-        <el-button type="warning" plain :loading="aiChecking" @click="runAiCheck" style="margin-bottom:12px;margin-left:8px">
-          <el-icon><MagicStick /></el-icon> AI 决策研判
         </el-button>
         <el-button :disabled="!checkReport" @click="onExportCheck" style="margin-bottom:12px;margin-left:8px">导出校验结果</el-button>
         <AiThinking v-bind="aiThink.state" />
@@ -170,13 +164,6 @@
             <el-table-column prop="issues" label="问题" min-width="200" />
             <el-table-column prop="suggestion" label="建议" min-width="180" />
           </el-table>
-        </el-alert>
-        <el-alert v-if="aiResult" :type="aiResult.prediction === '建议通过' ? 'success' : 'warning'" :closable="false" style="margin-bottom:12px">
-          <div><b>AI 校验结论:{{ aiResult.prediction }}</b>(综合评分 {{ aiResult.score }};AI 预测:{{ aiResult.aiPrediction || '未生成' }})</div>
-          <div style="margin-top:4px">需补材料:{{ aiResult.supplementMaterials }}</div>
-          <div style="margin-top:4px">待处理冲突:{{ aiResult.pendingConflicts }}</div>
-          <div style="margin-top:4px;color:#909399">由智能确权辅助工具基于本申请已解析材料/权属冲突/法规检索生成;点击下方按钮可进入工具补充材料</div>
-          <el-button size="small" type="warning" plain style="margin-top:6px" @click="invokeAitool">进入智能确权辅助工具</el-button>
         </el-alert>
         <el-alert v-if="checkReport" :type="checkReport.allPass ? 'success' : 'warning'" :closable="false" style="margin-bottom:12px">
           <div>{{ checkReport.summary }}</div>
@@ -249,7 +236,6 @@ import { computed, reactive, ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { autofillConfirm, saveConfirmDraft, uploadMaterial, uploadMaterialFile, materialFileUrl, listMaterialByApply, checkMaterial, runMaterialCheck, pushMaterialReview, materialExportUrl, submitConfirm, saveTableItems, getConsolidation, aiMaterialCheck, listMaterialRules } from '@/api/confirm'
-import { aitAnalyze } from '@/api/aitool'
 import AiThinking from '@/components/AiThinking.vue'
 import { useAiThinking } from '@/composables/useAiThinking'
 import { AI_PHASES } from '@/lib/aiPhases'
@@ -283,16 +269,6 @@ const quality = ref(null)
 const applyId = ref('')
 const applyNo = ref('')
 
-// 调用独立智能确权辅助工具的材料智能解析(新标签打开),带本申请+资产上下文。
-// 高级材料能力(Excel导入/OCR印章/版面/归集分类/内容指纹查重/模板对比/批量解析/解析记录)统一由 aitool 承接,
-// 主模块向导仅做轻量"随申请登记/上传",不重复造材料管理。
-function invokeAitool() {
-  const params = new URLSearchParams()
-  if (applyId.value) params.set('applyId', applyId.value)
-  if (form.assetId) params.set('assetId', form.assetId)
-  window.open('/aitool/material?' + params.toString(), '_blank')
-}
-
 // AI 材料校验:qwen3-max 逐份校验 完整性/合规性/与表单一致性(stub 回退)
 const aiMatChecking = ref(false)
 const aiMatResult = ref(null)
@@ -309,20 +285,6 @@ async function runAiMaterialCheck() {
   } finally { aiMatChecking.value = false }
 }
 
-// AI 决策研判(评审8.4):调用智能确权辅助工具决策分析,取回 预测/需补材料/冲突 结论
-const aiChecking = ref(false)
-const aiResult = ref(null)
-async function runAiCheck() {
-  if (!applyId.value) { ElMessage.warning('请先完成步骤1暂存申请'); return }
-  aiChecking.value = true
-  try {
-    aiResult.value = await aiThink.run(() => aitAnalyze(applyId.value),
-      { phases: AI_PHASES.analyze, title: '大模型决策研判中' })
-    ElMessage.success('AI 智能校验完成')
-  } catch (e) {
-    ElMessage.warning('AI 校验失败:' + (e?.response?.data?.message || '请先通过"进入智能确权辅助工具"上传并解析本申请材料'))
-  } finally { aiChecking.value = false }
-}
 const checklist = ref([])
 const materialRules = ref([]) // 后端可配置应交材料规则(单一真源)
 const checkReport = ref(null)
