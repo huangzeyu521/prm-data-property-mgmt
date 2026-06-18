@@ -97,21 +97,32 @@
         </el-form>
         <el-divider />
         <div v-if="requiredChecklist.length" style="margin-bottom:12px">
-          <div style="font-weight:600;margin-bottom:8px">应交材料清单（按当前申请自动判定 · 可配置规则单一真源）</div>
-          <el-table :data="requiredChecklist" border size="small" style="max-width:680px">
+          <div style="font-weight:600;margin-bottom:8px">应交材料清单（按当前申请自动判定）— 请按下表逐项上传</div>
+          <el-table :data="requiredChecklist" border size="small" style="max-width:880px">
             <el-table-column type="index" label="序号" width="56" align="center" />
-            <el-table-column prop="materialName" label="应交材料" min-width="180" />
-            <el-table-column prop="required" label="要求" width="90" align="center">
+            <el-table-column prop="materialName" label="应交材料" min-width="170" show-overflow-tooltip />
+            <el-table-column prop="required" label="要求" width="84" align="center">
               <template #default="{ row }">
                 <el-tag :type="row.required === '必填' ? 'danger' : 'warning'" effect="light" size="small">{{ row.required }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="detail" label="内容与要求明细" min-width="240" />
+            <el-table-column prop="detail" label="内容与要求明细" min-width="220" show-overflow-tooltip />
+            <el-table-column label="状态" width="86" align="center">
+              <template #default="{ row }"><el-tag :type="row.uploaded ? 'success' : 'info'" effect="light" size="small">{{ row.uploaded ? '已上传' : '待上传' }}</el-tag></template>
+            </el-table-column>
+            <el-table-column label="上传" width="110" align="center">
+              <template #default="{ row }">
+                <el-upload :show-file-list="false" :http-request="(o)=>doUploadForItem(row.materialName, o.file)" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" style="display:inline-block">
+                  <el-button link type="primary" :loading="matUploading">上传该材料</el-button>
+                </el-upload>
+              </template>
+            </el-table-column>
           </el-table>
+          <div style="margin-top:6px;color:#909399;font-size:12px">必填项须上传;"视情况"项按是否涉第三方/隐私商密上传。也可在下方上传其他补充材料。</div>
         </div>
-        <div style="font-weight:600;margin-bottom:8px">申请材料（上传相关材料，先暂存草稿后上传）</div>
+        <div style="font-weight:600;margin-bottom:8px">其他补充材料（可选，先暂存草稿后上传）</div>
         <el-upload :show-file-list="false" :http-request="(o)=>doUploadMaterial(o.file)" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
-          <el-button type="primary" plain :loading="matUploading">上传材料</el-button>
+          <el-button type="primary" plain :loading="matUploading">上传其他材料</el-button>
         </el-upload>
         <el-table v-if="materials.length" :data="materials" border size="small" style="margin-top:10px;max-width:680px">
           <el-table-column prop="materialName" label="材料名称" min-width="200" show-overflow-tooltip />
@@ -298,21 +309,45 @@ const form = reactive(empty())
 const scenarioOpts = ref([])
 const selectedReason = ref('')
 
-// 应交材料清单由后端可配置规则(单一真源·场景一事一议)按 涉第三方/涉敏感 触发生成,前端仅渲染
+// 应交材料清单由后端可配置规则(单一真源·场景一事一议)生成;规则不可用时回退内置默认,保证申请人永远看得到"该传哪些材料"
 const materialRules = ref([])
+// 内置兜底(对齐联调材料清单 Excel·一事一议):表5必填 + 涉三方→许可凭证 + 涉隐私商密→信息授权协议
+const FALLBACK_RULES = [
+  { triggerType: 'ALWAYS', materialName: '《表5 数据授权申请单》', required: '必填', detail: '申请主体、所属系统、模式及数据表、申请权益类型(持有权/使用权/经营权)、使用场景及目的、权益时效(默认两年)、是否跨区域跨域等' },
+  { triggerType: 'THIRD_PARTY', materialName: '第三方许可凭证或说明', required: '视情况', detail: '申请数据涉及第三方来源方式时必须提供:第三方关于数据授权的许可文件或详细情况说明' },
+  { triggerType: 'SENSITIVE', materialName: '信息授权协议', required: '视情况', detail: '申请数据涉及个人隐私或商业秘密时必须提供:相应的信息授权协议附件(如个人隐私授权协议范本)' }
+]
 const requiredChecklist = computed(() => {
   const tp = !!(form.thirdPartySource && form.thirdPartySource.trim())
   const sv = !!(form.sensitiveType && form.sensitiveType.trim() && form.sensitiveType !== '无')
   const hit = (r) => r.triggerType === 'ALWAYS'
     || (r.triggerType === 'THIRD_PARTY' && tp)
     || (r.triggerType === 'SENSITIVE' && sv)
-  return materialRules.value.filter(hit)
+  const src = materialRules.value.length ? materialRules.value : FALLBACK_RULES
+  return src.filter(hit).map(r => ({
+    ...r,
+    uploaded: materials.value.some(m => {
+      const mn = m.materialName || ''
+      return mn === r.materialName || mn.includes(r.materialName) || r.materialName.includes(mn)
+    })
+  }))
 })
 async function loadAuthMaterialRules() {
   try {
     const rules = await listAuthMaterialRules('一事一议')
     if (Array.isArray(rules) && rules.length) materialRules.value = rules
-  } catch (e) { /* 规则不可用则不展示清单面板,不阻断流程 */ }
+  } catch (e) { /* 规则接口不可用 → requiredChecklist 自动用内置兜底,不阻断、不丢指引 */ }
+}
+// 按应交清单逐项上传(材料名=该应交项名),申请人不再瞎传
+async function doUploadForItem(materialName, file) {
+  matUploading.value = true
+  try {
+    const id = await ensureDraft()
+    const fd = new FormData(); fd.append('file', file); fd.append('applyId', id); fd.append('materialName', materialName)
+    await uploadAuthMaterialFile(fd)
+    if (checkResult.value || aiMatResult.value) needRecheck.value = true
+    ElMessage.success(`已上传「${materialName}」`); refreshMaterials()
+  } finally { matUploading.value = false }
 }
 
 onMounted(async () => {
