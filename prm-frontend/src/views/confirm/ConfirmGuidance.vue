@@ -96,6 +96,7 @@
 </template>
 
 <script setup>
+import { openFilePreview } from '@/composables/useFilePreview'
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -148,7 +149,7 @@ async function onSave() {
 }
 
 async function onView(row) { cur.value = await getGuidance(row.guidanceId); viewDlg.value = true }
-function onDownload(row) { window.open(guidanceDownloadUrl(row.guidanceId), '_blank') }
+function onDownload(row) { openFilePreview(guidanceDownloadUrl(row.guidanceId), row.fileName) }
 async function onVersions(row) {
   verTitle.value = row.title
   verRows.value = await guidanceVersions(row.title)

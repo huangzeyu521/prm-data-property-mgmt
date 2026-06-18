@@ -79,6 +79,7 @@
 </template>
 
 <script setup>
+import { openFilePreview } from '@/composables/useFilePreview'
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -113,7 +114,7 @@ async function doUpload(row, file) {
   await uploadAuthCertTemplateFile(row.templateId, fd)
   ElMessage.success('套版文件已上传'); load()
 }
-function onDownload(row) { if (row.fileName) window.open(authCertTemplateFileUrl(row.templateId), '_blank') }
+function onDownload(row) { if (row.fileName) openFilePreview(authCertTemplateFileUrl(row.templateId), row.fileName) }
 function onDel(row) {
   ElMessageBox.confirm('确认删除该证书模板吗', '提示', { type: 'warning' })
     .then(async () => { await deleteAuthCertTemplate(row.templateId); ElMessage.success('已删除'); load() }).catch(() => {})

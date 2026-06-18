@@ -237,6 +237,7 @@ import { aiAuthIntent } from '@/api/confirm'
 import { aiAuthMaterialCheck, aiAuthPreReview } from '@/api/authorize'
 import AiThinking from '@/components/AiThinking.vue'
 import { useAiThinking } from '@/composables/useAiThinking'
+import { openFilePreview } from '@/composables/useFilePreview'
 import { AI_PHASES } from '@/lib/aiPhases'
 const aiThink = useAiThinking()
 import { pageEquityCard } from '@/api/confirm'
@@ -484,7 +485,7 @@ async function doUploadMaterial(file) {
     ElMessage.success('材料已上传'); refreshMaterials()
   } finally { matUploading.value = false }
 }
-function previewMaterial(row) { window.open(authMaterialFileUrl(row.materialId), '_blank') }
+function previewMaterial(row) { openFilePreview(authMaterialFileUrl(row.materialId), row.fileName) }
 async function delMaterial(row) { await deleteAuthMaterial(row.materialId); if (checkResult.value || aiMatResult.value) needRecheck.value = true; ElMessage.success('已删除'); refreshMaterials() }
 const rules = {
   assetId: [{ required: true, message: '请输入关联资产ID', trigger: 'blur' }],

@@ -82,6 +82,7 @@
 </template>
 
 <script setup>
+import { openFilePreview } from '@/composables/useFilePreview'
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -118,7 +119,7 @@ async function doUpload(row, file) {
   await uploadAgrTemplateFile(row.templateId, fd)
   ElMessage.success('套版文件已上传'); load()
 }
-function onDownload(row) { if (row.fileName) window.open(agrTemplateFileUrl(row.templateId), '_blank') }
+function onDownload(row) { if (row.fileName) openFilePreview(agrTemplateFileUrl(row.templateId), row.fileName) }
 async function onEnable(row) { await enableAgrTemplate(row.templateId); ElMessage.success('已启用'); load() }
 async function onDisable(row) { await disableAgrTemplate(row.templateId); ElMessage.success('已停用'); load() }
 function onDel(row) {

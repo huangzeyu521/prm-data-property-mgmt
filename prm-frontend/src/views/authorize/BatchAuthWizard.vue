@@ -60,11 +60,12 @@
             <el-table-column label="状态" width="86" align="center">
               <template #default="{ row }"><el-tag :type="row.uploaded ? 'success' : 'info'" effect="light" size="small">{{ row.uploaded ? '已上传' : '待上传' }}</el-tag></template>
             </el-table-column>
-            <el-table-column label="上传" width="110" align="center">
+            <el-table-column label="操作" width="156" align="center">
               <template #default="{ row }">
                 <el-upload :show-file-list="false" :http-request="(o)=>doUploadBatchItem(row.materialName, o.file)" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" style="display:inline-block">
-                  <el-button link type="primary" :loading="matUploading">上传该材料</el-button>
+                  <el-button link type="primary" :loading="matUploading">上传</el-button>
                 </el-upload>
+                <el-button v-if="row.uploaded" link type="success" style="margin-left:6px" @click="previewBatchItem(row.materialName)">预览</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -195,7 +196,8 @@
 import { reactive, ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { createBatchList, saveAuthDraft, submitBatchList, aiBatchIntent, aiBatchPreReview, listAuthMaterialRules, checkBatchCompliance, uploadAuthMaterialFile, listAuthMaterial } from '@/api/authorize'
+import { createBatchList, saveAuthDraft, submitBatchList, aiBatchIntent, aiBatchPreReview, listAuthMaterialRules, checkBatchCompliance, uploadAuthMaterialFile, listAuthMaterial, authMaterialFileUrl } from '@/api/authorize'
+import { openFilePreview } from '@/composables/useFilePreview'
 import AiThinking from '@/components/AiThinking.vue'
 import { useAiThinking } from '@/composables/useAiThinking'
 import { AI_PHASES } from '@/lib/aiPhases'
@@ -251,6 +253,14 @@ const requiredChecklist = computed(() => {
 })
 async function refreshBatchMaterials() {
   if (batchListId.value) batchMaterials.value = await listAuthMaterial(batchListId.value) || []
+}
+// 在线预览已上传的清单级材料(按应交项名匹配)
+function previewBatchItem(materialName) {
+  const m = batchMaterials.value.find(x => {
+    const mn = x.materialName || ''
+    return mn === materialName || mn.includes(materialName) || materialName.includes(mn)
+  })
+  if (m && m.materialId) openFilePreview(authMaterialFileUrl(m.materialId), m.fileName || materialName)
 }
 // 按应交清单逐项上传(清单级材料挂 batchListId,材料名=应交项名)
 async function doUploadBatchItem(materialName, file) {

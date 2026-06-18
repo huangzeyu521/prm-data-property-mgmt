@@ -70,6 +70,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { pageConfirmApply, approveConfirm, rejectConfirm, batchApproveConfirm, batchRejectConfirm, listMaterialByApply, getConfirmFlowLog, materialFileUrl } from '@/api/confirm'
+import { openFilePreview } from '@/composables/useFilePreview'
 
 const rows = ref([]); const loading = ref(false); const sel = ref([])
 const drawer = ref(false); const cur = ref({}); const materials = ref([]); const logs = ref([])
@@ -109,7 +110,7 @@ async function onDetail(row) {
   materials.value = m || []; logs.value = l || []
   drawer.value = true
 }
-function preview(row) { if (row.materialId) window.open(materialFileUrl(row.materialId), '_blank') }
+function preview(row) { if (row.materialId) openFilePreview(materialFileUrl(row.materialId), row.fileName) }
 // 从向导"去审核"带 applyId 跳入时高亮目标单
 import { useRoute } from 'vue-router'
 const route = useRoute()

@@ -78,6 +78,8 @@
       </el-main>
     </el-container>
   </el-container>
+  <!-- 全局在线文件预览(任意页 openFilePreview 触发) -->
+  <FilePreview />
 </template>
 
 <script setup>
@@ -85,6 +87,7 @@ import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import NotificationCenter from '@/components/NotificationCenter.vue'
 import WorkGuide from '@/components/WorkGuide.vue'
+import FilePreview from '@/components/FilePreview.vue'
 import { ROLES, ROLE_HOME, currentRole, visibleMenu } from '@/lib/roles'
 import { currentUser, clearSession } from '@/api/auth'
 

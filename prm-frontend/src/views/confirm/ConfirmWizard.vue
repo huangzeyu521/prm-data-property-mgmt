@@ -300,6 +300,7 @@ import { ElMessage } from 'element-plus'
 import { autofillConfirm, saveConfirmDraft, uploadMaterial, uploadMaterialFile, materialFileUrl, listMaterialByApply, checkMaterial, runMaterialCheck, pushMaterialReview, materialExportUrl, submitConfirm, saveTableItems, getConsolidation, aiMaterialCheck, listMaterialRules, aiParseConfirm, aiDecisionConfirm, aiConflictConfirm } from '@/api/confirm'
 import AiThinking from '@/components/AiThinking.vue'
 import { useAiThinking } from '@/composables/useAiThinking'
+import { openFilePreview } from '@/composables/useFilePreview'
 import { AI_PHASES } from '@/lib/aiPhases'
 const aiThink = useAiThinking()
 
@@ -686,7 +687,7 @@ async function onUploadFile(row, file) {
 }
 
 function previewMaterial(row) {
-  if (row.materialId) window.open(materialFileUrl(row.materialId), '_blank')
+  if (row.materialId) openFilePreview(materialFileUrl(row.materialId), row.fileName)
 }
 function onExportCheck() {
   if (applyId.value) window.open(materialExportUrl(applyId.value), '_blank')

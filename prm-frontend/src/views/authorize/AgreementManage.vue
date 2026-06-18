@@ -98,6 +98,7 @@
   </div>
 </template>
 <script setup>
+import { openFilePreview } from '@/composables/useFilePreview'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -140,7 +141,7 @@ async function onSealLogs(row) {
   sealLogs.value = await getAgreementSealLogs(row.agreementId) || []
   sealLogDlg.value = true
 }
-function dlSeal(row) { window.open(agreementSealFileUrl(row.logId), '_blank') }
+function dlSeal(row) { openFilePreview(agreementSealFileUrl(row.logId), row.fileName || ('印章-' + (row.logId||'') + '.png')) }
 function onReview(row, pass) {
   ElMessageBox.prompt(pass ? '请输入审核意见(可空)' : '请输入驳回意见', pass ? '审核通过' : '驳回重签', { inputType: 'textarea' })
     .then(async ({ value }) => { await reviewAgreement(row.agreementId, pass, value || ''); ElMessage.success(pass ? '审核通过' : '已驳回重签'); load() }).catch(() => {})
