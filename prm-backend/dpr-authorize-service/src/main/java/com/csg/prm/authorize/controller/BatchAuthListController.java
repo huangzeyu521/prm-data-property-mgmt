@@ -62,6 +62,12 @@ public class BatchAuthListController {
         return R.ok(opinion == null ? "AI 预审暂不可用" : opinion);
     }
 
+    /** 只读合规校验(试跑):整单是否可提交 + 逐项被拦原因,供前端"通过才放行提交"闭环 */
+    @PostMapping("/{batchListId}/compliance-check")
+    public R<com.csg.prm.authorize.dto.BatchComplianceResult> complianceCheck(@PathVariable String batchListId) {
+        return R.ok(service.complianceCheck(batchListId));
+    }
+
     @PostMapping("/{batchListId}/submit")
     public R<Void> submit(@PathVariable String batchListId) {
         service.submit(batchListId);

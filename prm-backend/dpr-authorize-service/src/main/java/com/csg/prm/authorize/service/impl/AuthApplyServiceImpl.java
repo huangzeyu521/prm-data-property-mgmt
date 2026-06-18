@@ -141,6 +141,32 @@ public class AuthApplyServiceImpl implements AuthApplyService {
         flowLogService.record(apply, AuthApply.STATUS_DRAFT, first, "申请人", null);
     }
 
+    /** 只读试跑:镜像 submit 的合规拦截条件(不改状态,validDate 为空按默认两年估算);通过返回 null。 */
+    @Override
+    public String submitBlockReason(String applyId) {
+        AuthApply apply = require(applyId);
+        if (!StringUtils.hasText(apply.getAssetId())) return "关联资产ID不能为空";
+        if (!StringUtils.hasText(apply.getAssetName())) return "资产名称不能为空";
+        if (!StringUtils.hasText(apply.getGranteeOrg())) return "被授权方不能为空";
+        if (!equityCardGateway.isUsable(apply.getEquityCardId())) {
+            return "未确权或权益卡片已冻结/失效(先确后授)";
+        }
+        if (RIGHT_OPERATION.equals(apply.getRightType()) && !openCatalogGateway.isInOpenCatalog(apply.getAssetId())) {
+            return "数据产品经营权授权仅限对外开放目录中的数据资源";
+        }
+        EquityCardGateway.CardBoundary b = equityCardGateway.boundary(apply.getEquityCardId());
+        if (b.scope() != null && !"全字段".equals(b.scope())
+                && StringUtils.hasText(apply.getScope()) && !b.scope().equals(apply.getScope())) {
+            return "授权范围超出确权边界(确权范围:" + b.scope() + ")";
+        }
+        java.time.LocalDateTime vd = apply.getValidDate() != null
+                ? apply.getValidDate() : java.time.LocalDateTime.now().plusYears(2);
+        if (b.validDate() != null && vd.isAfter(b.validDate())) {
+            return "授权期限超出确权有效期,不得超过确权边界";
+        }
+        return null;
+    }
+
     /**
      * 多级审批推进:按授权模式沿审批链逐级流转;最终环节通过则生成授权证书。
      * 专项:合规->业务->主管->经理->副总->已生效;批量:合规->数字化部认定->领导小组->已生效。

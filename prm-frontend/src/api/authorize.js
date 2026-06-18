@@ -114,6 +114,8 @@ export const listAuthMaterial = (applyId) => request.get(`/dpr/auth/material/by-
 export const deleteAuthMaterial = (id) => request.delete(`/dpr/auth/material/${id}`)
 // 应交材料清单规则(可配置·单一真源):前端据此生成应交清单,不再硬编码。scene=批量/一事一议
 export const listAuthMaterialRules = (scene = '批量') => request.get('/dpr/auth/material/rule', { params: { scene } })
+// 批量清单只读合规校验(试跑):整单是否可提交+逐项被拦原因(与提交门禁同源),支撑"通过才放行"闭环
+export const checkBatchCompliance = (batchListId) => request.post(`/dpr/auth/batch-list/${batchListId}/compliance-check`)
 export const authMaterialFileUrl = (id) => `/api/dpr/auth/material/${id}/file`
 
 // 授权协议模板库(可研 3.2.2.1.1.3.3.1)

@@ -3,6 +3,7 @@ package com.csg.prm.authorize.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.csg.prm.authorize.dto.BatchComplianceResult;
 import com.csg.prm.authorize.entity.AuthApply;
 import com.csg.prm.authorize.entity.BatchAuthList;
 import com.csg.prm.authorize.mapper.BatchAuthListMapper;
@@ -79,6 +80,31 @@ public class BatchAuthListServiceImpl implements BatchAuthListService {
             }
         }
         update(batchListId, BatchAuthList.STATUS_SUBMITTED);
+    }
+
+    /** 只读试跑:逐草稿明细做合规校验(第三方凭证红线 + submitBlockReason),返回被拦清单。不改状态。 */
+    @Override
+    public BatchComplianceResult complianceCheck(String batchListId) {
+        require(batchListId);
+        List<AuthApply> items = applyService.byBatch(batchListId);
+        List<BatchComplianceResult.BlockedItem> blocked = new ArrayList<>();
+        int draftTotal = 0;
+        for (AuthApply a : items) {
+            if (!AuthApply.STATUS_DRAFT.equals(a.getStatus())) {
+                continue; // 已入链明细跳过(与 submit 幂等一致)
+            }
+            draftTotal++;
+            String reason;
+            if (StringUtils.hasText(a.getThirdPartySource()) && !StringUtils.hasText(a.getThirdPartyLicense())) {
+                reason = "涉第三方未提许可凭证";
+            } else {
+                reason = applyService.submitBlockReason(a.getApplyId());
+            }
+            if (reason != null) {
+                blocked.add(new BatchComplianceResult.BlockedItem(a.getApplyId(), a.getAssetName(), reason));
+            }
+        }
+        return new BatchComplianceResult(blocked.isEmpty(), draftTotal, blocked.size(), blocked);
     }
 
     @Override

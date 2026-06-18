@@ -105,11 +105,30 @@
 
       <!-- 步骤3:提交清单审批 -->
       <el-card v-show="step === 2" shadow="never">
-        <el-result icon="info" :title="`提交《批量授权清单》申报稿（${items.length} 项）`" sub-title="资料审核 → 清单审核审批 → 领导小组决策批准" />
-        <div style="text-align:center;margin-top:4px">
-          <el-button type="warning" plain :loading="listReviewing" @click="runListPreReview">AI 清单预审(qwen3-max)</el-button>
+        <el-result icon="info" :title="`提交《批量授权清单》申报稿（${items.length} 项）`" sub-title="合规校验 → 清单审核审批 → 领导小组决策批准" />
+        <!-- 校验状态条:让"能否提交"一眼可见 -->
+        <div style="text-align:center;margin:4px 0 10px">
+          合规校验:<el-tag :type="checkStatus.type" effect="dark" size="small">{{ checkStatus.text }}</el-tag>
+        </div>
+        <div style="text-align:center">
+          <el-button :type="complianceResult && !complianceResult.allPass ? 'danger' : 'primary'" :loading="complianceChecking" @click="runComplianceCheck">
+            {{ complianceResult ? '重新校验' : '合规校验全部明细' }}
+          </el-button>
+          <el-button type="warning" plain :loading="listReviewing" style="margin-left:8px" @click="runListPreReview">AI 清单预审(qwen3-max)</el-button>
         </div>
         <AiThinking v-bind="aiThink.state" />
+        <!-- 闭环:被拦明细就地暴露 → 返回逐条修正 → 重新校验,直至通过才放行提交 -->
+        <el-card v-if="complianceResult && !complianceResult.allPass && complianceResult.blocked.length" shadow="never" style="margin-top:12px;border:1px solid #fde2e2;background:#fff8f8">
+          <div style="font-weight:600;color:#f56c6c;margin-bottom:8px">以下明细未通过合规校验,清单不可提交(修正后请重新校验)</div>
+          <el-table :data="complianceResult.blocked" border size="small">
+            <el-table-column type="index" label="序号" width="56" align="center" />
+            <el-table-column prop="assetName" label="数据资产" min-width="180" />
+            <el-table-column prop="reason" label="被拦原因" min-width="260" />
+          </el-table>
+          <div style="margin-top:10px">
+            <el-button type="primary" plain @click="step = 1">返回逐条修正</el-button>
+          </div>
+        </el-card>
         <el-alert v-if="listOpinion" type="info" :closable="false" style="margin-top:12px" title="AI 清单预审意见" :description="listOpinion" show-icon />
       </el-card>
 
@@ -132,7 +151,10 @@
       <el-button v-if="step > 0 && step < 3" @click="step--">上一步</el-button>
       <el-button v-if="step === 0" type="primary" :loading="creating" @click="next0">下一步:加授权项</el-button>
       <el-button v-if="step === 1" type="primary" :disabled="items.length===0" @click="step = 2">下一步:提交审批</el-button>
-      <el-button v-if="step === 2" type="primary" :loading="submitting" @click="doSubmit">提交清单审批</el-button>
+      <el-tooltip v-if="step === 2 && !canSubmit" content="请先通过合规校验(全部明细合规)" placement="top">
+        <span><el-button type="primary" disabled>提交清单审批</el-button></span>
+      </el-tooltip>
+      <el-button v-else-if="step === 2" type="primary" :loading="submitting" @click="doSubmit">提交清单审批</el-button>
     </div>
 
     <!-- 从目录多选资产 -->
@@ -156,10 +178,10 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed, onMounted } from 'vue'
+import { reactive, ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { createBatchList, saveAuthDraft, submitBatchList, aiBatchIntent, aiBatchPreReview, listAuthMaterialRules } from '@/api/authorize'
+import { createBatchList, saveAuthDraft, submitBatchList, aiBatchIntent, aiBatchPreReview, listAuthMaterialRules, checkBatchCompliance } from '@/api/authorize'
 import AiThinking from '@/components/AiThinking.vue'
 import { useAiThinking } from '@/composables/useAiThinking'
 import { AI_PHASES } from '@/lib/aiPhases'
@@ -204,6 +226,31 @@ onMounted(async () => {
     if (Array.isArray(rules) && rules.length) materialRules.value = rules
   } catch (e) { /* 规则不可用则不展示清单面板,不阻断流程 */ }
 })
+
+// 合规校验闭环:清单明细变化即让上次校验失效(必须重新校验才能提交)
+const complianceResult = ref(null)
+const complianceChecking = ref(false)
+watch(items, () => { complianceResult.value = null }, { deep: true })
+
+// 提交门禁:合规校验通过才放行(消灭"点了必然被拒"的死路)
+const canSubmit = computed(() => !!complianceResult.value && complianceResult.value.allPass)
+const checkStatus = computed(() => {
+  if (!complianceResult.value) return { type: 'info', text: '未校验' }
+  if (complianceResult.value.allPass) return { type: 'success', text: '✅ 全部合规,可提交' }
+  return { type: 'danger', text: `未通过(${complianceResult.value.blockedCount} 项被拦)` }
+})
+
+// 只读合规校验(与提交门禁同源),失败项就地暴露,引导修正后重新校验直至通过
+async function runComplianceCheck() {
+  if (!batchListId.value) { ElMessage.warning('请先建清单并加入授权项'); return }
+  if (!items.value.length) { ElMessage.warning('清单为空,请先加入授权项'); return }
+  complianceChecking.value = true
+  try {
+    complianceResult.value = await checkBatchCompliance(batchListId.value)
+    if (complianceResult.value.allPass) ElMessage.success('合规校验通过,可提交清单审批')
+    else ElMessage.warning(`合规校验未通过:${complianceResult.value.blockedCount} 项被拦,请逐条修正后重新校验`)
+  } finally { complianceChecking.value = false }
+}
 
 async function next0() {
   if (!listForm.listYear) { ElMessage.warning('请填写授权年度'); return }

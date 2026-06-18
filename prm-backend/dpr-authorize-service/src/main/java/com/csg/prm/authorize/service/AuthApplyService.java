@@ -20,6 +20,9 @@ public interface AuthApplyService {
     /** 提交审批(校验先确后授;草稿 -> 审核中) */
     void submit(String applyId);
 
+    /** 只读试跑:返回提交将被拦截的合规原因(先确后授/经营权目录/范围⊆边界/期限),通过返回 null。不改状态。 */
+    String submitBlockReason(String applyId);
+
     /** 审批通过(带审核意见) -> 已生效,自动生成授权证书,返回证书ID */
     String approve(String applyId, String opinion);
 
