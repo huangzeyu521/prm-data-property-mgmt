@@ -29,14 +29,18 @@ public class AuthComplianceServiceImpl implements AuthComplianceService {
     private final AuthComplianceMapper mapper;
     private final AuthApplyMapper applyMapper;
     private final AuthMaterialMapper materialMapper;
+    private final com.csg.prm.authorize.service.AuthApplyService applyService;
 
     private final com.csg.prm.common.ai.DawatAiGateway ai;
 
     public AuthComplianceServiceImpl(AuthComplianceMapper mapper, AuthApplyMapper applyMapper,
-                                     AuthMaterialMapper materialMapper, com.csg.prm.common.ai.DawatAiGateway ai) {
+                                     AuthMaterialMapper materialMapper,
+                                     com.csg.prm.authorize.service.AuthApplyService applyService,
+                                     com.csg.prm.common.ai.DawatAiGateway ai) {
         this.mapper = mapper;
         this.applyMapper = applyMapper;
         this.materialMapper = materialMapper;
+        this.applyService = applyService;
         this.ai = ai;
     }
 
@@ -94,6 +98,14 @@ public class AuthComplianceServiceImpl implements AuthComplianceService {
         boolean scopeOk = StringUtils.hasText(apply.getScope());
         report.add("权限合理性", "授权范围", scopeOk, scopeOk ? "已填写" : "授权范围未填写,建议明确");
         hasWarn |= !scopeOk;
+
+        // 提交硬门禁(与 submit 同源):先确后授 isUsable / 经营权仅限开放目录 / 授权范围·期限 ⊆ 确权边界
+        // —— 这些过去只在 submit 时查,合规校验若不含会出现"合规过了却提交被拒"的死路,故并入合规报告
+        String blockReason = applyService.submitBlockReason(applyId);
+        boolean submitOk = blockReason == null;
+        report.add("权限合理性", "确权边界与先确后授(提交硬门禁)", submitOk,
+                submitOk ? "符合先确后授·经营权目录·范围/期限⊆确权边界" : blockReason);
+        hasFail |= !submitOk;
 
         // ③ 合规性
         if (StringUtils.hasText(apply.getThirdPartySource())) {

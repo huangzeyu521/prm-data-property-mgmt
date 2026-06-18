@@ -213,10 +213,11 @@
                 <el-upload v-if="row.source === 'rule'" :auto-upload="false" :show-file-list="false" :on-change="(f) => onFixUpload(row, f)" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" style="display:inline-block">
                   <el-button link type="primary">上传补充</el-button>
                 </el-upload>
-                <template v-else>
+                <template v-else-if="row.source === 'ai'">
                   <el-button link type="primary" @click="goFix">去修正</el-button>
                   <el-button link type="success" @click="ackAi(row.name)" style="margin-left:6px">复核确认</el-button>
                 </template>
+                <span v-else style="color:#909399;font-size:12px">需治理元数据后重校</span>
               </template>
             </el-table-column>
           </el-table>
@@ -409,6 +410,10 @@ const aiIssues = computed(() => {
 const aiUnresolved = computed(() => aiIssues.value.filter(i => !i.acked))
 
 // 统一"待处理清单"(单一闭环):规则缺失/不合规 + AI 存疑/不通过(未复核)
+// 元数据质量门禁(后端 submit 会自动驳回 score<80):前移为提交前显式拦截,杜绝"提交即被自动驳回"
+const QUALITY_MIN = 80
+const qualityBlocked = computed(() => quality.value != null && quality.value < QUALITY_MIN)
+
 const pendingItems = computed(() => {
   const rule = !checkReport.value ? [] : [
     ...(checkReport.value.missing || []).map(n => ({ source: 'rule', name: n, kind: '缺失', suggestion: '未提交,请就地补充原件' })),
@@ -417,12 +422,14 @@ const pendingItems = computed(() => {
   const ai = aiUnresolved.value.map(i => ({ source: 'ai', name: i.materialName,
     kind: i.verdict === '不通过' ? 'AI不通过' : 'AI存疑',
     suggestion: [i.issues, i.suggestion].filter(Boolean).join(' / ') || 'AI 提示需核实' }))
-  return [...rule, ...ai]
+  const qa = qualityBlocked.value ? [{ source: 'quality', name: '元数据质量门禁', kind: '质量',
+    suggestion: `元数据质量评分 ${quality.value} < ${QUALITY_MIN},提交将被自动驳回,请先治理元数据质量后重新一键校验` }] : []
+  return [...rule, ...ai, ...qa]
 })
 
-// 单一裁决:规则全过 + AI 已跑且无未结存疑/不通过 + 无未结变更,才点亮提交
+// 单一裁决:规则全过 + AI 已跑且无未结存疑/不通过 + 质量达标 + 无未结变更,才点亮提交
 const canSubmit = computed(() => ruleDone.value && checkReport.value.allPass
-  && aiDone.value && aiUnresolved.value.length === 0 && !needRecheck.value)
+  && aiDone.value && aiUnresolved.value.length === 0 && !qualityBlocked.value && !needRecheck.value)
 
 // 统一状态条:一句话说清"能不能提交、还差什么"
 const checkStatus = computed(() => {
@@ -432,6 +439,7 @@ const checkStatus = computed(() => {
   const lack = []
   if (!ruleDone.value || !checkReport.value.allPass) lack.push('规则校验')
   if (!aiDone.value) lack.push('AI材料校验')
+  if (qualityBlocked.value) lack.push('元数据质量')
   if (pendingItems.value.length) lack.push(`${pendingItems.value.length} 项待处理`)
   return { type: 'danger', text: '还差:' + (lack.join(' · ') || '处理待办') }
 })
