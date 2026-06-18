@@ -25,7 +25,7 @@ prm:
     provider: ${PRM_AI_PROVIDER:qwen}
     base-url: ${PRM_AI_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
     model: ${QWEN_MODEL_NAME:qwen3.7-max-2026-06-08}
-    api-key: ${DASHSCOPE_API_KEY:sk-c3eb88a1b7734b1f95b1df957b120dde}
+    api-key: ${DASHSCOPE_API_KEY:}
   db-type: MYSQL
   # P0-② 跨域聚合(资产360 / 统一待办):默认关闭(本地空桩,离线/单测仅台账本地数据);
   # PRM_AGG=true 时经 HTTP 跨服务读取确权/授权,实现一屏贯通。

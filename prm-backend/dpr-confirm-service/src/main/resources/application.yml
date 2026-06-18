@@ -36,7 +36,7 @@ prm:
     provider: ${PRM_AI_PROVIDER:qwen}
     base-url: ${PRM_AI_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
     model: ${QWEN_MODEL_NAME:qwen3.7-max-2026-06-08}
-    api-key: ${DASHSCOPE_API_KEY:sk-c3eb88a1b7734b1f95b1df957b120dde}
+    api-key: ${DASHSCOPE_API_KEY:}
   # P2 流程编排引擎:state-machine=声明式状态机(默认,离线);camunda=Camunda7 BPMN(需 -Pcamunda 构建)
   workflow:
     engine: ${PRM_WORKFLOW:state-machine}
