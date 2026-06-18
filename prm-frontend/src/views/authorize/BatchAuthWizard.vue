@@ -106,28 +106,31 @@
       <!-- 步骤3:提交清单审批 -->
       <el-card v-show="step === 2" shadow="never">
         <el-result icon="info" :title="`提交《批量授权清单》申报稿（${items.length} 项）`" sub-title="合规校验 → 清单审核审批 → 领导小组决策批准" />
-        <!-- 校验状态条:让"能否提交"一眼可见 -->
+        <!-- 单一裁决状态条:一句话说清"能不能提交、还差什么" -->
         <div style="text-align:center;margin:4px 0 10px">
-          合规校验:<el-tag :type="checkStatus.type" effect="dark" size="small">{{ checkStatus.text }}</el-tag>
+          校验状态:<el-tag :type="checkStatus.type" effect="dark">{{ checkStatus.text }}</el-tag>
         </div>
+        <!-- 主操作:一键合规校验(批量为单检:逐项合规试跑) -->
         <div style="text-align:center">
           <el-button :type="complianceResult && !complianceResult.allPass ? 'danger' : 'primary'" :loading="complianceChecking" @click="runComplianceCheck">
-            {{ complianceResult ? '重新校验' : '合规校验全部明细' }}
+            {{ complianceResult ? '重新一键校验' : '一键合规校验(全部明细)' }}
           </el-button>
-          <el-button type="warning" plain :loading="listReviewing" style="margin-left:8px" @click="runListPreReview">AI 清单预审(qwen3-max)</el-button>
+        </div>
+        <!-- 次要:AI 辅助(可选,不影响提交门禁) -->
+        <div style="text-align:center;margin:4px 0 0;color:#909399;font-size:12px">
+          AI 辅助(可选,不影响提交):
+          <el-button link type="warning" :loading="listReviewing" @click="runListPreReview">AI 清单预审(qwen3-max)</el-button>
         </div>
         <AiThinking v-bind="aiThink.state" />
-        <!-- 闭环:被拦明细就地暴露 → 返回逐条修正 → 重新校验,直至通过才放行提交 -->
+        <!-- 统一待处理清单(单一闭环):被拦明细逐项「去修正」(回 step1)→ 重新一键校验,直至通过 -->
         <el-card v-if="complianceResult && !complianceResult.allPass && complianceResult.blocked.length" shadow="never" style="margin-top:12px;border:1px solid #fde2e2;background:#fff8f8">
-          <div style="font-weight:600;color:#f56c6c;margin-bottom:8px">以下明细未通过合规校验,清单不可提交(修正后请重新校验)</div>
+          <div style="font-weight:600;color:#f56c6c;margin-bottom:8px">需处理以下 {{ complianceResult.blocked.length }} 项后方可提交(处理完点上方「重新一键校验」)</div>
           <el-table :data="complianceResult.blocked" border size="small">
-            <el-table-column type="index" label="序号" width="56" align="center" />
-            <el-table-column prop="assetName" label="数据资产" min-width="180" />
-            <el-table-column prop="reason" label="被拦原因" min-width="260" />
+            <el-table-column label="来源" width="76" align="center"><template #default><el-tag type="danger" size="small">合规</el-tag></template></el-table-column>
+            <el-table-column prop="assetName" label="数据资产" min-width="180" show-overflow-tooltip />
+            <el-table-column prop="reason" label="被拦原因" min-width="240" show-overflow-tooltip />
+            <el-table-column label="就地处理" width="120" align="center"><template #default><el-button link type="primary" @click="step = 1">去修正</el-button></template></el-table-column>
           </el-table>
-          <div style="margin-top:10px">
-            <el-button type="primary" plain @click="step = 1">返回逐条修正</el-button>
-          </div>
         </el-card>
         <el-alert v-if="listOpinion" type="info" :closable="false" style="margin-top:12px" title="AI 清单预审意见" :description="listOpinion" show-icon />
       </el-card>

@@ -129,51 +129,53 @@
       <!-- 步骤2:合规校验 -->
       <el-card v-show="step === 1" shadow="never">
         <div class="prm-table-note" style="margin-bottom:10px">依据规则自动校验【材料完整性 / 权限合理性(先确后授·权益类型·授权范围) / 合规性(第三方许可·敏感数据·跨域)】，红灯不通过不可提交。</div>
-        <!-- 校验状态条:让"能否提交"一眼可见 -->
+        <!-- 单一裁决状态条:一句话说清"能不能提交、还差什么" -->
         <div style="margin-bottom:10px">
-          合规校验:<el-tag :type="checkStatus.type" effect="dark" size="small">{{ checkStatus.text }}</el-tag>
-          <span v-if="needRecheck" style="margin-left:8px;color:#f56c6c;font-size:12px">申请/材料已变更,请重新校验后再提交</span>
+          校验状态:<el-tag :type="checkStatus.type" effect="dark">{{ checkStatus.text }}</el-tag>
         </div>
-        <el-button :type="needRecheck || (checkResult && checkResult.checkResult==='不通过') ? 'danger' : 'primary'" :loading="checking" @click="runCheck" style="margin-bottom:12px">
-          {{ checkResult ? '重新校验' : '执行合规校验' }}
+        <!-- 主操作:一键校验(合规 + AI材料),降认知、显性正确路径 -->
+        <el-button :type="needRecheck || pendingItems.length ? 'danger' : 'primary'" :loading="checking || aiMatChecking" @click="runFullCheck" style="margin-bottom:6px">
+          {{ (checkResult || aiMatResult) ? '重新一键校验' : '一键校验(合规 + AI材料)' }}
         </el-button>
-        <el-button type="warning" :loading="aiMatChecking" @click="runAiMatCheck" style="margin-bottom:12px;margin-left:8px">AI 材料校验(qwen3-max)</el-button>
-        <el-button type="warning" plain :loading="preReviewing" @click="runPreReview" style="margin-bottom:12px;margin-left:8px">AI 合规预审</el-button>
+        <!-- 次要:AI 辅助(可选,不影响提交门禁) -->
+        <div style="margin:2px 0 12px;color:#909399;font-size:12px">
+          AI 辅助(可选,不影响提交):
+          <el-button link type="warning" :loading="preReviewing" @click="runPreReview">AI 合规预审</el-button>
+        </div>
         <AiThinking v-bind="aiThink.state" />
+        <!-- 统一待处理清单(单一闭环):合规不符/AI 存疑·不通过 → 去修正(回填报含应交材料)或复核确认 -->
+        <el-card v-if="pendingItems.length" shadow="never" style="margin-bottom:12px;border:1px solid #fde2e2;background:#fff8f8">
+          <div style="font-weight:600;color:#f56c6c;margin-bottom:8px">需处理以下 {{ pendingItems.length }} 项后方可提交(处理完点上方「重新一键校验」)</div>
+          <el-table :data="pendingItems" border size="small">
+            <el-table-column label="来源" width="76" align="center">
+              <template #default="{ row }"><el-tag :type="row.source === 'ai' ? 'warning' : 'danger'" size="small">{{ row.source === 'ai' ? 'AI' : '合规' }}</el-tag></template>
+            </el-table-column>
+            <el-table-column prop="name" label="校验项 / 材料" min-width="180" show-overflow-tooltip />
+            <el-table-column prop="kind" label="问题" width="96" align="center">
+              <template #default="{ row }"><el-tag type="danger" size="small">{{ row.kind }}</el-tag></template>
+            </el-table-column>
+            <el-table-column prop="suggestion" label="说明 / 建议" min-width="240" show-overflow-tooltip />
+            <el-table-column label="就地处理" width="190" align="center">
+              <template #default="{ row }">
+                <el-button link type="primary" @click="goFixFields">去修正</el-button>
+                <el-button v-if="row.source === 'ai'" link type="success" @click="ackAi(row.name)" style="margin-left:6px">复核确认</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+        <!-- 佐证摘要(明细已并入上方待处理清单) -->
         <el-alert v-if="preOpinion" type="info" :closable="false" style="margin-bottom:12px" :title="'AI 预审意见'" :description="preOpinion" show-icon />
         <el-alert v-if="aiMatResult" :type="aiMatResult.overall === '通过' ? 'success' : 'warning'" :closable="false" style="margin-bottom:12px">
           <div><b>AI 材料校验:{{ aiMatResult.overall }}</b> — {{ aiMatResult.overallDesc }}</div>
-          <el-table :data="aiMatResult.items" border size="small" style="margin-top:8px">
-            <el-table-column prop="materialName" label="材料" min-width="200" />
-            <el-table-column label="结论" width="90" align="center">
-              <template #default="{ row }"><el-tag :type="row.verdict === '通过' ? 'success' : 'warning'" size="small">{{ row.verdict }}</el-tag></template>
-            </el-table-column>
-            <el-table-column prop="issues" label="问题" min-width="180" />
-            <el-table-column prop="suggestion" label="建议" min-width="160" />
-          </el-table>
         </el-alert>
         <el-descriptions v-if="checkResult" :column="2" border style="margin-bottom:12px">
-          <el-descriptions-item label="校验结果">
+          <el-descriptions-item label="合规校验">
             <el-tag :type="checkResult.checkResult === '通过' ? 'success' : (checkResult.checkResult === '不通过' ? 'danger' : 'warning')">{{ checkResult.checkResult || '—' }}</el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="风险等级">
             <el-tag :type="checkResult.riskLevel === '红' ? 'danger' : (checkResult.riskLevel === '黄' ? 'warning' : 'success')">{{ checkResult.riskLevel || '—' }}</el-tag>
           </el-descriptions-item>
         </el-descriptions>
-        <el-table v-if="checkResult && checkResult.items" :data="checkResult.items" border size="small" style="max-width:760px">
-          <el-table-column prop="dimension" label="维度" width="110"><template #default="{ row }"><el-tag effect="plain">{{ row.dimension }}</el-tag></template></el-table-column>
-          <el-table-column prop="item" label="校验项" width="190" />
-          <el-table-column label="结果" width="80" align="center"><template #default="{ row }"><el-tag :type="row.pass?'success':'danger'" size="small">{{ row.pass?'通过':'不符' }}</el-tag></template></el-table-column>
-          <el-table-column prop="message" label="说明" min-width="200" show-overflow-tooltip />
-        </el-table>
-        <!-- 闭环:不通过 → 就地修正(材料类在下方上传 / 字段类返回填写申请)→ 重新校验,直至通过 -->
-        <el-alert v-if="checkResult && checkResult.checkResult === '不通过'" type="error" :closable="false" style="margin-top:12px">
-          <div style="font-weight:600">合规校验未通过,清单不可提交</div>
-          <div style="margin-top:4px;font-size:12px;color:#a8071a">
-            材料类问题(第三方许可/信息授权协议):在下方"应交材料"处补充上传;字段类问题(授权范围超边界/经营权目录/期限):点击下方按钮返回修正。修正后请「重新校验」。
-          </div>
-          <el-button size="small" type="primary" plain style="margin-top:8px" @click="goFixFields">返回填写申请修正字段</el-button>
-        </el-alert>
       </el-card>
 
       <!-- 步骤3:提交审核 -->
@@ -242,17 +244,51 @@ const checkResult = ref(null)
 const needRecheck = ref(false) // 申请/材料变更后置脏:必须重新校验才能提交
 const editing = ref(false)     // 解锁表单以修正字段(草稿可编辑)
 
-// 提交门禁:合规校验通过且无未结变更才放行(消灭"点了必然被拒"的死路)
-const canSubmit = computed(() => !!checkResult.value && checkResult.value.checkResult === '通过' && !needRecheck.value)
-const checkStatus = computed(() => {
-  if (needRecheck.value) return { type: 'warning', text: '已变更,需重新校验' }
-  if (!checkResult.value) return { type: 'info', text: '未校验' }
-  if (checkResult.value.checkResult === '通过') return { type: 'success', text: '✅ 通过,可提交' }
-  if (checkResult.value.checkResult === '不通过') return { type: 'danger', text: `不通过(风险${checkResult.value.riskLevel || '—'})` }
-  return { type: 'warning', text: checkResult.value.checkResult || '存疑' }
+const aiAck = ref([]) // 已复核接受的 AI 存疑/不通过项(材料名),解除其阻断
+const ruleDone = computed(() => !!checkResult.value)
+// 合规校验不符项(维度未通过)
+const ruleFail = computed(() => {
+  const items = checkResult.value && Array.isArray(checkResult.value.items) ? checkResult.value.items : []
+  return items.filter(it => it.pass === false)
 })
-// 返回填写申请修正字段:解锁表单,回第一步
+// AI 材料校验存疑/不通过项(含是否已复核)
+const aiIssues = computed(() => {
+  const items = aiMatResult.value && Array.isArray(aiMatResult.value.items) ? aiMatResult.value.items : []
+  return items.filter(it => it.verdict === '存疑' || it.verdict === '不通过')
+    .map(it => ({ ...it, acked: aiAck.value.includes(it.materialName) }))
+})
+const aiUnresolved = computed(() => aiIssues.value.filter(i => !i.acked))
+
+// 统一"待处理清单"(单一闭环):合规不符 + AI 存疑/不通过(未复核)
+const pendingItems = computed(() => [
+  ...ruleFail.value.map(it => ({ source: 'rule', name: it.item || it.dimension || '合规项', kind: '不符', suggestion: it.message || '请按规则修正' })),
+  ...aiUnresolved.value.map(i => ({ source: 'ai', name: i.materialName, kind: i.verdict === '不通过' ? 'AI不通过' : 'AI存疑', suggestion: [i.issues, i.suggestion].filter(Boolean).join(' / ') || 'AI 提示需核实' }))
+])
+
+// 单一裁决:合规通过 + AI 无未结存疑/不通过 + 无未结变更,才点亮提交
+const canSubmit = computed(() => ruleDone.value && checkResult.value.checkResult === '通过' && aiUnresolved.value.length === 0 && !needRecheck.value)
+// 统一状态条:一句话说清"能不能提交、还差什么"
+const checkStatus = computed(() => {
+  if (needRecheck.value) return { type: 'warning', text: '已变更,请重新一键校验' }
+  if (!ruleDone.value && !aiMatResult.value) return { type: 'info', text: '未校验 — 请点「一键校验」' }
+  if (canSubmit.value) return { type: 'success', text: '✅ 全部通过,可提交' }
+  const lack = []
+  if (!ruleDone.value || checkResult.value.checkResult !== '通过') lack.push('合规校验' + (checkResult.value ? `(风险${checkResult.value.riskLevel || '—'})` : ''))
+  if (pendingItems.value.length) lack.push(`${pendingItems.value.length} 项待处理`)
+  return { type: 'danger', text: '还差:' + (lack.join(' · ') || '处理待办') }
+})
+
+// 返回填写申请修正字段/材料(一事一议:字段与应交材料都在 step0):解锁表单,回第一步
 function goFixFields() { editing.value = true; step.value = 0 }
+// 一键校验:合规校验 + AI 材料校验(降认知,正确路径一步到位)
+async function runFullCheck() {
+  if (!applyId.value) { ElMessage.warning('请先暂存申请'); return }
+  aiAck.value = [] // 重新校验,既往复核作废
+  try { await runCheck() } catch (e) { /* 拦截器已提示;不阻断 AI 校验 */ }
+  await runAiMatCheck() // 自带 try/catch,不抛
+}
+// 复核确认:申请人对该 AI 存疑/不通过项已核实接受 → 解除阻断
+function ackAi(name) { if (!aiAck.value.includes(name)) aiAck.value.push(name); ElMessage.success('已复核确认:' + name) }
 const aiText = ref(''); const aiLoading = ref(false); const aiTip = ref('')
 
 function empty() {
@@ -409,12 +445,12 @@ async function doUploadMaterial(file) {
     const id = await ensureDraft()
     const fd = new FormData(); fd.append('file', file); fd.append('applyId', id); fd.append('materialName', file.name)
     await uploadAuthMaterialFile(fd)
-    if (checkResult.value) needRecheck.value = true // 已校验过又改材料 → 置脏
+    if (checkResult.value || aiMatResult.value) needRecheck.value = true // 已校验过又改材料 → 置脏
     ElMessage.success('材料已上传'); refreshMaterials()
   } finally { matUploading.value = false }
 }
 function previewMaterial(row) { window.open(authMaterialFileUrl(row.materialId), '_blank') }
-async function delMaterial(row) { await deleteAuthMaterial(row.materialId); if (checkResult.value) needRecheck.value = true; ElMessage.success('已删除'); refreshMaterials() }
+async function delMaterial(row) { await deleteAuthMaterial(row.materialId); if (checkResult.value || aiMatResult.value) needRecheck.value = true; ElMessage.success('已删除'); refreshMaterials() }
 const rules = {
   assetId: [{ required: true, message: '请输入关联资产ID', trigger: 'blur' }],
   assetName: [{ required: true, message: '请输入资产名称', trigger: 'blur' }],
@@ -452,7 +488,7 @@ async function next0() {
     try {
       await saveAuthDraft({ authMode: '一事一议', applyId: applyId.value, ...form })
       editing.value = false
-      if (checkResult.value) needRecheck.value = true
+      if (checkResult.value || aiMatResult.value) needRecheck.value = true
       ElMessage.success('申请已更新,请重新执行合规校验')
     } finally { saving.value = false }
   }
