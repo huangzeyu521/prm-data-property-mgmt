@@ -110,11 +110,12 @@
             <el-table-column label="状态" width="86" align="center">
               <template #default="{ row }"><el-tag :type="row.uploaded ? 'success' : 'info'" effect="light" size="small">{{ row.uploaded ? '已上传' : '待上传' }}</el-tag></template>
             </el-table-column>
-            <el-table-column label="上传" width="110" align="center">
+            <el-table-column label="操作" width="156" align="center">
               <template #default="{ row }">
                 <el-upload :show-file-list="false" :http-request="(o)=>doUploadForItem(row.materialName, o.file)" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" style="display:inline-block">
-                  <el-button link type="primary" :loading="matUploading">上传该材料</el-button>
+                  <el-button link type="primary" :loading="matUploading">上传</el-button>
                 </el-upload>
+                <el-button v-if="row.uploaded" link type="warning" style="margin-left:6px" @click="previewChecklistItem(row.materialName)">预览</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -486,6 +487,15 @@ async function doUploadMaterial(file) {
   } finally { matUploading.value = false }
 }
 function previewMaterial(row) { openFilePreview(authMaterialFileUrl(row.materialId), row.fileName) }
+// 应交清单行在线预览(按材料名匹配已上传材料)
+function previewChecklistItem(materialName) {
+  const m = materials.value.find(x => {
+    const mn = x.materialName || ''
+    return mn === materialName || mn.includes(materialName) || materialName.includes(mn)
+  })
+  if (m && m.materialId) openFilePreview(authMaterialFileUrl(m.materialId), m.fileName || materialName)
+  else ElMessage.info('请先上传该材料')
+}
 async function delMaterial(row) { await deleteAuthMaterial(row.materialId); if (checkResult.value || aiMatResult.value) needRecheck.value = true; ElMessage.success('已删除'); refreshMaterials() }
 const rules = {
   assetId: [{ required: true, message: '请输入关联资产ID', trigger: 'blur' }],

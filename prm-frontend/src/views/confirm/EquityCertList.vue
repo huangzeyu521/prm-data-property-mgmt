@@ -98,6 +98,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { pageCert, issueCert, revokeCert, getCertRender, pageCertTemplate, createCertTemplate, updateCertTemplate, enableCertTemplate, disableCertTemplate, uploadCertTemplateFile, certTemplateFileUrl } from '@/api/confirm'
+import { openFilePreview } from '@/composables/useFilePreview'
 const rightTypes = ['数据资源持有权', '数据加工使用权', '数据产品经营权']
 const tab = ref('cert')
 const cardId = ref('')
@@ -125,7 +126,7 @@ async function doUploadTpl(row, file) {
   await uploadCertTemplateFile(row.templateId, fd)
   ElMessage.success('套版文件已上传'); loadTpls()
 }
-function onDownloadTpl(row) { if (row.fileName) window.open(certTemplateFileUrl(row.templateId), '_blank') }
+function onDownloadTpl(row) { if (row.fileName) openFilePreview(certTemplateFileUrl(row.templateId), row.fileName) }
 async function onEnable(row) { await enableCertTemplate(row.templateId); ElMessage.success('已启用'); loadTpls() }
 async function onDisable(row) { await disableCertTemplate(row.templateId); ElMessage.success('已停用'); loadTpls() }
 onMounted(() => { loadCerts(); loadTpls() })
