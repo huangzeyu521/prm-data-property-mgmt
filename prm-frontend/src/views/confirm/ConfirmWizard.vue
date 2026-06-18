@@ -91,7 +91,10 @@
             <el-divider content-position="left" style="font-size:12px;color:#909399">表2 涉及第三方权益(结构化)</el-divider>
             <el-form-item label="来源主体名称" prop="sourceSubject"><el-input v-model="form.sourceSubject" placeholder="表2:第三方来源主体" /></el-form-item>
             <el-form-item label="来源权益限制摘要"><el-input v-model="form.sourceLimit" type="textarea" :rows="2" placeholder="表2:BCDEF 来源权益限制说明" /></el-form-item>
-            <el-form-item label="信息识别关联主体"><el-input v-model="form.relationSubject" placeholder="表2:GHIJ 信息识别关联主体说明" /></el-form-item>
+            <el-form-item label="信息识别关联主体"><el-input v-model="form.relationSubject" placeholder="表2:GHIJ 信息识别关联主体说明(其他第三方协议 J 必填)" /></el-form-item>
+            <el-form-item v-if="form.relationIdent.includes('H')" label="隐私关联主体说明" required>
+              <el-input v-model="form.privacyInfo" type="textarea" :rows="2" placeholder="涉个人/家庭隐私(H)必填:隐私关联主体及授权情况说明(如用户入网协议授权范围)" />
+            </el-form-item>
             <el-form-item label="权益风险说明"><el-input v-model="form.equityRisk" type="textarea" :rows="2" placeholder="表2:权益风险说明" /></el-form-item>
           </template>
           <el-form-item label="用途说明"><el-input v-model="form.purpose" type="textarea" /></el-form-item>
@@ -475,7 +478,7 @@ const form = reactive({
   assetId: '', assetName: '', rightTypes: [], rightHolder: '', respDept: '',
   systemOwner: '', contactInfo: '', registerType: '初始确权', applyMode: '常规', regulated: '非管制',
   purpose: '', thirdPartyInfo: '', sourceSubject: '', sourceLimit: '', relationSubject: '', equityRisk: '',
-  sourceIdent: [], relationIdent: []
+  privacyInfo: '', sourceIdent: [], relationIdent: []
 })
 const rules = {
   assetId: [{ required: true, message: '请输入关联资产ID', trigger: 'blur' }],
@@ -504,7 +507,7 @@ onMounted(() => {
         respDept: r.respDept || '', systemOwner: r.systemOwner || '', contactInfo: r.contactInfo || '',
         registerType: r.registerType || '初始确权', regulated: r.regulated || '非管制',
         purpose: r.purpose || '', sourceSubject: r.sourceSubject || '', sourceLimit: r.sourceLimit || '',
-        relationSubject: r.relationSubject || '', equityRisk: r.equityRisk || '',
+        relationSubject: r.relationSubject || '', equityRisk: r.equityRisk || '', privacyInfo: r.privacyInfo || '',
         rightTypes: r.rightType ? String(r.rightType).split(/[、,，]/).map(s => s.trim()).filter(Boolean) : [],
       })
       ElMessage.warning('已带入被驳回原单内容,请修改后重新提交(将作为新申请)')
@@ -546,6 +549,7 @@ function fillDemo() {
     sourceIdent: ['A'], relationIdent: ['G', 'H'],
     sourceSubject: '用电客户', sourceLimit: '涉个人信息字段对外提供须脱敏并经客户授权',
     relationSubject: '国家能源局南方监管局;用电客户', equityRisk: '未经授权对外提供个人信息存在合规风险',
+    privacyInfo: '用电客户个人信息,依据用户入网协议第X条已取得对外提供授权,范围限定于结算与征信场景',
     purpose: '营销域购售电数据确权(示例)'
   })
   tableItemText.value = 'MKT_DB01,MKT,C_CONS_ELEC_INFO,客户用电信息表,敏感信息,A 自行生产数据,广东电网有限责任公司'
@@ -579,29 +583,41 @@ function onAutoFillSilent() {
 // 步骤1 -> 2:暂存草稿,生成 A–J 应交材料清单
 async function next0() {
   await formRef.value.validate()
-  if (needTable2.value && !form.sourceSubject) { ElMessage.warning('涉第三方/敏感(B–F或G–J),须填表2来源主体名称'); return }
-  if (!applyId.value) {
-    saving.value = true
-    try {
-      const payload = {
-        ...form,
-        // 多权属类型合并一份申请(评审8.1):拼接保存,兼容单类型
-        rightType: form.rightTypes.join('、'),
-        sourceIdentification: form.sourceIdent.join(','),
-        relationIdentification: form.relationIdent.join(','),
-        involvesThirdParty: needTable2.value,
-        reConfirm: form.registerType === '确权变更',
-        thirdPartyInfo: needTable2.value ? `来源主体:${form.sourceSubject}; 限制:${form.sourceLimit}; 关联主体:${form.relationSubject}; 风险:${form.equityRisk}` : ''
-      }
-      applyId.value = await saveConfirmDraft(payload)
-      if (tableItems.value.length) {
-        await saveTableItems(applyId.value, tableItems.value)
-        ElMessage.success(`已保存 ${tableItems.value.length} 张表级清单(M02)`)
-      }
-      loadConsolidation()
-      buildChecklist()
-    } finally { saving.value = false }
+  // 申请要素逐维必填(与后端 validateRegistration 同源,前移到填报,杜绝"材料全过却提交被拒")
+  if (!form.sourceIdent.length) { ElMessage.warning('请至少选择一种数据来源方式(A–F)'); return }
+  if (form.sourceIdent.some(c => ['B', 'C', 'D', 'E', 'F'].includes(c)) && !form.sourceSubject) {
+    ElMessage.warning('数据来源涉公开采集/受让/委托/交易等(B–F),须填写来源主体名称'); return
   }
+  if (form.relationIdent.includes('H') && !form.privacyInfo) {
+    ElMessage.warning('涉及用户个人/家庭隐私(H),须填写隐私关联主体说明'); return
+  }
+  if (form.relationIdent.includes('J') && !form.relationSubject) {
+    ElMessage.warning('存在其他数据权益约束协议(J),须填写关联主体说明'); return
+  }
+  // 始终保存(首次插入 / 已有则按 applyId 更新草稿),确保填报修正(如 H 隐私说明)落库
+  saving.value = true
+  try {
+    const firstSave = !applyId.value
+    const payload = {
+      ...form,
+      ...(applyId.value ? { applyId: applyId.value } : {}),
+      // 多权属类型合并一份申请(评审8.1):拼接保存,兼容单类型
+      rightType: form.rightTypes.join('、'),
+      sourceIdentification: form.sourceIdent.join(','),
+      relationIdentification: form.relationIdent.join(','),
+      involvesThirdParty: needTable2.value,
+      reConfirm: form.registerType === '确权变更',
+      thirdPartyInfo: needTable2.value ? `来源主体:${form.sourceSubject}; 限制:${form.sourceLimit}; 关联主体:${form.relationSubject}; 风险:${form.equityRisk}` : ''
+    }
+    applyId.value = await saveConfirmDraft(payload)
+    if (firstSave && tableItems.value.length) {
+      await saveTableItems(applyId.value, tableItems.value)
+      ElMessage.success(`已保存 ${tableItems.value.length} 张表级清单(M02)`)
+    }
+    loadConsolidation()
+    buildChecklist()
+    if (!firstSave && (checkReport.value || aiMatResult.value)) needRecheck.value = true // 申请要素已更新 → 需重新校验
+  } finally { saving.value = false }
   step.value = 1
 }
 
@@ -715,7 +731,7 @@ function goProgress() { router.push('/dpr/confirm/history') }
 function reset() {
   step.value = 0; applyId.value = ''; applyNo.value = ''; quality.value = null
   checklist.value = []; materials.value = []
-  Object.assign(form, { assetId: '', assetName: '', rightTypes: [], rightHolder: '', respDept: '', systemOwner: '', contactInfo: '', registerType: '初始确权', applyMode: '常规', purpose: '', thirdPartyInfo: '', sourceSubject: '', sourceLimit: '', relationSubject: '', equityRisk: '', sourceIdent: [], relationIdent: [] })
+  Object.assign(form, { assetId: '', assetName: '', rightTypes: [], rightHolder: '', respDept: '', systemOwner: '', contactInfo: '', registerType: '初始确权', applyMode: '常规', purpose: '', thirdPartyInfo: '', sourceSubject: '', sourceLimit: '', relationSubject: '', equityRisk: '', privacyInfo: '', sourceIdent: [], relationIdent: [] })
 }
 </script>
 
