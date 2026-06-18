@@ -152,12 +152,13 @@
               <el-tag :type="row.done ? 'success' : 'info'" effect="light">{{ row.done ? '已上传' : '待上传' }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="220" align="center">
+          <el-table-column label="操作" width="280" align="center">
             <template #default="{ row }">
               <el-upload :auto-upload="false" :show-file-list="false" :on-change="(f) => onUploadFile(row, f)" style="display:inline-block">
                 <el-button link type="success">上传原件</el-button>
               </el-upload>
               <el-button link type="primary" :disabled="row.done" @click="registerMaterial(row)" style="margin-left:8px">仅登记</el-button>
+              <el-button v-if="row.materialId" link type="warning" style="margin-left:8px" @click="openFilePreview(materialFileUrl(row.materialId), row.fileName)">预览</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -680,8 +681,10 @@ async function onUploadFile(row, file) {
   fd.append('materialName', row.name)
   fd.append('materialType', row.m)
   fd.append('owner', form.rightHolder || '')
-  await uploadMaterialFile(fd) // 后端格式验证不通过会抛错(拦截器toast)
+  const mid = await uploadMaterialFile(fd) // 后端格式验证不通过会抛错(拦截器toast);返回 materialId
   row.done = true
+  row.materialId = mid          // 回填,使本行可在线预览
+  row.fileName = file.raw.name  // 真实文件名,预览按扩展名渲染
   if (checkReport.value || aiMatResult.value) needRecheck.value = true // 已校验过又改材料 → 置脏
   ElMessage.success('原件已上传并通过格式验证')
 }
