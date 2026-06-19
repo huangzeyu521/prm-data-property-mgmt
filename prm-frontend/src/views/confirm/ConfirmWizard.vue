@@ -626,9 +626,27 @@ async function next0() {
     }
     loadConsolidation()
     buildChecklist()
+    await syncChecklistUploaded() // 回填已上传状态:再入 step1 不丢失(buildChecklist 重置 done 后按材料名对齐)
     if (!firstSave && (checkReport.value || aiMatResult.value)) needRecheck.value = true // 申请要素已更新 → 需重新校验
   } finally { saving.value = false }
   step.value = 1
+}
+
+// 按材料名把已上传材料回填到清单行(done/materialId/fileName),避免再入 step1 时上传状态丢失
+async function syncChecklistUploaded() {
+  if (!applyId.value) return
+  const mats = await listMaterialByApply(applyId.value) || []
+  for (const row of checklist.value) {
+    const m = mats.find(x => {
+      const mn = x.materialName || ''
+      return mn === row.name || mn.includes(row.name) || row.name.includes(mn)
+    })
+    if (m) {
+      row.done = true
+      if (m.materialId) row.materialId = m.materialId
+      if (m.fileName) row.fileName = m.fileName
+    }
+  }
 }
 
 // 应交清单由后端可配置规则(单一真源)按 场景×触发条件(A–J/涉三方)生成,前端仅渲染。
