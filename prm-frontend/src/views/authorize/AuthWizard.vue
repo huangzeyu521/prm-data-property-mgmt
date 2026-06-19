@@ -230,7 +230,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed, onMounted } from 'vue'
+import { reactive, ref, computed, nextTick, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { saveAuthDraft, submitAuth, runAuthCompliance, pageScenario, uploadAuthMaterialFile, listAuthMaterial, deleteAuthMaterial, authMaterialFileUrl, listAuthMaterialRules } from '@/api/authorize'
@@ -368,7 +368,20 @@ onMounted(async () => {
   if (q.assetId) {
     form.assetId = String(q.assetId)
     if (q.assetName) form.assetName = String(q.assetName)
-    if (q.cardNo) { form.equityCardId = String(q.cardNo); ElMessage.success('已从权益卡片带入资产与生效卡片,可直接补全授权信息') }
+    if (q.cardNo) {
+      const cardNo = String(q.cardNo)
+      // 先载入卡片选项(+兜底合成项),再设 v-model,确保 el-select 能映射出 label(否则先设值后加 option 不刷新,显示为空)
+      await loadCards()
+      if (!cardOpts.value.some(c => (c.cardNo || c.cardId) === cardNo)) {
+        cardOpts.value = [{ cardNo, assetName: form.assetName, assetId: form.assetId, cardStatus: '生效' }, ...cardOpts.value]
+      }
+      if (!assetOpts.value.some(c => c.assetId === form.assetId)) {
+        assetOpts.value = [{ assetId: form.assetId, assetName: form.assetName, cardNo }, ...assetOpts.value]
+      }
+      await nextTick()
+      form.equityCardId = cardNo
+      ElMessage.success('已从权益卡片带入资产与生效卡片,可直接补全授权信息')
+    }
     else await onAssetPicked(form.assetId)
   }
   // 基于原单修改重提:从被驳回授权单带入字段(新申请,旧单保留已驳回)
