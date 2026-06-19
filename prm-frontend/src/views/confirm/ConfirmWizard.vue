@@ -505,6 +505,14 @@ async function loadMaterialRules() {
   } catch (e) { /* 回退内置默认 */ }
 }
 
+// 从识别串(逗号分隔,token 可能是 "A" 或 "A自行生产数据")抽取允许的 A–J 码
+function parseIdentCodes(s, allowed) {
+  if (!s) return []
+  return String(s).split(/[,，]/)
+    .map(t => (t.trim().match(/^[A-J]/) || [''])[0])
+    .filter(c => allowed.includes(c))
+}
+
 onMounted(() => {
   loadMaterialRules()
   if (!route.query.reopen) return
@@ -519,6 +527,9 @@ onMounted(() => {
         purpose: r.purpose || '', sourceSubject: r.sourceSubject || '', sourceLimit: r.sourceLimit || '',
         relationSubject: r.relationSubject || '', equityRisk: r.equityRisk || '', privacyInfo: r.privacyInfo || '',
         rightTypes: r.rightType ? String(r.rightType).split(/[、,，]/).map(s => s.trim()).filter(Boolean) : [],
+        // 还原 A–J 来源/关联识别勾选(原串如 "A,B" / "A自行生产数据"),否则重提时勾选全丢、next0 被拦
+        sourceIdent: parseIdentCodes(r.sourceIdentification, ['A', 'B', 'C', 'D', 'E', 'F']),
+        relationIdent: parseIdentCodes(r.relationIdentification, ['G', 'H', 'I', 'J']),
       })
       ElMessage.warning('已带入被驳回原单内容,请修改后重新提交(将作为新申请)')
     }
