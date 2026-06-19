@@ -382,6 +382,11 @@ onMounted(async () => {
           granteeOrg: r.granteeOrg || '', rightType: r.rightType || '', scenario: r.scenario || '',
           scope: r.scope || '', validDate: r.validDate || '', businessDomain: r.businessDomain || '',
           applicantManager: r.applicantManager || '', contactInfo: r.contactInfo || '',
+          // 还原合规相关字段,否则重提丢失:涉敏感/第三方/信息授权协议/保密承诺函/跨域
+          crossRegion: !!r.crossRegion, sensitiveType: r.sensitiveType || '',
+          thirdPartySource: r.thirdPartySource || '', thirdPartyLicense: r.thirdPartyLicense || '',
+          infoAuthAgreement: r.infoAuthAgreement || '',
+          needConfidentiality: !!r.needConfidentiality, confidentialityFile: r.confidentialityFile || '',
         })
         ElMessage.warning('已带入被驳回原单内容,请修改后重新提交(将作为新申请)')
       }
