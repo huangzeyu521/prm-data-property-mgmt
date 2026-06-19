@@ -272,21 +272,28 @@ const aiIssues = computed(() => {
 })
 const aiUnresolved = computed(() => aiIssues.value.filter(i => !i.acked))
 
-// 统一"待处理清单"(单一闭环):合规不符 + AI 存疑/不通过(未复核)
+// 合规"不通过(红)"才硬拦;"警告(黄)"为建议性(跨域/范围未填/敏感建议等),不阻断提交(对齐后端 submit:警告不拦)
+const isHardFail = computed(() => ruleDone.value && checkResult.value.checkResult === '不通过')
+
+// 必处理清单:仅"不通过"时的合规不符项 + AI 存疑/不通过(未复核);警告项不进此清单、不阻断
 const pendingItems = computed(() => [
-  ...ruleFail.value.map(it => ({ source: 'rule', name: it.item || it.dimension || '合规项', kind: '不符', suggestion: it.message || '请按规则修正' })),
+  ...(isHardFail.value ? ruleFail.value.map(it => ({ source: 'rule', name: it.item || it.dimension || '合规项', kind: '不符', suggestion: it.message || '请按规则修正' })) : []),
   ...aiUnresolved.value.map(i => ({ source: 'ai', name: i.materialName, kind: i.verdict === '不通过' ? 'AI不通过' : 'AI存疑', suggestion: [i.issues, i.suggestion].filter(Boolean).join(' / ') || 'AI 提示需核实' }))
 ])
 
-// 单一裁决:合规通过 + AI 无未结存疑/不通过 + 无未结变更,才点亮提交
-const canSubmit = computed(() => ruleDone.value && checkResult.value.checkResult === '通过' && aiUnresolved.value.length === 0 && !needRecheck.value)
+// 单一裁决:合规非"不通过"(通过/警告均可提交) + AI 无未结存疑/不通过 + 无未结变更,才点亮提交
+const canSubmit = computed(() => ruleDone.value && checkResult.value.checkResult !== '不通过' && aiUnresolved.value.length === 0 && !needRecheck.value)
 // 统一状态条:一句话说清"能不能提交、还差什么"
 const checkStatus = computed(() => {
   if (needRecheck.value) return { type: 'warning', text: '已变更,请重新一键校验' }
   if (!ruleDone.value && !aiMatResult.value) return { type: 'info', text: '未校验 — 请点「一键校验」' }
-  if (canSubmit.value) return { type: 'success', text: '✅ 全部通过,可提交' }
+  if (canSubmit.value) {
+    return (checkResult.value && checkResult.value.checkResult === '警告')
+      ? { type: 'warning', text: '⚠ 有警告项(可提交,建议复核)' }
+      : { type: 'success', text: '✅ 全部通过,可提交' }
+  }
   const lack = []
-  if (!ruleDone.value || checkResult.value.checkResult !== '通过') lack.push('合规校验' + (checkResult.value ? `(风险${checkResult.value.riskLevel || '—'})` : ''))
+  if (isHardFail.value) lack.push('合规不通过(风险' + (checkResult.value.riskLevel || '红') + ')')
   if (pendingItems.value.length) lack.push(`${pendingItems.value.length} 项待处理`)
   return { type: 'danger', text: '还差:' + (lack.join(' · ') || '处理待办') }
 })
