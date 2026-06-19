@@ -577,8 +577,10 @@ async function runCheck() {
     const r = await runAuthCompliance({ applyId: applyId.value })
     checkResult.value = r || { checkResult: '通过', riskLevel: '低', problemDesc: '无' }
     needRecheck.value = false // 校验已刷新,清除脏标
-    if (checkResult.value.checkResult === '通过') ElMessage.success('合规校验通过,可提交审核')
-    else ElMessage.warning('合规校验未通过,请按提示就地修正后重新校验')
+    const cr = checkResult.value.checkResult
+    if (cr === '通过') ElMessage.success('合规校验通过,可提交审核')
+    else if (cr === '不通过') ElMessage.warning('合规校验不通过,请按提示就地修正后重新校验')
+    else ElMessage.info('合规校验有警告项(可提交,建议复核)')
   } finally { checking.value = false }
 }
 
