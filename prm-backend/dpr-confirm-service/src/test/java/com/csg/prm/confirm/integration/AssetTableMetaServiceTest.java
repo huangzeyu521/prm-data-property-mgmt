@@ -35,6 +35,10 @@ class AssetTableMetaServiceTest {
         assertEquals("敏感信息", t.secretLevel());
         assertEquals("A 自行生产数据", t.sourceType(), "演示资产来源判定已采集");
         assertEquals("广东电网有限责任公司", t.sourceSubject());
+        assertTrue(t.gFlag(), "客户用电涉行政监管 G");
+        assertTrue(t.hFlag(), "客户用电涉个人隐私 H");
+        assertFalse(t.iFlag());
+        assertFalse(t.jFlag());
         assertTrue(t.existTable());
     }
 

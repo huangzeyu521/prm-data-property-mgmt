@@ -43,6 +43,11 @@
             </el-tag>
           </el-form-item>
           <el-form-item label="资产名称" prop="assetName"><el-input v-model="form.assetName" readonly placeholder="选取卡片后自动带出" /></el-form-item>
+          <el-form-item label="所属业务系统">
+            <el-input v-model="form.systemName" placeholder="选取卡片后自动带出(附录F表1 系统名称)">
+              <template #suffix><span v-if="form.systemName" style="color:#67c23a;font-size:12px">平台卡片</span></template>
+            </el-input>
+          </el-form-item>
           <el-form-item label="权属类型" prop="rightTypes">
             <el-select v-model="form.rightTypes" multiple style="width:100%" placeholder="可多选,多种权属类型合并一份申请">
               <el-option v-for="t in rightTypes" :key="t" :label="t" :value="t" />
@@ -53,9 +58,17 @@
             <el-input v-model="form.rightHolder" placeholder="当前申报主体,最终权属以确权审核结果为准" />
             <div class="form-tip">分省上报的数据产权,确权通过后统一归口中国南方电网有限责任公司</div>
           </el-form-item>
-          <el-form-item label="责任部门"><el-input v-model="form.respDept" /></el-form-item>
-          <el-form-item label="系统负责人"><el-input v-model="form.systemOwner" placeholder="附录F 表1" /></el-form-item>
-          <el-form-item label="联系方式"><el-input v-model="form.contactInfo" placeholder="电话 / 邮箱" /></el-form-item>
+          <el-form-item label="责任部门"><el-input v-model="form.respDept" placeholder="选取卡片后自动带出(卡片管理部门)" /></el-form-item>
+          <el-form-item label="系统负责人">
+            <el-input v-model="form.systemOwner" placeholder="选取卡片后自动带出(卡片责任人)">
+              <template #suffix><span v-if="form.systemOwner" style="color:#67c23a;font-size:12px">平台卡片</span></template>
+            </el-input>
+          </el-form-item>
+          <el-form-item label="联系方式">
+            <el-input v-model="form.contactInfo" placeholder="选取卡片后自动带出(责任人电话)">
+              <template #suffix><span v-if="form.contactInfo" style="color:#67c23a;font-size:12px">平台卡片</span></template>
+            </el-input>
+          </el-form-item>
           <el-form-item label="登记类型">
             <el-radio-group v-model="form.registerType">
               <el-radio value="初始确权">初始确权</el-radio>
@@ -81,11 +94,13 @@
             <el-checkbox-group v-model="form.sourceIdent">
               <el-checkbox v-for="s in sourceOpts" :key="s.v" :value="s.v">{{ s.v }} {{ s.t }}</el-checkbox>
             </el-checkbox-group>
+            <div class="form-tip">已按所选卡片的库表元数据(来源判定)自动聚合预勾,可手动调整</div>
           </el-form-item>
           <el-form-item label="信息关联识别">
             <el-checkbox-group v-model="form.relationIdent">
               <el-checkbox v-for="r in relationOpts" :key="r.v" :value="r.v">{{ r.v }} {{ r.t }}</el-checkbox>
             </el-checkbox-group>
+            <div class="form-tip">已按库表元数据(G行政监管/H个人隐私/I第三方商密/J其他协议)自动聚合预勾,可手动调整</div>
           </el-form-item>
           <template v-if="needTable2">
             <el-divider content-position="left" style="font-size:12px;color:#909399">表2 涉及第三方权益(结构化)</el-divider>
@@ -524,17 +539,44 @@ async function loadTablesFromMeta(silent = false) {
       secretLevel: t.secretLevel || '不涉密',
       sourceType: t.sourceType || defaultSourceLabel(),
       sourceSubject: t.sourceSubject || form.sourceSubject || '',
-      existTable: t.existTable !== false, sourceChannel: 'META', ...gjFromForm()
+      existTable: t.existTable !== false, sourceChannel: 'META',
+      // 逐表 G–J 取该表自身元数据(AU_TABLE_META_DATA),非系统级勾选
+      gFlag: t.gFlag ? '是' : '否', hFlag: t.hFlag ? '是' : '否',
+      iFlag: t.iFlag ? '是' : '否', jFlag: t.jFlag ? '是' : '否'
     }))
+    // P1:从库表元数据聚合系统级 A–F / G–J(并集预勾,用户可改);来源主体缺省也带一个
+    aggregateIdentFromTables(tbls)
     if (mapped.length) {
       tableItems.value = [...tableItems.value, ...mapped]
-      if (!silent) ElMessage.success(`已从平台元数据带入 ${mapped.length} 张库表(只读预填,来源/G–J 可逐表调整)`)
+      if (!silent) ElMessage.success(`已从平台元数据带入 ${mapped.length} 张库表 + 聚合 A–J 来源/关联识别(可改)`)
     } else if (!silent) {
       ElMessage.info('平台元数据未返回新库表,可用下方"批量导入"补充')
     }
   } catch (e) {
     if (!silent) ElMessage.warning('平台元数据暂不可用,可用下方"批量导入"手工补充库表')
   } finally { metaLoading.value = false }
+}
+
+// P1:库表元数据聚合到系统级 A–F 来源识别 / G–J 信息关联识别(并集预勾,免逐项手勾;用户仍可改)
+function aggregateIdentFromTables(tbls) {
+  if (!Array.isArray(tbls) || !tbls.length) return
+  const srcSet = new Set(form.sourceIdent)
+  const relSet = new Set(form.relationIdent)
+  for (const t of tbls) {
+    const c = (t.sourceType || '').trim().charAt(0)
+    if ('ABCDEF'.includes(c)) srcSet.add(c)
+    if (t.gFlag) relSet.add('G')
+    if (t.hFlag) relSet.add('H')
+    if (t.iFlag) relSet.add('I')
+    if (t.jFlag) relSet.add('J')
+  }
+  form.sourceIdent = [...srcSet].sort()
+  form.relationIdent = [...relSet].sort()
+  // 涉第三方且来源主体尚空时,带入库表里第一条来源主体
+  if (!form.sourceSubject) {
+    const s = tbls.find(t => t.sourceSubject)
+    if (s) form.sourceSubject = s.sourceSubject
+  }
 }
 
 // 批量粘贴(兜底/补充):平台未接入或离线整理时手工导入,追加并入同一清单(按表代码去重)
@@ -564,8 +606,9 @@ async function loadConsolidation() {
 }
 
 const form = reactive({
-  assetId: '', assetName: '', rightTypes: [], rightHolder: '', respDept: '',
-  systemOwner: '', contactInfo: '', registerType: '初始确权', applyMode: '常规', regulated: '非管制',
+  assetId: '', assetName: '', systemName: '', rightTypes: [], rightHolder: '', respDept: '',
+  systemOwner: '', contactInfo: '', assetSecretLevel: '', region: '',
+  registerType: '初始确权', applyMode: '常规', regulated: '非管制',
   purpose: '', thirdPartyInfo: '', sourceSubject: '', sourceLimit: '', relationSubject: '', equityRisk: '',
   privacyInfo: '', sourceIdent: [], relationIdent: []
 })
@@ -600,7 +643,7 @@ onMounted(() => {
     if (o.domain === '确权' && o.raw) {
       const r = o.raw
       Object.assign(form, {
-        assetId: r.assetId || '', assetName: r.assetName || '', rightHolder: r.rightHolder || '',
+        assetId: r.assetId || '', assetName: r.assetName || '', systemName: r.systemName || '', rightHolder: r.rightHolder || '',
         respDept: r.respDept || '', systemOwner: r.systemOwner || '', contactInfo: r.contactInfo || '',
         registerType: r.registerType || '初始确权', regulated: r.regulated || '非管制',
         purpose: r.purpose || '', sourceSubject: r.sourceSubject || '', sourceLimit: r.sourceLimit || '',
@@ -666,12 +709,18 @@ async function onAutofill(silent = false) {
   autoLoading.value = true
   try {
     const r = await autofillConfirm(form.assetId)
-    form.assetName = r.assetName; form.rightHolder = r.rightHolder
-    form.respDept = r.respDept; if (!form.rightTypes.length && r.rightType) form.rightTypes = [r.rightType]
+    // P0:平台卡片字段一次带出(系统/负责人/电话等,不再让用户手填空字段)
+    form.assetName = r.assetName; form.rightHolder = r.rightHolder; form.respDept = r.respDept
+    form.systemName = r.systemName || form.systemName
+    form.systemOwner = r.systemOwner || form.systemOwner
+    form.contactInfo = r.contactInfo || form.contactInfo
+    form.assetSecretLevel = r.secretLevel || form.assetSecretLevel
+    form.region = r.region || form.region
+    if (!form.rightTypes.length && r.rightType) form.rightTypes = [r.rightType]
     quality.value = r.qualityScore
     lastAutofillId = form.assetId
     await loadTablesFromMeta(true)
-    ElMessage.success(silent ? `已实时同步元数据(${form.assetId})` : '已按元数据自动填充')
+    ElMessage.success(silent ? `已实时同步元数据(${form.assetId})` : '已按平台卡片自动填充(系统/负责人/电话/A–J 等)')
   } finally { autoLoading.value = false }
 }
 // 资产ID 失焦即实时同步元数据(变化且非空才同步,避免重复)
@@ -852,7 +901,8 @@ function goProgress() { router.push('/dpr/confirm/history') }
 function reset() {
   step.value = 0; applyId.value = ''; applyNo.value = ''; quality.value = null
   checklist.value = []; materials.value = []
-  Object.assign(form, { assetId: '', assetName: '', rightTypes: [], rightHolder: '', respDept: '', systemOwner: '', contactInfo: '', registerType: '初始确权', applyMode: '常规', purpose: '', thirdPartyInfo: '', sourceSubject: '', sourceLimit: '', relationSubject: '', equityRisk: '', privacyInfo: '', sourceIdent: [], relationIdent: [] })
+  Object.assign(form, { assetId: '', assetName: '', systemName: '', rightTypes: [], rightHolder: '', respDept: '', systemOwner: '', contactInfo: '', assetSecretLevel: '', region: '', registerType: '初始确权', applyMode: '常规', purpose: '', thirdPartyInfo: '', sourceSubject: '', sourceLimit: '', relationSubject: '', equityRisk: '', privacyInfo: '', sourceIdent: [], relationIdent: [] })
+  tableItems.value = []; tableItemText.value = ''
 }
 </script>
 

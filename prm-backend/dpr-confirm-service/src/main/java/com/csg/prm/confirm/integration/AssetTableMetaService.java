@@ -41,12 +41,13 @@ public class AssetTableMetaService {
         if (!StringUtils.hasText(id)) {
             return List.of();
         }
-        // 已知演示资产:回放联调样例(对齐 test/确权申请 手册,来源判定已采集)
+        // 已知演示资产:回放联调样例(对齐 test/确权申请 手册;来源判定已采集,涉行政监管G+个人隐私H)
         if ("AST-001".equalsIgnoreCase(id)
                 || (assetName != null && assetName.contains("客户用电"))) {
             return List.of(new PlatformTableMeta(
                     "MKT_DB01", "MKT", "C_CONS_ELEC_INFO", "客户用电信息表", "客户用电信息(营销域)",
-                    "敏感信息", "A 自行生产数据", "广东电网有限责任公司", true));
+                    "敏感信息", "A 自行生产数据", "广东电网有限责任公司",
+                    true, true, false, false, true));
         }
         // 通用合成:一个系统下多张库表(体现"确权粒度到库表"),来源判定留空待用户/AI补全
         String base = id.replaceAll("[^A-Za-z0-9]", "").toUpperCase();
@@ -58,8 +59,8 @@ public class AssetTableMetaService {
         String name = StringUtils.hasText(assetName) ? assetName : id;
         return List.of(
                 new PlatformTableMeta(inst, schema, base + "_MAIN", name + "主表", name + "主数据",
-                        "普通商密", null, null, true),
+                        "普通商密", null, null, false, false, false, false, true),
                 new PlatformTableMeta(inst, schema, base + "_DIM", name + "维表", name + "维度数据",
-                        "不涉密", null, null, true));
+                        "不涉密", null, null, false, false, false, false, true));
     }
 }
