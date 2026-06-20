@@ -39,6 +39,11 @@ public class StubPlatformCardClient implements PlatformCardClient {
     }
 
     @Override
+    public List<com.csg.prm.confirm.integration.dto.PlatformTableMeta> listTableMeta(String assetId) {
+        return List.of();
+    }
+
+    @Override
     public boolean pushPropertyAndEquity(String assetId, Map<String, Object> property, List<Map<String, Object>> equity) {
         log.info("[资产卡片写回·STUB] assetId={} 产权字段数={} 权益条目={} —— 平台接口未接入,仅构造载荷未真正写回",
                 assetId, property == null ? 0 : property.size(), equity == null ? 0 : equity.size());

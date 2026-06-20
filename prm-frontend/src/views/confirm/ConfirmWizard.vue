@@ -99,22 +99,51 @@
           </template>
           <el-form-item label="用途说明"><el-input v-model="form.purpose" type="textarea" /></el-form-item>
 
-          <el-divider content-position="left" style="font-size:12px;color:#909399">表级数据清单(M02 元数据-系统数据表,确权粒度到库表)</el-divider>
-          <el-form-item label="批量粘贴">
-            <el-input v-model="tableItemText" type="textarea" :rows="4"
-              placeholder="每行一张表:实例TNS,schema,表代码,表名称[,密级][,来源判定][,来源主体]&#10;XC_ORA_ZH01,NCLAIMUSER,PRPLNEGOTIATIONS,谈判表,敏感信息,A 自行生产数据,鼎和保险" />
-            <div class="form-tip">密级:不涉密/核心商密/普通商密/工作秘密/敏感信息;来源判定:A自行生产/B公开采集/C公共授权/D公共生产/E交易采购/F其他;G-J 识别默认取上方"信息关联识别"勾选</div>
-            <el-button size="small" type="primary" plain style="margin-top:6px" @click="parseTableItems">解析为表级清单</el-button>
-            <span v-if="tableItems.length" class="form-tip" style="margin-left:8px">已解析 {{ tableItems.length }} 张表,暂存申请时一并保存</span>
+          <el-divider content-position="left" style="font-size:12px;color:#909399">表级数据确权清单(确权粒度到库表,对齐附录F表2/表3;补录工单归类 M02)</el-divider>
+          <el-form-item label="库表清单">
+            <div style="width:100%">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <el-button size="small" type="primary" :loading="metaLoading" :disabled="!form.assetId" @click="loadTablesFromMeta(false)">
+                  <el-icon><Download /></el-icon> 从平台元数据带入库表
+                </el-button>
+                <span v-if="tableItems.length" class="form-tip">共 {{ tableItems.length }} 张表,暂存申请时一并保存</span>
+                <el-button v-if="tableItems.length" size="small" link type="danger" @click="clearTableItems">清空</el-button>
+              </div>
+              <div class="form-tip">
+                选取数据资产卡片后自动带出实例/schema/表代码/表名/密级(平台为源,只读预填);来源判定、来源主体、G–J 可逐表调整。平台未接入时由系统按卡片合成桩清单。
+              </div>
+            </div>
           </el-form-item>
-          <el-table v-if="tableItems.length" :data="tableItems" border size="small" style="margin-bottom:8px">
-            <el-table-column prop="instanceName" label="实例TNS" width="130" />
-            <el-table-column prop="schemaName" label="schema" width="120" />
-            <el-table-column prop="tableCode" label="表代码" min-width="160" />
-            <el-table-column prop="tableName" label="表名称" min-width="140" />
-            <el-table-column prop="secretLevel" label="密级" width="90" />
-            <el-table-column prop="sourceType" label="来源判定" width="130" />
+          <el-empty v-if="!tableItems.length" description="尚无库表 — 选取上方资产卡片即自动带入,或用下方批量导入补充" :image-size="60" />
+          <el-table v-else :data="tableItems" border size="small" style="margin-bottom:8px">
+            <el-table-column prop="instanceName" label="实例TNS" width="120" />
+            <el-table-column prop="schemaName" label="schema" width="100" />
+            <el-table-column prop="tableCode" label="表代码" min-width="150" />
+            <el-table-column prop="tableName" label="表名称" min-width="120" />
+            <el-table-column prop="secretLevel" label="密级" width="84" />
+            <el-table-column prop="sourceType" label="来源判定" width="120" />
+            <el-table-column prop="sourceSubject" label="来源主体" min-width="120" />
+            <el-table-column label="来源" width="96" align="center">
+              <template #default="{ row }">
+                <el-tag :type="row.sourceChannel === 'META' ? 'success' : 'info'" size="small" effect="plain">
+                  {{ row.sourceChannel === 'META' ? '平台元数据' : '手工导入' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="64" align="center">
+              <template #default="{ row }"><el-button link type="danger" size="small" @click="removeTableItem(row)">移除</el-button></template>
+            </el-table-column>
           </el-table>
+
+          <el-collapse style="margin-top:4px">
+            <el-collapse-item name="adv">
+              <template #title><span style="font-size:12px;color:#909399">高级:批量导入(平台未接入 / 补充库表 / 离线整理)</span></template>
+              <el-input v-model="tableItemText" type="textarea" :rows="4"
+                placeholder="每行一张表:实例TNS,schema,表代码,表名称[,密级][,来源判定][,来源主体]&#10;XC_ORA_ZH01,NCLAIMUSER,PRPLNEGOTIATIONS,谈判表,敏感信息,A 自行生产数据,鼎和保险" />
+              <div class="form-tip">密级:不涉密/核心商密/普通商密/工作秘密/敏感信息;来源判定:A自行生产/B公开采集/C公共授权/D公共生产/E交易采购/F其他;G–J 识别默认取上方"信息关联识别"勾选</div>
+              <el-button size="small" type="primary" plain style="margin-top:6px" @click="parseTableItems">导入并入清单</el-button>
+            </el-collapse-item>
+          </el-collapse>
         </el-form>
         <el-alert v-if="applyId" type="success" :closable="false" show-icon
           :title="`申请已暂存(${applyNo || applyId})，进入材料上传`" style="max-width:640px;margin-top:8px" />
@@ -462,20 +491,70 @@ function ackAi(name) {
 function goFix() { step.value = 1 }
 const materials = ref([])
 
-// 表级清单(M02)批量粘贴解析
+// 表级清单(M02)
 const tableItemText = ref('')
 const tableItems = ref([])
+const metaLoading = ref(false)
+
+// G–J 标记取上方"信息关联识别"勾选(逐表可覆盖)
+function gjFromForm() {
+  return {
+    gFlag: form.relationIdent.includes('G') ? '是' : '否', hFlag: form.relationIdent.includes('H') ? '是' : '否',
+    iFlag: form.relationIdent.includes('I') ? '是' : '否', jFlag: form.relationIdent.includes('J') ? '是' : '否'
+  }
+}
+// 来源判定缺省:取系统级第一个勾选项的完整标签(如 "A 自行生产数据"),否则默认 A
+function defaultSourceLabel() {
+  const code = form.sourceIdent[0]
+  const opt = sourceOpts.find(s => s.v === code)
+  return opt ? `${opt.v} ${opt.t}` : 'A 自行生产数据'
+}
+
+// 选卡片→自动带库表清单(平台元数据,未接入时后端桩合成);只读预填,不覆盖已有手工/已存项
+async function loadTablesFromMeta(silent = false) {
+  if (!form.assetId) { if (!silent) ElMessage.warning('请先选取数据资产卡片'); return }
+  metaLoading.value = true
+  try {
+    const tbls = await listAssetTables(form.assetId, form.assetName) || []
+    const existCodes = new Set(tableItems.value.map(t => t.tableCode).filter(Boolean))
+    const mapped = tbls.filter(t => !existCodes.has(t.tableCode)).map(t => ({
+      instanceName: t.instanceName || '', schemaName: t.schemaName || '',
+      tableCode: t.tableCode || '', tableName: t.tableName || '',
+      tableComment: t.tableComment || t.tableName || '',
+      secretLevel: t.secretLevel || '不涉密',
+      sourceType: t.sourceType || defaultSourceLabel(),
+      sourceSubject: t.sourceSubject || form.sourceSubject || '',
+      existTable: t.existTable !== false, sourceChannel: 'META', ...gjFromForm()
+    }))
+    if (mapped.length) {
+      tableItems.value = [...tableItems.value, ...mapped]
+      if (!silent) ElMessage.success(`已从平台元数据带入 ${mapped.length} 张库表(只读预填,来源/G–J 可逐表调整)`)
+    } else if (!silent) {
+      ElMessage.info('平台元数据未返回新库表,可用下方"批量导入"补充')
+    }
+  } catch (e) {
+    if (!silent) ElMessage.warning('平台元数据暂不可用,可用下方"批量导入"手工补充库表')
+  } finally { metaLoading.value = false }
+}
+
+// 批量粘贴(兜底/补充):平台未接入或离线整理时手工导入,追加并入同一清单(按表代码去重)
 function parseTableItems() {
-  tableItems.value = tableItemText.value.split('\n').map(l => l.trim()).filter(Boolean).map(line => {
+  const parsed = tableItemText.value.split('\n').map(l => l.trim()).filter(Boolean).map(line => {
     const [instanceName, schemaName, tableCode, tableName, secretLevel, sourceType, sourceSubject] =
       line.split(/[,，]/).map(s => (s || '').trim())
     return { instanceName, schemaName, tableCode, tableName, tableComment: tableName,
-      secretLevel: secretLevel || '不涉密', sourceType: sourceType || 'A 自行生产数据', sourceSubject: sourceSubject || '',
-      gFlag: form.relationIdent.includes('G') ? '是' : '否', hFlag: form.relationIdent.includes('H') ? '是' : '否',
-      iFlag: form.relationIdent.includes('I') ? '是' : '否', jFlag: form.relationIdent.includes('J') ? '是' : '否' }
+      secretLevel: secretLevel || '不涉密', sourceType: sourceType || defaultSourceLabel(), sourceSubject: sourceSubject || '',
+      existTable: true, sourceChannel: 'MANUAL', ...gjFromForm() }
   }).filter(it => it.tableCode || it.tableName)
-  if (!tableItems.value.length) ElMessage.warning('未解析到有效表级记录,请检查格式')
+  if (!parsed.length) { ElMessage.warning('未解析到有效表级记录,请检查格式'); return }
+  const existCodes = new Set(tableItems.value.map(t => t.tableCode).filter(Boolean))
+  const fresh = parsed.filter(p => !p.tableCode || !existCodes.has(p.tableCode))
+  tableItems.value = [...tableItems.value, ...fresh]
+  tableItemText.value = ''
+  ElMessage.success(`已导入 ${fresh.length} 张表(并入清单,共 ${tableItems.value.length} 张)`)
 }
+function removeTableItem(row) { tableItems.value = tableItems.value.filter(t => t !== row) }
+function clearTableItems() { tableItems.value = [] }
 
 // 权益归集判定结果(分子公司共享网公司)
 const consolidation = ref(null)
@@ -541,7 +620,7 @@ const needTable2 = computed(() =>
   form.relationIdent.some(c => ['G', 'H', 'I', 'J'].includes(c)))
 
 // 关联数据资产卡片:按 名称/编码/系统 搜索平台卡片并选取(平台为源,台账兜底);存ID、带出名,不手填
-import { searchAssetCards } from '@/api/assetCard'
+import { searchAssetCards, listAssetTables } from '@/api/assetCard'
 const assetOpts = ref([])
 const assetSearching = ref(false)
 const pickedCard = ref(null)
@@ -573,9 +652,7 @@ function fillDemo() {
     privacyInfo: '用电客户个人信息,依据用户入网协议第X条已取得对外提供授权,范围限定于结算与征信场景',
     purpose: '营销域购售电数据确权(示例)'
   })
-  tableItemText.value = 'MKT_DB01,MKT,C_CONS_ELEC_INFO,客户用电信息表,敏感信息,A 自行生产数据,广东电网有限责任公司'
-  parseTableItems()
-  // autofill 取质量评分,但桩会回写申报主体为网公司,完成后恢复示例主体(分省申报口径)
+  // autofill 取质量评分 + 自动带库表清单(AST-001 → 客户用电信息表);桩会回写申报主体为网公司,完成后恢复示例主体(分省申报口径)
   onAutofill(true).then(() => {
     form.rightHolder = '广东电网有限责任公司'
     form.respDept = '数字化部'
@@ -593,6 +670,7 @@ async function onAutofill(silent = false) {
     form.respDept = r.respDept; if (!form.rightTypes.length && r.rightType) form.rightTypes = [r.rightType]
     quality.value = r.qualityScore
     lastAutofillId = form.assetId
+    await loadTablesFromMeta(true)
     ElMessage.success(silent ? `已实时同步元数据(${form.assetId})` : '已按元数据自动填充')
   } finally { autoLoading.value = false }
 }
@@ -631,9 +709,11 @@ async function next0() {
       thirdPartyInfo: needTable2.value ? `来源主体:${form.sourceSubject}; 限制:${form.sourceLimit}; 关联主体:${form.relationSubject}; 风险:${form.equityRisk}` : ''
     }
     applyId.value = await saveConfirmDraft(payload)
-    if (firstSave && tableItems.value.length) {
-      await saveTableItems(applyId.value, tableItems.value)
-      ElMessage.success(`已保存 ${tableItems.value.length} 张表级清单(M02)`)
+    // 表级清单全量同步(后端按 applyId 删后插);剥离前端态字段(sourceChannel/existTable),避免后端未知属性
+    if (tableItems.value.length) {
+      const items = tableItems.value.map(({ sourceChannel, existTable, ...rest }) => rest)
+      await saveTableItems(applyId.value, items)
+      if (firstSave) ElMessage.success(`已保存 ${items.length} 张表级清单(M02)`)
     }
     loadConsolidation()
     buildChecklist()

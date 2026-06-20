@@ -1,6 +1,7 @@
 package com.csg.prm.confirm.integration;
 
 import com.csg.prm.confirm.integration.dto.PlatformCardRef;
+import com.csg.prm.confirm.integration.dto.PlatformTableMeta;
 
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,9 @@ public interface PlatformCardClient {
 
     /** 入站:校验某 assetId 是否对应平台真实卡片(引用完整性,杜绝幽灵资产)。 */
     boolean cardExists(String assetId);
+
+    /** 入站:按 assetId 取该卡片/系统下库表清单(实例/schema/表/密级 + 已采集的来源判定)。空=未接入(服务层合成桩)。 */
+    List<PlatformTableMeta> listTableMeta(String assetId);
 
     /** 出站:把某资产的产权/权益结论单向写回平台卡片。返回 true=平台已接收。 */
     boolean pushPropertyAndEquity(String assetId, Map<String, Object> property, List<Map<String, Object>> equity);
