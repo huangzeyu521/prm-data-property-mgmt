@@ -4,6 +4,7 @@
 -- 与 AuthService 运行器幂等共存(其 selectCount 命中即跳过)。口径须与 AuthService.seed 一致。
 INSERT INTO IM_SYS_USER (CEC_USER_ID,CEC_USERNAME,CEC_PASSWORD_HASH,CEC_REAL_NAME,CEC_ROLE,CEC_PROVINCE_CODE,CEC_STATUS,CEC_CREATE_TIME,CEC_DEL_FLAG) VALUES
 ('USR-APPLY','apply','9338f855bfca1551a6b7e608e391c8ddaec90b3667dd6088485ee86e6bcce7e7','梁晶晶','apply','GD','启用',CURRENT_TIMESTAMP,0),
+('USR-PRECHECK','precheck','9338f855bfca1551a6b7e608e391c8ddaec90b3667dd6088485ee86e6bcce7e7','周慎之','precheck','GD','启用',CURRENT_TIMESTAMP,0),
 ('USR-REVIEW','review','9338f855bfca1551a6b7e608e391c8ddaec90b3667dd6088485ee86e6bcce7e7','李天天','review','GD','启用',CURRENT_TIMESTAMP,0),
 ('USR-ADMIN','admin','9338f855bfca1551a6b7e608e391c8ddaec90b3667dd6088485ee86e6bcce7e7','陈明亮','admin','','启用',CURRENT_TIMESTAMP,0),
 ('USR-VIEWER','viewer','9338f855bfca1551a6b7e608e391c8ddaec90b3667dd6088485ee86e6bcce7e7','黄文静','view','','启用',CURRENT_TIMESTAMP,0),

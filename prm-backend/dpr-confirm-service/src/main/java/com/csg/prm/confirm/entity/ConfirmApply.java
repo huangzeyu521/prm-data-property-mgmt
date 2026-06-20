@@ -17,17 +17,23 @@ import java.time.LocalDateTime;
 public class ConfirmApply extends BaseEntity {
 
     public static final String STATUS_DRAFT = "草稿";
+    public static final String STATUS_PRECHECK = "人工预审中";     // 节点40 人工预审(复核AI校验结果)
     public static final String STATUS_COMPLIANCE = "合规审核中";   // 节点50 合规管控小组
     public static final String STATUS_MANAGER = "主管复核中";      // 节点60 数字化部主管
     public static final String STATUS_DIRECTOR = "经理终审中";     // 节点70 经理/高级经理
     public static final String STATUS_DONE = "已完成";            // 节点80 制卡归集
     public static final String STATUS_REJECTED = "已驳回";
 
-    /** 当前节点编号(附录F 流程步骤编号 50/60/70/80) */
+    /** 当前节点编号(附录F 流程步骤编号 40 人工预审/50/60/70/80) */
+    public static final int NODE_PRECHECK = 40;
     public static final int NODE_COMPLIANCE = 50;
     public static final int NODE_MANAGER = 60;
     public static final int NODE_DIRECTOR = 70;
     public static final int NODE_DONE = 80;
+
+    /** 人工预审依据:提交时固化的 AI 校验结果快照(JSON;材料AI校验+规则完整性+权益归集),供预审人完整复核·可追溯 */
+    @TableField("CEC_AI_SNAPSHOT")
+    private String aiSnapshot;
 
     @TableId(value = "CEC_APPLY_ID", type = IdType.ASSIGN_UUID)
     private String applyId;
@@ -329,6 +335,14 @@ public class ConfirmApply extends BaseEntity {
 
     public void setPurpose(String purpose) {
         this.purpose = purpose;
+    }
+
+    public String getAiSnapshot() {
+        return aiSnapshot;
+    }
+
+    public void setAiSnapshot(String aiSnapshot) {
+        this.aiSnapshot = aiSnapshot;
     }
 
     public String getRightHolder() {

@@ -63,13 +63,13 @@ class ConfirmRefinementsTest {
         BizException ex = assertThrows(BizException.class, () -> applyService.submit(id));
         assertTrue(ex.getMessage().contains("隐私"), "涉个人隐私须填说明:" + ex.getMessage());
 
-        // 补充隐私关联主体说明后可正常进入合规审核
+        // 补充隐私关联主体说明后可正常进入审批链(首节点:人工预审)
         ConfirmApply ok = base("DA-T2-002");
         ok.setRelationIdentification("H");
         ok.setPrivacyInfo("涉用户隐私,已取得数据主体授权");
         String id2 = applyService.saveDraft(ok);
         applyService.submit(id2);
-        assertEquals(ConfirmApply.STATUS_COMPLIANCE, applyService.getById(id2).getStatus());
+        assertEquals(ConfirmApply.STATUS_PRECHECK, applyService.getById(id2).getStatus());
     }
 
     /** 工单规则:来源方式 A–F 至少选一;来源含 B–F 须填来源主体(资料完整性归集审查)。 */
@@ -89,14 +89,14 @@ class ConfirmRefinementsTest {
         BizException e2 = assertThrows(BizException.class, () -> applyService.submit(idB));
         assertTrue(e2.getMessage().contains("来源主体"), "B–F 缺来源主体应拦截:" + e2.getMessage());
 
-        // 含 B–F 且填来源主体(+表2)-> 通过进入合规审核
+        // 含 B–F 且填来源主体(+表2)-> 通过进入审批链(首节点:人工预审)
         ConfirmApply ok = base("DA-SRC-OK");
         ok.setSourceIdentification("B公开采集数据");
         ok.setSourceSubject("某政府信息中心");
         ok.setThirdPartyInfo("公开采集,已履行免责声明");
         String idOk = applyService.saveDraft(ok);
         applyService.submit(idOk);
-        assertEquals(ConfirmApply.STATUS_COMPLIANCE, applyService.getById(idOk).getStatus());
+        assertEquals(ConfirmApply.STATUS_PRECHECK, applyService.getById(idOk).getStatus());
     }
 
     @Test

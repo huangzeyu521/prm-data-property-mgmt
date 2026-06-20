@@ -34,6 +34,7 @@ class ConfirmDashboardTest {
         a.setRightHolder("广东电网有限责任公司");
         String id = applyService.saveDraft(a);
         applyService.submit(id);
+        applyService.approve(id); // 节点40 人工预审通过 -> 合规
         applyService.approve(id); // 节点50 合规审核通过
         applyService.approve(id); // 节点60 主管复核通过
         applyService.approve(id); // 节点70 经理终审通过 -> 制卡

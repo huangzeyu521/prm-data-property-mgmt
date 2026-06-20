@@ -52,7 +52,12 @@ class ConfirmFlowTest {
         assertNotNull(applyService.getById(id).getApplyNo(), "应自动生成申请编号");
 
         applyService.submit(id);
+        assertEquals(ConfirmApply.STATUS_PRECHECK, applyService.getById(id).getStatus(), "提交后先进人工预审");
+
+        // 节点40 人工预审通过(复核 AI 校验结果)-> 合规审核中(尚未生成表3/表4)
+        assertNull(applyService.approve(id));
         assertEquals(ConfirmApply.STATUS_COMPLIANCE, applyService.getById(id).getStatus());
+        assertEquals(0, summaryService.listByApply(id).size(), "人工预审阶段尚未生成汇总表");
 
         // 节点50 合规审核通过 -> 主管复核中,生成表3/表4 + 认定意见(尚未制卡)
         assertNull(applyService.approve(id));

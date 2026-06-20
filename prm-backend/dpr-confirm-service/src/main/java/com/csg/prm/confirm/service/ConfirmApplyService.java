@@ -25,7 +25,10 @@ public interface ConfirmApplyService {
      */
     String createReConfirm(String assetId, String assetName, String rightType, String reason, String sourceRef);
 
-    /** 提交进入审批(草稿 -> 合规审核中) */
+    /** 固化提交前的 AI 校验结果快照(JSON),供人工预审完整复核·可追溯。在提交前调用。 */
+    void saveAiSnapshot(String applyId, String snapshotJson);
+
+    /** 提交进入审批(草稿 -> 人工预审中) */
     void submit(String applyId);
 
     /**

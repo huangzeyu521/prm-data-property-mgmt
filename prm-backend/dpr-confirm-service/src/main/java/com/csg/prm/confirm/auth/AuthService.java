@@ -41,6 +41,7 @@ public class AuthService implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         seed("apply", "梁晶晶", "apply", "GD");
+        seed("precheck", "周慎之", "precheck", "GD");
         seed("review", "李天天", "review", "GD");
         seed("admin", "陈明亮", "admin", "");
         seed("viewer", "黄文静", "view", "");

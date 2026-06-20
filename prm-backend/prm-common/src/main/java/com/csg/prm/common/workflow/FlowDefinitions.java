@@ -22,7 +22,8 @@ public final class FlowDefinitions {
     private static final Map<String, List<String>> FLOWS = new LinkedHashMap<>();
 
     static {
-        FLOWS.put(DPR_CONFIRM, List.of("合规审核中", "主管复核中", "经理终审中", "已完成"));
+        // 确权审批链:提交后先"人工预审"(对 AI 校验结果人工复核),通过再进合规管控小组(生成表3/表4)。
+        FLOWS.put(DPR_CONFIRM, List.of("人工预审中", "合规审核中", "主管复核中", "经理终审中", "已完成"));
         FLOWS.put(DPR_AUTH_SPECIAL, List.of("合规审核中", "业务审核中", "主管审核中", "经理审核中", "副总审批中", "已生效"));
         // 批量(附录F 步骤50-90):合规审核 -> 数字化部主管 -> 数字化部经理 -> 数字化部副总 -> 领导小组决策 -> 已生效。
         // 数字化部三节点(主管/经理/副总)与一事一议同名同粒度,差异仅在:一事一议第2节点为"业务审核中",批量末节点为"领导小组审批中"。

@@ -17,7 +17,11 @@ class StateMachineFlowEngineTest {
     @Test
     void confirm_chain_advances_through_appendix_F_nodes() {
         String key = FlowDefinitions.DPR_CONFIRM;
-        assertEquals("合规审核中", engine.start(key, "b1"));
+        assertEquals("人工预审中", engine.start(key, "b1"), "提交后首节点为人工预审");
+
+        FlowTransition t0 = engine.advance(key, "b1", "人工预审中");
+        assertEquals("合规审核中", t0.nextState());
+        assertFalse(t0.terminal());
 
         FlowTransition t1 = engine.advance(key, "b1", "合规审核中");
         assertEquals("主管复核中", t1.nextState());

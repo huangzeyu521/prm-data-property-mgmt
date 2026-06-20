@@ -60,6 +60,13 @@ public class ConfirmApplyController {
         return R.ok(service.createReConfirm(assetId, assetName, rightType, reason, sourceRef));
     }
 
+    /** 固化提交前 AI 校验结果快照(JSON),供人工预审完整复核·可追溯。提交前调用。 */
+    @PostMapping("/{applyId}/ai-snapshot")
+    public R<Void> saveAiSnapshot(@PathVariable String applyId, @RequestBody String snapshotJson) {
+        service.saveAiSnapshot(applyId, snapshotJson);
+        return R.ok();
+    }
+
     @PostMapping("/{applyId}/submit")
     public R<Void> submit(@PathVariable String applyId) {
         service.submit(applyId);

@@ -59,8 +59,9 @@ class ConfirmWritebackTest {
         a.setSourceIdentification("A自行生产数据");
         a.setRightHolder("广东电网");
         String id = applyService.saveDraft(a);
-        applyService.submit(id);          // -> 合规审核中(元数据质量达标)
-        applyService.approve(id);         // 节点50 -> 主管
+        applyService.submit(id);          // -> 人工预审中(元数据质量达标)
+        applyService.approve(id);         // 节点40 人工预审 -> 合规
+        applyService.approve(id);         // 节点50 合规 -> 主管
         applyService.approve(id);         // 节点60 -> 经理
         String cardId = applyService.approve(id); // 节点70 -> 制卡
         assertNotNull(cardId, "应制卡");

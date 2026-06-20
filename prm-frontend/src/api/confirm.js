@@ -4,6 +4,8 @@ import request from './request'
 export const pageConfirmApply = (query) => request.post('/dpr/confirm/apply/page', query)
 export const saveConfirmDraft = (data) => request.post('/dpr/confirm/apply/draft', data)
 export const submitConfirm = (applyId) => request.post(`/dpr/confirm/apply/${applyId}/submit`)
+// 固化提交前 AI 校验结果快照(JSON 字符串),供人工预审完整复核
+export const saveAiSnapshot = (applyId, snapshotJson) => request.post(`/dpr/confirm/apply/${applyId}/ai-snapshot`, snapshotJson, { headers: { 'Content-Type': 'application/json' } })
 export const deleteConfirmApply = (applyId) => request.delete(`/dpr/confirm/apply/${applyId}`)
 export const getConfirmFlowLog = (applyId) => request.get(`/dpr/confirm/apply/${applyId}/flow-log`)
 export const confirmHistoryExportUrl = (params) => {

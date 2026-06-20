@@ -35,6 +35,40 @@
         <el-descriptions-item label="用途" :span="2">{{ cur.purpose || '-' }}</el-descriptions-item>
       </el-descriptions>
 
+      <div class="rv-h">
+        AI 校验结果（人工预审依据）
+        <el-tag v-if="cur.status === '人工预审中'" type="warning" size="small" effect="plain" style="margin-left:8px">本环节须人工复核 AI 结果</el-tag>
+      </div>
+      <div v-if="aiSnap">
+        <el-alert :type="aiSnap.materialCheck && aiSnap.materialCheck.overall === '通过' ? 'success' : 'warning'" :closable="false" style="margin-bottom:8px">
+          <div><b>AI 材料校验：{{ aiSnap.materialCheck && aiSnap.materialCheck.overall || '—' }}</b> {{ aiSnap.materialCheck && aiSnap.materialCheck.overallDesc || '' }}</div>
+        </el-alert>
+        <el-table v-if="aiSnap.materialCheck && aiSnap.materialCheck.items && aiSnap.materialCheck.items.length" :data="aiSnap.materialCheck.items" border size="small" style="margin-bottom:8px">
+          <el-table-column prop="materialName" label="材料" min-width="150" show-overflow-tooltip />
+          <el-table-column prop="rightHolder" label="识别权属主体" min-width="110" show-overflow-tooltip />
+          <el-table-column prop="rightType" label="识别权类" width="96" />
+          <el-table-column label="敏感" width="60" align="center">
+            <template #default="{ row }"><el-tag v-if="row.sensitiveHit" type="danger" size="small">敏感</el-tag><span v-else>—</span></template>
+          </el-table-column>
+          <el-table-column label="AI 结论" min-width="110" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.conclusion || row.aiResult || row.suggestion || '—' }}</template>
+          </el-table-column>
+        </el-table>
+        <el-alert v-if="aiSnap.ruleReport" :type="aiSnap.ruleReport.allPass ? 'success' : 'warning'" :closable="false" style="margin-bottom:8px">
+          <div>规则完整性：{{ aiSnap.ruleReport.summary || (aiSnap.ruleReport.allPass ? '全部通过' : '存在缺失/不合规') }}</div>
+          <div v-if="aiSnap.ruleReport.missing && aiSnap.ruleReport.missing.length" style="font-size:12px">缺失：{{ aiSnap.ruleReport.missing.join('、') }}</div>
+        </el-alert>
+        <el-descriptions v-if="aiSnap.consolidation" :column="3" border size="small">
+          <el-descriptions-item label="命中规则">规则 {{ aiSnap.consolidation.rule }}</el-descriptions-item>
+          <el-descriptions-item label="网公司持有权">{{ aiSnap.consolidation.holdRight }}</el-descriptions-item>
+          <el-descriptions-item label="网公司经营权">{{ aiSnap.consolidation.operateRight }}</el-descriptions-item>
+        </el-descriptions>
+        <div style="font-size:12px;color:#9ca3af;margin-top:4px">
+          校验时间 {{ fmt(aiSnap.checkedAt) }} · 元数据质量 {{ aiSnap.qualityScore ?? '—' }} · 提交时固化快照,供预审完整复核·可追溯
+        </div>
+      </div>
+      <el-empty v-else :image-size="40" description="该申请无 AI 校验快照(旧数据 / 未经一键校验提交)" />
+
       <div class="rv-h">申请材料（{{ materials.length }}）</div>
       <el-table :data="materials" border size="small">
         <el-table-column prop="materialName" label="材料名称" min-width="200" show-overflow-tooltip />
@@ -74,7 +108,13 @@ import { openFilePreview } from '@/composables/useFilePreview'
 
 const rows = ref([]); const loading = ref(false); const sel = ref([])
 const drawer = ref(false); const cur = ref({}); const materials = ref([]); const logs = ref([])
-const reviewing = computed(() => rows.value.filter(r => ['合规审核中', '主管复核中', '经理终审中'].includes(r.status)))
+const reviewing = computed(() => rows.value.filter(r => ['人工预审中', '合规审核中', '主管复核中', '经理终审中'].includes(r.status)))
+// 人工预审依据:解析提交时固化的 AI 校验结果快照(JSON)
+const aiSnap = computed(() => {
+  const s = cur.value && cur.value.aiSnapshot
+  if (!s) return null
+  try { return typeof s === 'string' ? JSON.parse(s) : s } catch (e) { return null }
+})
 function fmt(t) { return t ? String(t).replace('T', ' ').slice(0, 19) : '-' }
 
 async function load() {

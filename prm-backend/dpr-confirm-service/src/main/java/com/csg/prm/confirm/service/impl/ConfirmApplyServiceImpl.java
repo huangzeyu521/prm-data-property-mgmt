@@ -56,6 +56,9 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
 
     /** 各审批状态对应的责任人(节点处理人/角色)。 */
     private String responderOf(String status) {
+        if (ConfirmApply.STATUS_PRECHECK.equals(status)) {
+            return "人工预审员";
+        }
         if (ConfirmApply.STATUS_COMPLIANCE.equals(status)) {
             return "合规管控小组";
         }
@@ -125,6 +128,16 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
 
     @Override
     @Transactional
+    public void saveAiSnapshot(String applyId, String snapshotJson) {
+        ConfirmApply apply = require(applyId);
+        ConfirmApply upd = new ConfirmApply();
+        upd.setApplyId(applyId);
+        upd.setAiSnapshot(snapshotJson);
+        mapper.updateById(upd);
+    }
+
+    @Override
+    @Transactional
     public void submit(String applyId) {
         ConfirmApply apply = require(applyId);
         if (!ConfirmApply.STATUS_DRAFT.equals(apply.getStatus())) {
@@ -146,7 +159,7 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
             flowLogService.record(apply, ConfirmApply.STATUS_DRAFT, ConfirmApply.STATUS_REJECTED, "元数据质量门禁", reason);
             return;
         }
-        // 节点40归集审查通过 -> 由流程引擎启动确权审批链(首状态:合规审核)
+        // 归集审查通过 -> 由流程引擎启动确权审批链(首状态:人工预审中,对AI校验结果人工复核后再进合规)
         String first = flowEngine.start(FlowDefinitions.DPR_CONFIRM, applyId);
         updateNode(applyId, first, nodeOf(first), null, null);
         flowLogService.record(apply, ConfirmApply.STATUS_DRAFT, first, "申请人", null);
@@ -195,6 +208,9 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
 
     /** 确权状态 -> 附录F 节点编号(纯映射,非流程逻辑) */
     private Integer nodeOf(String status) {
+        if (ConfirmApply.STATUS_PRECHECK.equals(status)) {
+            return ConfirmApply.NODE_PRECHECK;
+        }
         if (ConfirmApply.STATUS_MANAGER.equals(status)) {
             return ConfirmApply.NODE_MANAGER;
         }

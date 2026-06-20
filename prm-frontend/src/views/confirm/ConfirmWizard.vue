@@ -307,6 +307,7 @@
         <!-- 审批重要节点显式化(评审8.5) -->
         <el-divider content-position="left" style="font-size:12px;color:#909399">提交后审批链(重要节点)</el-divider>
         <el-steps :active="0" align-center class="approve-chain">
+          <el-step title="人工预审" description="人工复核 AI 校验结果" />
           <el-step title="合规管控小组审核" description="生成表3/表4及认定意见" />
           <el-step title="数据管理部门主管复核" description="权属边界与责任复核" />
           <el-step title="经理/高级经理终审" :description="(form.applyMode === '一事一议' ? '一事一议:单独组织审议' : '逐级审批')" />
@@ -316,7 +317,7 @@
 
       <!-- 步骤4:完成 -->
       <el-card v-show="step === 3" shadow="never">
-        <el-result icon="success" title="确权申请已提交" :sub-title="`申请编号 ${applyNo || applyId}，已进入：合规审核 → 主管复核 → 经理终审`">
+        <el-result icon="success" title="确权申请已提交" :sub-title="`申请编号 ${applyNo || applyId}，已进入：人工预审 → 合规审核 → 主管复核 → 经理终审`">
           <template #extra>
             <el-button type="primary" @click="goProgress">查看进度</el-button>
             <el-button type="success" @click="router.push('/dpr/confirm/review?applyId=' + applyId)">去审核(审核申请提交)</el-button>
@@ -342,7 +343,7 @@
 import { computed, reactive, ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { autofillConfirm, saveConfirmDraft, uploadMaterial, uploadMaterialFile, materialFileUrl, listMaterialByApply, checkMaterial, runMaterialCheck, pushMaterialReview, materialExportUrl, submitConfirm, saveTableItems, getConsolidation, aiMaterialCheck, listMaterialRules, aiParseConfirm, aiDecisionConfirm, aiConflictConfirm } from '@/api/confirm'
+import { autofillConfirm, saveConfirmDraft, uploadMaterial, uploadMaterialFile, materialFileUrl, listMaterialByApply, checkMaterial, runMaterialCheck, pushMaterialReview, materialExportUrl, submitConfirm, saveAiSnapshot, saveTableItems, getConsolidation, aiMaterialCheck, listMaterialRules, aiParseConfirm, aiDecisionConfirm, aiConflictConfirm } from '@/api/confirm'
 import AiThinking from '@/components/AiThinking.vue'
 import { useAiThinking } from '@/composables/useAiThinking'
 import { openFilePreview } from '@/composables/useFilePreview'
@@ -892,6 +893,17 @@ async function onFixUpload(item, file) {
 async function next2() {
   submitting.value = true
   try {
+    // 提交前固化 AI 校验结果快照(材料AI校验 + 规则完整性 + 权益归集),供人工预审完整复核·可追溯
+    try {
+      const snapshot = {
+        checkedAt: new Date().toISOString(),
+        qualityScore: quality.value,
+        materialCheck: aiMatResult.value || null,
+        ruleReport: checkReport.value || null,
+        consolidation: consolidation.value || null
+      }
+      await saveAiSnapshot(applyId.value, JSON.stringify(snapshot))
+    } catch (e) { /* 快照失败不阻断提交 */ }
     await pushMaterialReview(applyId.value) // 后端门禁:校验全通过才提交审核,否则抛错(拦截器toast缺失/不合规)
     step.value = 3
   } finally { submitting.value = false }
