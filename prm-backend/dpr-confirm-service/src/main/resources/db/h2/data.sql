@@ -1,4 +1,14 @@
 -- 演示数据(仅 dev profile 加载;test profile 不加载)
+-- 演示账号(5 角色,密码均 Prm@1234 的 SM3 摘要):随 schema 在 datasource 初始化期种入,
+-- 早于 Web 服务接流量,杜绝"AuthService 播种被慢启动的 AI 运行器拖后、登录窗口期失败"。
+-- 与 AuthService 运行器幂等共存(其 selectCount 命中即跳过)。口径须与 AuthService.seed 一致。
+INSERT INTO IM_SYS_USER (CEC_USER_ID,CEC_USERNAME,CEC_PASSWORD_HASH,CEC_REAL_NAME,CEC_ROLE,CEC_PROVINCE_CODE,CEC_STATUS,CEC_CREATE_TIME,CEC_DEL_FLAG) VALUES
+('USR-APPLY','apply','9338f855bfca1551a6b7e608e391c8ddaec90b3667dd6088485ee86e6bcce7e7','梁晶晶','apply','GD','启用',CURRENT_TIMESTAMP,0),
+('USR-REVIEW','review','9338f855bfca1551a6b7e608e391c8ddaec90b3667dd6088485ee86e6bcce7e7','李天天','review','GD','启用',CURRENT_TIMESTAMP,0),
+('USR-ADMIN','admin','9338f855bfca1551a6b7e608e391c8ddaec90b3667dd6088485ee86e6bcce7e7','陈明亮','admin','','启用',CURRENT_TIMESTAMP,0),
+('USR-VIEWER','viewer','9338f855bfca1551a6b7e608e391c8ddaec90b3667dd6088485ee86e6bcce7e7','黄文静','view','','启用',CURRENT_TIMESTAMP,0),
+('USR-SUPER','super','9338f855bfca1551a6b7e608e391c8ddaec90b3667dd6088485ee86e6bcce7e7','吴海涛','all','','启用',CURRENT_TIMESTAMP,0);
+
 -- 确权指引(4,含"操作指引"v1历史版本演示历史版本记录)
 INSERT INTO IM_CONFIRM_GUIDANCE (CEC_GUIDANCE_ID,CEC_TITLE,CEC_GUIDANCE_TYPE,CEC_VERSION,CEC_PUBLISHER,CEC_PUBLISH_DATE,CEC_FILE_URL,CEC_IS_LATEST,CEC_CREATE_TIME,CEC_DEL_FLAG) VALUES
 ('GD-000','数据确权操作指引','操作说明','v1','数字化部',DATEADD('MONTH',-3,CURRENT_TIMESTAMP),'/files/确权操作指引_v1.pdf',FALSE,DATEADD('MONTH',-3,CURRENT_TIMESTAMP),0),

@@ -7,6 +7,8 @@ import com.csg.prm.common.exception.BizException;
 import com.csg.prm.confirm.system.SysOpLogService;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -15,8 +17,13 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/** 内建认证:登录(SM3 密码校验)+ 签发 JWT;启动时幂等种入每角色演示账号。 */
+/**
+ * 内建认证:登录(SM3 密码校验)+ 签发 JWT;启动时幂等种入每角色演示账号。
+ * 播种运行器置最高优先级,先于慢启动的 AI 语料/模板运行器执行,缩小"已可接流量但演示账号未种入"的登录窗口期。
+ * dev profile 另由 data.sql 在 datasource 初始化期(早于 Web 接流量)确定性种入,此处幂等共存(已存在即跳过)。
+ */
 @Service
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class AuthService implements ApplicationRunner {
 
     /** 演示账号默认密码(生产由 4A 接管,此处仅本地/演示) */
