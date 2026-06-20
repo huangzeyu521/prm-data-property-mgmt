@@ -18,8 +18,13 @@
         <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="onDetail(row)">详情</el-button>
-            <el-button link type="success" @click="onApprove(row)">审批通过</el-button>
-            <el-button link type="danger" @click="onReject(row)">驳回</el-button>
+            <template v-if="canAct(row.status)">
+              <el-button link type="success" @click="onApprove(row)">审批通过</el-button>
+              <el-button link type="danger" @click="onReject(row)">驳回</el-button>
+            </template>
+            <el-tooltip v-else :content="`本节点须「${needRoleLabel(row.status)}」处理`" placement="top">
+              <span style="color:#bbb;font-size:12px;margin-left:6px">非本人审批</span>
+            </el-tooltip>
           </template>
         </el-table-column>
       </el-table>
@@ -92,8 +97,11 @@
       <el-empty v-else :image-size="50" description="暂无流转记录" />
 
       <template #footer>
-        <el-button type="success" @click="onApprove(cur, true)">审批通过</el-button>
-        <el-button type="danger" @click="onReject(cur, true)">驳回</el-button>
+        <template v-if="canAct(cur.status)">
+          <el-button type="success" @click="onApprove(cur, true)">审批通过</el-button>
+          <el-button type="danger" @click="onReject(cur, true)">驳回</el-button>
+        </template>
+        <el-tag v-else type="info" effect="plain" style="margin-right:8px">本节点须「{{ needRoleLabel(cur.status) }}」处理</el-tag>
         <el-button @click="drawer = false">关闭</el-button>
       </template>
     </el-drawer>
@@ -105,6 +113,18 @@ import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { pageConfirmApply, approveConfirm, rejectConfirm, batchApproveConfirm, batchRejectConfirm, listMaterialByApply, getConfirmFlowLog, materialFileUrl } from '@/api/confirm'
 import { openFilePreview } from '@/composables/useFilePreview'
+import { currentRole } from '@/lib/roles'
+
+// 逐节点角色门禁(与后端一致):每个节点仅对应角色(及 all/admin)可审批/驳回
+const NODE_ROLE = { 人工预审中: 'precheck', 合规审核中: 'review', 主管复核中: 'manager', 经理终审中: 'director' }
+const ROLE_LABEL = { precheck: '人工预审员', review: '合规管控小组', manager: '数字化部主管', director: '经理/高级经理' }
+function canAct(status) {
+  const r = currentRole()
+  if (r === 'all' || r === 'admin') return true
+  const need = NODE_ROLE[status]
+  return !need || need === r
+}
+function needRoleLabel(status) { return ROLE_LABEL[NODE_ROLE[status]] || '' }
 
 const rows = ref([]); const loading = ref(false); const sel = ref([])
 const drawer = ref(false); const cur = ref({}); const materials = ref([]); const logs = ref([])

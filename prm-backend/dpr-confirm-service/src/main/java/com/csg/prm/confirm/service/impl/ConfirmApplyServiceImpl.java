@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.ResultCode;
+import com.csg.prm.common.context.UserContext;
+import com.csg.prm.common.context.UserContextHolder;
 import com.csg.prm.common.exception.BizException;
 import com.csg.prm.common.workflow.FlowDefinitions;
 import com.csg.prm.common.workflow.FlowTransition;
@@ -21,12 +23,23 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Service
 public class ConfirmApplyServiceImpl implements ConfirmApplyService {
 
     /** 元数据质量门禁阈值:<80 自动驳回确权(需求§5.5 接口③) */
     private static final int QUALITY_THRESHOLD = 80;
+
+    /** 逐节点角色门禁:每个审批节点仅对应角色(及 all/admin)可处理(审批/驳回)。 */
+    private static final Map<String, String> NODE_ROLE = Map.of(
+            ConfirmApply.STATUS_PRECHECK, "precheck",   // 40 人工预审 -> 人工预审员
+            ConfirmApply.STATUS_COMPLIANCE, "review",   // 50 合规审核 -> 合规管控小组
+            ConfirmApply.STATUS_MANAGER, "manager",     // 60 主管复核 -> 数字化部主管
+            ConfirmApply.STATUS_DIRECTOR, "director");  // 70 经理终审 -> 经理/高级经理
+    private static final Map<String, String> ROLE_LABEL = Map.of(
+            "precheck", "人工预审员", "review", "合规管控小组", "manager", "数字化部主管", "director", "经理/高级经理");
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ConfirmApplyServiceImpl.class);
 
@@ -55,6 +68,23 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
     }
 
     /** 各审批状态对应的责任人(节点处理人/角色)。 */
+    /**
+     * 逐节点角色门禁:校验当前登录用户是否有权处理该节点(审批/驳回)。
+     * 无用户上下文(内部调用/未启用认证/单测)或 all/admin 角色:放行;否则节点角色须匹配。
+     */
+    private void assertNodeRole(String status) {
+        UserContext ctx = UserContextHolder.get();
+        Set<String> roles = ctx == null ? null : ctx.getRoles();
+        if (roles == null || roles.isEmpty() || roles.contains("all") || roles.contains("admin")) {
+            return;
+        }
+        String need = NODE_ROLE.get(status);
+        if (need != null && !roles.contains(need)) {
+            throw new BizException(ResultCode.FORBIDDEN.getCode(),
+                    "无权限:【" + status + "】节点须由「" + ROLE_LABEL.getOrDefault(need, need) + "」角色处理");
+        }
+    }
+
     private String responderOf(String status) {
         if (ConfirmApply.STATUS_PRECHECK.equals(status)) {
             return "人工预审员";
@@ -175,6 +205,7 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
     public String approve(String applyId) {
         ConfirmApply apply = require(applyId);
         String from = apply.getStatus();
+        assertNodeRole(from);
         if (!flowEngine.canAdvance(FlowDefinitions.DPR_CONFIRM, from)) {
             throw new BizException("当前状态不可审批:" + from);
         }
@@ -227,6 +258,7 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
     @Transactional
     public void reject(String applyId, String reason) {
         ConfirmApply apply = require(applyId);
+        assertNodeRole(apply.getStatus());
         // 仅审批链中(可推进)的状态可驳回——与引擎判定一致
         if (!flowEngine.canAdvance(FlowDefinitions.DPR_CONFIRM, apply.getStatus())) {
             throw new BizException("当前状态不可驳回:" + apply.getStatus());

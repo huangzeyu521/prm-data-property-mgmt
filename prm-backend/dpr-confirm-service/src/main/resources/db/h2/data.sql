@@ -6,6 +6,8 @@ INSERT INTO IM_SYS_USER (CEC_USER_ID,CEC_USERNAME,CEC_PASSWORD_HASH,CEC_REAL_NAM
 ('USR-APPLY','apply','9338f855bfca1551a6b7e608e391c8ddaec90b3667dd6088485ee86e6bcce7e7','梁晶晶','apply','GD','启用',CURRENT_TIMESTAMP,0),
 ('USR-PRECHECK','precheck','9338f855bfca1551a6b7e608e391c8ddaec90b3667dd6088485ee86e6bcce7e7','周慎之','precheck','GD','启用',CURRENT_TIMESTAMP,0),
 ('USR-REVIEW','review','9338f855bfca1551a6b7e608e391c8ddaec90b3667dd6088485ee86e6bcce7e7','李天天','review','GD','启用',CURRENT_TIMESTAMP,0),
+('USR-MANAGER','manager','9338f855bfca1551a6b7e608e391c8ddaec90b3667dd6088485ee86e6bcce7e7','黄主管','manager','GD','启用',CURRENT_TIMESTAMP,0),
+('USR-DIRECTOR','director','9338f855bfca1551a6b7e608e391c8ddaec90b3667dd6088485ee86e6bcce7e7','郑经理','director','','启用',CURRENT_TIMESTAMP,0),
 ('USR-ADMIN','admin','9338f855bfca1551a6b7e608e391c8ddaec90b3667dd6088485ee86e6bcce7e7','陈明亮','admin','','启用',CURRENT_TIMESTAMP,0),
 ('USR-VIEWER','viewer','9338f855bfca1551a6b7e608e391c8ddaec90b3667dd6088485ee86e6bcce7e7','黄文静','view','','启用',CURRENT_TIMESTAMP,0),
 ('USR-SUPER','super','9338f855bfca1551a6b7e608e391c8ddaec90b3667dd6088485ee86e6bcce7e7','吴海涛','all','','启用',CURRENT_TIMESTAMP,0);

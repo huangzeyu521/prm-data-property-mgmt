@@ -43,6 +43,8 @@ public class AuthService implements ApplicationRunner {
         seed("apply", "梁晶晶", "apply", "GD");
         seed("precheck", "周慎之", "precheck", "GD");
         seed("review", "李天天", "review", "GD");
+        seed("manager", "黄主管", "manager", "GD");
+        seed("director", "郑经理", "director", "");
         seed("admin", "陈明亮", "admin", "");
         seed("viewer", "黄文静", "view", "");
         seed("super", "吴海涛", "all", "");
