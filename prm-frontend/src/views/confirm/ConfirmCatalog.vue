@@ -58,7 +58,7 @@ import { getPropertyTree } from '@/api/ledger'
 import { pageConfirmApply, saveConfirmDraft, submitConfirm } from '@/api/confirm'
 
 const router = useRouter()
-const IN_PROGRESS = ['草稿', '合规审核中', '主管复核中', '经理终审中']
+const IN_PROGRESS = ['草稿', '人工预审中', '合规审核中', '主管复核中', '经理终审中']
 const treeProps = { label: 'label', children: 'children' }
 const treeRef = ref()
 const tree = ref([])

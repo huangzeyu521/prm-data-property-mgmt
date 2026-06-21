@@ -18,8 +18,8 @@ import java.util.Set;
 @ConditionalOnProperty(name = "prm.aggregate.enabled", havingValue = "true")
 public class HttpConfirmQueryGateway extends AbstractHttpQueryGateway implements ConfirmQueryGateway {
 
-    /** 审批中(待办)状态:合规审核中 / 主管复核中 / 经理终审中 */
-    private static final Set<String> PENDING = Set.of("合规审核中", "主管复核中", "经理终审中");
+    /** 审批中(待办)状态:人工预审中 / 合规审核中 / 主管复核中 / 经理终审中 */
+    private static final Set<String> PENDING = Set.of("人工预审中", "合规审核中", "主管复核中", "经理终审中");
     private static final String LINK_PREFIX = "/confirm/apply/";
 
     public HttpConfirmQueryGateway(

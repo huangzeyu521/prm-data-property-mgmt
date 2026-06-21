@@ -38,7 +38,7 @@
         <el-table-column label="流转进度" min-width="340">
           <template #default="{ row }">
             <el-steps :active="stepOf(row.status)" align-center finish-status="success" simple style="margin:0">
-              <el-step title="提交" /><el-step title="合规" /><el-step title="主管" /><el-step title="终审" /><el-step title="制卡" />
+              <el-step title="提交" /><el-step title="人工预审" /><el-step title="合规" /><el-step title="主管" /><el-step title="终审" /><el-step title="制卡" />
             </el-steps>
           </template>
         </el-table-column>
@@ -88,7 +88,7 @@ async function onBatchSubmit() {
   ElMessage[r.failed ? 'warning' : 'success'](`批量提交:成功 ${r.success}/${r.total}${r.failed ? '，失败 ' + r.failed : ''}`)
   load()
 }
-const statuses = ['草稿', '合规审核中', '主管复核中', '已完成', '已驳回']
+const statuses = ['草稿', '人工预审中', '合规审核中', '主管复核中', '经理终审中', '已完成', '已驳回']
 const dateRange = ref([])
 function duration(row) {
   if (!row.createTime) return '-'
@@ -115,7 +115,7 @@ async function onProgress(row) {
 const q = reactive({ current: 1, size: 10, assetName: '', status: '', rightHolder: '' })
 const rows = ref([]); const total = ref(0); const loading = ref(false)
 function tag(s) { return { 已完成: 'success', 已驳回: 'danger', 草稿: 'info' }[s] || 'warning' }
-function stepOf(s) { return { 草稿: 0, 合规审核中: 1, 主管复核中: 2, 经理终审中: 3, 已完成: 5, 已驳回: 1 }[s] ?? 0 }
+function stepOf(s) { return { 草稿: 0, 人工预审中: 1, 合规审核中: 2, 主管复核中: 3, 经理终审中: 4, 已完成: 6, 已驳回: 1 }[s] ?? 0 }
 async function load() {
   loading.value = true
   const p = exportParams()

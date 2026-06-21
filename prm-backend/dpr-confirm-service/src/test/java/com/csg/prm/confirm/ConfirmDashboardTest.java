@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -39,6 +40,17 @@ class ConfirmDashboardTest {
         applyService.approve(id); // 节点60 主管复核通过
         applyService.approve(id); // 节点70 经理终审通过 -> 制卡
 
+        // 另起一笔仅提交(停在人工预审中)-> 验证新节点纳入审批积压统计
+        ConfirmApply b = new ConfirmApply();
+        b.setAssetId("DA-DASH-002");
+        b.setAssetName("人工预审积压表");
+        b.setRightType("数据资源持有权");
+        b.setSourceIdentification("A自行生产数据");
+        b.setRightHolder("广东电网有限责任公司");
+        String pid = applyService.saveDraft(b);
+        applyService.submit(pid);
+        assertEquals(ConfirmApply.STATUS_PRECHECK, applyService.getById(pid).getStatus());
+
         ConfirmDashboardVO vo = dashboardService.dashboard(null, null, null);
         assertTrue(vo.getTotalApply() >= 1);
         assertTrue(vo.getDone() >= 1, "应统计到已完成确权");
@@ -46,5 +58,7 @@ class ConfirmDashboardTest {
         assertTrue(vo.getPassRate() > 0);
         assertNotNull(vo.getStatusDistribution());
         assertTrue(vo.getRightTypeDistribution().containsKey("数据资源持有权"));
+        assertTrue(vo.getNodeBacklog().containsKey(ConfirmApply.STATUS_PRECHECK),
+                "人工预审中应纳入审批节点积压统计(修复漏统计新节点)");
     }
 }

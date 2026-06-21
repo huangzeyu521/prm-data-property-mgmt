@@ -33,7 +33,8 @@ public class ConfirmDashboardServiceImpl implements ConfirmDashboardService {
     }
 
     private static final Set<String> IN_REVIEW = Set.of(
-            ConfirmApply.STATUS_COMPLIANCE, ConfirmApply.STATUS_MANAGER, ConfirmApply.STATUS_DIRECTOR);
+            ConfirmApply.STATUS_PRECHECK, ConfirmApply.STATUS_COMPLIANCE,
+            ConfirmApply.STATUS_MANAGER, ConfirmApply.STATUS_DIRECTOR);
 
     @Override
     public ConfirmDashboardVO dashboard(String deptName, String startTime, String endTime) {
