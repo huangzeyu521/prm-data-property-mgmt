@@ -7,7 +7,7 @@
         <el-button type="danger" :disabled="!sel.length" @click="onBatchReject">批量驳回（{{ sel.length }}）</el-button>
       </div>
       <el-table :row-class-name="rowHl" :data="reviewing" v-loading="loading" border stripe @selection-change="s => sel = s">
-        <el-table-column type="selection" width="46" />
+        <el-table-column type="selection" width="46" :selectable="row => canAct(row.status)" />
         <el-table-column type="index" label="序号" width="56" align="center" />
         <el-table-column prop="applyNo" label="申请编号" width="160" show-overflow-tooltip />
         <el-table-column prop="assetName" label="资产名称" min-width="160" show-overflow-tooltip />
