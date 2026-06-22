@@ -7,8 +7,12 @@ import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.ResultCode;
 import com.csg.prm.common.exception.BizException;
 import com.csg.prm.confirm.dto.MaterialCheckReport;
+import com.csg.prm.confirm.dto.MaterialSyncReport;
 import com.csg.prm.confirm.entity.ConfirmApply;
 import com.csg.prm.confirm.entity.ConfirmMaterial;
+import com.csg.prm.confirm.entity.ConfirmMaterialRule;
+import com.csg.prm.confirm.integration.AssetTableMetaService;
+import com.csg.prm.confirm.integration.dto.PlatformTableMeta;
 import com.csg.prm.confirm.mapper.ConfirmMaterialMapper;
 import com.csg.prm.confirm.service.ConfirmApplyService;
 import com.csg.prm.confirm.service.ConfirmMaterialRuleService;
@@ -35,15 +39,18 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
     private final ConfirmMaterialMapper mapper;
     private final ConfirmApplyService applyService;
     private final ConfirmMaterialRuleService ruleService;
+    private final AssetTableMetaService tableMetaService;
     // 内生 AI 能力走 prm-common 共享网关(qwen3-max/Local 桩),不依赖独立工具的 aitool 包
     private final com.csg.prm.common.ai.DawatAiGateway aiGateway;
 
     public ConfirmMaterialServiceImpl(ConfirmMaterialMapper mapper, ConfirmApplyService applyService,
                                       ConfirmMaterialRuleService ruleService,
+                                      AssetTableMetaService tableMetaService,
                                       com.csg.prm.common.ai.DawatAiGateway aiGateway) {
         this.mapper = mapper;
         this.applyService = applyService;
         this.ruleService = ruleService;
+        this.tableMetaService = tableMetaService;
         this.aiGateway = aiGateway;
     }
 
@@ -255,6 +262,108 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
                 + ",缺失 " + missing.size() + ",不合规 " + nonCompliant.size()
                 + (rep.isAllPass() ? " — 完整且合规,可推送审核" : " — 存在缺失/不合规,补齐后方可推送审核"));
         return rep;
+    }
+
+    @Override
+    @Transactional
+    public MaterialSyncReport syncFromPlatform(String applyId) {
+        ConfirmApply apply = applyService.getById(applyId);
+        // 1) 拉该资产平台库表元数据(AU_TABLE_META_DATA),聚合各维度"平台已上传材料"附件名
+        List<PlatformTableMeta> tables = tableMetaService.listTableMeta(apply.getAssetId(), apply.getAssetName());
+        String srcAtt = firstAttachment(tables, PlatformTableMeta::sourceAttachment, t -> true);
+        String gAtt = firstAttachment(tables, PlatformTableMeta::checkAttachment, PlatformTableMeta::gFlag);
+        String hAtt = firstAttachment(tables, PlatformTableMeta::privacyAttachment, PlatformTableMeta::hFlag);
+        String iAtt = firstAttachment(tables, PlatformTableMeta::busSecretAttachment, PlatformTableMeta::iFlag);
+        String jAtt = firstAttachment(tables, PlatformTableMeta::equityAttachment, PlatformTableMeta::jFlag);
+
+        // 2) 应交清单(命中本申请的规则,含触发码)+ 已登记材料名(避免重复登记)
+        List<ConfirmMaterialRule> required = ruleService.requiredRules(apply);
+        List<ConfirmMaterial> existing = mapper.selectList(
+                new LambdaQueryWrapper<ConfirmMaterial>().eq(ConfirmMaterial::getApplyId, applyId));
+        Set<String> present = existing.stream()
+                .map(ConfirmMaterial::getMaterialName).collect(Collectors.toCollection(java.util.HashSet::new));
+
+        // 3) 逐应交项:平台有对应附件且尚未登记 → 登记为"平台同步"(免上传,材料校验直接通过)
+        List<MaterialSyncReport.SyncedItem> synced = new ArrayList<>();
+        for (ConfirmMaterialRule r : required) {
+            String att = platformAttachmentFor(r, srcAtt, gAtt, hAtt, iAtt, jAtt);
+            if (att == null || present.contains(r.getMaterialName())) {
+                continue;
+            }
+            insertPlatformMaterial(applyId, r, att, apply.getRightHolder());
+            present.add(r.getMaterialName());
+            String code = StringUtils.hasText(r.getTriggerCode()) ? r.getTriggerCode() : "证明";
+            synced.add(new MaterialSyncReport.SyncedItem(r.getMaterialName(), att, code));
+        }
+
+        // 4) 仍待用户补全:命中应交项中,平台未覆盖且尚未登记的(必填优先)
+        List<String> stillMissing = new ArrayList<>();
+        for (ConfirmMaterialRule r : required) {
+            if (!present.contains(r.getMaterialName()) && !stillMissing.contains(r.getMaterialName())) {
+                stillMissing.add(r.getMaterialName());
+            }
+        }
+
+        MaterialSyncReport rep = new MaterialSyncReport();
+        rep.setApplyId(applyId);
+        rep.setSyncedCount(synced.size());
+        rep.setSynced(synced);
+        rep.setStillMissing(stillMissing);
+        rep.setSummary("已从平台元数据同步 " + synced.size() + " 项已上传材料,仍待补全 "
+                + stillMissing.size() + " 项" + (stillMissing.isEmpty() ? " — 材料已齐,可进入校验" : ""));
+        return rep;
+    }
+
+    /** 取首张满足条件(applies)且附件名非空的库表附件;无则 null。 */
+    private String firstAttachment(List<PlatformTableMeta> tables,
+                                   java.util.function.Function<PlatformTableMeta, String> attGetter,
+                                   java.util.function.Predicate<PlatformTableMeta> applies) {
+        if (tables == null) {
+            return null;
+        }
+        return tables.stream()
+                .filter(applies)
+                .map(attGetter)
+                .filter(StringUtils::hasText)
+                .findFirst()
+                .orElse(null);
+    }
+
+    /** 应交规则 → 平台附件名映射:A–F/证明→来源附件,G→监管,H→隐私,I→商密,J→其他权益;表单(表1/表2)无平台附件。 */
+    private String platformAttachmentFor(ConfirmMaterialRule r, String srcAtt,
+                                         String gAtt, String hAtt, String iAtt, String jAtt) {
+        String type = r.getTriggerType();
+        if (ConfirmMaterialRule.T_SOURCE.equals(type)) {
+            return srcAtt; // A–F 来源说明 ← SOURCE_NAME
+        }
+        if (ConfirmMaterialRule.T_ALWAYS.equals(type)
+                && r.getMaterialName() != null && r.getMaterialName().contains("证明材料")) {
+            return srcAtt; // 数据确权证明材料(权属/来源凭证) ← SOURCE_NAME
+        }
+        if (ConfirmMaterialRule.T_RELATION.equals(type)) {
+            return switch (r.getTriggerCode() == null ? "" : r.getTriggerCode()) {
+                case "G" -> gAtt;
+                case "H" -> hAtt;
+                case "I" -> iAtt;
+                case "J" -> jAtt;
+                default -> null;
+            };
+        }
+        return null; // T_ALWAYS 表1 / T_TABLE2 表2 为系统自生成表单,无平台附件
+    }
+
+    private void insertPlatformMaterial(String applyId, ConfirmMaterialRule r, String attachment, String owner) {
+        ConfirmMaterial m = new ConfirmMaterial();
+        m.setApplyId(applyId);
+        m.setMaterialName(r.getMaterialName());
+        m.setMaterialType(StringUtils.hasText(r.getEvidenceType()) ? r.getEvidenceType() : "平台同步");
+        m.setOwner(owner);
+        m.setSource(ConfirmMaterial.SOURCE_PLATFORM);
+        m.setFileName(attachment); // 平台附件名:材料校验据此判完整(有原件)
+        m.setUploadTime(LocalDateTime.now());
+        m.setCheckResult(ConfirmMaterial.CHECK_PASS);
+        m.setAbnormalDesc("平台元数据已上传原件:" + attachment + "(AU_TABLE_META_DATA 同步,免重复上传)");
+        mapper.insert(m);
     }
 
     @Override

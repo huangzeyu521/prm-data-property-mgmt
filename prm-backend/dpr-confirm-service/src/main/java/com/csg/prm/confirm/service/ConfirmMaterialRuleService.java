@@ -53,17 +53,28 @@ public class ConfirmMaterialRuleService implements ApplicationRunner {
 
     /** 按申请的来源/关联识别(A–J)+涉三方标志,生成应交材料名清单(后端校验用)。 */
     public List<String> requiredNames(ConfirmApply apply) {
-        List<ConfirmMaterialRule> rules = listEnabled(SCENE_CONFIRM);
-        Set<String> src = codes(apply.getSourceIdentification());
-        Set<String> rel = codes(apply.getRelationIdentification());
-        boolean t2 = Boolean.TRUE.equals(apply.getInvolvesThirdParty());
         List<String> req = new ArrayList<>();
-        for (ConfirmMaterialRule r : rules) {
-            if (hit(r, src, rel, t2) && !req.contains(r.getMaterialName())) {
+        for (ConfirmMaterialRule r : requiredRules(apply)) {
+            if (!req.contains(r.getMaterialName())) {
                 req.add(r.getMaterialName());
             }
         }
         return req.isEmpty() ? new ArrayList<>(FALLBACK) : req;
+    }
+
+    /** 命中本申请(A–J/涉三方)的应交规则(含触发类型/码,供平台材料同步按维度映射用)。 */
+    public List<ConfirmMaterialRule> requiredRules(ConfirmApply apply) {
+        List<ConfirmMaterialRule> rules = listEnabled(SCENE_CONFIRM);
+        Set<String> src = codes(apply.getSourceIdentification());
+        Set<String> rel = codes(apply.getRelationIdentification());
+        boolean t2 = Boolean.TRUE.equals(apply.getInvolvesThirdParty());
+        List<ConfirmMaterialRule> req = new ArrayList<>();
+        for (ConfirmMaterialRule r : rules) {
+            if (hit(r, src, rel, t2)) {
+                req.add(r);
+            }
+        }
+        return req;
     }
 
     private boolean hit(ConfirmMaterialRule r, Set<String> src, Set<String> rel, boolean t2) {

@@ -5,6 +5,7 @@ import com.csg.prm.common.api.R;
 import com.csg.prm.confirm.entity.ConfirmMaterial;
 import com.csg.prm.common.exception.BizException;
 import com.csg.prm.confirm.dto.MaterialCheckReport;
+import com.csg.prm.confirm.dto.MaterialSyncReport;
 import com.csg.prm.confirm.entity.ConfirmMaterialRule;
 import com.csg.prm.confirm.service.ConfirmMaterialRuleService;
 import com.csg.prm.confirm.service.ConfirmMaterialService;
@@ -105,6 +106,15 @@ public class ConfirmMaterialController {
     @PostMapping("/check-run")
     public R<MaterialCheckReport> checkRun(@RequestParam String applyId) {
         return R.ok(service.runCheck(applyId));
+    }
+
+    /**
+     * 先从数据资产管理平台元数据(AU_TABLE_META_DATA)同步该申请已上传材料:命中应交项的平台附件
+     * 自动登记为"平台同步"免上传,返回同步明细 + 仍待用户补全清单。幂等,可重复调用。
+     */
+    @PostMapping("/sync-platform")
+    public R<MaterialSyncReport> syncPlatform(@RequestParam String applyId) {
+        return R.ok(service.syncFromPlatform(applyId));
     }
 
     /** 材料 AI 校验:qwen3-max 逐份校验完整性/合规性/与表单一致性(stub 回退),返回严格 JSON */

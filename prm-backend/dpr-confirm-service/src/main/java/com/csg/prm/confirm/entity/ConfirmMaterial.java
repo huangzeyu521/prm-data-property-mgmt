@@ -19,6 +19,10 @@ public class ConfirmMaterial extends BaseEntity {
     public static final String CHECK_PASS = "通过";
     public static final String CHECK_FAIL = "不通过";
 
+    /** 材料来源:平台同步(从数据资产管理平台元数据已上传材料带入)/用户上传(本系统补全)。 */
+    public static final String SOURCE_PLATFORM = "平台同步";
+    public static final String SOURCE_USER = "用户上传";
+
     @TableId(value = "CEC_MATERIAL_ID", type = IdType.ASSIGN_UUID)
     private String materialId;
 
@@ -54,6 +58,13 @@ public class ConfirmMaterial extends BaseEntity {
     /** 原件二进制(Base64);列表响应置空,预览/下载时取用 */
     @TableField("CEC_FILE_DATA")
     private String fileData;
+
+    /** 材料来源:平台同步 / 用户上传(默认空视为用户上传) */
+    @TableField("CEC_SOURCE")
+    private String source;
+
+    public String getSource() { return source; }
+    public void setSource(String source) { this.source = source; }
 
     public String getFileName() { return fileName; }
     public void setFileName(String fileName) { this.fileName = fileName; }

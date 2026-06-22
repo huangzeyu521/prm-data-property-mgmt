@@ -59,6 +59,8 @@ export const listMaterialByApply = (applyId) => request.get(`/dpr/confirm/materi
 export const checkMaterial = (materialId, pass, abnormalDesc) =>
   request.post(`/dpr/confirm/material/${materialId}/check`, null, { params: { pass, abnormalDesc } })
 export const runMaterialCheck = (applyId) => request.post('/dpr/confirm/material/check-run', null, { params: { applyId } })
+// 先从数据资产管理平台元数据(AU_TABLE_META_DATA)同步已上传材料(平台命中项免上传),返回同步报告
+export const syncPlatformMaterials = (applyId) => request.post('/dpr/confirm/material/sync-platform', null, { params: { applyId } })
 export const pushMaterialReview = (applyId) => request.post('/dpr/confirm/material/push-review', null, { params: { applyId } })
 export const materialExportUrl = (applyId) => `/api/dpr/confirm/material/export?applyId=${applyId}`
 export const pageMaterial = (params) => request.get('/dpr/confirm/material/page', { params })
