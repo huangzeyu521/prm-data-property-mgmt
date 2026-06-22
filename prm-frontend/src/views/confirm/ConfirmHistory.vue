@@ -37,7 +37,7 @@
         </el-table-column>
         <el-table-column label="流转进度" min-width="340">
           <template #default="{ row }">
-            <el-steps :active="stepOf(row.status)" align-center finish-status="success" simple style="margin:0">
+            <el-steps :active="stepOf(row.status)" align-center finish-status="success" simple style="margin:0" class="flow-mini">
               <el-step title="提交" /><el-step title="人工预审" /><el-step title="合规" /><el-step title="主管" /><el-step title="终审" /><el-step title="制卡" />
             </el-steps>
           </template>
@@ -51,6 +51,8 @@
           <template #default="{ row }">
             <el-button link type="primary" @click="onProgress(row)">进度详情</el-button>
             <el-button v-if="row.status === '草稿'" link type="danger" @click="onDelete(row)">删除</el-button>
+            <el-button v-if="IN_REVIEW.includes(row.status)" link type="warning" @click="onWithdraw(row)">撤回</el-button>
+            <el-button v-if="row.status === '已撤回'" link type="primary" @click="onReopen(row)">重新编辑提交</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -74,8 +76,26 @@
 </template>
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { pageConfirmApply, deleteConfirmApply, getConfirmFlowLog, confirmHistoryExportUrl, batchSubmitConfirm, confirmSummaryExportUrl, equityConsolidationExportUrl } from '@/api/confirm'
+import { pageConfirmApply, deleteConfirmApply, withdrawConfirm, getConfirmFlowLog, confirmHistoryExportUrl, batchSubmitConfirm, confirmSummaryExportUrl, equityConsolidationExportUrl } from '@/api/confirm'
+
+const router = useRouter()
+// 审批链活动态(申请人可主动撤回);终态(已完成/已驳回/已撤回)与草稿不可撤回
+const IN_REVIEW = ['人工预审中', '合规审核中', '主管复核中', '经理终审中']
+async function onWithdraw(row) {
+  try {
+    const { value } = await ElMessageBox.prompt(`确认撤回确权申请「${row.applyNo}」?撤回后可重新编辑提交`, '撤回申请', { inputType: 'textarea', inputPlaceholder: '撤回原因(可空)' })
+    await withdrawConfirm(row.applyId, value || '')
+    ElMessage.success('已撤回,可在「已撤回」项重新编辑提交')
+    load()
+  } catch (e) { /* 取消 */ }
+}
+// 重新编辑提交:带入原单内容到一站式向导(复用 reopen 机制),作为新申请再次发起
+function onReopen(row) {
+  sessionStorage.setItem('prm-reopen', JSON.stringify({ domain: '确权', raw: row }))
+  router.push({ path: '/dpr/confirm/wizard', query: { reopen: 1 } })
+}
 
 // 官方汇总表导出(对齐南网《数据确权信息汇总表》/《权益内部管理汇总表》模板)
 function onExportSummary() { window.open(confirmSummaryExportUrl(), '_blank') }
@@ -88,12 +108,12 @@ async function onBatchSubmit() {
   ElMessage[r.failed ? 'warning' : 'success'](`批量提交:成功 ${r.success}/${r.total}${r.failed ? '，失败 ' + r.failed : ''}`)
   load()
 }
-const statuses = ['草稿', '人工预审中', '合规审核中', '主管复核中', '经理终审中', '已完成', '已驳回']
+const statuses = ['草稿', '人工预审中', '合规审核中', '主管复核中', '经理终审中', '已完成', '已驳回', '已撤回']
 const dateRange = ref([])
 function duration(row) {
   if (!row.createTime) return '-'
   const start = new Date(String(row.createTime).replace(' ', 'T'))
-  const terminal = row.status === '已完成' || row.status === '已驳回'
+  const terminal = row.status === '已完成' || row.status === '已驳回' || row.status === '已撤回'
   const end = (terminal && row.updateTime) ? new Date(String(row.updateTime).replace(' ', 'T')) : new Date()
   const mins = Math.max(0, Math.floor((end - start) / 60000))
   return `${Math.floor(mins / 1440)}天${Math.floor((mins % 1440) / 60)}小时${terminal ? '' : '(在途)'}`
@@ -114,8 +134,8 @@ async function onProgress(row) {
 }
 const q = reactive({ current: 1, size: 10, assetName: '', status: '', rightHolder: '' })
 const rows = ref([]); const total = ref(0); const loading = ref(false)
-function tag(s) { return { 已完成: 'success', 已驳回: 'danger', 草稿: 'info' }[s] || 'warning' }
-function stepOf(s) { return { 草稿: 0, 人工预审中: 1, 合规审核中: 2, 主管复核中: 3, 经理终审中: 4, 已完成: 6, 已驳回: 1 }[s] ?? 0 }
+function tag(s) { return { 已完成: 'success', 已驳回: 'danger', 已撤回: 'info', 草稿: 'info' }[s] || 'warning' }
+function stepOf(s) { return { 草稿: 0, 人工预审中: 1, 合规审核中: 2, 主管复核中: 3, 经理终审中: 4, 已完成: 6, 已驳回: 1, 已撤回: 1 }[s] ?? 0 }
 async function load() {
   loading.value = true
   const p = exportParams()
@@ -129,3 +149,15 @@ function onDelete(row) {
 }
 onMounted(load)
 </script>
+
+<style scoped>
+/* 流转进度列:仅缩小步骤标题字号 + 收紧行高,让竖排标签更清爽(最小展示优化,不改结构/逻辑) */
+.flow-mini :deep(.el-step__title) {
+  font-size: 12px;
+  line-height: 1.2;
+}
+/* 去掉步骤之间的箭头分隔符(simple 模式的 V 形连接符) */
+.flow-mini :deep(.el-step__arrow) {
+  display: none;
+}
+</style>
