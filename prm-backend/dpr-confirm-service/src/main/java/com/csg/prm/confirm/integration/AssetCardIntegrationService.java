@@ -55,16 +55,21 @@ public class AssetCardIntegrationService {
             String msg = isChange(done) ? "本次为确权变更,展示最新确权结论" : null;
             return AssetPropertyVO.of(done, STATE_DONE, msg);
         }
-        // 在途(非驳回)→ 确权中
-        ConfirmApply inProgress = first(list, a -> !ConfirmApply.STATUS_REJECTED.equals(a.getStatus()));
+        // 在途(草稿/审批中)→ 确权中;已驳回·已撤回为终态,须排除(否则撤回单会被误报"审核中(节点 null)")
+        ConfirmApply inProgress = first(list, a ->
+                !ConfirmApply.STATUS_REJECTED.equals(a.getStatus())
+                        && !ConfirmApply.STATUS_WITHDRAWN.equals(a.getStatus()));
         if (inProgress != null) {
             return AssetPropertyVO.of(inProgress, STATE_PROGRESS,
                     "确权审核中(当前节点 " + inProgress.getCurrentNode() + ")");
         }
-        // 仅有被驳回记录
-        ConfirmApply rejected = list.get(0);
-        return AssetPropertyVO.of(rejected, STATE_REJECTED,
-                "确权被驳回:" + (StringUtils.hasText(rejected.getRejectReason()) ? rejected.getRejectReason() : "请重新发起"));
+        // 仅有终态记录:按最新一条区分 已撤回 / 已驳回
+        ConfirmApply latest = list.get(0);
+        if (ConfirmApply.STATUS_WITHDRAWN.equals(latest.getStatus())) {
+            return AssetPropertyVO.of(latest, STATE_NONE, "最近一次确权已撤回,可重新发起确权");
+        }
+        return AssetPropertyVO.of(latest, STATE_REJECTED,
+                "确权被驳回:" + (StringUtils.hasText(latest.getRejectReason()) ? latest.getRejectReason() : "请重新发起"));
     }
 
     /** 「权益基本信息」子Tab:该资产名下未失效的权益条目(三权)。 */

@@ -108,6 +108,16 @@ class AssetCardIntegrationTest {
         assertNotNull(p.message());
     }
 
+    /** 已撤回:不得误判为"确权中(节点 null)",应回落为"待确权"并提示可重新发起。 */
+    @Test
+    void withdrawn_asset_is_not_in_progress() {
+        String asset = "ASSET-WD-" + System.nanoTime();
+        apply(asset, ConfirmApply.STATUS_WITHDRAWN, "初始确权");
+        AssetPropertyVO p = service.property(asset);
+        assertEquals(AssetCardIntegrationService.STATE_NONE, p.state(), "已撤回应回落待确权,非确权中/已驳回");
+        assertTrue(p.message() != null && p.message().contains("撤回"), "应提示已撤回可重新发起:" + p.message());
+    }
+
     /** 确权变更:已确权且提示为变更。 */
     @Test
     void change_registration_reflected() {

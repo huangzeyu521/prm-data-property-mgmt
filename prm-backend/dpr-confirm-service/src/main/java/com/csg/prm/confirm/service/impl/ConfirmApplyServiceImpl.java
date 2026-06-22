@@ -357,13 +357,14 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
         return sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
     }
 
-    /** 处理时效:终态(已完成/已驳回)用 updateTime-createTime,在途用 now-createTime。 */
+    /** 处理时效:终态(已完成/已驳回/已撤回)用 updateTime-createTime,在途用 now-createTime。 */
     private String durationOf(ConfirmApply a) {
         if (a.getCreateTime() == null) {
             return "";
         }
         boolean terminal = ConfirmApply.STATUS_DONE.equals(a.getStatus())
-                || ConfirmApply.STATUS_REJECTED.equals(a.getStatus());
+                || ConfirmApply.STATUS_REJECTED.equals(a.getStatus())
+                || ConfirmApply.STATUS_WITHDRAWN.equals(a.getStatus());
         java.time.LocalDateTime end = terminal && a.getUpdateTime() != null
                 ? a.getUpdateTime() : java.time.LocalDateTime.now();
         long mins = java.time.Duration.between(a.getCreateTime(), end).toMinutes();

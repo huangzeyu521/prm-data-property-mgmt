@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 
@@ -83,6 +84,9 @@ public class ConfirmFlowLogServiceImpl implements ConfirmFlowLogService {
         if (ConfirmApply.STATUS_REJECTED.equals(status)) {
             return "驳回";
         }
+        if (ConfirmApply.STATUS_WITHDRAWN.equals(status)) {
+            return "撤回";
+        }
         return status;
     }
 
@@ -102,6 +106,10 @@ public class ConfirmFlowLogServiceImpl implements ConfirmFlowLogService {
         }
         if (ConfirmApply.STATUS_REJECTED.equals(to)) {
             return "确权申请 " + no + " 已被驳回:" + (opinion == null ? "" : opinion);
+        }
+        if (ConfirmApply.STATUS_WITHDRAWN.equals(to)) {
+            return "确权申请 " + no + " 已由申请人主动撤回,可重新编辑后再次提交"
+                    + (StringUtils.hasText(opinion) ? "(原因:" + opinion + ")" : "");
         }
         return "确权申请 " + no + " 状态更新为:" + to;
     }
