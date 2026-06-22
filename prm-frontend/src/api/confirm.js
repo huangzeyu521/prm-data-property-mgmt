@@ -18,6 +18,9 @@ export const batchRejectConfirm = (ids, reason) => request.post('/dpr/confirm/ap
 export const approveConfirm = (applyId) => request.post(`/dpr/confirm/apply/${applyId}/approve`)
 export const rejectConfirm = (applyId, reason) =>
   request.post(`/dpr/confirm/apply/${applyId}/reject`, null, { params: { reason } })
+// 申请人主动撤回(审批中 -> 已撤回中间态),撤回后可重新编辑提交
+export const withdrawConfirm = (applyId, reason) =>
+  request.post(`/dpr/confirm/apply/${applyId}/withdraw`, null, { params: { reason } })
 
 // 确权表单 元数据自动填充(含质量评分,P1)
 export const autofillConfirm = (assetId) => request.get('/dpr/confirm/apply/autofill', { params: { assetId } })

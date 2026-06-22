@@ -281,6 +281,41 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
     }
 
     @Override
+    @Transactional
+    public void withdraw(String applyId, String reason) {
+        ConfirmApply apply = require(applyId);
+        // 仅审批链活动态(可推进)可撤回;已完成(已制卡)/已驳回/草稿 均不可撤回
+        if (!flowEngine.canAdvance(FlowDefinitions.DPR_CONFIRM, apply.getStatus())) {
+            throw new BizException("当前状态不可撤回:" + apply.getStatus() + ";草稿请删除,已完成/已驳回不可撤回");
+        }
+        // 撤回是申请人本人的动作(非节点审批角色门禁):校验调用者为原申请人
+        assertApplicant(apply);
+        String from = apply.getStatus();
+        String why = StringUtils.hasText(reason) ? reason : "申请人主动撤回";
+        updateNode(applyId, ConfirmApply.STATUS_WITHDRAWN, null, why, null);
+        flowLogService.record(apply, from, ConfirmApply.STATUS_WITHDRAWN, "申请人", why);
+    }
+
+    /**
+     * 撤回门禁:仅申请人本人可撤回(与节点审批角色相反)。
+     * 无用户上下文(内部/未启用认证/单测)、admin/all 角色、或原单无 creatorId:放行;否则须 creatorId 匹配当前用户。
+     */
+    private void assertApplicant(ConfirmApply apply) {
+        UserContext ctx = UserContextHolder.get();
+        if (ctx == null || !StringUtils.hasText(ctx.getUserId())) {
+            return;
+        }
+        Set<String> roles = ctx.getRoles();
+        if (roles != null && (roles.contains("all") || roles.contains("admin"))) {
+            return;
+        }
+        String creator = apply.getCreatorId();
+        if (StringUtils.hasText(creator) && !creator.equals(ctx.getUserId())) {
+            throw new BizException(ResultCode.FORBIDDEN.getCode(), "仅申请人本人可撤回该确权申请");
+        }
+    }
+
+    @Override
     public ConfirmApply getById(String applyId) {
         return require(applyId);
     }

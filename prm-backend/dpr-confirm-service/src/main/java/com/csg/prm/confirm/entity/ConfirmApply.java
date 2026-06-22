@@ -23,6 +23,7 @@ public class ConfirmApply extends BaseEntity {
     public static final String STATUS_DIRECTOR = "经理终审中";     // 节点70 经理/高级经理
     public static final String STATUS_DONE = "已完成";            // 节点80 制卡归集
     public static final String STATUS_REJECTED = "已驳回";
+    public static final String STATUS_WITHDRAWN = "已撤回";        // 申请人审批中主动撤回(中间态,可重新编辑提交)
 
     /** 当前节点编号(附录F 流程步骤编号 40 人工预审/50/60/70/80) */
     public static final int NODE_PRECHECK = 40;

@@ -41,6 +41,12 @@ public interface ConfirmApplyService {
     /** 驳回 */
     void reject(String applyId, String reason);
 
+    /**
+     * 申请人主动撤回(审批中 -> 已撤回中间态)。仅审批链活动态可撤回,且仅申请人本人(非节点审批角色)。
+     * 审批中尚未制卡,撤回无副作用;撤回后可经"重新编辑提交"复用原单内容再次发起。
+     */
+    void withdraw(String applyId, String reason);
+
     /** 删除确权申请:仅草稿状态可删除(已提交/审批中请走撤回或驳回)。 */
     void delete(String applyId);
 

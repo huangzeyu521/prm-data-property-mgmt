@@ -115,6 +115,14 @@ public class ConfirmApplyController {
         return R.ok();
     }
 
+    /** 申请人主动撤回(审批中 -> 已撤回);仅申请人本人,撤回后可重新编辑提交。 */
+    @com.csg.prm.common.auth.RequiresRole({"apply", "admin"})
+    @PostMapping("/{applyId}/withdraw")
+    public R<Void> withdraw(@PathVariable String applyId, @RequestParam(required = false) String reason) {
+        service.withdraw(applyId, reason);
+        return R.ok();
+    }
+
     /** 删除草稿确权申请(仅草稿状态;已提交/审批中会被拒绝)。 */
     @DeleteMapping("/{applyId}")
     public R<Void> delete(@PathVariable String applyId) {

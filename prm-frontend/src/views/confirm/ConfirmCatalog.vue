@@ -70,7 +70,7 @@ const viewDlg = ref(false)
 const curApply = ref(null)
 
 function statusTag(s) { return { 待确权: 'warning', 申请中: '', 已确权: 'success' }[s] || 'info' }
-function applyTag(s) { return { 已完成: 'success', 已驳回: 'danger', 草稿: 'info' }[s] || 'warning' }
+function applyTag(s) { return { 已完成: 'success', 已驳回: 'danger', 已撤回: 'info', 草稿: 'info' }[s] || 'warning' }
 function fmt(t) { return t ? String(t).replace('T', ' ').slice(0, 19) : '-' }
 
 function transform(nodes, applyMap) {

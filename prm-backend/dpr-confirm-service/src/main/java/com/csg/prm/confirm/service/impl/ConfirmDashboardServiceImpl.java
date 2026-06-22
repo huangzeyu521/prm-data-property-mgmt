@@ -49,7 +49,9 @@ public class ConfirmDashboardServiceImpl implements ConfirmDashboardService {
         long total = applies.size();
         long done = applies.stream().filter(a -> ConfirmApply.STATUS_DONE.equals(a.getStatus())).count();
         long rejected = applies.stream().filter(a -> ConfirmApply.STATUS_REJECTED.equals(a.getStatus())).count();
-        long pending = total - done - rejected;
+        // 已撤回为终态,不计入"审批中(待办)";否则减法会把撤回单错算成在审(枚举一致性)
+        long withdrawn = applies.stream().filter(a -> ConfirmApply.STATUS_WITHDRAWN.equals(a.getStatus())).count();
+        long pending = total - done - rejected - withdrawn;
         long decided = done + rejected;
         double passRate = decided == 0 ? 0d
                 : BigDecimal.valueOf(done * 100.0 / decided).setScale(2, RoundingMode.HALF_UP).doubleValue();
