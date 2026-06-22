@@ -30,6 +30,11 @@ public class QwenDawatAiGateway implements DawatAiGateway {
     private final String model;
     private final String apiKey;
 
+    @Override
+    public String modelName() {
+        return StringUtils.hasText(apiKey) ? model : "local-rule-stub(qwen-fallback)";
+    }
+
     public QwenDawatAiGateway(LocalDawatAiGateway fallback,
                               @Value("${prm.ai.base-url:https://dashscope.aliyuncs.com/compatible-mode/v1}") String baseUrl,
                               @Value("${prm.ai.model:qwen3.7-max-2026-06-08}") String model,

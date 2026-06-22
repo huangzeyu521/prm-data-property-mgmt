@@ -71,8 +71,53 @@
         <div style="font-size:12px;color:#9ca3af;margin-top:4px">
           校验时间 {{ fmt(aiSnap.checkedAt) }} · 元数据质量 {{ aiSnap.qualityScore ?? '—' }} · 提交时固化快照,供预审完整复核·可追溯
         </div>
+        <!-- 快照完整性验真(防篡改):重算 SM3 比对上链存证 -->
+        <div v-if="snapVerify" style="margin-top:6px">
+          <el-tag :type="snapVerify.verified ? 'success' : (snapVerify.payloadSm3 ? 'danger' : 'info')" size="small" effect="dark">
+            {{ snapVerify.verified ? '✔ 快照完整·未被篡改' : (snapVerify.payloadSm3 ? '✘ 快照与存证不一致·疑似篡改' : '无防篡改快照') }}
+          </el-tag>
+          <span v-if="snapVerify.evidenceId" style="font-size:12px;color:#9ca3af;margin-left:8px">存证 {{ snapVerify.evidenceId.slice(0, 12) }}… · SM3 {{ (snapVerify.payloadSm3 || '').slice(0, 12) }}… · 留痕 {{ snapVerify.aiRunCount ?? 0 }} 次</span>
+        </div>
       </div>
       <el-empty v-else :image-size="40" description="该申请无 AI 校验快照(旧数据 / 未经一键校验提交)" />
+
+      <!-- §1 校验规则可视化:逐应交项的校验逻辑 + 规则明细 + AI 判定依据(透明可信) -->
+      <div v-if="checkLogic && checkLogic.items && checkLogic.items.length" class="rv-h" style="margin-top:10px">
+        校验规则可视化（校验逻辑 / 规则明细 / 判定依据）
+      </div>
+      <el-collapse v-if="checkLogic && checkLogic.items && checkLogic.items.length" accordion>
+        <el-collapse-item v-for="(it, i) in checkLogic.items" :key="i">
+          <template #title>
+            <el-tag size="small" effect="plain" style="margin-right:6px">{{ it.code }}</el-tag>
+            <span style="font-weight:600">{{ it.materialName }}</span>
+            <el-tag size="small" :type="it.materialPresent ? 'success' : 'warning'" effect="light" style="margin-left:8px">{{ it.materialPresent ? '已交' : '待补' }}</el-tag>
+            <el-tag v-if="it.aiVerdict" size="small" :type="it.aiVerdict === '通过' ? 'success' : (it.aiVerdict === '不通过' ? 'danger' : 'info')" effect="light" style="margin-left:6px">AI:{{ it.aiVerdict }}</el-tag>
+          </template>
+          <div style="font-size:13px;line-height:1.8">
+            <div><b>校验逻辑(触发规则):</b>{{ it.triggerLabel }}<el-tag size="small" effect="plain" style="margin-left:6px">{{ it.required }}</el-tag></div>
+            <div><b>规则明细:</b>{{ it.ruleDetail || '—' }}</div>
+            <div><b>判定依据(AI):</b>{{ it.aiIssues || (it.aiVerdict ? ('AI 结论:' + it.aiVerdict) : '该项尚无 AI 判定留痕(可在向导一键校验后提交)') }}</div>
+          </div>
+        </el-collapse-item>
+      </el-collapse>
+      <div v-if="checkLogic && checkLogic.summary" style="font-size:12px;color:#9ca3af;margin-top:4px">
+        {{ checkLogic.summary }} · 模型 {{ checkLogic.aiModel }}
+      </div>
+
+      <!-- §2 AI 校验过程回放:全部大模型操作留痕时间线(可复盘·可审计) -->
+      <div v-if="aiRunlog && aiRunlog.length" class="rv-h" style="margin-top:10px">
+        AI 校验过程回放（{{ aiRunlog.length }} 次操作 · 留痕可审计）
+      </div>
+      <el-timeline v-if="aiRunlog && aiRunlog.length" style="padding:6px">
+        <el-timeline-item v-for="(l, i) in aiRunlog" :key="i" :timestamp="fmt(l.createTime)" placement="top" type="primary">
+          <div style="font-size:13px">
+            <el-tag size="small" effect="dark" style="margin-right:6px">{{ l.capability }}</el-tag>
+            <span style="color:#606266">模型 {{ l.model }} · 耗时 {{ l.durationMs }}ms · 触发 {{ l.triggerUser }}</span>
+            <div style="font-size:12px;color:#9ca3af">输入:{{ l.inputSummary || '—' }}</div>
+            <div style="font-size:12px;color:#9ca3af">SM3 {{ (l.sm3Hash || '').slice(0, 16) }}…(输出防篡改指纹)</div>
+          </div>
+        </el-timeline-item>
+      </el-timeline>
 
       <div class="rv-h">申请材料（{{ materials.length }}）</div>
       <el-table :data="materials" border size="small">
@@ -85,8 +130,9 @@
         </el-table-column>
         <el-table-column label="原件" width="150">
           <template #default="{ row }">
-            <!-- 平台同步材料原件存于数据资产管理平台,本系统无本地原件,显示平台附件名(不可下载) -->
-            <span v-if="row.source === '平台同步'" style="color:#67c23a" :title="row.fileName">{{ row.fileName }}（平台原件）</span>
+            <!-- 平台同步且已落地原件字节(fileUrl)才可在线预览;否则纯文本标注,不给会 404 的入口 -->
+            <el-link v-if="row.source === '平台同步' && row.fileUrl" type="success" @click="preview(row)" :title="row.fileName">平台原件·查看</el-link>
+            <span v-else-if="row.source === '平台同步'" style="color:#67c23a" :title="row.fileName">平台原件</span>
             <el-link v-else-if="row.fileName" type="primary" @click="preview(row)">查看</el-link>
             <span v-else style="color:#bbb">-</span>
           </template>
@@ -118,7 +164,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { pageConfirmApply, approveConfirm, rejectConfirm, batchApproveConfirm, batchRejectConfirm, listMaterialByApply, getConfirmFlowLog, materialFileUrl } from '@/api/confirm'
+import { pageConfirmApply, approveConfirm, rejectConfirm, batchApproveConfirm, batchRejectConfirm, listMaterialByApply, getConfirmFlowLog, materialFileUrl, getAiCheckLogic, getAiRunlog, verifyAiSnapshot } from '@/api/confirm'
 import { openFilePreview } from '@/composables/useFilePreview'
 import { currentRole } from '@/lib/roles'
 
@@ -135,12 +181,14 @@ function needRoleLabel(status) { return ROLE_LABEL[NODE_ROLE[status]] || '' }
 
 const rows = ref([]); const loading = ref(false); const sel = ref([])
 const drawer = ref(false); const cur = ref({}); const materials = ref([]); const logs = ref([])
+// 大模型校验机制完善:校验逻辑可视化 / 校验过程回放 / 快照防篡改验真
+const checkLogic = ref(null); const aiRunlog = ref([]); const snapVerify = ref(null)
 const reviewing = computed(() => rows.value.filter(r => ['人工预审中', '合规审核中', '主管复核中', '经理终审中'].includes(r.status)))
-// 人工预审依据:解析提交时固化的 AI 校验结果快照(JSON)
+// 人工预审依据:解析提交时固化的 AI 校验快照(防篡改包:取 payload;兼容旧顶层格式)
 const aiSnap = computed(() => {
   const s = cur.value && cur.value.aiSnapshot
   if (!s) return null
-  try { return typeof s === 'string' ? JSON.parse(s) : s } catch (e) { return null }
+  try { const o = typeof s === 'string' ? JSON.parse(s) : s; return (o && o.payload) || o } catch (e) { return null }
 })
 function fmt(t) { return t ? String(t).replace('T', ' ').slice(0, 19) : '-' }
 
@@ -173,9 +221,14 @@ function onBatchReject() {
 }
 async function onDetail(row) {
   cur.value = row
+  checkLogic.value = null; aiRunlog.value = []; snapVerify.value = null
   const [m, l] = await Promise.all([listMaterialByApply(row.applyId), getConfirmFlowLog(row.applyId)])
   materials.value = m || []; logs.value = l || []
   drawer.value = true
+  // 大模型校验机制(规则可视化 / 回放 / 快照验真):best-effort,任一失败不影响详情
+  getAiCheckLogic(row.applyId).then(r => { checkLogic.value = r }).catch(() => {})
+  getAiRunlog(row.applyId).then(r => { aiRunlog.value = r || [] }).catch(() => {})
+  verifyAiSnapshot(row.applyId).then(r => { snapVerify.value = r }).catch(() => {})
 }
 function preview(row) { if (row.materialId) openFilePreview(materialFileUrl(row.materialId), row.fileName) }
 // 从向导"去审核"带 applyId 跳入时高亮目标单

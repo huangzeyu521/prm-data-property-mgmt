@@ -40,6 +40,11 @@ public interface DawatAiGateway {
     /** RAG 知识问答:基于确权授权业务指导书与附录F 回答 */
     RagAnswer ask(String question);
 
+    /** 模型标识(用于校验留痕:qwen3-max / local-rule-stub 等),默认未知。 */
+    default String modelName() {
+        return "unknown";
+    }
+
     /**
      * 授权申请材料 AI 校验:输入 申请要素+逐份材料正文(段格式 【材料】名称=..;正文=..),
      * 输出严格 JSON {"overall":"通过|不通过|存疑","overallDesc":"…","items":[{materialName,verdict,issues,suggestion}]}。

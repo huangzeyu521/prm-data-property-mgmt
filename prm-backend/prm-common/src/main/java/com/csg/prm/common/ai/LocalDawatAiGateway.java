@@ -12,6 +12,11 @@ import java.util.List;
 @Component
 public class LocalDawatAiGateway implements DawatAiGateway {
 
+    @Override
+    public String modelName() {
+        return "local-rule-stub";
+    }
+
     private static final String HOLD = "数据持有权";
     private static final String USE = "数据加工使用权";
     private static final String OPERATE = "数据产品经营权";

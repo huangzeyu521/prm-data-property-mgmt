@@ -13,6 +13,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -68,6 +69,21 @@ class PlatformMaterialSyncTest {
         assertTrue(rep.getStillMissing().stream().anyMatch(n -> n.contains("表1")), "表1 应待补全");
         assertTrue(rep.getStillMissing().stream().anyMatch(n -> n.contains("表2")), "表2 应待补全");
         assertFalse(rep.getStillMissing().stream().anyMatch(n -> n.contains("个人/家庭隐私")), "H 已平台同步,不应待补全");
+    }
+
+    @Test
+    void synced_materials_are_downloadable_for_online_preview() {
+        String id = draftAst001();
+        materialService.syncFromPlatform(id);
+        List<ConfirmMaterial> mats = materialService.listByApply(id);
+        // 平台同步材料应已落地平台原件字节,可经 download 在线预览(.docx 由前端 docx-preview 渲染)
+        assertTrue(mats.stream().anyMatch(m -> m.getFileName() != null && m.getFileName().endsWith(".docx")),
+                "平台同步材料应带 .docx 平台附件名");
+        for (ConfirmMaterial m : mats) {
+            byte[] bytes = materialService.download(m.getMaterialId());
+            assertNotNull(bytes, "平台同步材料应可下载原件字节(供预览):" + m.getMaterialName());
+            assertTrue(bytes.length > 0, "平台同步材料原件不应为空:" + m.getMaterialName());
+        }
     }
 
     @Test

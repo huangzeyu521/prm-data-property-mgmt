@@ -31,10 +31,13 @@ public class ConfirmApplyController {
 
     private final ConfirmApplyService service;
     private final ConfirmFlowLogService flowLogService;
+    private final com.csg.prm.confirm.service.ConfirmAiSnapshotService aiSnapshotService;
 
-    public ConfirmApplyController(ConfirmApplyService service, ConfirmFlowLogService flowLogService) {
+    public ConfirmApplyController(ConfirmApplyService service, ConfirmFlowLogService flowLogService,
+                                  com.csg.prm.confirm.service.ConfirmAiSnapshotService aiSnapshotService) {
         this.service = service;
         this.flowLogService = flowLogService;
+        this.aiSnapshotService = aiSnapshotService;
     }
 
     @PostMapping("/draft")
@@ -61,11 +64,17 @@ public class ConfirmApplyController {
         return R.ok(service.createReConfirm(assetId, assetName, rightType, reason, sourceRef, changeTrigger));
     }
 
-    /** 固化提交前 AI 校验结果快照(JSON),供人工预审完整复核·可追溯。提交前调用。 */
+    /** 固化提交前 AI 校验结果快照(JSON):服务端计 SM3 + 上链存证 + 关联逐次留痕,防篡改、可审计。提交前调用。 */
     @PostMapping("/{applyId}/ai-snapshot")
     public R<Void> saveAiSnapshot(@PathVariable String applyId, @RequestBody String snapshotJson) {
-        service.saveAiSnapshot(applyId, snapshotJson);
+        aiSnapshotService.save(applyId, snapshotJson);
         return R.ok();
+    }
+
+    /** 校验已固化 AI 校验快照的完整性(重算 SM3 比对存证),供人工预审/审计验真防篡改。 */
+    @GetMapping("/{applyId}/ai-snapshot/verify")
+    public R<java.util.Map<String, Object>> verifyAiSnapshot(@PathVariable String applyId) {
+        return R.ok(aiSnapshotService.verify(applyId));
     }
 
     @PostMapping("/{applyId}/submit")

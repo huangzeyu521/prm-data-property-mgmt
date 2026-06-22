@@ -61,6 +61,10 @@ export const checkMaterial = (materialId, pass, abnormalDesc) =>
 export const runMaterialCheck = (applyId) => request.post('/dpr/confirm/material/check-run', null, { params: { applyId } })
 // 先从数据资产管理平台元数据(AU_TABLE_META_DATA)同步已上传材料(平台命中项免上传),返回同步报告
 export const syncPlatformMaterials = (applyId) => request.post('/dpr/confirm/material/sync-platform', null, { params: { applyId } })
+// 大模型校验机制完善:① 校验规则可视化 ② 校验过程回放 ③ 快照完整性验真(防篡改)
+export const getAiCheckLogic = (applyId) => request.get('/dpr/confirm/ai/check-logic', { params: { applyId } })
+export const getAiRunlog = (applyId) => request.get('/dpr/confirm/ai/runlog', { params: { applyId } })
+export const verifyAiSnapshot = (applyId) => request.get(`/dpr/confirm/apply/${applyId}/ai-snapshot/verify`)
 export const pushMaterialReview = (applyId) => request.post('/dpr/confirm/material/push-review', null, { params: { applyId } })
 export const materialExportUrl = (applyId) => `/api/dpr/confirm/material/export?applyId=${applyId}`
 export const pageMaterial = (params) => request.get('/dpr/confirm/material/page', { params })

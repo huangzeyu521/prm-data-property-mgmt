@@ -42,16 +42,19 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
     private final AssetTableMetaService tableMetaService;
     // 内生 AI 能力走 prm-common 共享网关(qwen3-max/Local 桩),不依赖独立工具的 aitool 包
     private final com.csg.prm.common.ai.DawatAiGateway aiGateway;
+    private final com.csg.prm.confirm.service.ConfirmAiRunLogService aiRunLogService;
 
     public ConfirmMaterialServiceImpl(ConfirmMaterialMapper mapper, ConfirmApplyService applyService,
                                       ConfirmMaterialRuleService ruleService,
                                       AssetTableMetaService tableMetaService,
-                                      com.csg.prm.common.ai.DawatAiGateway aiGateway) {
+                                      com.csg.prm.common.ai.DawatAiGateway aiGateway,
+                                      com.csg.prm.confirm.service.ConfirmAiRunLogService aiRunLogService) {
         this.mapper = mapper;
         this.applyService = applyService;
         this.ruleService = ruleService;
         this.tableMetaService = tableMetaService;
         this.aiGateway = aiGateway;
+        this.aiRunLogService = aiRunLogService;
     }
 
     /** 抽取某份材料正文(供确权内生 AI 能力复用),按 ID 重取完整记录;无法抽取返回空串。 */
@@ -85,7 +88,13 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
                             : text.substring(0, Math.min(text.length(), 1200)))
                     .append('\n');
         }
+        long t0 = System.currentTimeMillis();
         String result = aiGateway.reviewMaterials(ctx.toString());
+        // 逐次留痕(南网全流程留痕追溯):模型/输入摘要/输出/耗时/SM3/触发人
+        aiRunLogService.record(applyId, com.csg.prm.confirm.entity.ConfirmAiRunLog.CAP_MATERIAL_CHECK,
+                aiGateway.modelName(),
+                "资产:" + apply.getAssetName() + ";材料 " + mats.size() + " 份",
+                result, System.currentTimeMillis() - t0);
         if (!StringUtils.hasText(result)) {
             throw new BizException(ResultCode.SYSTEM_ERROR.getCode(), "AI 校验暂不可用,请稍后重试或走规则校验");
         }
@@ -290,7 +299,7 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
             if (att == null || present.contains(r.getMaterialName())) {
                 continue;
             }
-            insertPlatformMaterial(applyId, r, att, apply.getRightHolder());
+            insertPlatformMaterial(applyId, apply.getAssetId(), r, att, apply.getRightHolder());
             present.add(r.getMaterialName());
             String code = StringUtils.hasText(r.getTriggerCode()) ? r.getTriggerCode() : "证明";
             synced.add(new MaterialSyncReport.SyncedItem(r.getMaterialName(), att, code));
@@ -352,18 +361,31 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
         return null; // T_ALWAYS 表1 / T_TABLE2 表2 为系统自生成表单,无平台附件
     }
 
-    private void insertPlatformMaterial(String applyId, ConfirmMaterialRule r, String attachment, String owner) {
+    private void insertPlatformMaterial(String applyId, String assetId, ConfirmMaterialRule r,
+                                        String attachment, String owner) {
         ConfirmMaterial m = new ConfirmMaterial();
         m.setApplyId(applyId);
         m.setMaterialName(r.getMaterialName());
         m.setMaterialType(StringUtils.hasText(r.getEvidenceType()) ? r.getEvidenceType() : "平台同步");
         m.setOwner(owner);
         m.setSource(ConfirmMaterial.SOURCE_PLATFORM);
-        m.setFileName(attachment); // 平台附件名:材料校验据此判完整(有原件)
+        m.setFileName(attachment); // 平台附件名:材料校验据此判完整(有原件);预览按扩展名渲染
         m.setUploadTime(LocalDateTime.now());
         m.setCheckResult(ConfirmMaterial.CHECK_PASS);
         m.setAbnormalDesc("平台元数据已上传原件:" + attachment + "(AU_TABLE_META_DATA 同步,免重复上传)");
+        // 取回平台原件字节并落地,使平台同步材料可经 /file 在线预览(平台未接入时由桩用随包样例兜底)
+        byte[] bytes = tableMetaService.fetchAttachment(assetId, attachment);
+        if (bytes != null && bytes.length > 0) {
+            m.setFileData(Base64.getEncoder().encodeToString(bytes));
+        }
         mapper.insert(m);
+        // 回填下载/预览地址(insert 后才有 id)
+        if (bytes != null && bytes.length > 0) {
+            ConfirmMaterial upd = new ConfirmMaterial();
+            upd.setMaterialId(m.getMaterialId());
+            upd.setFileUrl("/api/dpr/confirm/material/" + m.getMaterialId() + "/file");
+            mapper.updateById(upd);
+        }
     }
 
     @Override
