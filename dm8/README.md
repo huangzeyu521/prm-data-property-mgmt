@@ -1,0 +1,42 @@
+# 达梦 DM8 部署/迁移 SQL 执行手册
+
+数据产权管理模块(IM-DAM-DPR)· 数据资产管理平台 V3.6 · 中国南方电网
+
+> 信创生产库为达梦 DM8。应用 `dm` profile 下 `sql.init.mode=never`,**不自动建表**,
+> 库表结构与增量列由 DBA 按本手册执行。基线以 H2 schema 为准
+> (`dpr-confirm-service` / `dpr-authorize-service` 的 `src/main/resources/db/h2/schema.sql`),
+> 达梦脚本由 MySQL 方言转换:`DATETIME→TIMESTAMP`、`TEXT/LONGTEXT→CLOB`、`TINYINT(1)→SMALLINT`、`NOW()→SYSDATE`。
+
+## 一、全新部署(空库)——按序执行
+
+| 顺序 | 文件 | 说明 | 是否必需 |
+|---|---|---|---|
+| 1 | `01_create_tablespace.sql` | 表空间 + 用户 + 字符集初始化 | 必需 |
+| 2 | `02_schema_dm.sql` | 全量库表 DDL(**已含全部最新列/表**,无需再跑 04) | 必需 |
+| 3 | `03_data_dm.sql` | 演示/测试数据 | 生产可跳过 |
+| 4 | `05_seed_aitool_dm.sql` | 智能确权辅助工具演示种子 | 可选,生产跳过 |
+| 5 | `06_seata_undo_log_dm.sql` | Seata AT 回滚日志表 | 仅 prod 分布式事务需要 |
+
+> 全新部署**不要执行** `04_alter_*`——`02_schema_dm.sql` 已含其全部列/表。
+
+## 二、存量生产库升级(已上线、表里已有数据)——只执行增量
+
+| 顺序 | 文件 | 说明 |
+|---|---|---|
+| 1 | `04_alter_change_lifecycle_dm.sql` | 补齐近期新增列/表(见下) |
+
+`04_alter_change_lifecycle_dm.sql` 覆盖的增量项:
+1. 确权变更生命周期:`IM_CONFIRM_APPLY.CEC_CHANGE_TRIGGER`、`IM_EQUITY_CARD_INFO.CEC_VERSION` / `CEC_SUPERSEDED_NO`(+ 存量版本号回填)
+2. 人工预审 AI 快照:`IM_CONFIRM_APPLY.CEC_AI_SNAPSHOT`
+3. 平台同步材料来源:`IM_CONFIRM_MATERIAL.CEC_SOURCE`
+4. 大模型校验留痕:新增表 `IM_DPR_AI_RUNLOG`(含跨域字段 `CEC_BIZ_TYPE`)+ 索引
+5. 授权侧 AI 校验快照:`IM_AUTH_APPLY.CEC_AI_SNAPSHOT`
+
+**幂等性**:达梦不支持 `ADD COLUMN/CREATE TABLE IF NOT EXISTS`,本脚本**仅可执行一次**;
+若某列/表已存在会报"列名重复/对象已存在",**忽略该条对应语句继续**即可。
+
+## 三、注意事项
+
+- 暴露过的 `DASHSCOPE_API_KEY` 须在阿里云百炼控制台轮换(与库无关,部署清单备注)。
+- MySQL 侧对应迁移见 `mysql/04_alter_change_lifecycle.sql`(若该环境也部署 MySQL)。
+- 升级后建议抽查:`IM_DPR_AI_RUNLOG`、`IM_AUTH_APPLY.CEC_AI_SNAPSHOT`、`IM_CONFIRM_MATERIAL.CEC_SOURCE` 是否已存在。

@@ -1,13 +1,19 @@
 -- =============================================================================
--- 增量迁移(达梦DM8):确权变更生命周期 + 人工预审AI快照 新增列
--- 适用对象:已上线、IM_CONFIRM_APPLY / IM_EQUITY_CARD_INFO 已存在数据的生产库。
--- 全新部署请直接用 02_schema_dm.sql(已含这些列),无需执行本脚本。
+-- 增量迁移(达梦DM8):存量生产库补齐近期新增列/表。覆盖项:
+--   1) 确权变更生命周期:IM_CONFIRM_APPLY.CEC_CHANGE_TRIGGER、
+--      IM_EQUITY_CARD_INFO.CEC_VERSION / CEC_SUPERSEDED_NO
+--   2) 人工预审 AI 快照:IM_CONFIRM_APPLY.CEC_AI_SNAPSHOT
+--   3) 平台同步材料来源:IM_CONFIRM_MATERIAL.CEC_SOURCE
+--   4) 大模型校验留痕:新增表 IM_DPR_AI_RUNLOG(含跨域字段 CEC_BIZ_TYPE)
+--   5) 授权侧 AI 校验快照:IM_AUTH_APPLY.CEC_AI_SNAPSHOT
+-- 适用对象:已上线、相关表已存在数据的生产库。
+-- 全新部署请直接用 02_schema_dm.sql(已含全部这些列/表),无需执行本脚本。
 --
 -- 背景:02_schema_dm.sql 的 CREATE TABLE 仅对新建库生效,不会改动现网已存在的表;
---       故存量生产库须由 DBA 执行本 ALTER 脚本补列。
--- 幂等性:达梦不支持 ADD COLUMN IF NOT EXISTS,本脚本仅可执行一次;
---        若列已存在会报"列名重复",可忽略该列对应语句继续。
--- 对应基线:prm-backend/dpr-confirm-service/src/main/resources/db/h2/schema.sql
+--       故存量生产库须由 DBA 执行本 ALTER 脚本补列/建表。
+-- 幂等性:达梦不支持 ADD COLUMN/CREATE TABLE IF NOT EXISTS,本脚本仅可执行一次;
+--        若列/表已存在会报"列名重复/对象已存在",可忽略该条对应语句继续。
+-- 对应基线:prm-backend/dpr-confirm-service|dpr-authorize-service/src/main/resources/db/h2/schema.sql
 -- =============================================================================
 
 -- 1) 确权申请单:人工预审AI快照 + 变更触发类型
