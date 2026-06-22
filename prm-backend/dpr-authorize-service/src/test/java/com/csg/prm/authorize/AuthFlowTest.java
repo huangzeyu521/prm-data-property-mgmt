@@ -130,6 +130,23 @@ class AuthFlowTest {
     }
 
     @Test
+    void batch_chain_must_not_contain_legacy_orphan_state() {
+        // 回归:批量审批链把"数字化部认定"拆分为主管/经理/副总三节点后,旧编排态
+        // "数字化部认定中"成为孤儿态——不在任一审批链,却被种子(AA-005)与前端当作可审批,
+        // 导致该单永远卡死(approve/reject 均抛"当前状态不可审批/驳回")。已把 AA-005 迁移为主管审核中。
+        // 守护:批量链不得再含旧孤儿态,且必须含迁移目标"主管审核中"。
+        java.util.List<String> batch =
+                com.csg.prm.common.workflow.FlowDefinitions.states(
+                        com.csg.prm.common.workflow.FlowDefinitions.DPR_AUTH_BATCH);
+        assertTrue(batch.contains(AuthApply.STATUS_MANAGER), "批量链应含主管审核中");
+        assertTrue(!batch.contains("数字化部认定中"), "批量链不得再含孤儿态'数字化部认定中'");
+        // 迁移目标在链中即代表"可审批可驳回"(canAdvance 为真),不再卡死。
+        assertTrue(batch.indexOf(AuthApply.STATUS_MANAGER) >= 0
+                && batch.indexOf(AuthApply.STATUS_MANAGER) < batch.size() - 1,
+                "主管审核中应为可推进的中间节点");
+    }
+
+    @Test
     void reject_should_set_status() {
         String id = applyService.saveDraft(draft("DA-AUTH-004", "待驳回表", "EC-PRA-VALID02"));
         applyService.submit(id);

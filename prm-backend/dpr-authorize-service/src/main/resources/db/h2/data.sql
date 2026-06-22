@@ -16,7 +16,7 @@ INSERT INTO IM_AUTH_APPLY (CEC_APPLY_ID,CEC_APPLY_NO,CEC_AUTH_MODE,CEC_ASSET_ID,
 ('AA-002','SQ-0002','一事一议','AST-002','台区负荷数据','EC-PRA-0002','深圳供电局','数据加工使用权','负荷预测','约定字段',DATEADD('YEAR',2,CURRENT_TIMESTAMP),'合规审核中',FALSE,CURRENT_TIMESTAMP,0),
 ('AA-003','SQ-0003','一事一议','AST-003','设备资产台账','EC-PRA-0003','南网科研院','数据加工使用权','设备健康分析','全字段',DATEADD('YEAR',2,CURRENT_TIMESTAMP),'经理审核中',FALSE,CURRENT_TIMESTAMP,0),
 ('AA-004','SQ-0004','批量','AST-006','充电桩运营数据','EC-PRA-0006','广东电网综能公司','数据产品经营权','对外经营','全字段',DATEADD('YEAR',2,CURRENT_TIMESTAMP),'领导小组审批中',TRUE,CURRENT_TIMESTAMP,0),
-('AA-005','SQ-0005','批量','AST-008','线损分析数据','EC-PRA-0008','贵州电网','数据加工使用权','线损治理','约定字段',DATEADD('YEAR',2,CURRENT_TIMESTAMP),'数字化部认定中',FALSE,CURRENT_TIMESTAMP,0),
+('AA-005','SQ-0005','批量','AST-008','线损分析数据','EC-PRA-0008','贵州电网','数据加工使用权','线损治理','约定字段',DATEADD('YEAR',2,CURRENT_TIMESTAMP),'主管审核中',FALSE,CURRENT_TIMESTAMP,0),
 ('AA-006','SQ-0006','一事一议','AST-004','停电事件记录','EC-PRA-0004','广西电网','数据加工使用权','停电分析','全字段',DATEADD('YEAR',2,CURRENT_TIMESTAMP),'已驳回',FALSE,CURRENT_TIMESTAMP,0);
 
 -- 批量授权清单 表6(3)

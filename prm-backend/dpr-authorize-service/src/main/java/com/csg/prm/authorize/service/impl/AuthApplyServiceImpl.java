@@ -70,9 +70,6 @@ public class AuthApplyServiceImpl implements AuthApplyService {
         if (AuthApply.STATUS_VP.equals(status)) {
             return "副总/总经理";
         }
-        if (AuthApply.STATUS_DEPT.equals(status)) {
-            return "公司总部数字化部";
-        }
         if (AuthApply.STATUS_LEADERSHIP.equals(status)) {
             return "领导小组办公室";
         }
@@ -169,7 +166,7 @@ public class AuthApplyServiceImpl implements AuthApplyService {
 
     /**
      * 多级审批推进:按授权模式沿审批链逐级流转;最终环节通过则生成授权证书。
-     * 专项:合规->业务->主管->经理->副总->已生效;批量:合规->数字化部认定->领导小组->已生效。
+     * 专项:合规->业务->主管->经理->副总->已生效;批量:合规->主管->经理->副总->领导小组->已生效。
      * @return 生效(发证)时返回证书ID,否则 null
      */
     @Override

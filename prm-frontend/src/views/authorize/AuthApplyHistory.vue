@@ -44,7 +44,7 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { pageAuthApply } from '@/api/authorize'
-const statuses = ['草稿', '合规审核中', '业务审核中', '主管审核中', '经理审核中', '副总审批中', '数字化部认定中', '领导小组审批中', '已生效', '已驳回']
+const statuses = ['草稿', '合规审核中', '业务审核中', '主管审核中', '经理审核中', '副总审批中', '领导小组审批中', '已生效', '已驳回']
 const q = reactive({ current: 1, size: 10, assetName: '', applicant: '', authMode: '', status: '' })
 const rows = ref([]); const total = ref(0); const loading = ref(false)
 // 审核结果:未提交/审核中/通过/驳回

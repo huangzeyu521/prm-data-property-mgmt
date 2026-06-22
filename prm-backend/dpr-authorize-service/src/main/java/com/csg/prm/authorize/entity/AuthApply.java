@@ -11,9 +11,10 @@ import java.time.LocalDateTime;
 /**
  * 数据授权申请单(表5《数据授权申请单》,对应界面 IM-DAM-DPR-03-001-001)。对应物理表 IM_AUTH_APPLY。
  * 强制"先确后授":授权必须引用有效权益卡片(equityCardId);冻结卡片熔断。
- * 多级审批(对齐附录F 4.2/4.3):
+ * 多级审批(对齐附录F 4.2/4.3,审批链以 {@link com.csg.prm.common.workflow.FlowDefinitions} 为单一事实来源):
  *   专项一事一议:草稿->合规审核->业务审核->主管审核->经理审核->副总审批->已生效(发证)
- *   批量:草稿->合规审核->数字化部认定->领导小组审批->已生效(发证)
+ *   批量:草稿->合规审核->主管审核->经理审核->副总审批->领导小组审批->已生效(发证)
+ *     (数字化部认定细分为主管/经理/副总三节点,与专项同名同粒度;末节点为领导小组决策)
  *   任一环节可驳回。
  */
 @TableName("IM_AUTH_APPLY")
@@ -24,8 +25,7 @@ public class AuthApply extends BaseEntity {
     public static final String STATUS_BUSINESS = "业务审核中";        // 专项:业务部门经理/高级经理
     public static final String STATUS_MANAGER = "主管审核中";         // 专项:数字化部主管
     public static final String STATUS_DIRECTOR = "经理审核中";        // 专项:数字化部经理/高级经理
-    public static final String STATUS_VP = "副总审批中";             // 专项:副总经理/总经理
-    public static final String STATUS_DEPT = "数字化部认定中";        // 批量:公司总部数字化部认定
+    public static final String STATUS_VP = "副总审批中";             // 副总经理/总经理(批量复用同节点)
     public static final String STATUS_LEADERSHIP = "领导小组审批中";   // 批量:领导小组办公室批准
     public static final String STATUS_EFFECTIVE = "已生效";
     public static final String STATUS_REJECTED = "已驳回";
@@ -34,15 +34,6 @@ public class AuthApply extends BaseEntity {
 
     public static final String MODE_SPECIAL = "一事一议";
     public static final String MODE_BATCH = "批量";
-
-    /** 专项审批链 */
-    public static final String[] CHAIN_SPECIAL = {
-            STATUS_COMPLIANCE, STATUS_BUSINESS, STATUS_MANAGER, STATUS_DIRECTOR, STATUS_VP, STATUS_EFFECTIVE
-    };
-    /** 批量审批链(数字化部三节点与专项同名同粒度,末节点为领导小组决策) */
-    public static final String[] CHAIN_BATCH = {
-            STATUS_COMPLIANCE, STATUS_MANAGER, STATUS_DIRECTOR, STATUS_VP, STATUS_LEADERSHIP, STATUS_EFFECTIVE
-    };
 
     @TableId(value = "CEC_APPLY_ID", type = IdType.ASSIGN_UUID)
     private String applyId;

@@ -64,7 +64,7 @@ import { pageAuthApply, approveAuth, rejectAuth, batchApproveAuth, batchRejectAu
 
 const rows = ref([]); const loading = ref(false); const sel = ref([])
 const drawer = ref(false); const cur = ref({}); const logs = ref([])
-const PENDING = ['合规审核中', '业务审核中', '主管审核中', '经理审核中', '副总审批中', '数字化部认定中', '领导小组审批中']
+const PENDING = ['合规审核中', '业务审核中', '主管审核中', '经理审核中', '副总审批中', '领导小组审批中']
 const reviewing = computed(() => rows.value.filter(r => PENDING.includes(r.status)))
 function fmt(t) { return t ? String(t).replace('T', ' ').slice(0, 19) : '-' }
 
