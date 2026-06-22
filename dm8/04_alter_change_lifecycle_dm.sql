@@ -22,5 +22,9 @@ ALTER TABLE IM_EQUITY_CARD_INFO ADD CEC_SUPERSEDED_NO VARCHAR(64);
 COMMENT ON COLUMN IM_EQUITY_CARD_INFO.CEC_VERSION IS '卡片版本号(确权变更每取代一次+1,初始确权为1)';
 COMMENT ON COLUMN IM_EQUITY_CARD_INFO.CEC_SUPERSEDED_NO IS '前序被取代卡片号(确权变更时指向上一版正常卡,形成版本链;初始确权为空)';
 
--- 3) 存量回填:已有权益卡片版本号默认置 1(新增列 DEFAULT 仅对新行生效,存量行须显式回填)
+-- 3) 确权申请材料:材料来源(平台同步/用户上传)——"先从平台元数据同步已上传材料、再补全"
+ALTER TABLE IM_CONFIRM_MATERIAL ADD CEC_SOURCE VARCHAR(20);
+COMMENT ON COLUMN IM_CONFIRM_MATERIAL.CEC_SOURCE IS '材料来源(平台同步/用户上传)';
+
+-- 4) 存量回填:已有权益卡片版本号默认置 1(新增列 DEFAULT 仅对新行生效,存量行须显式回填)
 UPDATE IM_EQUITY_CARD_INFO SET CEC_VERSION = 1 WHERE CEC_VERSION IS NULL;
