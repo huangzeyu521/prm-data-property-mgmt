@@ -233,7 +233,7 @@
 import { reactive, ref, computed, nextTick, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { saveAuthDraft, submitAuth, runAuthCompliance, pageScenario, uploadAuthMaterialFile, listAuthMaterial, deleteAuthMaterial, authMaterialFileUrl, listAuthMaterialRules } from '@/api/authorize'
+import { saveAuthDraft, submitAuth, runAuthCompliance, pageScenario, uploadAuthMaterialFile, listAuthMaterial, deleteAuthMaterial, authMaterialFileUrl, listAuthMaterialRules, saveAuthAiSnapshot } from '@/api/authorize'
 import { aiAuthIntent } from '@/api/confirm'
 import { aiAuthMaterialCheck, aiAuthPreReview } from '@/api/authorize'
 import AiThinking from '@/components/AiThinking.vue'
@@ -604,8 +604,14 @@ async function runCheck() {
 
 async function doSubmit() {
   submitting.value = true
-  try { await submitAuth(applyId.value); step.value = 3 }
-  finally { submitting.value = false }
+  try {
+    // 提交前固化防篡改 AI 校验快照(材料AI校验 + 合规规则结果),服务端计 SM3 + 上链,供人工审核复核·可审计
+    try {
+      const snapshot = { checkedAt: new Date().toISOString(), materialCheck: aiMatResult.value || null, ruleReport: checkResult.value || null }
+      await saveAuthAiSnapshot(applyId.value, JSON.stringify(snapshot))
+    } catch (e) { /* 快照失败不阻断提交 */ }
+    await submitAuth(applyId.value); step.value = 3
+  } finally { submitting.value = false }
 }
 
 function go(path) { router.push(path) }

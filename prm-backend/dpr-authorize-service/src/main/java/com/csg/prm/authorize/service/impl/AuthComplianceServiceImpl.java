@@ -32,16 +32,19 @@ public class AuthComplianceServiceImpl implements AuthComplianceService {
     private final com.csg.prm.authorize.service.AuthApplyService applyService;
 
     private final com.csg.prm.common.ai.DawatAiGateway ai;
+    private final com.csg.prm.common.aitrace.AiRunLogService aiRunLogService;
 
     public AuthComplianceServiceImpl(AuthComplianceMapper mapper, AuthApplyMapper applyMapper,
                                      AuthMaterialMapper materialMapper,
                                      com.csg.prm.authorize.service.AuthApplyService applyService,
-                                     com.csg.prm.common.ai.DawatAiGateway ai) {
+                                     com.csg.prm.common.ai.DawatAiGateway ai,
+                                     com.csg.prm.common.aitrace.AiRunLogService aiRunLogService) {
         this.mapper = mapper;
         this.applyMapper = applyMapper;
         this.materialMapper = materialMapper;
         this.applyService = applyService;
         this.ai = ai;
+        this.aiRunLogService = aiRunLogService;
     }
 
     /** 合规 AI 预审:先跑规则三维校验,再交大模型生成补充预审意见(qwen3-max,stub 回退) */
@@ -59,7 +62,13 @@ public class AuthComplianceServiceImpl implements AuthComplianceService {
             ctx.append(it.getDimension()).append('/').append(it.getItem()).append(':')
                     .append(it.isPass() ? "通过" : "不符").append('(').append(it.getMessage()).append(")\n");
         }
+        long t0 = System.currentTimeMillis();
         String opinion = ai.preReviewAuth(ctx.toString());
+        // 逐次留痕(南网全流程留痕追溯):合规 AI 预审 模型/输入摘要/输出/耗时/SM3/触发人
+        aiRunLogService.record(com.csg.prm.common.aitrace.AiRunLog.BIZ_AUTHORIZE, applyId,
+                com.csg.prm.common.aitrace.AiRunLog.CAP_AUTH_PRECHECK, ai.modelName(),
+                "资产:" + apply.getAssetName() + ";规则结果:" + report.getCheckResult() + ";风险:" + report.getRiskLevel(),
+                opinion, System.currentTimeMillis() - t0);
         return opinion == null ? "AI 预审暂不可用" : opinion;
     }
 

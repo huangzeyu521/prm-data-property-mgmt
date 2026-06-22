@@ -10,7 +10,7 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
  */
 @SpringBootApplication(scanBasePackages = "com.csg.prm")
 @EnableDiscoveryClient
-@MapperScan({"com.csg.prm.authorize.mapper", "com.csg.prm.common.evidence.mapper"})
+@MapperScan({"com.csg.prm.authorize.mapper", "com.csg.prm.common.evidence.mapper", "com.csg.prm.common.aitrace.mapper"})
 public class AuthorizeApplication {
 
     public static void main(String[] args) {

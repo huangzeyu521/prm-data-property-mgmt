@@ -128,6 +128,10 @@ public class AuthApply extends BaseEntity {
     @TableField("CEC_CONTACT")
     private String contactInfo;
 
+    /** 提交前 AI 校验结果快照(防篡改包),供人工审核复核·可审计 */
+    @TableField("CEC_AI_SNAPSHOT")
+    private String aiSnapshot;
+
     public Boolean getNeedConfidentiality() {
         return needConfidentiality;
     }
@@ -206,6 +210,14 @@ public class AuthApply extends BaseEntity {
 
     public void setContactInfo(String contactInfo) {
         this.contactInfo = contactInfo;
+    }
+
+    public String getAiSnapshot() {
+        return aiSnapshot;
+    }
+
+    public void setAiSnapshot(String aiSnapshot) {
+        this.aiSnapshot = aiSnapshot;
     }
 
     public Integer getCurrentNode() {

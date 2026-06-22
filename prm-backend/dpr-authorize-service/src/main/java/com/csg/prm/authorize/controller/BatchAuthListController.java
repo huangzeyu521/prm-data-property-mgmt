@@ -20,13 +20,16 @@ public class BatchAuthListController {
     private final BatchAuthListService service;
     private final com.csg.prm.common.ai.DawatAiGateway ai;
     private final com.csg.prm.authorize.mapper.AuthApplyMapper applyMapper;
+    private final com.csg.prm.common.aitrace.AiRunLogService aiRunLogService;
 
     public BatchAuthListController(BatchAuthListService service,
                                    com.csg.prm.common.ai.DawatAiGateway ai,
-                                   com.csg.prm.authorize.mapper.AuthApplyMapper applyMapper) {
+                                   com.csg.prm.authorize.mapper.AuthApplyMapper applyMapper,
+                                   com.csg.prm.common.aitrace.AiRunLogService aiRunLogService) {
         this.ai = ai;
         this.applyMapper = applyMapper;
         this.service = service;
+        this.aiRunLogService = aiRunLogService;
     }
 
     @PostMapping
@@ -37,7 +40,13 @@ public class BatchAuthListController {
     /** AI 批量填单:自然语言→共享字段+多条明细(qwen3-max,stub 回退) */
     @PostMapping("/ai-intent")
     public R<String> aiIntent(@RequestParam String text) {
-        return R.ok(ai.parseBatchIntent(text));
+        long t0 = System.currentTimeMillis();
+        String result = ai.parseBatchIntent(text);
+        aiRunLogService.record(com.csg.prm.common.aitrace.AiRunLog.BIZ_AUTHORIZE, "批量意图解析",
+                com.csg.prm.common.aitrace.AiRunLog.CAP_AUTH_BATCH_INTENT, ai.modelName(),
+                text == null ? "" : (text.length() > 200 ? text.substring(0, 200) : text),
+                result, System.currentTimeMillis() - t0);
+        return R.ok(result);
     }
 
     /** AI 清单预审:整单明细交大模型审查批量适用条件(非门禁) */
@@ -58,7 +67,11 @@ public class BatchAuthListController {
         }
         ctx.append("被授权方一致性:").append(grantees.size() <= 1 ? "一致" : "不符(存在多个被授权方:" + grantees + ")")
            .append(";权益类型一致性:").append(rights.size() <= 1 ? "一致" : "不符(混合权益类型,建议拆分或转一事一议)");
+        long t0 = System.currentTimeMillis();
         String opinion = ai.preReviewAuth(ctx.toString());
+        aiRunLogService.record(com.csg.prm.common.aitrace.AiRunLog.BIZ_AUTHORIZE, batchListId,
+                com.csg.prm.common.aitrace.AiRunLog.CAP_AUTH_PRECHECK, ai.modelName(),
+                "批量清单预审 明细数:" + items.size(), opinion, System.currentTimeMillis() - t0);
         return R.ok(opinion == null ? "AI 预审暂不可用" : opinion);
     }
 

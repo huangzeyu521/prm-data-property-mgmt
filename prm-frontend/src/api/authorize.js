@@ -134,3 +134,8 @@ export const aiAuthMaterialCheck = (applyId) => request.post('/dpr/auth/material
 export const aiAuthPreReview = (applyId) => request.post('/dpr/auth/compliance/pre-review', null, { params: { applyId }, timeout: 120000 })
 export const aiBatchIntent = (text) => request.post('/dpr/auth/batch-list/ai-intent', null, { params: { text }, timeout: 120000 })
 export const aiBatchPreReview = (batchListId) => request.post(`/dpr/auth/batch-list/${batchListId}/pre-review`, null, { timeout: 120000 })
+// 授权大模型校验机制完善:① 校验规则可视化 ② 校验过程回放 ③ 快照固化/验真(防篡改)
+export const getAuthAiCheckLogic = (applyId) => request.get('/dpr/auth/ai/check-logic', { params: { applyId } })
+export const getAuthAiRunlog = (applyId) => request.get('/dpr/auth/ai/runlog', { params: { applyId } })
+export const saveAuthAiSnapshot = (applyId, snapshotJson) => request.post(`/dpr/auth/ai/${applyId}/ai-snapshot`, snapshotJson, { headers: { 'Content-Type': 'application/json' } })
+export const verifyAuthAiSnapshot = (applyId) => request.get(`/dpr/auth/ai/${applyId}/ai-snapshot/verify`)

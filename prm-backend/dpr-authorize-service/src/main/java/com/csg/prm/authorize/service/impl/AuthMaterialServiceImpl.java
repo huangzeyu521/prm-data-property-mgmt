@@ -24,13 +24,16 @@ public class AuthMaterialServiceImpl implements AuthMaterialService {
     private final AuthMaterialMapper mapper;
     private final com.csg.prm.authorize.mapper.AuthApplyMapper applyMapper;
     private final com.csg.prm.common.ai.DawatAiGateway ai;
+    private final com.csg.prm.common.aitrace.AiRunLogService aiRunLogService;
 
     public AuthMaterialServiceImpl(AuthMaterialMapper mapper,
                                    com.csg.prm.authorize.mapper.AuthApplyMapper applyMapper,
-                                   com.csg.prm.common.ai.DawatAiGateway ai) {
+                                   com.csg.prm.common.ai.DawatAiGateway ai,
+                                   com.csg.prm.common.aitrace.AiRunLogService aiRunLogService) {
         this.mapper = mapper;
         this.applyMapper = applyMapper;
         this.ai = ai;
+        this.aiRunLogService = aiRunLogService;
     }
 
     /**
@@ -60,7 +63,13 @@ public class AuthMaterialServiceImpl implements AuthMaterialService {
                             : text.substring(0, Math.min(text.length(), 1200)))
                     .append('\n');
         }
+        long t0 = System.currentTimeMillis();
         String result = ai.reviewAuthMaterials(ctx.toString());
+        // 逐次留痕(南网全流程留痕追溯):授权材料校验 模型/输入摘要/输出/耗时/SM3/触发人
+        aiRunLogService.record(com.csg.prm.common.aitrace.AiRunLog.BIZ_AUTHORIZE, applyId,
+                com.csg.prm.common.aitrace.AiRunLog.CAP_AUTH_MATERIAL_CHECK, ai.modelName(),
+                "资产:" + apply.getAssetName() + ";被授权方:" + apply.getGranteeOrg() + ";材料 " + mats.size() + " 份",
+                result, System.currentTimeMillis() - t0);
         if (!StringUtils.hasText(result)) {
             throw new BizException(ResultCode.SYSTEM_ERROR.getCode(), "AI 校验暂不可用,请稍后重试");
         }

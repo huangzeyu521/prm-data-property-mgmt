@@ -50,16 +50,27 @@ public class AuthMaterialRuleService implements ApplicationRunner {
 
     /** 按申请的第三方来源/敏感类型,生成应交材料名清单(后端校验/前端渲染共用)。 */
     public List<String> requiredNames(AuthApply apply) {
-        String scene = AuthApply.MODE_BATCH.equals(apply.getAuthMode()) ? SCENE_BATCH : SCENE_SPECIAL;
-        boolean thirdParty = StringUtils.hasText(apply.getThirdPartySource());
-        boolean sensitive = StringUtils.hasText(apply.getSensitiveType());
         List<String> req = new ArrayList<>();
-        for (AuthMaterialRule r : listEnabled(scene)) {
-            if (hit(r, thirdParty, sensitive) && !req.contains(r.getMaterialName())) {
+        for (AuthMaterialRule r : requiredRules(apply)) {
+            if (!req.contains(r.getMaterialName())) {
                 req.add(r.getMaterialName());
             }
         }
         return req.isEmpty() ? new ArrayList<>(FALLBACK) : req;
+    }
+
+    /** 命中本申请(涉三方/涉隐私商密)的应交规则(含触发类型/明细),供 AI 校验规则可视化用。 */
+    public List<AuthMaterialRule> requiredRules(AuthApply apply) {
+        String scene = AuthApply.MODE_BATCH.equals(apply.getAuthMode()) ? SCENE_BATCH : SCENE_SPECIAL;
+        boolean thirdParty = StringUtils.hasText(apply.getThirdPartySource());
+        boolean sensitive = StringUtils.hasText(apply.getSensitiveType());
+        List<AuthMaterialRule> req = new ArrayList<>();
+        for (AuthMaterialRule r : listEnabled(scene)) {
+            if (hit(r, thirdParty, sensitive)) {
+                req.add(r);
+            }
+        }
+        return req;
     }
 
     private boolean hit(AuthMaterialRule r, boolean thirdParty, boolean sensitive) {
