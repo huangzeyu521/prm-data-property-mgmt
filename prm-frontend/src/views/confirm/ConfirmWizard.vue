@@ -164,14 +164,31 @@
           :title="`申请已暂存(${applyNo || applyId})，进入材料上传`" style="max-width:640px;margin-top:8px" />
       </el-card>
 
-      <!-- 步骤2:上传材料(按 A–J 动态清单) -->
+      <!-- 步骤2:上传材料(先从平台元数据同步已上传材料,再补全缺口) -->
       <el-card v-show="step === 1" shadow="never">
         <div class="prm-table-note" style="margin-bottom:10px">
-          按所选来源/关联(A–J)应交材料清单。"上传原件"真实上传文件(仅 PDF/Word/JPG/PNG,自动格式验证);或"仅登记"占位。
-          <el-button size="small" type="warning" plain style="margin-left:12px" :loading="parsing" @click="runParse">
+          材料优先<b>从数据资产管理平台元数据同步已上传项</b>(标「已同步·平台」免上传),仅需补全平台未覆盖的缺口。补全时"上传原件"(仅 PDF/Word/JPG/PNG,自动格式验证)或"仅登记"占位。
+          <el-button size="small" type="primary" plain style="margin-left:12px" :loading="syncing" @click="doSyncPlatform(false)">
+            <el-icon><Refresh /></el-icon> 从平台同步已上传材料
+          </el-button>
+          <el-button size="small" type="warning" plain style="margin-left:8px" :loading="parsing" @click="runParse">
             <el-icon><MagicStick /></el-icon> 智能解析材料(要素抽取/敏感判定/内容查重)
           </el-button>
         </div>
+        <!-- 平台同步报告:已同步 N 项(平台已上传)/ 待补全 M 项 -->
+        <el-alert v-if="syncReport" :type="(syncReport.stillMissing && syncReport.stillMissing.length) ? 'warning' : 'success'"
+                  :closable="false" style="margin-bottom:10px">
+          <div><b>平台材料同步:</b>{{ syncReport.summary }}</div>
+          <div v-if="syncReport.synced && syncReport.synced.length" style="margin-top:4px">
+            已同步(平台已上传):
+            <el-tag v-for="s in syncReport.synced" :key="s.materialName" type="success" size="small" effect="light" style="margin:2px 4px 2px 0">
+              {{ s.code }} · {{ s.attachment }}
+            </el-tag>
+          </div>
+          <div v-if="syncReport.stillMissing && syncReport.stillMissing.length" style="margin-top:4px">
+            待补全:{{ syncReport.stillMissing.join('、') }}
+          </div>
+        </el-alert>
         <!-- 智能解析:确权内生 AI(走 confirm-service /ai/parse,不依赖独立工具) -->
         <el-alert v-if="parseResult" type="info" :closable="false" style="margin-bottom:10px">
           <div><b>智能解析:</b>{{ parseResult.summary }}</div>
@@ -191,18 +208,25 @@
           <el-table-column type="index" label="序号" width="60" align="center" />
           <el-table-column prop="code" label="标识" width="70" align="center" />
           <el-table-column prop="name" label="应交材料" min-width="240" />
-          <el-table-column label="状态" width="110" align="center">
+          <el-table-column label="状态" width="180" align="center">
             <template #default="{ row }">
-              <el-tag :type="row.done ? 'success' : 'info'" effect="light">{{ row.done ? '已上传' : '待上传' }}</el-tag>
+              <template v-if="row.done && row.source === '平台同步'">
+                <el-tag type="success" effect="dark">已同步·平台</el-tag>
+                <div v-if="row.fileName" style="font-size:12px;color:#67c23a;margin-top:2px" :title="row.fileName">{{ row.fileName }}</div>
+              </template>
+              <el-tag v-else-if="row.done" type="success" effect="light">已上传</el-tag>
+              <el-tag v-else type="warning" effect="light">待补全</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="280" align="center">
+          <el-table-column label="操作" width="300" align="center">
             <template #default="{ row }">
+              <span v-if="row.done && row.source === '平台同步'" style="color:#909399;font-size:12px;margin-right:8px">平台原件(免上传)</span>
               <el-upload :auto-upload="false" :show-file-list="false" :on-change="(f) => onUploadFile(row, f)" style="display:inline-block">
-                <el-button link type="success">上传原件</el-button>
+                <el-button link type="success">{{ row.done && row.source === '平台同步' ? '改用本地原件' : '上传原件' }}</el-button>
               </el-upload>
               <el-button link type="primary" :disabled="row.done" @click="registerMaterial(row)" style="margin-left:8px">仅登记</el-button>
-              <el-button v-if="row.materialId" link type="warning" style="margin-left:8px" @click="openFilePreview(materialFileUrl(row.materialId), row.fileName)">预览</el-button>
+              <!-- 平台同步材料原件在平台,无本地可下载原件,不显示预览(避免点开 404) -->
+              <el-button v-if="row.materialId && row.source !== '平台同步'" link type="warning" style="margin-left:8px" @click="openFilePreview(materialFileUrl(row.materialId), row.fileName)">预览</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -285,9 +309,16 @@
               </el-tag>
             </template>
           </el-table-column>
+          <el-table-column label="来源" width="110" align="center">
+            <template #default="{ row }">
+              <el-tag :type="row.source === '平台同步' ? 'success' : 'info'" effect="light" size="small">{{ row.source || '用户上传' }}</el-tag>
+            </template>
+          </el-table-column>
           <el-table-column label="原件" min-width="160">
             <template #default="{ row }">
-              <el-link v-if="row.fileName" type="primary" @click="previewMaterial(row)">{{ row.fileName }}（预览/下载）</el-link>
+              <!-- 平台同步材料原件存于数据资产管理平台,本系统不提供下载,显示平台附件名 -->
+              <span v-if="row.source === '平台同步'" style="color:#67c23a" :title="row.fileName">{{ row.fileName }}（平台原件）</span>
+              <el-link v-else-if="row.fileName" type="primary" @click="previewMaterial(row)">{{ row.fileName }}（预览/下载）</el-link>
               <span v-else style="color:#bbb">占位/无原件</span>
             </template>
           </el-table-column>
@@ -343,7 +374,7 @@
 import { computed, reactive, ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { autofillConfirm, saveConfirmDraft, uploadMaterial, uploadMaterialFile, materialFileUrl, listMaterialByApply, checkMaterial, runMaterialCheck, pushMaterialReview, materialExportUrl, submitConfirm, saveAiSnapshot, saveTableItems, getConsolidation, aiMaterialCheck, listMaterialRules, aiParseConfirm, aiDecisionConfirm, aiConflictConfirm } from '@/api/confirm'
+import { autofillConfirm, saveConfirmDraft, uploadMaterial, uploadMaterialFile, materialFileUrl, listMaterialByApply, checkMaterial, runMaterialCheck, syncPlatformMaterials, pushMaterialReview, materialExportUrl, submitConfirm, saveAiSnapshot, saveTableItems, getConsolidation, aiMaterialCheck, listMaterialRules, aiParseConfirm, aiDecisionConfirm, aiConflictConfirm } from '@/api/confirm'
 import AiThinking from '@/components/AiThinking.vue'
 import { useAiThinking } from '@/composables/useAiThinking'
 import { openFilePreview } from '@/composables/useFilePreview'
@@ -441,6 +472,8 @@ async function runConflict() {
 
 const checklist = ref([])
 const materialRules = ref([]) // 后端可配置应交材料规则(单一真源)
+const syncReport = ref(null)  // 平台元数据同步报告(已同步/待补全)
+const syncing = ref(false)
 const checkReport = ref(null)
 const needRecheck = ref(false) // 规则/AI/材料变更后置脏:必须重新校验才能提交(闭环)
 const aiAck = ref([])          // 已复核接受的 AI 存疑/不通过项(材料名),解除其阻断
@@ -767,7 +800,8 @@ async function next0() {
     }
     loadConsolidation()
     buildChecklist()
-    await syncChecklistUploaded() // 回填已上传状态:再入 step1 不丢失(buildChecklist 重置 done 后按材料名对齐)
+    // 先从平台元数据同步已上传材料(命中项免上传),并回填清单已上传状态(含再入 step1 不丢失)
+    await doSyncPlatform(true)
     if (!firstSave && (checkReport.value || aiMatResult.value)) needRecheck.value = true // 申请要素已更新 → 需重新校验
   } finally { saving.value = false }
   step.value = 1
@@ -786,8 +820,27 @@ async function syncChecklistUploaded() {
       row.done = true
       if (m.materialId) row.materialId = m.materialId
       if (m.fileName) row.fileName = m.fileName
+      row.source = m.source || row.source || '用户上传' // 标记来源:平台同步 / 用户上传
     }
   }
+}
+
+// 先从数据资产管理平台元数据(AU_TABLE_META_DATA)同步已上传材料:平台命中项自动登记免上传,仅补全缺口
+async function doSyncPlatform(silent = false) {
+  if (!applyId.value) { if (!silent) ElMessage.warning('请先完成步骤1暂存申请'); return }
+  syncing.value = true
+  try {
+    syncReport.value = await syncPlatformMaterials(applyId.value)
+    await syncChecklistUploaded() // 把平台同步登记的材料回填到清单行(done + source=平台同步)
+    if (!silent) {
+      const n = syncReport.value?.syncedCount || 0
+      if (n > 0) ElMessage.success(`已从平台同步 ${n} 项已上传材料,仅需补全缺口`)
+      else ElMessage.info('平台元数据暂无可同步的已上传材料,请按清单补全')
+    }
+    if (checkReport.value || aiMatResult.value) needRecheck.value = true // 材料集变化 → 需重新校验
+  } catch (e) {
+    if (!silent) ElMessage.warning('平台材料同步暂不可用,请按清单手动补全:' + (e?.response?.data?.message || e?.message || ''))
+  } finally { syncing.value = false }
 }
 
 // 应交清单由后端可配置规则(单一真源)按 场景×触发条件(A–J/涉三方)生成,前端仅渲染。
@@ -825,9 +878,10 @@ function buildChecklistFallback() {
 async function registerMaterial(row) {
   await uploadMaterial({
     applyId: applyId.value, materialName: row.name, materialType: row.m,
-    fileUrl: `/files/dev/${applyId.value}-${row.code}.pdf`, owner: form.rightHolder
+    fileUrl: `/files/dev/${applyId.value}-${row.code}.pdf`, owner: form.rightHolder, source: '用户上传'
   })
   row.done = true
+  row.source = '用户上传'
   if (checkReport.value || aiMatResult.value) needRecheck.value = true // 已校验过又改材料 → 置脏
   ElMessage.success('已登记')
 }
@@ -842,6 +896,7 @@ async function onUploadFile(row, file) {
   fd.append('owner', form.rightHolder || '')
   const mid = await uploadMaterialFile(fd) // 后端格式验证不通过会抛错(拦截器toast);返回 materialId
   row.done = true
+  row.source = '用户上传'        // 本地上传原件:覆盖/补全为用户上传
   row.materialId = mid          // 回填,使本行可在线预览
   row.fileName = file.raw.name  // 真实文件名,预览按扩展名渲染
   if (checkReport.value || aiMatResult.value) needRecheck.value = true // 已校验过又改材料 → 置脏

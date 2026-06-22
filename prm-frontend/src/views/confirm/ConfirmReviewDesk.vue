@@ -78,9 +78,16 @@
       <el-table :data="materials" border size="small">
         <el-table-column prop="materialName" label="材料名称" min-width="200" show-overflow-tooltip />
         <el-table-column prop="checkResult" label="校验" width="80" align="center" />
-        <el-table-column label="原件" width="120">
+        <el-table-column label="来源" width="92" align="center">
           <template #default="{ row }">
-            <el-link v-if="row.fileName" type="primary" @click="preview(row)">查看</el-link>
+            <el-tag :type="row.source === '平台同步' ? 'success' : 'info'" effect="light" size="small">{{ row.source || '用户上传' }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="原件" width="150">
+          <template #default="{ row }">
+            <!-- 平台同步材料原件存于数据资产管理平台,本系统无本地原件,显示平台附件名(不可下载) -->
+            <span v-if="row.source === '平台同步'" style="color:#67c23a" :title="row.fileName">{{ row.fileName }}（平台原件）</span>
+            <el-link v-else-if="row.fileName" type="primary" @click="preview(row)">查看</el-link>
             <span v-else style="color:#bbb">-</span>
           </template>
         </el-table-column>
