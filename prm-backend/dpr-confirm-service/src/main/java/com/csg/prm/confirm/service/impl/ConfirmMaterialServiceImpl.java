@@ -42,13 +42,13 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
     private final AssetTableMetaService tableMetaService;
     // 内生 AI 能力走 prm-common 共享网关(qwen3-max/Local 桩),不依赖独立工具的 aitool 包
     private final com.csg.prm.common.ai.DawatAiGateway aiGateway;
-    private final com.csg.prm.confirm.service.ConfirmAiRunLogService aiRunLogService;
+    private final com.csg.prm.common.aitrace.AiRunLogService aiRunLogService;
 
     public ConfirmMaterialServiceImpl(ConfirmMaterialMapper mapper, ConfirmApplyService applyService,
                                       ConfirmMaterialRuleService ruleService,
                                       AssetTableMetaService tableMetaService,
                                       com.csg.prm.common.ai.DawatAiGateway aiGateway,
-                                      com.csg.prm.confirm.service.ConfirmAiRunLogService aiRunLogService) {
+                                      com.csg.prm.common.aitrace.AiRunLogService aiRunLogService) {
         this.mapper = mapper;
         this.applyService = applyService;
         this.ruleService = ruleService;
@@ -91,7 +91,7 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
         long t0 = System.currentTimeMillis();
         String result = aiGateway.reviewMaterials(ctx.toString());
         // 逐次留痕(南网全流程留痕追溯):模型/输入摘要/输出/耗时/SM3/触发人
-        aiRunLogService.record(applyId, com.csg.prm.confirm.entity.ConfirmAiRunLog.CAP_MATERIAL_CHECK,
+        aiRunLogService.record(com.csg.prm.common.aitrace.AiRunLog.BIZ_CONFIRM, applyId, com.csg.prm.common.aitrace.AiRunLog.CAP_MATERIAL_CHECK,
                 aiGateway.modelName(),
                 "资产:" + apply.getAssetName() + ";材料 " + mats.size() + " 份",
                 result, System.currentTimeMillis() - t0);

@@ -2,8 +2,8 @@ package com.csg.prm.confirm.ai;
 
 import com.csg.prm.common.ai.DawatAiGateway;
 import com.csg.prm.common.api.R;
-import com.csg.prm.confirm.entity.ConfirmAiRunLog;
-import com.csg.prm.confirm.service.ConfirmAiRunLogService;
+import com.csg.prm.common.aitrace.AiRunLog;
+import com.csg.prm.common.aitrace.AiRunLogService;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,9 +20,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class ConfirmAiController {
 
     private final ConfirmAiService service;
-    private final ConfirmAiRunLogService runLogService;
+    private final AiRunLogService runLogService;
 
-    public ConfirmAiController(ConfirmAiService service, ConfirmAiRunLogService runLogService) {
+    public ConfirmAiController(ConfirmAiService service, AiRunLogService runLogService) {
         this.service = service;
         this.runLogService = runLogService;
     }
@@ -53,7 +53,7 @@ public class ConfirmAiController {
 
     /** 校验过程回放(§2):该申请全部大模型操作留痕时间线(能力/模型/耗时/SM3/触发人),供复盘审计。 */
     @GetMapping("/runlog")
-    public R<List<ConfirmAiRunLog>> runlog(@RequestParam String applyId) {
-        return R.ok(runLogService.listByApply(applyId));
+    public R<List<AiRunLog>> runlog(@RequestParam String applyId) {
+        return R.ok(runLogService.listByBiz(applyId));
     }
 }

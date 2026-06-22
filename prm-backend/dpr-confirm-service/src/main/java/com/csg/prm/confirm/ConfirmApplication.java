@@ -14,7 +14,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableDiscoveryClient
 @EnableAsync
 @EnableScheduling
-@MapperScan({"com.csg.prm.confirm.mapper", "com.csg.prm.confirm.aitool.mapper", "com.csg.prm.confirm.auth", "com.csg.prm.confirm.system", "com.csg.prm.common.evidence.mapper"})
+@MapperScan({"com.csg.prm.confirm.mapper", "com.csg.prm.confirm.aitool.mapper", "com.csg.prm.confirm.auth", "com.csg.prm.confirm.system", "com.csg.prm.common.evidence.mapper", "com.csg.prm.common.aitrace.mapper"})
 public class ConfirmApplication {
 
     public static void main(String[] args) {

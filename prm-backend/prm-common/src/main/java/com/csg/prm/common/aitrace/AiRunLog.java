@@ -1,4 +1,4 @@
-package com.csg.prm.confirm.entity;
+package com.csg.prm.common.aitrace;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
@@ -7,26 +7,39 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.csg.prm.common.entity.BaseEntity;
 
 /**
- * 大模型校验操作留痕(南网"全流程留痕追溯"):确权内生 AI 每次调用逐条落库——
- * 能力类型、模型、输入摘要、输出、耗时、触发人、SM3 指纹(防篡改)+ 关键节点存证ID。
- * 供人工预审与审计「AI 校验过程回放」与可复盘、可审计。物理表 IM_DPR_AI_RUNLOG。
+ * 大模型校验操作留痕(南网"全流程留痕追溯",跨域共享:确权 + 授权)。
+ * 每次内生 AI 调用逐条落库——业务域、能力类型、模型、输入摘要、输出、耗时、SM3 指纹(防篡改)、触发人。
+ * 供人工审核「AI 校验过程回放」与可复盘、可审计。物理表 IM_DPR_AI_RUNLOG。
  */
 @TableName("IM_DPR_AI_RUNLOG")
-public class ConfirmAiRunLog extends BaseEntity {
+public class AiRunLog extends BaseEntity {
 
-    /** 能力类型常量 */
+    /** 业务域 */
+    public static final String BIZ_CONFIRM = "确权";
+    public static final String BIZ_AUTHORIZE = "授权";
+
+    /** 能力类型常量(确权) */
     public static final String CAP_PARSE = "智能解析";
     public static final String CAP_DECISION = "决策研判";
     public static final String CAP_CONFLICT = "冲突识别";
     public static final String CAP_MATERIAL_CHECK = "材料校验";
+    /** 能力类型常量(授权) */
+    public static final String CAP_AUTH_MATERIAL_CHECK = "授权材料校验";
+    public static final String CAP_AUTH_PRECHECK = "合规预审";
+    public static final String CAP_AUTH_BATCH_INTENT = "批量意图解析";
 
     @TableId(value = "CEC_LOG_ID", type = IdType.ASSIGN_UUID)
     private String logId;
 
-    @TableField("CEC_APPLY_ID")
-    private String applyId;
+    /** 业务域(确权/授权) */
+    @TableField("CEC_BIZ_TYPE")
+    private String bizType;
 
-    /** 能力类型(智能解析/决策研判/冲突识别/材料校验) */
+    /** 业务主键(确权/授权申请ID),物理列沿用 CEC_APPLY_ID */
+    @TableField("CEC_APPLY_ID")
+    private String bizId;
+
+    /** 能力类型 */
     @TableField("CEC_CAPABILITY")
     private String capability;
 
@@ -34,7 +47,7 @@ public class ConfirmAiRunLog extends BaseEntity {
     @TableField("CEC_MODEL")
     private String model;
 
-    /** 输入摘要(申请要素/材料概要,便于复盘,避免存全量) */
+    /** 输入摘要(便于复盘,避免存全量) */
     @TableField("CEC_INPUT_SUMMARY")
     private String inputSummary;
 
@@ -50,11 +63,11 @@ public class ConfirmAiRunLog extends BaseEntity {
     @TableField("CEC_SM3_HASH")
     private String sm3Hash;
 
-    /** 触发人(操作留痕) */
+    /** 触发人 */
     @TableField("CEC_TRIGGER_USER")
     private String triggerUser;
 
-    /** 关键节点上链存证ID(可选,链上锚定) */
+    /** 关键节点上链存证ID(可选) */
     @TableField("CEC_EVIDENCE_ID")
     private String evidenceId;
 
@@ -66,12 +79,20 @@ public class ConfirmAiRunLog extends BaseEntity {
         this.logId = logId;
     }
 
-    public String getApplyId() {
-        return applyId;
+    public String getBizType() {
+        return bizType;
     }
 
-    public void setApplyId(String applyId) {
-        this.applyId = applyId;
+    public void setBizType(String bizType) {
+        this.bizType = bizType;
+    }
+
+    public String getBizId() {
+        return bizId;
+    }
+
+    public void setBizId(String bizId) {
+        this.bizId = bizId;
     }
 
     public String getCapability() {

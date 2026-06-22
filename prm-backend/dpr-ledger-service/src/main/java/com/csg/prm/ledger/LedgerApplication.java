@@ -13,7 +13,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication(scanBasePackages = "com.csg.prm")
 @EnableDiscoveryClient
 @EnableScheduling
-@MapperScan({"com.csg.prm.ledger.mapper", "com.csg.prm.ledger.monitor.mapper", "com.csg.prm.common.evidence.mapper"})
+@MapperScan({"com.csg.prm.ledger.mapper", "com.csg.prm.ledger.monitor.mapper", "com.csg.prm.common.evidence.mapper", "com.csg.prm.common.aitrace.mapper"})
 public class LedgerApplication {
 
     public static void main(String[] args) {

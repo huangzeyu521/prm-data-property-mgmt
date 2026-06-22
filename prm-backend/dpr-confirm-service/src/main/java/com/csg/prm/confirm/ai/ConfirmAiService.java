@@ -5,10 +5,10 @@ import com.csg.prm.common.api.ResultCode;
 import com.csg.prm.common.crypto.Sm3Util;
 import com.csg.prm.common.exception.BizException;
 import com.csg.prm.confirm.entity.ConfirmApply;
-import com.csg.prm.confirm.entity.ConfirmAiRunLog;
+import com.csg.prm.common.aitrace.AiRunLog;
 import com.csg.prm.confirm.entity.ConfirmMaterial;
 import com.csg.prm.confirm.entity.ConfirmMaterialRule;
-import com.csg.prm.confirm.service.ConfirmAiRunLogService;
+import com.csg.prm.common.aitrace.AiRunLogService;
 import com.csg.prm.confirm.service.ConfirmApplyService;
 import com.csg.prm.confirm.service.ConfirmMaterialRuleService;
 import com.csg.prm.confirm.service.ConfirmMaterialService;
@@ -66,13 +66,13 @@ public class ConfirmAiService {
     private final DawatAiGateway ai;
     private final ConfirmApplyService applyService;
     private final ConfirmMaterialService materialService;
-    private final ConfirmAiRunLogService runLogService;
+    private final AiRunLogService runLogService;
     private final ConfirmMaterialRuleService ruleService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public ConfirmAiService(DawatAiGateway ai, ConfirmApplyService applyService,
                             ConfirmMaterialService materialService,
-                            ConfirmAiRunLogService runLogService,
+                            AiRunLogService runLogService,
                             ConfirmMaterialRuleService ruleService) {
         this.ai = ai;
         this.applyService = applyService;
@@ -126,11 +126,11 @@ public class ConfirmAiService {
     /** 取该申请最近一次"材料校验"AI 留痕,解析逐材料的 verdict/issues。无则空。 */
     private Map<String, String[]> latestMaterialCheckVerdicts(String applyId) {
         Map<String, String[]> out = new HashMap<>();
-        List<ConfirmAiRunLog> logs = runLogService.listByApply(applyId);
-        ConfirmAiRunLog last = null;
-        for (ConfirmAiRunLog l : logs) {
-            if (ConfirmAiRunLog.CAP_MATERIAL_CHECK.equals(l.getCapability())) {
-                last = l; // listByApply 升序,循环结束 last 即最近一次
+        List<AiRunLog> logs = runLogService.listByBiz(applyId);
+        AiRunLog last = null;
+        for (AiRunLog l : logs) {
+            if (AiRunLog.CAP_MATERIAL_CHECK.equals(l.getCapability())) {
+                last = l; // listByBiz 升序,循环结束 last 即最近一次
             }
         }
         if (last == null || !StringUtils.hasText(last.getOutput())) {
@@ -163,7 +163,7 @@ public class ConfirmAiService {
         } catch (Exception e) {
             out = String.valueOf(result);
         }
-        runLogService.record(applyId, capability, ai.modelName(), inputSummary, out, durationMs);
+        runLogService.record(AiRunLog.BIZ_CONFIRM, applyId, capability, ai.modelName(), inputSummary, out, durationMs);
     }
 
     /** 智能解析:对申请已上传材料逐份抽权属要素(OCR权属)+ 敏感判定 + 内容指纹(SM3)查重。 */
@@ -203,7 +203,7 @@ public class ConfirmAiService {
         String summary = "解析 " + mats.size() + " 份材料:识别权属要素 " + items.size()
                 + " 项,敏感 " + sens + " 份,疑似重复 " + dup + " 份";
         ParseResult result = new ParseResult(items, mats.size(), dup, sens, summary);
-        traceLog(applyId, ConfirmAiRunLog.CAP_PARSE,
+        traceLog(applyId, AiRunLog.CAP_PARSE,
                 "资产:" + apply.getAssetName() + ";材料 " + mats.size() + " 份",
                 result, System.currentTimeMillis() - t0);
         return result;
@@ -214,7 +214,7 @@ public class ConfirmAiService {
         long t0 = System.currentTimeMillis();
         ConfirmApply a = mustApply(applyId);
         DawatAiGateway.ConflictResult result = ai.detectConflict(a.getAssetId(), a.getRightHolder(), a.getRightType());
-        traceLog(applyId, ConfirmAiRunLog.CAP_CONFLICT,
+        traceLog(applyId, AiRunLog.CAP_CONFLICT,
                 "资产:" + a.getAssetId() + ";主体:" + a.getRightHolder() + ";权类:" + a.getRightType(),
                 result, System.currentTimeMillis() - t0);
         return result;
@@ -242,7 +242,7 @@ public class ConfirmAiService {
                 + ";法规RAG置信:" + (rag == null ? "无" : rag.confidence())
                 + ";已上传材料:" + mats.size() + " 份";
         DecisionResult result = new DecisionResult(prediction, score, aiPrediction, supplement, conflicts, basis);
-        traceLog(applyId, ConfirmAiRunLog.CAP_DECISION,
+        traceLog(applyId, AiRunLog.CAP_DECISION,
                 "资产:" + a.getAssetName() + ";权类:" + a.getRightType() + ";材料 " + mats.size() + " 份",
                 result, System.currentTimeMillis() - t0);
         return result;

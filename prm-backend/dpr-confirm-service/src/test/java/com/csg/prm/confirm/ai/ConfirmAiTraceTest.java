@@ -1,15 +1,17 @@
 package com.csg.prm.confirm.ai;
 
-import com.csg.prm.confirm.entity.ConfirmAiRunLog;
+import com.csg.prm.common.aitrace.AiRunLog;
 import com.csg.prm.confirm.entity.ConfirmApply;
 import com.csg.prm.confirm.mapper.ConfirmApplyMapper;
-import com.csg.prm.confirm.service.ConfirmAiRunLogService;
+import com.csg.prm.common.aitrace.AiRunLogService;
 import com.csg.prm.confirm.service.ConfirmAiSnapshotService;
 import com.csg.prm.confirm.service.ConfirmApplyService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 import java.util.Map;
@@ -31,9 +33,10 @@ class ConfirmAiTraceTest {
 
     @Autowired private ConfirmApplyService applyService;
     @Autowired private ConfirmAiService aiService;
-    @Autowired private ConfirmAiRunLogService runLogService;
+    @Autowired private AiRunLogService runLogService;
     @Autowired private ConfirmAiSnapshotService snapshotService;
     @Autowired private ConfirmApplyMapper applyMapper;
+    @Autowired private PlatformTransactionManager txManager;
 
     private String draft() {
         ConfirmApply a = new ConfirmApply();
@@ -53,10 +56,10 @@ class ConfirmAiTraceTest {
         aiService.decision(id);  // 决策研判
         aiService.conflict(id);  // 冲突识别
 
-        List<ConfirmAiRunLog> logs = runLogService.listByApply(id);
+        List<AiRunLog> logs = runLogService.listByBiz(id);
         assertTrue(logs.size() >= 2, "每次 AI 调用应逐条留痕,实际 " + logs.size());
-        assertTrue(logs.stream().anyMatch(l -> ConfirmAiRunLog.CAP_DECISION.equals(l.getCapability())), "应含决策研判留痕");
-        assertTrue(logs.stream().anyMatch(l -> ConfirmAiRunLog.CAP_CONFLICT.equals(l.getCapability())), "应含冲突识别留痕");
+        assertTrue(logs.stream().anyMatch(l -> AiRunLog.CAP_DECISION.equals(l.getCapability())), "应含决策研判留痕");
+        assertTrue(logs.stream().anyMatch(l -> AiRunLog.CAP_CONFLICT.equals(l.getCapability())), "应含冲突识别留痕");
         assertTrue(logs.stream().allMatch(l -> l.getSm3Hash() != null && !l.getSm3Hash().isBlank()), "每条留痕应有 SM3 指纹");
         assertTrue(logs.stream().allMatch(l -> l.getModel() != null), "每条留痕应记录模型");
         assertTrue(logs.stream().allMatch(l -> l.getDurationMs() != null && l.getDurationMs() >= 0), "每条留痕应记录耗时");
@@ -82,6 +85,21 @@ class ConfirmAiTraceTest {
 
         Map<String, Object> v2 = snapshotService.verify(id);
         assertEquals(Boolean.FALSE, v2.get("verified"), "篡改后验真应失败(防篡改)");
+    }
+
+    @Test
+    void runlog_survives_business_transaction_rollback() {
+        // 审计留痕须独立于业务事务:即便业务事务回滚,"AI 调用已发生"的留痕也必须保留(REQUIRES_NEW)。
+        String bizId = "ROLLBACK-GUARD-" + draft();
+        TransactionTemplate tt = new TransactionTemplate(txManager);
+        tt.execute(status -> {
+            runLogService.record(AiRunLog.BIZ_CONFIRM, bizId, AiRunLog.CAP_MATERIAL_CHECK,
+                    "local-rule-stub", "in", "{\"overall\":\"通过\"}", 1L);
+            status.setRollbackOnly(); // 业务事务回滚
+            return null;
+        });
+        assertEquals(1, runLogService.listByBiz(bizId).size(),
+                "REQUIRES_NEW:留痕应独立于业务事务回滚而保留(可审计)");
     }
 
     @Test
