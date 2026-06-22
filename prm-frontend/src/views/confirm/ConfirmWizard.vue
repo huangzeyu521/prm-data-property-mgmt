@@ -225,8 +225,8 @@
                 <el-button link type="success">{{ row.done && row.source === '平台同步' ? '改用本地原件' : '上传原件' }}</el-button>
               </el-upload>
               <el-button link type="primary" :disabled="row.done" @click="registerMaterial(row)" style="margin-left:8px">仅登记</el-button>
-              <!-- 平台同步材料原件在平台,无本地可下载原件,不显示预览(避免点开 404) -->
-              <el-button v-if="row.materialId && row.source !== '平台同步'" link type="warning" style="margin-left:8px" @click="openFilePreview(materialFileUrl(row.materialId), row.fileName)">预览</el-button>
+              <!-- 平台同步材料已落地平台原件字节(fileUrl 存在)才可预览;无字节则不显示,避免点开 404 -->
+              <el-button v-if="row.materialId && (row.source !== '平台同步' || row.fileUrl)" link type="warning" style="margin-left:8px" @click="openFilePreview(materialFileUrl(row.materialId), row.fileName)">预览</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -316,8 +316,9 @@
           </el-table-column>
           <el-table-column label="原件" min-width="160">
             <template #default="{ row }">
-              <!-- 平台同步材料原件存于数据资产管理平台,本系统不提供下载,显示平台附件名 -->
-              <span v-if="row.source === '平台同步'" style="color:#67c23a" :title="row.fileName">{{ row.fileName }}（平台原件）</span>
+              <!-- 平台同步且已落地原件字节(fileUrl)才可在线预览;否则纯文本标注,不给会 404 的入口 -->
+              <el-link v-if="row.source === '平台同步' && row.fileUrl" type="success" @click="previewMaterial(row)" :title="row.fileName">{{ row.fileName }}（平台原件·预览）</el-link>
+              <span v-else-if="row.source === '平台同步'" style="color:#67c23a" :title="row.fileName">{{ row.fileName }}（平台原件）</span>
               <el-link v-else-if="row.fileName" type="primary" @click="previewMaterial(row)">{{ row.fileName }}（预览/下载）</el-link>
               <span v-else style="color:#bbb">占位/无原件</span>
             </template>
@@ -820,6 +821,7 @@ async function syncChecklistUploaded() {
       row.done = true
       if (m.materialId) row.materialId = m.materialId
       if (m.fileName) row.fileName = m.fileName
+      row.fileUrl = m.fileUrl || ''                    // 有原件字节才有 fileUrl(平台同步无字节则空)
       row.source = m.source || row.source || '用户上传' // 标记来源:平台同步 / 用户上传
     }
   }

@@ -35,6 +35,14 @@ public class AssetTableMetaService {
         return stubTables(assetId, assetName);
     }
 
+    /**
+     * 取平台已上传材料原件字节(供"平台同步材料"在线预览);平台未接入时由桩用随包样例兜底。
+     * 返回 null=无可取原件。
+     */
+    public byte[] fetchAttachment(String assetId, String fileName) {
+        return platform.fetchAttachment(assetId, fileName);
+    }
+
     /** 平台未接入:合成库表清单(模拟 TW_DATA_CARD + AU_TABLE_META_DATA)。 */
     private List<PlatformTableMeta> stubTables(String assetId, String assetName) {
         String id = StringUtils.hasText(assetId) ? assetId.trim() : "";
@@ -49,8 +57,8 @@ public class AssetTableMetaService {
                     "MKT_DB01", "MKT", "C_CONS_ELEC_INFO", "客户用电信息表", "客户用电信息(营销域)",
                     "敏感信息", "A 自行生产数据", "广东电网有限责任公司",
                     true, true, false, false, true,
-                    "客户用电信息_数据来源与系统建设投入说明.pdf", "营销数据行政监管要求补充说明.pdf",
-                    "用户入网协议(个人信息授权).pdf", null, null));
+                    "客户用电信息_数据来源与系统建设投入说明.docx", "营销数据行政监管要求补充说明.docx",
+                    "用户入网协议(个人信息授权).docx", null, null));
         }
         // 通用合成:一个系统下多张库表(体现"确权粒度到库表"),来源判定留空待用户/AI补全;平台附件均未采集(null)
         String base = id.replaceAll("[^A-Za-z0-9]", "").toUpperCase();

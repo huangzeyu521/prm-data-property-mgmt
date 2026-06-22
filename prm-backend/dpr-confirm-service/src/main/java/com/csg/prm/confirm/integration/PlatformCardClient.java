@@ -30,6 +30,12 @@ public interface PlatformCardClient {
     /** 入站:按 assetId 取该卡片/系统下库表清单(实例/schema/表/密级 + 已采集的来源判定)。空=未接入(服务层合成桩)。 */
     List<PlatformTableMeta> listTableMeta(String assetId);
 
+    /**
+     * 入站:按 assetId + 平台附件名,从平台元数据(AU_TABLE_META_DATA)取回该已上传材料原件字节,
+     * 供确权"平台同步材料"在线预览。返回 null=平台未接入/附件不存在(同步材料则无本地可预览原件)。
+     */
+    byte[] fetchAttachment(String assetId, String fileName);
+
     /** 出站:把某资产的产权/权益结论单向写回平台卡片。返回 true=平台已接收。 */
     boolean pushPropertyAndEquity(String assetId, Map<String, Object> property, List<Map<String, Object>> equity);
 }

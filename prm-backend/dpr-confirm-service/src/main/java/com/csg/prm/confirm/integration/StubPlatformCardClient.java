@@ -43,6 +43,42 @@ public class StubPlatformCardClient implements PlatformCardClient {
         return List.of();
     }
 
+    /**
+     * 平台未接入期间:用随包的 AST-001 真实样例材料(resources/platform-stub/*.docx)模拟"平台已上传原件",
+     * 使"平台同步材料"可在线预览。按附件名关键词映射到对应样例;无匹配返回 null(该材料无本地可预览原件)。
+     * 接入后替换为对平台附件下载 API 的真实 HTTP 取件。
+     */
+    @Override
+    public byte[] fetchAttachment(String assetId, String fileName) {
+        String resource = resourceFor(fileName);
+        if (resource == null) {
+            return null;
+        }
+        try (java.io.InputStream in = getClass().getResourceAsStream(resource)) {
+            return in == null ? null : in.readAllBytes();
+        } catch (java.io.IOException e) {
+            log.warn("[平台附件·STUB] 读取样例失败 resource={} err={}", resource, e.getMessage());
+            return null;
+        }
+    }
+
+    /** 附件名关键词 → 随包样例资源(ASCII 路径,避免中文类路径)。 */
+    private String resourceFor(String fileName) {
+        if (fileName == null) {
+            return null;
+        }
+        if (fileName.contains("监管")) {
+            return "/platform-stub/ast001-relation-g.docx";
+        }
+        if (fileName.contains("隐私") || fileName.contains("入网")) {
+            return "/platform-stub/ast001-privacy-h.docx";
+        }
+        if (fileName.contains("来源") || fileName.contains("投入") || fileName.contains("证明")) {
+            return "/platform-stub/ast001-source.docx";
+        }
+        return null;
+    }
+
     @Override
     public boolean pushPropertyAndEquity(String assetId, Map<String, Object> property, List<Map<String, Object>> equity) {
         log.info("[资产卡片写回·STUB] assetId={} 产权字段数={} 权益条目={} —— 平台接口未接入,仅构造载荷未真正写回",
