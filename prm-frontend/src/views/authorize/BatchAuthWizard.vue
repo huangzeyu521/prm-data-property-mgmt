@@ -74,7 +74,7 @@
         <el-divider />
         <el-row :gutter="16">
           <el-col :span="11">
-            <el-form ref="itemRef" :model="item" :rules="itemRules" label-width="100px">
+            <el-form ref="itemRef" :model="item" :rules="itemRules" label-width="130px">
               <el-form-item label="关联数据资产卡片" prop="assetId">
                 <el-select v-model="item.assetId" filterable remote clearable
                   :remote-method="searchAssets" :loading="assetSearching" style="width:100%"
