@@ -56,8 +56,9 @@ public class ConfirmApplyController {
                                @RequestParam(required = false) String assetName,
                                @RequestParam(required = false) String rightType,
                                @RequestParam(required = false) String reason,
-                               @RequestParam(required = false) String sourceRef) {
-        return R.ok(service.createReConfirm(assetId, assetName, rightType, reason, sourceRef));
+                               @RequestParam(required = false) String sourceRef,
+                               @RequestParam(required = false) String changeTrigger) {
+        return R.ok(service.createReConfirm(assetId, assetName, rightType, reason, sourceRef, changeTrigger));
     }
 
     /** 固化提交前 AI 校验结果快照(JSON),供人工预审完整复核·可追溯。提交前调用。 */

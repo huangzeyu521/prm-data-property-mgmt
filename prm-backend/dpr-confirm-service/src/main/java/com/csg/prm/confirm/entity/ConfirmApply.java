@@ -121,6 +121,10 @@ public class ConfirmApply extends BaseEntity {
     @TableField("CEC_REGISTER_TYPE")
     private String registerType;
 
+    /** 变更触发类型(仅确权变更):数据新增/数据来源变更/管理要求变更/权益到期/其他(附录F 权益变更四类)。 */
+    @TableField("CEC_CHANGE_TRIGGER")
+    private String changeTrigger;
+
     /** 申请模式:常规 / 一事一议(特殊事项单独审议) */
     @TableField("CEC_APPLY_MODE")
     private String applyMode;
@@ -167,6 +171,14 @@ public class ConfirmApply extends BaseEntity {
 
     public void setRegisterType(String registerType) {
         this.registerType = registerType;
+    }
+
+    public String getChangeTrigger() {
+        return changeTrigger;
+    }
+
+    public void setChangeTrigger(String changeTrigger) {
+        this.changeTrigger = changeTrigger;
     }
 
     public String getApplyMode() {

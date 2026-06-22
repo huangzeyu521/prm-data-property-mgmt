@@ -23,7 +23,8 @@ public interface ConfirmApplyService {
      * 供权益动态监测在识别"数据新增/来源变更/到期"时联动调用(附录F 3.3.2 季度重确权)。
      * @return 新建重确权申请ID
      */
-    String createReConfirm(String assetId, String assetName, String rightType, String reason, String sourceRef);
+    String createReConfirm(String assetId, String assetName, String rightType, String reason,
+                           String sourceRef, String changeTrigger);
 
     /** 固化提交前的 AI 校验结果快照(JSON),供人工预审完整复核·可追溯。在提交前调用。 */
     void saveAiSnapshot(String applyId, String snapshotJson);

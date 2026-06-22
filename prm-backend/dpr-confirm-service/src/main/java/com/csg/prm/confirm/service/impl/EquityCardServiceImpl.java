@@ -20,6 +20,7 @@ import com.csg.prm.confirm.service.EquityCardService;
 import com.csg.prm.confirm.service.EquityCertService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.UUID;
@@ -71,6 +72,25 @@ public class EquityCardServiceImpl implements EquityCardService {
     @Override
     @Transactional
     public String generateFromApply(ConfirmApply apply) {
+        // 确权变更:取代该资产+权利的前序"正常"卡片,保证"当前有效权益"唯一并形成版本链
+        boolean isChange = Boolean.TRUE.equals(apply.getReConfirm())
+                || "确权变更".equals(apply.getRegisterType());
+        int newVersion = 1;
+        String supersededNo = null;
+        if (isChange) {
+            List<EquityCard> priors = mapper.selectList(new LambdaQueryWrapper<EquityCard>()
+                    .eq(EquityCard::getAssetId, apply.getAssetId())
+                    .eq(EquityCard::getRightType, apply.getRightType())
+                    .eq(EquityCard::getCardStatus, EquityCard.STATUS_NORMAL)
+                    .orderByDesc(EquityCard::getVersion));
+            for (EquityCard prior : priors) {
+                int pv = prior.getVersion() == null ? 1 : prior.getVersion();
+                if (pv + 1 > newVersion) newVersion = pv + 1;
+                if (supersededNo == null) supersededNo = prior.getCardNo(); // 版本最高者为直接前序
+                transition(prior.getCardId(), prior.getCardStatus(), EquityCard.STATUS_INVALID,
+                        "被取代", "确权变更生成新版,本卡失效被取代");
+            }
+        }
         EquityCard card = new EquityCard();
         card.setCardNo(generateCardNo());
         card.setApplyId(apply.getApplyId());
@@ -82,6 +102,8 @@ public class EquityCardServiceImpl implements EquityCardService {
         card.setScope(deriveScope(apply.getApplyId()));
         card.setValidDate(apply.getValidDate());
         card.setCardStatus(EquityCard.STATUS_NORMAL);
+        card.setVersion(newVersion);
+        card.setSupersededCardNo(supersededNo);
         // 权益归集原则(F指导书):确权时网公司直接取得权益、直接归属中国南方电网有限责任公司
         //(五所口径:不存在"分省先确权再转让"的动作,确权即直接确给网公司)
         card.setConsolidatedUnit("中国南方电网有限责任公司");
@@ -138,6 +160,19 @@ public class EquityCardServiceImpl implements EquityCardService {
         }
         transition(cardId, cur.getCardStatus(), EquityCard.STATUS_INVALID, "注销",
                 reason == null ? "权属灭失/确权撤销" : reason);
+    }
+
+    @Override
+    public EquityCard findCurrentValid(String assetId, String rightType) {
+        if (!StringUtils.hasText(assetId)) {
+            return null;
+        }
+        return mapper.selectOne(new LambdaQueryWrapper<EquityCard>()
+                .eq(EquityCard::getAssetId, assetId)
+                .eq(StringUtils.hasText(rightType), EquityCard::getRightType, rightType)
+                .eq(EquityCard::getCardStatus, EquityCard.STATUS_NORMAL)
+                .orderByDesc(EquityCard::getVersion)
+                .last("LIMIT 1"));
     }
 
     @Override

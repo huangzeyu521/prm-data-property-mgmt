@@ -20,6 +20,11 @@ public class DataAssetInfo extends BaseEntity {
     @TableField("CEC_ASSET_NAME")
     private String assetName;
 
+    /**
+     * 数据资产形态(结构化/非结构化)。合法取值见 {@link com.csg.prm.ledger.enums.AssetDataType}。
+     * 现网存量全为"结构化";"非结构化"为预留位,本期确权链路暂不支持(详见该枚举说明)。
+     * 仍以 String 原样存取,勿在此基础上提前新增分支逻辑。
+     */
     @TableField("CEC_ASSET_TYPE")
     private String assetType;
 

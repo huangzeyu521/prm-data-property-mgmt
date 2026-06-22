@@ -62,6 +62,14 @@ public class EquityCard extends BaseEntity {
     @TableField("CEC_CONSOLIDATED_UNIT")
     private String consolidatedUnit;
 
+    /** 卡片版本号(确权变更每取代一次 +1,初始确权为 1)。 */
+    @TableField("CEC_VERSION")
+    private Integer version;
+
+    /** 前序被取代卡片号(确权变更时指向上一版"正常"卡;初始确权为空)——形成版本链。 */
+    @TableField("CEC_SUPERSEDED_NO")
+    private String supersededCardNo;
+
     public String getCardId() {
         return cardId;
     }
@@ -156,5 +164,21 @@ public class EquityCard extends BaseEntity {
 
     public void setConsolidatedUnit(String consolidatedUnit) {
         this.consolidatedUnit = consolidatedUnit;
+    }
+
+    public Integer getVersion() {
+        return version;
+    }
+
+    public void setVersion(Integer version) {
+        this.version = version;
+    }
+
+    public String getSupersededCardNo() {
+        return supersededCardNo;
+    }
+
+    public void setSupersededCardNo(String supersededCardNo) {
+        this.supersededCardNo = supersededCardNo;
     }
 }

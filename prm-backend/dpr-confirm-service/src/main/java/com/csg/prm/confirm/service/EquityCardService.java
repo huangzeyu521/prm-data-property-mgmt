@@ -32,6 +32,12 @@ public interface EquityCardService {
     /** 卡片变更历史 */
     List<EquityCardLog> listLogs(String cardId);
 
+    /**
+     * 当前有效权益卡片(资产+权利维度的最新"正常"卡,版本最高者)。
+     * 供确权变更"基于现状预填"与下游展示;无则返回 null。
+     */
+    EquityCard findCurrentValid(String assetId, String rightType);
+
     PageResult<EquityCard> page(PageQuery query);
 
     /**

@@ -12,6 +12,7 @@ import com.csg.prm.common.workflow.FlowTransition;
 import com.csg.prm.common.workflow.ProcessFlowEngine;
 import com.csg.prm.confirm.dto.ConfirmApplyQuery;
 import com.csg.prm.confirm.entity.ConfirmApply;
+import com.csg.prm.confirm.entity.EquityCard;
 import com.csg.prm.confirm.gateway.MetadataGateway;
 import com.csg.prm.confirm.mapper.ConfirmApplyMapper;
 import com.csg.prm.confirm.service.ConfirmApplyService;
@@ -139,7 +140,7 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
     @Override
     @Transactional
     public String createReConfirm(String assetId, String assetName, String rightType,
-                                  String reason, String sourceRef) {
+                                  String reason, String sourceRef, String changeTrigger) {
         if (!StringUtils.hasText(assetId)) {
             throw new BizException(ResultCode.PARAM_ERROR.getCode(), "关联资产ID不能为空");
         }
@@ -149,7 +150,18 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
         apply.setRightType(StringUtils.hasText(rightType) ? rightType : "数据持有权");
         apply.setPurpose(StringUtils.hasText(reason) ? reason : "监测联动派生重确权");
         apply.setReConfirm(Boolean.TRUE);
+        // 重确权即"确权变更"登记类型(附录F 表1),并归类变更触发动因
+        apply.setRegisterType("确权变更");
+        apply.setChangeTrigger(StringUtils.hasText(changeTrigger) ? changeTrigger : "权益到期");
         apply.setSourceRef(sourceRef);
+        // 基于现状预填:从前序当前有效权益卡片带出权属主体/权利类型(变更是对现状的修订,不空表重填)
+        EquityCard prior = equityCardService.findCurrentValid(assetId, apply.getRightType());
+        if (prior != null) {
+            apply.setRightHolder(prior.getRightOwner());
+            if (StringUtils.hasText(prior.getRightType())) {
+                apply.setRightType(prior.getRightType());
+            }
+        }
         apply.setStatus(ConfirmApply.STATUS_DRAFT);
         apply.setApplyNo(generateApplyNo());
         mapper.insert(apply);
