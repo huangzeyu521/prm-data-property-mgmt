@@ -122,7 +122,7 @@
             <el-date-picker v-model="filters.startTime" type="date" placeholder="开始" value-format="YYYY-MM-DD" size="small" style="width:130px" />
             <el-date-picker v-model="filters.endTime" type="date" placeholder="结束" value-format="YYYY-MM-DD" size="small" style="width:130px" />
             <el-button size="small" type="primary" :disabled="!assetId" @click="refresh(assetId)">筛选</el-button>
-            <el-button size="small" type="warning" :disabled="!assetId" @click="onExportWord">导出Word</el-button>
+            <el-button size="small" type="primary" :disabled="!assetId" @click="onExportWord">导出Word</el-button>
             <el-button size="small" :disabled="!assetId" @click="onPrintPdf">打印/PDF</el-button>
           </div>
           <!-- 打印态报告抬头(仅打印可见) -->
@@ -195,7 +195,7 @@
           <div style="display:flex;gap:8px">
             <el-input v-model="graphAsset" placeholder="资产ID" size="small" style="width:170px" />
             <el-button size="small" type="primary" :disabled="!graphAsset" @click="loadGraph">看图谱</el-button>
-            <el-button size="small" type="warning" :disabled="!graphAsset" @click="onSyncHistory">同步历史案例</el-button>
+            <el-button size="small" type="primary" :disabled="!graphAsset" @click="onSyncHistory">同步历史案例</el-button>
           </div>
         </div>
       </template>

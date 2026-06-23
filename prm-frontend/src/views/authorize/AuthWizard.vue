@@ -115,7 +115,7 @@
                 <el-upload :show-file-list="false" :http-request="(o)=>doUploadForItem(row.materialName, o.file)" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" style="display:inline-block">
                   <el-button link type="primary" :loading="matUploading">上传</el-button>
                 </el-upload>
-                <el-button v-if="row.uploaded" link type="warning" style="margin-left:6px" @click="previewChecklistItem(row.materialName)">预览</el-button>
+                <el-button v-if="row.uploaded" link type="primary" style="margin-left:6px" @click="previewChecklistItem(row.materialName)">预览</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -152,7 +152,7 @@
         <!-- 次要:AI 辅助(可选,不影响提交门禁) -->
         <div style="margin:2px 0 12px;color:#909399;font-size:12px">
           AI 辅助(可选,不影响提交):
-          <el-button link type="warning" :loading="preReviewing" @click="runPreReview">AI 合规预审</el-button>
+          <el-button link type="primary" :loading="preReviewing" @click="runPreReview">AI 合规预审</el-button>
         </div>
         <AiThinking v-bind="aiThink.state" />
         <!-- 统一待处理清单(单一闭环):合规不符/AI 存疑·不通过 → 去修正(回填报含应交材料)或复核确认 -->
@@ -203,7 +203,7 @@
           <template #extra>
             <div style="margin-bottom:10px">
               <el-button type="success" @click="go('/dpr/auth/review?applyId=' + applyId)">去审核(授权审核提交)</el-button>
-              <el-button type="warning" plain @click="go('/dpr/auth/agreement-seal')">去协议签章(双签附录D)</el-button>
+              <el-button type="primary" plain @click="go('/dpr/auth/agreement-seal')">去协议签章(双签附录D)</el-button>
             </div>
             <div class="wz-flow">后续闭环:多级审批 → 授权方/被授权方双签《运营授权协议(附录D)》→ 自动签发授权证书 → 执行授权</div>
             <div style="margin-top:14px">

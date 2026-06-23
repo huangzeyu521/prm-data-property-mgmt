@@ -49,7 +49,7 @@
               <el-button link type="info" @click="onReviewLogs(row)">审核记录</el-button>
             </template>
             <template v-else-if="action==='archive'">
-              <el-button link type="warning" :disabled="row.reviewStatus!=='审核通过'||row.archiveStatus==='已归档'" @click="onArchive(row)">归档</el-button>
+              <el-button link type="primary" :disabled="row.reviewStatus!=='审核通过'||row.archiveStatus==='已归档'" @click="onArchive(row)">归档</el-button>
               <el-button link type="info" @click="onArchiveLogs(row)">审计日志</el-button>
             </template>
             <template v-else>

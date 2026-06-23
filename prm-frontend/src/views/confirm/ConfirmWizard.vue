@@ -327,7 +327,7 @@
               </el-upload>
               <el-button link type="primary" :disabled="row.done" @click="registerMaterial(row)" style="margin-left:8px">仅登记</el-button>
               <!-- 平台同步材料已落地平台原件字节(fileUrl 存在)才可预览;无字节则不显示,避免点开 404 -->
-              <el-button v-if="row.materialId && (row.source !== '平台同步' || row.fileUrl)" link type="warning" style="margin-left:8px" @click="openFilePreview(materialFileUrl(row.materialId), row.fileName)">预览</el-button>
+              <el-button v-if="row.materialId && (row.source !== '平台同步' || row.fileUrl)" link type="primary" style="margin-left:8px" @click="openFilePreview(materialFileUrl(row.materialId), row.fileName)">预览</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -348,8 +348,8 @@
         <!-- 次要:AI 辅助研判(可选,不影响提交门禁) -->
         <div style="margin:2px 0 12px;color:#909399;font-size:12px">
           AI 辅助研判(可选,不影响提交):
-          <el-button link type="warning" :loading="aiChecking" @click="runAiCheck">AI 决策研判</el-button>
-          <el-button link type="warning" :loading="conflictChecking" @click="runConflict">权属冲突识别</el-button>
+          <el-button link type="primary" :loading="aiChecking" @click="runAiCheck">AI 决策研判</el-button>
+          <el-button link type="primary" :loading="conflictChecking" @click="runConflict">权属冲突识别</el-button>
         </div>
         <AiThinking v-bind="aiThink.state" />
         <!-- AI 决策研判:确权内生 AI(走 confirm-service /ai/decision) -->

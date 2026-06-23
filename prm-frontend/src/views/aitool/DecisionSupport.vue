@@ -16,7 +16,7 @@
         <el-form-item><el-button type="success" :loading="agentRunning" @click="onAgentAudit">Agent 多阶段审核</el-button></el-form-item>
         <el-form-item><el-button @click="onLedger">审核台账</el-button></el-form-item>
         <el-form-item>
-          <el-button type="warning" plain :loading="demoRunning" @click="runDemo">一键示例并研判(测试/演示)</el-button>
+          <el-button type="primary" plain :loading="demoRunning" @click="runDemo">一键示例并研判(测试/演示)</el-button>
         </el-form-item>
       </el-form>
       <span class="prm-table-note">综合 材料完整性30% / 权属无冲突40% / 合规15% / 历史匹配15% 加权;RAG 检索历史确权案例与《数据二十条》/南网制度条款,由大模型给出预测结论并与规则预测对照。</span>

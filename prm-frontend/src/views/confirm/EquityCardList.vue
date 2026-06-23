@@ -16,7 +16,7 @@
         <el-table-column label="操作" width="500" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="onDetail(row)">详情</el-button>
-            <el-button link type="warning" :disabled="row.cardStatus !== '正常'" @click="onChange(row)">发起变更</el-button>
+            <el-button link type="primary" :disabled="row.cardStatus !== '正常'" @click="onChange(row)">发起变更</el-button>
             <el-button link type="success" :disabled="row.cardStatus !== '正常'" @click="onAuthorize(row)">发起授权</el-button>
             <el-button link type="primary" @click="onPreview(row)">预览证书</el-button>
             <el-button link type="warning" :disabled="row.cardStatus !== '正常'" @click="onFreeze(row)">冻结</el-button>

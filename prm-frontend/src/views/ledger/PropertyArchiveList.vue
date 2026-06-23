@@ -40,7 +40,7 @@
         <el-table-column label="操作" width="150" align="center" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="onView(row)">查看</el-button>
-            <el-button v-if="row.state === '已确权'" link type="warning" @click="onChange(row)">发起变更</el-button>
+            <el-button v-if="row.state === '已确权'" link type="primary" @click="onChange(row)">发起变更</el-button>
           </template>
         </el-table-column>
       </el-table>

@@ -83,7 +83,7 @@
           <template #default="{ row }">
             <el-button link type="primary" :disabled="row.disposeStatus === '已关闭'" @click="onDispose(row)">处置</el-button>
             <el-button link type="success" :disabled="row.disposeStatus === '已关闭'" @click="onClose(row)">关闭</el-button>
-            <el-button link type="warning" @click="onPush(row)">推送</el-button>
+            <el-button link type="primary" @click="onPush(row)">推送</el-button>
           </template>
         </el-table-column>
       </el-table>

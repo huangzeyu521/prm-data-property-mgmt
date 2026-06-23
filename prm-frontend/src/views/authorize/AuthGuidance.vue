@@ -30,7 +30,7 @@
             <el-button link type="primary" @click="onView(row)">查看</el-button>
             <el-button link type="primary" @click="onEdit(row)">修改</el-button>
             <el-button link type="success" :disabled="!row.fileName" @click="onDownload(row)">下载</el-button>
-            <el-button link type="warning" @click="onVersions(row)">版本历史</el-button>
+            <el-button link type="primary" @click="onVersions(row)">版本历史</el-button>
             <el-button link type="danger" @click="onDel(row)">删除</el-button>
           </template>
         </el-table-column>

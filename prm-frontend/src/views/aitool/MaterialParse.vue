@@ -49,7 +49,7 @@
             <el-button link type="success" :disabled="row.parseStatus!=='成功'" @click="onView(row)">查看结果</el-button>
             <el-button link type="primary" :disabled="row.parseStatus!=='成功'" @click="onClean(row)">清洗标准化</el-button>
             <el-button link type="success" :disabled="row.parseStatus!=='成功'" @click="onProfile(row)">确权画像</el-button>
-            <el-button link type="warning" :disabled="row.parseStatus!=='成功'" @click="onExport(row)">导出Excel</el-button>
+            <el-button link type="primary" :disabled="row.parseStatus!=='成功'" @click="onExport(row)">导出Excel</el-button>
           </template>
         </el-table-column>
       </el-table>

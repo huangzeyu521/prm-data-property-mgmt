@@ -34,7 +34,7 @@
         <div class="ai-batch">
           <el-input v-model="aiBatchText" type="textarea" maxlength="500" show-word-limit :rows="2"
             placeholder="AI 批量填单:如 向南网综合能源股份有限公司授权台区负荷数据、充电桩运营数据、线损分析数据用于综合能源服务,数据加工使用权,批量授权" />
-          <el-button type="warning" :loading="aiParsing" style="margin-top:6px" @click="runAiBatch">大瓦特 AI 解析并预填明细</el-button>
+          <el-button type="primary" :loading="aiParsing" style="margin-top:6px" @click="runAiBatch">大瓦特 AI 解析并预填明细</el-button>
           <el-button v-if="aiItems.length" type="primary" plain :loading="aiAdding" style="margin-top:6px;margin-left:8px" @click="addAiItems">
             一键加入清单({{ aiItems.length }} 项)
           </el-button>
@@ -131,7 +131,7 @@
         <!-- 次要:AI 辅助(可选,不影响提交门禁) -->
         <div style="text-align:center;margin:4px 0 0;color:#909399;font-size:12px">
           AI 辅助(可选,不影响提交):
-          <el-button link type="warning" :loading="listReviewing" @click="runListPreReview">AI 清单预审(qwen3-max)</el-button>
+          <el-button link type="primary" :loading="listReviewing" @click="runListPreReview">AI 清单预审(qwen3-max)</el-button>
         </div>
         <AiThinking v-bind="aiThink.state" />
         <!-- 统一待处理清单(单一闭环):被拦明细逐项「去修正」(回 step1)→ 重新一键校验,直至通过 -->

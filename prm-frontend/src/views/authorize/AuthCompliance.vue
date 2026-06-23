@@ -9,7 +9,7 @@
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="warning" :disabled="!checkApplyId" :loading="running" @click="onRun">规则化校验</el-button>
+          <el-button type="primary" :disabled="!checkApplyId" :loading="running" @click="onRun">规则化校验</el-button>
           <el-button @click="onSearch">查询</el-button>
           <el-button @click="onExport">导出</el-button>
         </el-form-item>
