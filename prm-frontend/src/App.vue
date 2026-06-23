@@ -70,7 +70,11 @@
             <el-breadcrumb-item v-if="groupName">{{ groupName }}</el-breadcrumb-item>
             <el-breadcrumb-item>{{ pageTitle }}</el-breadcrumb-item>
           </el-breadcrumb>
-          <span v-if="pageGoal" class="prm-goal">本页目标:{{ pageGoal }}</span>
+          <div class="prm-crumb-right">
+            <span v-if="pageGoal" class="prm-goal" :title="pageGoal">本页目标:{{ pageGoal }}</span>
+            <!-- 统一页面操作区(右上角):各页主操作按钮经 PageActions 传送至此(规范:操作按钮置于页面右上角) -->
+            <div id="prm-page-actions" class="prm-page-actions"></div>
+          </div>
         </div>
         <div class="prm-content">
           <router-view :key="$route.fullPath" />
@@ -214,7 +218,11 @@ const openeds = computed(() => {
   height: 2px;
   background: #fff;
 }
-.prm-goal { margin-left: auto; font-size: 12px; color: #8a8a8a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 52%; }
+.prm-crumb-right { margin-left: auto; display: flex; align-items: center; gap: 12px; min-width: 0; }
+.prm-goal { font-size: 12px; color: #8a8a8a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 460px; }
+/* 统一页面操作区:面包屑行右上角,各页主操作按钮传送至此 */
+.prm-page-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.prm-page-actions:empty { display: none; }
 .prm-spacer { flex: 1; }
 .prm-search { width: 260px; }
 .prm-role { width: 150px; flex: none; }

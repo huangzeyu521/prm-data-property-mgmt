@@ -15,7 +15,9 @@
   --prm-color-text-weak: #8c8c8c;      /* 规范三级文本/说明(p6) */
   --prm-color-text-disabled: #b4b4b4;  /* 规范禁用/默认控件文字(p6) */
   --prm-color-border: #d8d8d8;
-  --prm-color-bg: #f5f5f6;
+  --prm-color-bg: #f5f5f6;             /* 表头/填充等中性底 */
+  --prm-color-page-bg: #f0f6ff;        /* 规范页面浅蓝背景(p21 系统栅格);卡片仍白 */
+  --prm-radius-tag: 2px;               /* 规范标签圆角(p34,区别于按钮 4px) */
   --prm-color-success: #36b21d;        /* 规范操作成功/确认(p6) */
   --prm-color-warning: #ffc417;        /* 规范警告/提示(p6,金黄,非橙) */
   --prm-color-danger: #e21f0c;         /* 规范错误提示(p6) */
@@ -68,7 +70,7 @@ body {
   font-family: var(--prm-font-family);
   font-size: var(--prm-font-size-base);
   color: var(--prm-color-text);
-  background: var(--prm-color-bg);
+  background: var(--prm-color-page-bg);
 }
 
 /* 必填红星固定在文字标签左侧(高压线第六条) */
@@ -177,5 +179,11 @@ body {
   --el-dialog-border-radius: var(--prm-radius);
 }
 .el-tag {
-  border-radius: var(--prm-radius);
+  border-radius: var(--prm-radius-tag);
 }
+/* 规范状态标签(p34):采用填充背景而非纯描边——把描边(plain)标签按类型统一填充浅色底 */
+.el-tag.is-plain { background-color: var(--el-color-info-light-9); }
+.el-tag--success.is-plain { background-color: var(--el-color-success-light-9); }
+.el-tag--warning.is-plain { background-color: var(--el-color-warning-light-9); }
+.el-tag--danger.is-plain { background-color: var(--el-color-danger-light-9); }
+.el-tag--info.is-plain { background-color: var(--el-color-info-light-9); }

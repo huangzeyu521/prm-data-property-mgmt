@@ -31,7 +31,7 @@
     </div>
 
     <el-dialog v-model="rcDlg" title="权属变动 · 联动派生重确权" width="500px" align-center>
-      <el-alert type="warning" :closable="false" show-icon style="margin-bottom:12px"
+      <el-alert type="info" :closable="false" show-icon style="margin-bottom:12px"
         title="附录F 3.3.2:数据新增/来源变更/到期将生成重要预警并派生重确权工单(草稿)进入确权流程。" />
       <el-form :model="rc" label-width="100px">
         <el-form-item label="资产ID" required><el-input v-model="rc.assetId" placeholder="发生权属变动的资产ID" /></el-form-item>

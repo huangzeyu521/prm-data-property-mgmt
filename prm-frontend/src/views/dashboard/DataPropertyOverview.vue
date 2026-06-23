@@ -1,32 +1,33 @@
 <template>
   <div class="prm-page">
     <h3 style="margin:0 0 16px 0">数据产权全景概览</h3>
+    <!-- 响应式断点(规范 p21 等效):≥md 宽屏多列,sm/xs 窄屏自动重排;Element 固定 24 栏,以断点 span 达成变栏等效 -->
     <el-row :gutter="16">
-      <el-col :span="4"><el-card shadow="hover"><div class="st"><b>{{ ov.totalAssets }}</b><span>数据资产总数</span></div></el-card></el-col>
-      <el-col :span="4"><el-card shadow="hover"><div class="st"><b class="blue">{{ ov.confirmRate }}%</b><span>确权覆盖率</span></div></el-card></el-col>
-      <el-col :span="4"><el-card shadow="hover"><div class="st"><b class="green">{{ cf.cardCount }}</b><span>权益卡片数</span></div></el-card></el-col>
-      <el-col :span="4"><el-card shadow="hover"><div class="st"><b class="blue">{{ cf.passRate }}%</b><span>确权通过率</span></div></el-card></el-col>
-      <el-col :span="4"><el-card shadow="hover"><div class="st"><b class="green">{{ au.certCount }}</b><span>授权证书数</span></div></el-card></el-col>
-      <el-col :span="4"><el-card shadow="hover"><div class="st"><b class="blue">{{ au.effectiveRate }}%</b><span>授权生效率</span></div></el-card></el-col>
+      <el-col :span="4" :sm="8" :xs="12"><el-card shadow="hover"><div class="st"><b>{{ ov.totalAssets }}</b><span>数据资产总数</span></div></el-card></el-col>
+      <el-col :span="4" :sm="8" :xs="12"><el-card shadow="hover"><div class="st"><b class="blue">{{ ov.confirmRate }}%</b><span>确权覆盖率</span></div></el-card></el-col>
+      <el-col :span="4" :sm="8" :xs="12"><el-card shadow="hover"><div class="st"><b class="green">{{ cf.cardCount }}</b><span>权益卡片数</span></div></el-card></el-col>
+      <el-col :span="4" :sm="8" :xs="12"><el-card shadow="hover"><div class="st"><b class="blue">{{ cf.passRate }}%</b><span>确权通过率</span></div></el-card></el-col>
+      <el-col :span="4" :sm="8" :xs="12"><el-card shadow="hover"><div class="st"><b class="green">{{ au.certCount }}</b><span>授权证书数</span></div></el-card></el-col>
+      <el-col :span="4" :sm="8" :xs="12"><el-card shadow="hover"><div class="st"><b class="blue">{{ au.effectiveRate }}%</b><span>授权生效率</span></div></el-card></el-col>
     </el-row>
 
     <div class="lk-title">权益闭环联动治理(确权↔授权↔监测)</div>
     <el-row :gutter="16">
-      <el-col :span="6"><el-card shadow="hover" class="lk"><div class="st"><b class="orange">{{ lk.reConfirmCount }}</b><span>重确权工单(联动派生)</span></div></el-card></el-col>
-      <el-col :span="6"><el-card shadow="hover" class="lk"><div class="st"><b class="red">{{ lk.suspendedCount }}</b><span>熔断暂停证书</span></div></el-card></el-col>
-      <el-col :span="6"><el-card shadow="hover" class="lk"><div class="st"><b class="orange">{{ lk.expiring }}</b><span>授权到期预警(30天)</span></div></el-card></el-col>
-      <el-col :span="6"><el-card shadow="hover" class="lk"><div class="st"><b class="green">{{ lk.closureRate }}%</b><span>风险整改闭环率</span></div></el-card></el-col>
+      <el-col :span="6" :sm="12" :xs="24"><el-card shadow="hover" class="lk"><div class="st"><b class="orange">{{ lk.reConfirmCount }}</b><span>重确权工单(联动派生)</span></div></el-card></el-col>
+      <el-col :span="6" :sm="12" :xs="24"><el-card shadow="hover" class="lk"><div class="st"><b class="red">{{ lk.suspendedCount }}</b><span>熔断暂停证书</span></div></el-card></el-col>
+      <el-col :span="6" :sm="12" :xs="24"><el-card shadow="hover" class="lk"><div class="st"><b class="orange">{{ lk.expiring }}</b><span>授权到期预警(30天)</span></div></el-card></el-col>
+      <el-col :span="6" :sm="12" :xs="24"><el-card shadow="hover" class="lk"><div class="st"><b class="green">{{ lk.closureRate }}%</b><span>风险整改闭环率</span></div></el-card></el-col>
     </el-row>
     <el-row :gutter="16" style="margin-top:16px">
-      <el-col :span="8"><el-card header="产权类型构成"><div ref="rtRef" style="height:300px"></div></el-card></el-col>
-      <el-col :span="8"><el-card header="确权状态分布"><div ref="csRef" style="height:300px"></div></el-card></el-col>
-      <el-col :span="8"><el-card header="授权模式分布"><div ref="amRef" style="height:300px"></div></el-card></el-col>
+      <el-col :span="8" :sm="12" :xs="24"><el-card header="产权类型构成"><div ref="rtRef" style="height:300px"></div></el-card></el-col>
+      <el-col :span="8" :sm="12" :xs="24"><el-card header="确权状态分布"><div ref="csRef" style="height:300px"></div></el-card></el-col>
+      <el-col :span="8" :sm="12" :xs="24"><el-card header="授权模式分布"><div ref="amRef" style="height:300px"></div></el-card></el-col>
     </el-row>
 
     <div class="lk-title">趋势与多维统计（部门/地域 · 时间 · 同比环比）</div>
     <el-row :gutter="16">
-      <el-col :span="16"><el-card header="确权登记趋势 + 同比(YoY)/环比(MoM)（月度）"><div ref="trendRef" style="height:320px"></div></el-card></el-col>
-      <el-col :span="8"><el-card header="授权状态分布"><div ref="authStatusRef" style="height:320px"></div></el-card></el-col>
+      <el-col :span="16" :sm="24" :xs="24"><el-card header="确权登记趋势 + 同比(YoY)/环比(MoM)（月度）"><div ref="trendRef" style="height:320px"></div></el-card></el-col>
+      <el-col :span="8" :sm="24" :xs="24"><el-card header="授权状态分布"><div ref="authStatusRef" style="height:320px"></div></el-card></el-col>
     </el-row>
     <el-row :gutter="16" style="margin-top:16px">
       <el-col :span="24"><el-card header="部门/地域分布（确权台账）"><div ref="regionRef" style="height:300px"></div></el-card></el-col>

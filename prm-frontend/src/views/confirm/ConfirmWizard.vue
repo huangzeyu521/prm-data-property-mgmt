@@ -46,7 +46,7 @@
           <el-form-item label="登记类型">
             <!-- R1 派生横幅:类型由资产确权状态唯一决定,不做随手 radio;已确权可经二次确认改为重新初始登记 -->
             <el-tag v-if="!assetConfirmState" type="info" effect="plain">请先选取资产,系统将按其确权状态自动判定登记类型</el-tag>
-            <el-alert v-else-if="form.registerType === '确权变更'" type="warning" :closable="false"
+            <el-alert v-else-if="form.registerType === '确权变更'" type="info" :closable="false"
               title="本次:确权变更 · 该资产已确权(对既有确权结论的修订,附录F §3.3.2 重新确权)">
               <el-button link type="primary" style="padding:0;height:auto" @click="requestInitialOverride">需要改为「重新初始登记」?</el-button>
             </el-alert>
@@ -265,19 +265,19 @@
 
       <!-- 步骤2:上传材料(先从平台元数据同步已上传材料,再补全缺口) -->
       <el-card v-show="step === 1" shadow="never">
-        <el-alert v-if="form.registerType === '确权变更' && form.changeTrigger" type="warning" :closable="false" style="margin-bottom:10px"
+        <el-alert v-if="form.registerType === '确权变更' && form.changeTrigger" type="info" :closable="false" style="margin-bottom:10px"
           :title="`确权变更(触发:${form.changeTrigger}）—— 应交材料已收敛为差异项,仅需提交与本次变更相关的材料,无需重复全套`" />
         <div class="prm-table-note" style="margin-bottom:10px">
           材料优先<b>从数据资产管理平台元数据同步已上传项</b>(标「已同步·平台」免上传),仅需补全平台未覆盖的缺口。补全时"上传原件"(仅 PDF/Word/JPG/PNG,自动格式验证)或"仅登记"占位。
-          <el-button size="small" type="primary" plain style="margin-left:12px" :loading="syncing" @click="doSyncPlatform(false)">
-            <el-icon><Refresh /></el-icon> 从平台同步已上传材料
+          <el-button size="small" type="primary" plain style="margin-left:12px" :loading="syncing" @click="doSyncPlatform(false)" title="从数据资产管理平台元数据同步已上传材料">
+            <el-icon><Refresh /></el-icon> 平台同步
           </el-button>
-          <el-button size="small" type="warning" plain style="margin-left:8px" :loading="parsing" @click="runParse">
-            <el-icon><MagicStick /></el-icon> 智能解析材料(要素抽取/敏感判定/内容查重)
+          <el-button size="small" type="primary" plain style="margin-left:8px" :loading="parsing" @click="runParse" title="智能解析材料:要素抽取 / 敏感判定 / 内容查重">
+            <el-icon><MagicStick /></el-icon> 智能解析
           </el-button>
         </div>
         <!-- 平台同步报告:已同步 N 项(平台已上传)/ 待补全 M 项 -->
-        <el-alert v-if="syncReport" :type="(syncReport.stillMissing && syncReport.stillMissing.length) ? 'warning' : 'success'"
+        <el-alert v-if="syncReport" :type="(syncReport.stillMissing && syncReport.stillMissing.length) ? 'info' : 'success'"
                   :closable="false" style="margin-bottom:10px">
           <div><b>平台材料同步:</b>{{ syncReport.summary }}</div>
           <div v-if="syncReport.synced && syncReport.synced.length" style="margin-top:4px">
@@ -460,15 +460,15 @@
       </el-card>
     </div>
 
-    <div class="wz-foot">
+    <PageActions>
       <el-button v-if="step > 0 && step < 3" @click="step--">上一步</el-button>
-      <el-button v-if="step === 0" type="primary" :loading="saving" @click="next0">下一步:上传材料</el-button>
-      <el-button v-if="step === 1" type="primary" @click="next1">下一步:材料校验</el-button>
+      <el-button v-if="step === 0" type="primary" :loading="saving" @click="next0">下一步</el-button>
+      <el-button v-if="step === 1" type="primary" @click="next1">下一步</el-button>
       <el-tooltip v-if="step === 2 && !canSubmit" content="请先通过材料校验(全部应交项完整且合规)" placement="top">
         <span><el-button type="primary" disabled>提交审核</el-button></span>
       </el-tooltip>
       <el-button v-else-if="step === 2" type="primary" :loading="submitting" @click="next2">提交审核</el-button>
-    </div>
+    </PageActions>
   </div>
 </template>
 
@@ -478,6 +478,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { autofillConfirm, saveConfirmDraft, uploadMaterial, uploadMaterialFile, materialFileUrl, listMaterialByApply, checkMaterial, runMaterialCheck, syncPlatformMaterials, pushMaterialReview, materialExportUrl, submitConfirm, saveAiSnapshot, saveTableItems, getConsolidation, aiMaterialCheck, listMaterialRules, aiParseConfirm, aiDecisionConfirm, aiConflictConfirm } from '@/api/confirm'
 import AiThinking from '@/components/AiThinking.vue'
+import PageActions from '@/components/PageActions.vue'
 import { useAiThinking } from '@/composables/useAiThinking'
 import { openFilePreview } from '@/composables/useFilePreview'
 import { AI_PHASES } from '@/lib/aiPhases'
@@ -1242,7 +1243,6 @@ function reset() {
 <style scoped>
 .wz-steps { max-width: 900px; margin: 8px auto 20px; }
 .wz-body { min-height: 320px; }
-.wz-foot { margin-top: 18px; display: flex; gap: 12px; justify-content: center; }
 .form-tip { font-size: 12px; color: #909399; line-height: 1.6; }
 .approve-chain { max-width: 880px; margin: 8px auto 0; }
 /* R3 维持原值折叠区:与 form-item 行距对齐,弱化呈现 */

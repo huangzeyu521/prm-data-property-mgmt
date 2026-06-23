@@ -217,15 +217,15 @@
       </el-card>
     </div>
 
-    <div class="wz-foot">
+    <PageActions>
       <el-button v-if="step > 0 && step < 3" @click="step--">上一步</el-button>
-      <el-button v-if="step === 0" type="primary" :loading="saving" @click="next0">下一步:合规校验</el-button>
-      <el-button v-if="step === 1" type="primary" :disabled="!canSubmit" @click="step = 2">下一步:提交审核</el-button>
+      <el-button v-if="step === 0" type="primary" :loading="saving" @click="next0">下一步</el-button>
+      <el-button v-if="step === 1" type="primary" :disabled="!canSubmit" @click="step = 2">下一步</el-button>
       <el-tooltip v-if="step === 2 && !canSubmit" content="请先通过合规校验(全部红线合规)" placement="top">
         <span><el-button type="primary" disabled>提交审核</el-button></span>
       </el-tooltip>
       <el-button v-else-if="step === 2" type="primary" :loading="submitting" @click="doSubmit">提交审核</el-button>
-    </div>
+    </PageActions>
   </div>
 </template>
 
@@ -237,6 +237,7 @@ import { saveAuthDraft, submitAuth, runAuthCompliance, pageScenario, uploadAuthM
 import { aiAuthIntent } from '@/api/confirm'
 import { aiAuthMaterialCheck, aiAuthPreReview } from '@/api/authorize'
 import AiThinking from '@/components/AiThinking.vue'
+import PageActions from '@/components/PageActions.vue'
 import { useAiThinking } from '@/composables/useAiThinking'
 import { openFilePreview } from '@/composables/useFilePreview'
 import { AI_PHASES } from '@/lib/aiPhases'
@@ -624,7 +625,6 @@ function reset() {
 <style scoped>
 .wz-steps { max-width: 900px; margin: 8px auto 20px; }
 .wz-body { min-height: 320px; }
-.wz-foot { margin-top: 18px; display: flex; gap: 12px; justify-content: center; }
 .wz-flow { background: #f7f9ff; border-radius: 8px; padding: 10px 16px; color: #4a5160; font-size: 13px; display: inline-block; }
 .auth-tip { font-size: 12px; color: #8a8a8a; line-height: 1.6; }
 </style>
