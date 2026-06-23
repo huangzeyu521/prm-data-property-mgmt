@@ -14,20 +14,6 @@
     <div class="wz-body">
       <!-- 步骤1:填写申请 -->
       <el-card v-show="step === 0" shadow="never">
-        <!-- P0 变更前后对照:确权变更时,以已有确权结论为基线,一眼看见改了什么/没改什么 -->
-        <div v-if="form.registerType === '确权变更' && changeBaseline" style="margin-bottom:12px">
-          <el-alert :type="changeDiff.length ? 'warning' : 'info'" :closable="false" :title="changeSummary" />
-          <el-table v-if="changeDiff.length" :data="changeDiff" border size="small" style="margin-top:8px;max-width:840px">
-            <el-table-column prop="key" label="变更维度" width="150" />
-            <el-table-column label="原值(已有确权)" min-width="180">
-              <template #default="{ row }"><span style="color:#909399;text-decoration:line-through">{{ row.before || '空' }}</span></template>
-            </el-table-column>
-            <el-table-column label="新值(本次变更)" min-width="180">
-              <template #default="{ row }"><span style="color:#e6a23c;font-weight:600">{{ row.after || '空' }}</span></template>
-            </el-table-column>
-          </el-table>
-          <div style="font-size:12px;color:#67c23a;margin-top:4px">另有 {{ changeUnchanged }} 项维持原值(无需改动)。</div>
-        </div>
         <el-alert v-if="!applyId" type="info" :closable="false" style="margin-bottom:12px;max-width:640px">
           <template #title>
             第一次填写?可
@@ -56,11 +42,60 @@
               元数据质量评分 {{ quality }}{{ quality < 80 ? ' · 低于80,提交将被自动驳回(请先治理元数据)' : '' }}
             </el-tag>
           </el-form-item>
+          <!-- A区·定性:选完资产即在岔路口当场讲清「初始/变更·因何变更·改了什么」 -->
+          <el-form-item label="登记类型">
+            <!-- R1 派生横幅:类型由资产确权状态唯一决定,不做随手 radio;已确权可经二次确认改为重新初始登记 -->
+            <el-tag v-if="!assetConfirmState" type="info" effect="plain">请先选取资产,系统将按其确权状态自动判定登记类型</el-tag>
+            <el-alert v-else-if="form.registerType === '确权变更'" type="warning" :closable="false"
+              title="本次:确权变更 · 该资产已确权(对既有确权结论的修订,附录F §3.3.2 重新确权)">
+              <el-button link type="primary" style="padding:0;height:auto" @click="requestInitialOverride">需要改为「重新初始登记」?</el-button>
+            </el-alert>
+            <el-alert v-else :type="assetConfirmed ? 'warning' : 'success'" :closable="false"
+              :title="assetConfirmed
+                ? '本次:初始确权(您已选择对已确权资产重新初始登记,将作为全新确权提交)'
+                : `本次:初始确权 · 该资产未确权(状态:${assetConfirmState})`">
+              <el-button v-if="assetConfirmed" link type="primary" style="padding:0;height:auto" @click="revertToChange">恢复为「确权变更」</el-button>
+            </el-alert>
+          </el-form-item>
+          <!-- 确权变更差异化(附录F §3.3.2 重新确权):须选变更触发类型 -->
+          <el-form-item v-if="form.registerType === '确权变更'" prop="changeTrigger" required>
+            <template #label><span style="color:#f56c6c">*</span> 变更触发类型</template>
+            <el-select v-model="form.changeTrigger" placeholder="本次确权变更的触发动因(附录F §3.3.2)" style="width:100%">
+              <el-option label="数据新增" value="数据新增" />
+              <el-option label="数据来源变更" value="数据来源变更" />
+              <el-option label="管理要求变更" value="管理要求变更" />
+              <el-option label="数据权益到期" value="权益到期" />
+              <el-option label="其他" value="其他" />
+            </el-select>
+            <div class="form-tip">确权变更=对该资产已有确权结论的修订;下方字段已基于现状预填,请只改动发生变动的维度。</div>
+          </el-form-item>
+          <!-- P0 变更前后对照:落在编辑区之前,先给基线语境(一眼看见改了什么/没改什么) -->
+          <div v-if="form.registerType === '确权变更' && changeBaseline" style="margin-bottom:18px">
+            <el-alert :type="changeDiff.length ? 'warning' : 'info'" :closable="false" :title="changeSummary" />
+            <el-table v-if="changeDiff.length" :data="changeDiff" border size="small" style="margin-top:8px;max-width:840px">
+              <el-table-column prop="key" label="变更维度" width="150" />
+              <el-table-column label="原值(已有确权)" min-width="180">
+                <template #default="{ row }"><span style="color:#909399;text-decoration:line-through">{{ row.before || '空' }}</span></template>
+              </el-table-column>
+              <el-table-column label="新值(本次变更)" min-width="180">
+                <template #default="{ row }"><span style="color:#e6a23c;font-weight:600">{{ row.after || '空' }}</span></template>
+              </el-table-column>
+            </el-table>
+            <div style="font-size:12px;color:#67c23a;margin-top:4px">另有 {{ changeUnchanged }} 项维持原值(无需改动)。</div>
+          </div>
           <el-form-item label="资产名称" prop="assetName"><el-input v-model="form.assetName" readonly placeholder="选取卡片后自动带出" /></el-form-item>
           <el-form-item label="所属业务系统">
             <el-input v-model="form.systemName" placeholder="选取卡片后自动带出(附录F表1 系统名称)">
               <template #suffix><span v-if="form.systemName" style="color:#67c23a;font-size:12px">平台卡片</span></template>
             </el-input>
+          </el-form-item>
+          <el-form-item label="申报权属主体">
+            <el-input v-model="form.rightHolder" placeholder="当前申报主体,最终权属以确权审核结果为准" />
+            <div class="form-tip">分省上报的数据产权,确权通过后统一归口中国南方电网有限责任公司</div>
+            <div v-if="dimMarks['权属主体']" class="form-tip" style="margin-top:2px">
+              <el-tag v-if="dimMarks['权属主体'].changed" size="small" type="warning" effect="plain">已修改 · 原值「{{ dimMarks['权属主体'].before || '空' }}」</el-tag>
+              <el-tag v-else size="small" type="info" effect="plain">维持原值</el-tag>
+            </div>
           </el-form-item>
           <el-form-item label="权属类型" prop="rightTypes">
             <el-select v-model="form.rightTypes" multiple style="width:100%" placeholder="可多选,多种权属类型合并一份申请">
@@ -69,14 +104,6 @@
             <div class="form-tip">支持多选:多种权属类型合并发起同一份申请(评审优化)</div>
             <div v-if="dimMarks['权属类型']" class="form-tip" style="margin-top:2px">
               <el-tag v-if="dimMarks['权属类型'].changed" size="small" type="warning" effect="plain">已修改 · 原值「{{ dimMarks['权属类型'].before || '空' }}」</el-tag>
-              <el-tag v-else size="small" type="info" effect="plain">维持原值</el-tag>
-            </div>
-          </el-form-item>
-          <el-form-item label="申报权属主体">
-            <el-input v-model="form.rightHolder" placeholder="当前申报主体,最终权属以确权审核结果为准" />
-            <div class="form-tip">分省上报的数据产权,确权通过后统一归口中国南方电网有限责任公司</div>
-            <div v-if="dimMarks['权属主体']" class="form-tip" style="margin-top:2px">
-              <el-tag v-if="dimMarks['权属主体'].changed" size="small" type="warning" effect="plain">已修改 · 原值「{{ dimMarks['权属主体'].before || '空' }}」</el-tag>
               <el-tag v-else size="small" type="info" effect="plain">维持原值</el-tag>
             </div>
           </el-form-item>
@@ -97,28 +124,6 @@
               <template #suffix><span v-if="form.contactInfo" style="color:#67c23a;font-size:12px">平台卡片</span></template>
             </el-input>
           </el-form-item>
-          <el-form-item label="登记类型">
-            <el-radio-group v-model="form.registerType" @change="onRegisterTypeChange">
-              <el-radio value="初始确权">初始确权</el-radio>
-              <el-radio value="确权变更">确权变更</el-radio>
-            </el-radio-group>
-            <div v-if="assetConfirmState" class="form-tip">
-              <span v-if="assetConfirmed" style="color:#e6a23c">该资产<b>已确权</b>,选取后默认「确权变更」;如确需重新初始登记请知悉已存在确权结论。</span>
-              <span v-else style="color:#67c23a">该资产<b>未确权</b>(状态:{{ assetConfirmState }}),默认「初始确权」。</span>
-            </div>
-          </el-form-item>
-          <!-- 确权变更差异化(附录F §3.3.2 重新确权):须选变更触发类型 -->
-          <el-form-item v-if="form.registerType === '确权变更'" prop="changeTrigger" required>
-            <template #label><span style="color:#f56c6c">*</span> 变更触发类型</template>
-            <el-select v-model="form.changeTrigger" placeholder="本次确权变更的触发动因(附录F §3.3.2)" style="width:100%">
-              <el-option label="数据新增" value="数据新增" />
-              <el-option label="数据来源变更" value="数据来源变更" />
-              <el-option label="管理要求变更" value="管理要求变更" />
-              <el-option label="数据权益到期" value="权益到期" />
-              <el-option label="其他" value="其他" />
-            </el-select>
-            <div class="form-tip">确权变更=对该资产已有确权结论的修订;下方字段已基于现状预填,请只改动发生变动的维度。</div>
-          </el-form-item>
           <el-form-item label="管制属性">
             <el-radio-group v-model="form.regulated">
               <el-radio value="管制业务">管制业务</el-radio>
@@ -133,18 +138,39 @@
             </el-radio-group>
             <div class="form-tip">权属复杂/跨主体/全网统一转让等特殊场景选择"一事一议",由合规管控小组单独组织审议</div>
           </el-form-item>
-          <el-form-item label="来源权益识别">
+          <!-- R3 渐进披露:确权变更按触发聚焦相关识别维度,其余折叠为"维持原值"(只折叠不隐藏,与后端材料收敛同源) -->
+          <el-alert v-if="changeNarrowing" type="info" :closable="false" style="margin-bottom:12px"
+            :title="`已按变更触发「${form.changeTrigger}」聚焦相关识别维度,其余维持原值已折叠;如确有变动请展开修改`" />
+          <el-form-item v-if="focusSource" label="来源权益识别">
             <el-checkbox-group v-model="form.sourceIdent">
               <el-checkbox v-for="s in sourceOpts" :key="s.v" :value="s.v">{{ s.v }} {{ s.t }}</el-checkbox>
             </el-checkbox-group>
             <div class="form-tip">已按所选卡片的库表元数据(来源判定)自动聚合预勾,可手动调整</div>
           </el-form-item>
-          <el-form-item label="信息关联识别">
+          <el-collapse v-else class="change-fold">
+            <el-collapse-item>
+              <template #title><span style="color:#909399">来源权益识别 · 维持原值(本次触发不涉来源,点击展开修改)</span></template>
+              <el-checkbox-group v-model="form.sourceIdent">
+                <el-checkbox v-for="s in sourceOpts" :key="s.v" :value="s.v">{{ s.v }} {{ s.t }}</el-checkbox>
+              </el-checkbox-group>
+              <div class="form-tip">已按所选卡片的库表元数据(来源判定)自动聚合预勾,可手动调整</div>
+            </el-collapse-item>
+          </el-collapse>
+          <el-form-item v-if="focusRelation" label="信息关联识别">
             <el-checkbox-group v-model="form.relationIdent">
               <el-checkbox v-for="r in relationOpts" :key="r.v" :value="r.v">{{ r.v }} {{ r.t }}</el-checkbox>
             </el-checkbox-group>
             <div class="form-tip">已按库表元数据(G行政监管/H个人隐私/I第三方商密/J其他协议)自动聚合预勾,可手动调整</div>
           </el-form-item>
+          <el-collapse v-else class="change-fold">
+            <el-collapse-item>
+              <template #title><span style="color:#909399">信息关联识别 · 维持原值(本次触发不涉关联,点击展开修改)</span></template>
+              <el-checkbox-group v-model="form.relationIdent">
+                <el-checkbox v-for="r in relationOpts" :key="r.v" :value="r.v">{{ r.v }} {{ r.t }}</el-checkbox>
+              </el-checkbox-group>
+              <div class="form-tip">已按库表元数据(G行政监管/H个人隐私/I第三方商密/J其他协议)自动聚合预勾,可手动调整</div>
+            </el-collapse-item>
+          </el-collapse>
           <template v-if="needTable2">
             <el-divider content-position="left" style="font-size:12px;color:#909399">表2 涉及第三方权益(结构化)</el-divider>
             <el-form-item label="来源主体名称" prop="sourceSubject">
@@ -441,7 +467,7 @@
 <script setup>
 import { computed, reactive, ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { autofillConfirm, saveConfirmDraft, uploadMaterial, uploadMaterialFile, materialFileUrl, listMaterialByApply, checkMaterial, runMaterialCheck, syncPlatformMaterials, pushMaterialReview, materialExportUrl, submitConfirm, saveAiSnapshot, saveTableItems, getConsolidation, aiMaterialCheck, listMaterialRules, aiParseConfirm, aiDecisionConfirm, aiConflictConfirm } from '@/api/confirm'
 import AiThinking from '@/components/AiThinking.vue'
 import { useAiThinking } from '@/composables/useAiThinking'
@@ -849,13 +875,40 @@ const dimMarks = computed(() => {
   }
   return map
 })
-// 登记类型门禁:已确权却手动选「初始确权」→ 提示(附录F:已确权应走确权变更)
-function onRegisterTypeChange(val) {
-  if (val === '初始确权') {
-    if (assetConfirmed.value) ElMessage.warning('该资产已确权,若需修订请选「确权变更」;选择「初始确权」将重复登记')
+// R1 登记类型派生横幅:类型由资产确权状态唯一决定(已确权→变更,否则→初始),不做随手 radio。
+// 已确权资产如确需"重新初始登记",经二次确认方可覆盖,杜绝误选造成重复确权。
+async function requestInitialOverride() {
+  try {
+    await ElMessageBox.confirm(
+      '该资产已存在确权结论。「重新初始登记」将作为全新初始确权提交,可能与既有确权结论重复或冲突;如只是信息发生变动,请用「确权变更」。确认要重新初始登记吗?',
+      '重新初始登记确认', { type: 'warning', confirmButtonText: '确认重新初始登记', cancelButtonText: '取消' })
+    form.registerType = '初始确权'
     form.changeTrigger = '' // 初始确权无变更触发类型
-  }
+  } catch (e) { /* 取消:维持确权变更 */ }
 }
+function revertToChange() {
+  form.registerType = '确权变更'
+}
+
+// R3 渐进披露:确权变更按触发类型聚焦相关识别维度,其余折叠为"维持原值"(只折叠不隐藏)。
+// 与后端 ConfirmMaterialRuleService.narrowForChange 同源:来源/新增→留来源;管理/监管→留关联;
+// 其他/未知→保守全展开;到期→均不聚焦(仅核心,与后端材料收敛口径一致)。
+const changeKnownTrigger = computed(() => {
+  const t = form.changeTrigger || ''
+  return ['来源', '新增', '管理', '监管', '到期'].some(k => t.includes(k)) || t === '其他'
+})
+const changeNarrowing = computed(() =>
+  form.registerType === '确权变更' && !!form.changeTrigger && changeKnownTrigger.value && form.changeTrigger !== '其他')
+const focusSource = computed(() => {
+  if (!changeNarrowing.value) return true
+  const t = form.changeTrigger
+  return t.includes('来源') || t.includes('新增')
+})
+const focusRelation = computed(() => {
+  if (!changeNarrowing.value) return true
+  const t = form.changeTrigger
+  return t.includes('管理') || t.includes('监管')
+})
 async function searchAssets(kw) {
   if (!kw) { assetOpts.value = []; return }
   assetSearching.value = true
@@ -1159,7 +1212,7 @@ function reset() {
   step.value = 0; applyId.value = ''; applyNo.value = ''; quality.value = null
   checklist.value = []; materials.value = []
   Object.assign(form, { assetId: '', assetName: '', systemName: '', rightTypes: [], rightHolder: '', respDept: '', systemOwner: '', contactInfo: '', assetSecretLevel: '', region: '', registerType: '初始确权', changeTrigger: '', applyMode: '常规', purpose: '', thirdPartyInfo: '', sourceSubject: '', sourceLimit: '', relationSubject: '', equityRisk: '', privacyInfo: '', sourceIdent: [], relationIdent: [] })
-  assetConfirmState.value = ''; assetConfirmed.value = false
+  assetConfirmState.value = ''; assetConfirmed.value = false; changeBaseline.value = null
   tableItems.value = []; tableItemText.value = ''
 }
 </script>
@@ -1170,4 +1223,7 @@ function reset() {
 .wz-foot { margin-top: 18px; display: flex; gap: 12px; justify-content: center; }
 .form-tip { font-size: 12px; color: #909399; line-height: 1.6; }
 .approve-chain { max-width: 880px; margin: 8px auto 0; }
+/* R3 维持原值折叠区:与 form-item 行距对齐,弱化呈现 */
+.change-fold { margin-bottom: 18px; border-top: none; border-bottom: none; }
+.change-fold :deep(.el-collapse-item__header) { font-size: 13px; height: 36px; line-height: 36px; }
 </style>
