@@ -85,11 +85,11 @@ class AitMaterialAdvancedTest {
         assertTrue(m.getLayoutJson().contains("公章"), "文件名含'章' → 版面应检出公章区域");
     }
 
-    /** #4 材料类别归集:按内容/文件名归类。 */
+    /** #4 资料类型归集(CEC_DATA_TYPE):按内容/文件名归类,落库存规范编码 01–07。 */
     @Test
     void category_classified() throws Exception {
         String id = service.uploadBinary("数据授权材料.xlsx", xlsxBytes(), null, null, null);
-        assertEquals("授权材料", service.getMaterial(id).getCategory());
+        assertEquals("03", service.getMaterial(id).getCategory(), "授权材料 → 编码 03");
     }
 
     /** #6 重复检测:同内容指纹的第二份标记 duplicateOf。 */

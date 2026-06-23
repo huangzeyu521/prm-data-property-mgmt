@@ -14,6 +14,7 @@ import com.csg.prm.confirm.aitool.entity.AitCompare;
 import com.csg.prm.confirm.aitool.entity.AitDocSegment;
 import com.csg.prm.confirm.aitool.entity.AitMaterial;
 import com.csg.prm.confirm.aitool.entity.AitParseResult;
+import com.csg.prm.confirm.aitool.enums.MaterialDataType;
 import com.csg.prm.confirm.aitool.term.AitTermLibrary;
 import com.csg.prm.confirm.aitool.gateway.AiToolParseGateway;
 import com.csg.prm.confirm.aitool.mapper.AitCompareMapper;
@@ -197,13 +198,13 @@ public class AitMaterialServiceImpl implements AitMaterialService {
         return dup == null ? null : dup.getMaterialId();
     }
 
-    /** #4 材料类别:优先模型(qwen),失败回退规则。 */
+    /** #4 资料类型(CEC_DATA_TYPE):优先模型(qwen),失败回退规则;统一存规范编码 01–07。 */
     private String safeClassify(String fileName, String content) {
         try {
             String c = parseGateway.classifyCategory(fileName, content);
-            return StringUtils.hasText(c) ? c : "其他";
+            return StringUtils.hasText(c) ? MaterialDataType.codeOf(c) : MaterialDataType.OTHER.getCode();
         } catch (RuntimeException e) {
-            return "其他";
+            return MaterialDataType.OTHER.getCode();
         }
     }
 

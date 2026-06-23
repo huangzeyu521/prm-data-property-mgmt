@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS IM_AIT_MATERIAL (
   CEC_PROGRESS      INT DEFAULT 0 COMMENT '进度',
   CEC_STORAGE_PATH  VARCHAR(500) COMMENT '存储路径',
   CEC_CONTENT       TEXT        COMMENT '抽取正文',
-  CEC_CATEGORY      VARCHAR(50) COMMENT '材料类别(元数据/制度附件/授权材料/合同材料/来源说明/确权证明等)',
+  CEC_CATEGORY      VARCHAR(50) COMMENT '资料类型编码(CEC_DATA_TYPE):01元数据/02制度附件/03授权材料/04合同材料/05来源说明/06确权证明/07其他',
   CEC_DATA_TABLE_REF VARCHAR(255) COMMENT '所属数据表标识(归集关联键)',
   CEC_LAYOUT_JSON   TEXT        COMMENT '版面分析结果JSON(印章/表格/标题/分栏/页类型)',
   CEC_DUPLICATE_OF  VARCHAR(64) COMMENT '重复检测命中的原材料ID',

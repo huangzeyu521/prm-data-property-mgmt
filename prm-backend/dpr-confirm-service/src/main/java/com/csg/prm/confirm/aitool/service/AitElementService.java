@@ -7,6 +7,7 @@ import com.csg.prm.confirm.aitool.entity.AitDocSegment;
 import com.csg.prm.confirm.aitool.entity.AitMaterial;
 import com.csg.prm.confirm.aitool.entity.AitParseResult;
 import com.csg.prm.confirm.aitool.entity.AitProfile;
+import com.csg.prm.confirm.aitool.enums.MaterialDataType;
 import com.csg.prm.confirm.aitool.entity.AitProfileSubject;
 import com.csg.prm.confirm.aitool.gateway.AiToolParseGateway;
 import com.csg.prm.confirm.aitool.mapper.AitConstraintMapper;
@@ -385,8 +386,10 @@ public class AitElementService {
     }
 
     private String inferLevel(AitMaterial m) {
-        String c = m.getCategory();
-        if ("元数据".equals(c) || "确权证明".equals(c) || c == null) {
+        // 资料类型编码归一(兼容历史中文存量):01 元数据 / 06 确权证明 → 表级,其余 → 附件级
+        String c = m.getCategory() == null ? null : MaterialDataType.codeOf(m.getCategory());
+        if (MaterialDataType.METADATA.getCode().equals(c)
+                || MaterialDataType.CONFIRM_PROOF.getCode().equals(c) || c == null) {
             return AitProfile.LEVEL_TABLE;
         }
         return AitProfile.LEVEL_ATTACHMENT;

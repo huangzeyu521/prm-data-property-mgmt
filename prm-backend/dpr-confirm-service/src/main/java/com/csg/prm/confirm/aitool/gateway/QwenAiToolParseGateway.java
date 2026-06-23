@@ -243,19 +243,9 @@ public class QwenAiToolParseGateway implements AiToolParseGateway {
         return m;
     }
 
-    private static final java.util.List<String> CATEGORIES = java.util.List.of(
-            "元数据", "制度附件", "授权材料", "合同材料", "来源说明", "确权证明", "其他");
-
+    /** 模型输出的中文类别词收敛为规范资料类型编码 01–07(联调清单 行25 / CEC_DATA_TYPE)。 */
     private static String normalizeCategory(String out) {
-        if (out == null) {
-            return "其他";
-        }
-        for (String c : CATEGORIES) {
-            if (out.contains(c)) {
-                return c;
-            }
-        }
-        return "其他";
+        return com.csg.prm.confirm.aitool.enums.MaterialDataType.codeOf(out);
     }
 
     /** 解析 qwen-vl 返回 JSON 为 OcrLayout(容忍代码块/前后缀)。 */

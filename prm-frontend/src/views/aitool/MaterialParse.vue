@@ -21,8 +21,8 @@
           </template>
         </el-table-column>
         <el-table-column prop="fileType" label="类型" width="72" align="center" />
-        <el-table-column prop="category" label="类别" width="96" align="center">
-          <template #default="{ row }"><el-tag v-if="row.category" size="small" effect="plain">{{ row.category }}</el-tag><span v-else>—</span></template>
+        <el-table-column prop="category" label="资料类型" width="100" align="center">
+          <template #default="{ row }"><el-tag v-if="row.category" size="small" effect="plain">{{ dataTypeLabel(row.category) }}</el-tag><span v-else>—</span></template>
         </el-table-column>
         <el-table-column prop="sizeKb" label="大小" width="92" align="right"><template #default="{ row }">{{ fmtSize(row.sizeKb) }}</template></el-table-column>
         <el-table-column prop="batchNo" label="批次" width="120" show-overflow-tooltip />
@@ -193,8 +193,8 @@
         <div class="agg-title">📄 {{ g.dataTableRef }} <span class="prm-table-note">({{ g.materials.length }} 份)</span></div>
         <el-table :data="g.materials" border size="small">
           <el-table-column prop="fileName" label="文件" show-overflow-tooltip />
-          <el-table-column prop="category" label="类别" width="110" align="center">
-            <template #default="{ row }"><el-tag size="small" effect="plain">{{ row.category || '其他' }}</el-tag></template>
+          <el-table-column prop="category" label="资料类型" width="110" align="center">
+            <template #default="{ row }"><el-tag size="small" effect="plain">{{ dataTypeLabel(row.category) || '其他' }}</el-tag></template>
           </el-table-column>
           <el-table-column prop="parseStatus" label="状态" width="90" align="center">
             <template #default="{ row }"><el-tag :type="stTag(row.parseStatus)" size="small">{{ row.parseStatus }}</el-tag></template>
@@ -554,6 +554,9 @@ function diffTag(d) { return { 一致: 'success', 不一致: 'danger', 缺失: '
 function sealTag(s) { return { 有效: 'success', 可疑: 'warning', 未检出: 'info' }[s] || 'info' }
 function trustTag(t) { return { 可信: 'success', 存疑: 'warning', 不可信: 'danger' }[t] || 'info' }
 function fmtSize(kb) { if (!kb) return '-'; return kb >= 1024 ? (kb / 1024).toFixed(1) + ' MB' : kb + ' KB' }
+// 资料类型(CEC_DATA_TYPE)编码→中文展示;兼容历史中文存量(非编码值原样显示)
+const DATA_TYPE_LABEL = { '01': '元数据', '02': '制度附件', '03': '授权材料', '04': '合同材料', '05': '来源说明', '06': '确权证明', '07': '其他' }
+function dataTypeLabel(v) { return v == null ? v : (DATA_TYPE_LABEL[v] || v) }
 function stageText(p) {
   return materialParsePhaseText(p || 0)
 }

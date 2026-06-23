@@ -94,8 +94,9 @@ public interface AiToolParseGateway {
     }
 
     /**
-     * 材料类别归集(#4):判定材料属于 元数据/制度附件/授权材料/合同材料/来源说明/确权证明/其他。
-     * 默认返回 null(调用方回退规则分类);Qwen 网关用大模型判定。
+     * 材料类别归集(#4):判定材料资料类型并返回规范编码 {@code 01–07}(联调清单 行25 / CEC_DATA_TYPE):
+     * 01 元数据 / 02 制度附件 / 03 授权材料 / 04 合同材料 / 05 来源说明 / 06 确权证明 / 07 其他。
+     * 默认返回 null(调用方回退规则分类);Qwen 网关用大模型判定后经 MaterialDataType 收敛为编码。
      */
     default String classifyCategory(String fileName, String content) {
         return null;

@@ -24,6 +24,7 @@
 | 顺序 | 文件 | 说明 |
 |---|---|---|
 | 1 | `04_alter_change_lifecycle_dm.sql` | 补齐近期新增列/表(见下) |
+| 2 | `07_normalize_material_datatype_dm.sql` | 资料类型 `CEC_CATEGORY`(CEC_DATA_TYPE)中文→编码 01–07,**幂等可重跑** |
 
 `04_alter_change_lifecycle_dm.sql` 覆盖的增量项:
 1. 确权变更生命周期:`IM_CONFIRM_APPLY.CEC_CHANGE_TRIGGER`、`IM_EQUITY_CARD_INFO.CEC_VERSION` / `CEC_SUPERSEDED_NO`(+ 存量版本号回填)
@@ -32,8 +33,9 @@
 4. 大模型校验留痕:新增表 `IM_DPR_AI_RUNLOG`(含跨域字段 `CEC_BIZ_TYPE`)+ 索引
 5. 授权侧 AI 校验快照:`IM_AUTH_APPLY.CEC_AI_SNAPSHOT`
 
-**幂等性**:达梦不支持 `ADD COLUMN/CREATE TABLE IF NOT EXISTS`,本脚本**仅可执行一次**;
+**幂等性**:达梦不支持 `ADD COLUMN/CREATE TABLE IF NOT EXISTS`,`04_alter_*` **仅可执行一次**;
 若某列/表已存在会报"列名重复/对象已存在",**忽略该条对应语句继续**即可。
+`07_normalize_material_datatype_dm.sql` 为纯数据回填(中文→编码),**幂等可重复执行**。
 
 ## 三、注意事项
 

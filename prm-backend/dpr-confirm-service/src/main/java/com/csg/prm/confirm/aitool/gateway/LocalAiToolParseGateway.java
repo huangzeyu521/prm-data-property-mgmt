@@ -1,5 +1,6 @@
 package com.csg.prm.confirm.aitool.gateway;
 
+import com.csg.prm.confirm.aitool.enums.MaterialDataType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -88,29 +89,29 @@ public class LocalAiToolParseGateway implements AiToolParseGateway {
         v[idx] += 1f;
     }
 
-    /** 本地材料类别规则分类(#4):按文件名/正文关键词归类。 */
+    /** 本地材料类别规则分类(#4):按文件名/正文关键词归类,返回规范资料类型编码 01–07(CEC_DATA_TYPE)。 */
     @Override
     public String classifyCategory(String fileName, String content) {
         String t = (fileName == null ? "" : fileName) + " " + (content == null ? "" : content);
         if (t.contains("合同") || t.contains("协议")) {
-            return "合同材料";
+            return MaterialDataType.CONTRACT.getCode();
         }
         if (t.contains("授权")) {
-            return "授权材料";
+            return MaterialDataType.AUTHORIZATION.getCode();
         }
         if (t.contains("制度") || t.contains("办法") || t.contains("规定") || t.contains("规范")) {
-            return "制度附件";
+            return MaterialDataType.POLICY_ATTACHMENT.getCode();
         }
         if (t.contains("来源") || t.contains("采集") || t.contains("生产说明")) {
-            return "来源说明";
+            return MaterialDataType.SOURCE_DESC.getCode();
         }
         if (t.contains("元数据") || t.contains("字段") || t.contains("表结构") || t.contains("数据字典")) {
-            return "元数据";
+            return MaterialDataType.METADATA.getCode();
         }
         if (t.contains("确权") || t.contains("权属") || t.contains("证明")) {
-            return "确权证明";
+            return MaterialDataType.CONFIRM_PROOF.getCode();
         }
-        return "其他";
+        return MaterialDataType.OTHER.getCode();
     }
 
     @Override
