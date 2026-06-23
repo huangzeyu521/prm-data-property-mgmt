@@ -46,7 +46,7 @@
         <el-tab-pane label="变更历史" name="history">
           <el-timeline>
             <el-timeline-item v-for="r in changes" :key="r.changeId" :timestamp="r.changeTime" placement="top">
-              {{ r.changeType }} · {{ r.fieldName }}:<span style="color:#d03050">{{ r.beforeValue }}</span> → <span style="color:#18a058">{{ r.afterValue }}</span>
+              {{ r.changeType }} · {{ r.fieldName }}:<span style="color:#e21f0c">{{ r.beforeValue }}</span> → <span style="color:#36b21d">{{ r.afterValue }}</span>
             </el-timeline-item>
             <el-empty v-if="!changes.length" description="暂无变更记录" />
           </el-timeline>

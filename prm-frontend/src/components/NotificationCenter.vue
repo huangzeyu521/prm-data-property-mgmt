@@ -137,7 +137,7 @@ onUnmounted(() => timer && clearInterval(timer))
 
 <style scoped>
 .nc-bell { color: #71717a; padding: 6px; }
-.nc-bell:hover { color: var(--prm-color-primary, #1886ff); }
+.nc-bell:hover { color: var(--prm-color-primary, #1e87f0); }
 .nc-badge :deep(.el-badge__content) { border: none; }
 </style>
 
@@ -167,8 +167,8 @@ onUnmounted(() => timer && clearInterval(timer))
 .nc-dotsep { color: #cdd; }
 .nc-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex: none; }
 .lv-urgent { background: #f5483b; box-shadow: 0 0 0 3px rgba(245,72,59,0.15); }
-.lv-major { background: #f0a020; box-shadow: 0 0 0 3px rgba(240,160,32,0.15); }
-.lv-normal { background: #2f6bff; box-shadow: 0 0 0 3px rgba(47,107,255,0.15); }
+.lv-major { background: #ffc417; box-shadow: 0 0 0 3px rgba(240,160,32,0.15); }
+.lv-normal { background: #1e87f0; box-shadow: 0 0 0 3px rgba(47,107,255,0.15); }
 .nc-domain { flex: none; margin-top: 2px; }
 .nc-empty { padding: 8px 0 14px; }
 .nc-foot { border-top: 1px solid #eef0f3; padding: 8px 14px; text-align: center; }

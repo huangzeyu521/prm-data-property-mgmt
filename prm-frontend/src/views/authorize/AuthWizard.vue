@@ -55,7 +55,7 @@
               <el-option v-for="c in cardOpts" :key="c.cardNo || c.cardId" :value="c.cardNo || c.cardId"
                 :label="(c.cardNo || c.cardId) + '　' + (c.assetName || c.assetId)" :disabled="!CARD_OK.includes(c.cardStatus)">
                 <span>{{ c.cardNo || c.cardId }}</span>
-                <span style="float:right;font-size:12px" :style="{color: CARD_OK.includes(c.cardStatus) ? '#18a058' : '#b4b4b4'}">
+                <span style="float:right;font-size:12px" :style="{color: CARD_OK.includes(c.cardStatus) ? '#36b21d' : '#b4b4b4'}">
                   {{ c.assetName || c.assetId }} · {{ c.cardStatus }}</span>
               </el-option>
             </el-select>

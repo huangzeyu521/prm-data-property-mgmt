@@ -154,7 +154,7 @@ onMounted(load)
 </script>
 
 <style scoped>
-.cert { border: 2px solid #2f6bff; border-radius: 8px; padding: 24px 28px; background: linear-gradient(180deg, #f7faff, #eef4ff); }
+.cert { border: 2px solid #1e87f0; border-radius: 8px; padding: 24px 28px; background: linear-gradient(180deg, #f7faff, #eef4ff); }
 .cert-title { text-align: center; font-size: 22px; font-weight: 800; letter-spacing: 4px; color: #1c4ec2; }
 .cert-sub { text-align: center; font-size: 13px; color: #4a72c5; margin: 6px 0 4px; }
 .cert-no { text-align: center; font-size: 12px; color: #c0392b; font-weight: 600; margin-bottom: 16px; }

@@ -47,7 +47,7 @@
             <el-table-column label="得分" min-width="200">
               <template #default="{ row }">
                 <el-tooltip :content="row.reason || '—'" :disabled="!row.reason" placement="top">
-                  <el-progress :percentage="row.score" :color="row.score>=85?'#18a058':(row.score<70?'#d03050':'#f0a020')" />
+                  <el-progress :percentage="row.score" :color="row.score>=85?'#36b21d':(row.score<70?'#e21f0c':'#ffc417')" />
                 </el-tooltip>
               </template>
             </el-table-column>
@@ -295,5 +295,5 @@ function renderGauge(score) {
 .kv { margin-top: 8px; font-size: 13px; }
 .ai-lbl { font-size: 13px; color: #606266; margin-right: 6px; }
 .plan-desc { font-size: 12px; color: #909399; margin-bottom: 6px; }
-.hash { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: #2f6bff; word-break: break-all; }
+.hash { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: #1e87f0; word-break: break-all; }
 </style>

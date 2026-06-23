@@ -100,10 +100,10 @@ function onCancel() {
   border-top: 1px solid #ebecec;
 }
 .prm-dialog-prompt { display: flex; gap: 12px; align-items: flex-start; }
-.prm-dialog-prompt-body { font-size: 14px; color: var(--prm-color-text, #25262b); line-height: 1.7; padding-top: 1px; }
-.prm-dialog-prompt-icon.is-warning { color: var(--prm-color-accent, #ff7800); }
-.prm-dialog-prompt-icon.is-success { color: var(--el-color-success, #52c41a); }
-.prm-dialog-prompt-icon.is-info { color: var(--prm-color-primary, #1886ff); }
+.prm-dialog-prompt-body { font-size: 14px; color: var(--prm-color-text, #262626); line-height: 1.7; padding-top: 1px; }
+.prm-dialog-prompt-icon.is-warning { color: var(--prm-color-warning, #ffc417); }
+.prm-dialog-prompt-icon.is-success { color: var(--el-color-success, #36b21d); }
+.prm-dialog-prompt-icon.is-info { color: var(--prm-color-primary, #1e87f0); }
 .prm-dialog-prompt-icon.is-danger { color: var(--prm-color-danger, #f53f3f); }
 .prm-dialog-body { font-size: 14px; }
 </style>

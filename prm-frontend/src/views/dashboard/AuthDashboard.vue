@@ -87,5 +87,5 @@ onMounted(load)
 
 <style scoped>
 .st { text-align: center; } .st b { display:block; font-size:24px; } .st span { color: var(--prm-color-text-secondary); font-size:12px; }
-.green { color:#18a058; } .orange { color:#f0a020; } .blue { color:#2f6bff; } .red { color:#d03050; }
+.green { color:#36b21d; } .orange { color:#ffc417; } .blue { color:#1e87f0; } .red { color:#e21f0c; }
 </style>

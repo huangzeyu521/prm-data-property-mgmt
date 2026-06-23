@@ -90,5 +90,5 @@ onMounted(load)
 
 <style scoped>
 .st { text-align: center; } .st b { display:block; font-size:30px; font-weight:700; } .st span { color: var(--prm-color-text-secondary); }
-.st b.up { color:#18a058; } .st b.down { color:#d03050; }
+.st b.up { color:#36b21d; } .st b.down { color:#e21f0c; }
 </style>

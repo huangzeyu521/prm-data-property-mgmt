@@ -795,7 +795,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.hash { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: #2f6bff; }
+.hash { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: #1e87f0; }
 .locate-doc { max-height: 360px; overflow: auto; white-space: pre-wrap; word-break: break-all; line-height: 1.9; font-size: 13px; padding: 12px 14px; background: #f7f9fc; border: 1px solid #e4e7ed; border-radius: 6px; color: #303133; }
 .locate-mark { background: #ffe08a; color: #ad6800; font-weight: 700; padding: 1px 3px; border-radius: 3px; box-shadow: 0 0 0 2px #ffd666; }
 </style>

@@ -31,10 +31,10 @@
         <el-table-column prop="changeType" label="变更类型" width="100" />
         <el-table-column prop="fieldName" label="变更字段" width="100" />
         <el-table-column prop="beforeValue" label="变更前" min-width="110" show-overflow-tooltip>
-          <template #default="{ row }"><span style="color:#d03050">{{ row.beforeValue }}</span></template>
+          <template #default="{ row }"><span style="color:#e21f0c">{{ row.beforeValue }}</span></template>
         </el-table-column>
         <el-table-column prop="afterValue" label="变更后" min-width="110" show-overflow-tooltip>
-          <template #default="{ row }"><span style="color:#18a058">{{ row.afterValue }}</span></template>
+          <template #default="{ row }"><span style="color:#36b21d">{{ row.afterValue }}</span></template>
         </el-table-column>
         <el-table-column prop="changeReason" label="变更原因" min-width="130" show-overflow-tooltip />
         <el-table-column prop="sourceFlow" label="来源流程" width="110" show-overflow-tooltip />

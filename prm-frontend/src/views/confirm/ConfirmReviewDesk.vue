@@ -56,7 +56,7 @@
               <template #default="{ row }"><span style="color:#909399;text-decoration:line-through">{{ row.before || '空' }}</span></template>
             </el-table-column>
             <el-table-column label="新值(本次申报)" min-width="170">
-              <template #default="{ row }"><span style="color:#e6a23c;font-weight:600">{{ row.after || '空' }}</span></template>
+              <template #default="{ row }"><span style="color:#ffc417;font-weight:600">{{ row.after || '空' }}</span></template>
             </el-table-column>
           </el-table>
         </template>
@@ -154,7 +154,7 @@
           <template #default="{ row }">
             <!-- 平台同步且已落地原件字节(fileUrl)才可在线预览;否则纯文本标注,不给会 404 的入口 -->
             <el-link v-if="row.source === '平台同步' && row.fileUrl" type="success" @click="preview(row)" :title="row.fileName">平台原件·查看</el-link>
-            <span v-else-if="row.source === '平台同步'" style="color:#67c23a" :title="row.fileName">平台原件</span>
+            <span v-else-if="row.source === '平台同步'" style="color:#36b21d" :title="row.fileName">平台原件</span>
             <el-link v-else-if="row.fileName" type="primary" @click="preview(row)">查看</el-link>
             <span v-else style="color:#bbb">-</span>
           </template>
@@ -291,5 +291,5 @@ onMounted(load)
 
 <style scoped>
 .rv-h { font-weight: 600; margin: 16px 0 8px; }
-:deep(.hl-row) { background: var(--prm-color-selected-bg, #eff7ff) !important; outline: 1px solid var(--prm-color-primary, #1886ff); }
+:deep(.hl-row) { background: var(--prm-color-selected-bg, #eff7ff) !important; outline: 1px solid var(--prm-color-primary, #1e87f0); }
 </style>

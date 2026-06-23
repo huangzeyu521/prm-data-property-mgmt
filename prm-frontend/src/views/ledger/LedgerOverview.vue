@@ -69,7 +69,7 @@ onMounted(load)
 .ov-card { text-align: center; padding: 8px 0; }
 .ov-num { font-size: 30px; font-weight: 700; }
 .ov-label { color: var(--prm-color-text-secondary); margin-top: 4px; }
-.ov-green { color: #18a058; }
-.ov-orange { color: #f0a020; }
-.ov-blue { color: #2f6bff; }
+.ov-green { color: #36b21d; }
+.ov-orange { color: #ffc417; }
+.ov-blue { color: #1e87f0; }
 </style>

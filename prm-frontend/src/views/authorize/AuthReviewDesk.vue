@@ -156,5 +156,5 @@ onMounted(load)
 
 <style scoped>
 .rv-h { font-weight: 600; margin: 16px 0 8px; }
-:deep(.hl-row) { background: var(--prm-color-selected-bg, #eff7ff) !important; outline: 1px solid var(--prm-color-primary, #1886ff); }
+:deep(.hl-row) { background: var(--prm-color-selected-bg, #eff7ff) !important; outline: 1px solid var(--prm-color-primary, #1e87f0); }
 </style>

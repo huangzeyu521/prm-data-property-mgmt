@@ -68,7 +68,7 @@
           <div style="font-weight:600">{{ l.nodeName }}{{ l.node ? '（节点' + l.node + '）' : '' }}：{{ l.fromStatus }} → {{ l.toStatus }}</div>
           <div style="font-size:12px;color:#71717a;margin-top:2px">责任人：{{ l.responder || '-' }}</div>
           <div v-if="l.opinion" style="font-size:12px;color:#71717a;margin-top:2px">意见：{{ l.opinion }}</div>
-          <div style="font-size:12px;color:#2f6bff;margin-top:4px"><el-icon style="vertical-align:-2px"><Bell /></el-icon> {{ l.pushChannel }}：{{ l.notifyContent }}</div>
+          <div style="font-size:12px;color:#1e87f0;margin-top:4px"><el-icon style="vertical-align:-2px"><Bell /></el-icon> {{ l.pushChannel }}：{{ l.notifyContent }}</div>
         </el-timeline-item>
       </el-timeline>
     </el-drawer>

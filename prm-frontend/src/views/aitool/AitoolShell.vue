@@ -61,7 +61,7 @@ function backToPlatform() {
   height: 56px;
   padding: 0 20px;
   color: #fff;
-  background: var(--prm-color-primary, #1886ff);
+  background: var(--prm-color-primary, #1e87f0);
   border-bottom: none;
 }
 .ait-logo-icon { color: #fff; }

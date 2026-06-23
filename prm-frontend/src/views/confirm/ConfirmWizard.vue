@@ -78,10 +78,10 @@
                 <template #default="{ row }"><span style="color:#909399;text-decoration:line-through">{{ row.before || '空' }}</span></template>
               </el-table-column>
               <el-table-column label="新值(本次变更)" min-width="180">
-                <template #default="{ row }"><span style="color:#e6a23c;font-weight:600">{{ row.after || '空' }}</span></template>
+                <template #default="{ row }"><span style="color:#ffc417;font-weight:600">{{ row.after || '空' }}</span></template>
               </el-table-column>
             </el-table>
-            <div style="font-size:12px;color:#67c23a;margin-top:4px">另有 {{ changeUnchanged }} 项维持原值(无需改动)。</div>
+            <div style="font-size:12px;color:#36b21d;margin-top:4px">另有 {{ changeUnchanged }} 项维持原值(无需改动)。</div>
           </div>
           <!-- B 身份摘要(R2):平台带出的身份字段折叠为只读摘要,聚焦下方权属研判项;可展开编辑 -->
           <el-collapse v-model="identityPanel" class="identity-card">
@@ -92,17 +92,17 @@
               <el-form-item label="资产名称" prop="assetName"><el-input v-model="form.assetName" readonly placeholder="选取卡片后自动带出" /></el-form-item>
               <el-form-item label="所属业务系统">
                 <el-input v-model="form.systemName" placeholder="选取卡片后自动带出(附录F表1 系统名称)">
-                  <template #suffix><span v-if="form.systemName" style="color:#67c23a;font-size:12px">平台卡片</span></template>
+                  <template #suffix><span v-if="form.systemName" style="color:#36b21d;font-size:12px">平台卡片</span></template>
                 </el-input>
               </el-form-item>
               <el-form-item label="系统负责人">
                 <el-input v-model="form.systemOwner" placeholder="选取卡片后自动带出(卡片责任人)">
-                  <template #suffix><span v-if="form.systemOwner" style="color:#67c23a;font-size:12px">平台卡片</span></template>
+                  <template #suffix><span v-if="form.systemOwner" style="color:#36b21d;font-size:12px">平台卡片</span></template>
                 </el-input>
               </el-form-item>
               <el-form-item label="联系方式">
                 <el-input v-model="form.contactInfo" placeholder="选取卡片后自动带出(责任人电话)">
-                  <template #suffix><span v-if="form.contactInfo" style="color:#67c23a;font-size:12px">平台卡片</span></template>
+                  <template #suffix><span v-if="form.contactInfo" style="color:#36b21d;font-size:12px">平台卡片</span></template>
                 </el-input>
               </el-form-item>
             </el-collapse-item>
@@ -313,7 +313,7 @@
             <template #default="{ row }">
               <template v-if="row.done && row.source === '平台同步'">
                 <el-tag type="success" effect="dark">已同步·平台</el-tag>
-                <div v-if="row.fileName" style="font-size:12px;color:#67c23a;margin-top:2px" :title="row.fileName">{{ row.fileName }}</div>
+                <div v-if="row.fileName" style="font-size:12px;color:#36b21d;margin-top:2px" :title="row.fileName">{{ row.fileName }}</div>
               </template>
               <el-tag v-else-if="row.done" type="success" effect="light">已上传</el-tag>
               <el-tag v-else type="warning" effect="light">待补全</el-tag>
@@ -419,7 +419,7 @@
             <template #default="{ row }">
               <!-- 平台同步且已落地原件字节(fileUrl)才可在线预览;否则纯文本标注,不给会 404 的入口 -->
               <el-link v-if="row.source === '平台同步' && row.fileUrl" type="success" @click="previewMaterial(row)" :title="row.fileName">{{ row.fileName }}（平台原件·预览）</el-link>
-              <span v-else-if="row.source === '平台同步'" style="color:#67c23a" :title="row.fileName">{{ row.fileName }}（平台原件）</span>
+              <span v-else-if="row.source === '平台同步'" style="color:#36b21d" :title="row.fileName">{{ row.fileName }}（平台原件）</span>
               <el-link v-else-if="row.fileName" type="primary" @click="previewMaterial(row)">{{ row.fileName }}（预览/下载）</el-link>
               <span v-else style="color:#bbb">占位/无原件</span>
             </template>

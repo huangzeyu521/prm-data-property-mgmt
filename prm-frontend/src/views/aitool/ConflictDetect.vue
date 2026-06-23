@@ -146,7 +146,7 @@
               <span v-if="!report.bySource || !Object.keys(report.bySource).length">—</span>
             </el-descriptions-item>
             <el-descriptions-item v-if="(report.highRiskSummary||[]).length" label="高风险摘要(优先处置)" :span="2">
-              <div v-for="(s,i) in report.highRiskSummary" :key="i" style="color:#d03050;font-size:12px">• {{ s }}</div>
+              <div v-for="(s,i) in report.highRiskSummary" :key="i" style="color:#e21f0c;font-size:12px">• {{ s }}</div>
             </el-descriptions-item>
           </el-descriptions>
           <el-table :data="conflicts" border stripe size="small">
@@ -300,8 +300,8 @@ async function loadGraph() {
   graphEmpty.value = nodes.length <= 1
   const links = (g.edges || []).map(e => ({
     source: e.from, target: e.to,
-    label: { show: true, formatter: e.relation, fontSize: 11, color: e.relation === '冲突' ? '#d03050' : '#71717a' },
-    lineStyle: { color: e.relation === '冲突' ? '#d03050' : '#bbb', width: e.relation === '冲突' ? 2.5 : 1.2, type: e.relation === '冲突' ? 'dashed' : 'solid', curveness: 0.1 }
+    label: { show: true, formatter: e.relation, fontSize: 11, color: e.relation === '冲突' ? '#e21f0c' : '#71717a' },
+    lineStyle: { color: e.relation === '冲突' ? '#e21f0c' : '#bbb', width: e.relation === '冲突' ? 2.5 : 1.2, type: e.relation === '冲突' ? 'dashed' : 'solid', curveness: 0.1 }
   }))
   const cats = ['主体', '客体', '授权事项', '有效期'].map(t => ({ name: t, itemStyle: { color: NODE_COLOR[t] } }))
   await nextTick()

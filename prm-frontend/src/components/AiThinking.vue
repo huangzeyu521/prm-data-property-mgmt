@@ -36,7 +36,7 @@ function phaseClass(i) {
 <style scoped>
 .ai-thinking {
   border: 1px solid var(--prm-color-border, #d8d8d8);
-  border-left: 3px solid var(--prm-color-primary, #1886ff);
+  border-left: 3px solid var(--prm-color-primary, #1e87f0);
   border-radius: var(--prm-radius, 2px);
   background: var(--prm-color-bg, #f5f5f6);
   padding: 12px 16px;
@@ -51,7 +51,7 @@ function phaseClass(i) {
 .ai-spinner {
   width: 14px;
   height: 14px;
-  border: 2px solid var(--prm-color-primary, #1886ff);
+  border: 2px solid var(--prm-color-primary, #1e87f0);
   border-top-color: transparent;
   border-radius: 50%;
   animation: ai-spin 0.8s linear infinite;
@@ -67,7 +67,7 @@ function phaseClass(i) {
 }
 .ai-elapsed {
   margin-left: auto;
-  color: var(--prm-color-primary, #1886ff);
+  color: var(--prm-color-primary, #1e87f0);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
@@ -102,7 +102,7 @@ function phaseClass(i) {
   font-weight: 600;
 }
 .ai-phases li.cur .ai-dot {
-  background: var(--prm-color-primary, #1886ff);
+  background: var(--prm-color-primary, #1e87f0);
   box-shadow: 0 0 0 3px rgba(18, 108, 253, 0.18);
   animation: ai-pulse 1s ease-in-out infinite;
 }
@@ -110,19 +110,19 @@ function phaseClass(i) {
   color: #52606d;
 }
 .ai-phases li.passed .ai-dot {
-  background: #52c41a;
+  background: #36b21d;
 }
 @keyframes ai-pulse {
   50% { box-shadow: 0 0 0 5px rgba(18, 108, 253, 0.08); }
 }
 .ai-ok {
   margin-left: auto;
-  color: #52c41a;
+  color: #36b21d;
   font-size: 12px;
 }
 .ai-running {
   margin-left: auto;
-  color: var(--prm-color-primary, #1886ff);
+  color: var(--prm-color-primary, #1e87f0);
   font-size: 12px;
 }
 .ai-fade-enter-active,

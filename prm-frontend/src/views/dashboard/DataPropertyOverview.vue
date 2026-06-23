@@ -95,7 +95,7 @@ onMounted(load)
 </script>
 <style scoped>
 .st { text-align: center; } .st b { display:block; font-size:24px; font-weight:700; } .st span { color: var(--prm-color-text-secondary); font-size:12px; }
-.blue { color:#2f6bff; } .green { color:#18a058; } .orange { color:#f0a020; } .red { color:#d03050; }
-.lk-title { margin:18px 0 10px; font-weight:700; color: var(--prm-color-text); border-left:4px solid #2f6bff; padding-left:10px; }
+.blue { color:#1e87f0; } .green { color:#36b21d; } .orange { color:#ffc417; } .red { color:#e21f0c; }
+.lk-title { margin:18px 0 10px; font-weight:700; color: var(--prm-color-text); border-left:4px solid #1e87f0; padding-left:10px; }
 .lk { background: linear-gradient(180deg, rgba(47,107,255,0.04), transparent); }
 </style>

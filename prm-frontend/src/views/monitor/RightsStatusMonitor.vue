@@ -56,5 +56,5 @@ onMounted(load)
 
 <style scoped>
 .st { text-align: center; } .st b { display:block; font-size:26px; } .st span { color: var(--prm-color-text-secondary); font-size:12px; }
-.red { color:#d03050; } .orange { color:#f0a020; } .green { color:#18a058; }
+.red { color:#e21f0c; } .orange { color:#ffc417; } .green { color:#36b21d; }
 </style>

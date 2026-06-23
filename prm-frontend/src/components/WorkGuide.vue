@@ -199,7 +199,7 @@ function openPdf() { if (docMeta.value.pdf) window.open(docMeta.value.pdf, '_bla
 
 <style scoped>
 .wg-trigger { color: #71717a; padding: 6px 8px; }
-.wg-trigger:hover { color: var(--prm-color-primary, #1886ff); }
+.wg-trigger:hover { color: var(--prm-color-primary, #1e87f0); }
 .wg-trigger-label { margin-left: 4px; font-size: 13px; }
 </style>
 
@@ -224,8 +224,8 @@ function openPdf() { if (docMeta.value.pdf) window.open(docMeta.value.pdf, '_bla
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .wg-toc-item.lv2 { padding-left: 24px; font-size: 12.5px; color: #6b7280; }
-.wg-toc-item:hover { background: #eef3ff; color: #2f6bff; }
-.wg-toc-item.active { background: #eaf1ff; color: #2f6bff; font-weight: 600; border-left-color: #2f6bff; }
+.wg-toc-item:hover { background: #eef3ff; color: #1e87f0; }
+.wg-toc-item.active { background: #eaf1ff; color: #1e87f0; font-weight: 600; border-left-color: #1e87f0; }
 .wg-nomatch { padding: 16px 12px; color: #aab; font-size: 13px; }
 .wg-content { overflow-y: auto; padding: 20px 30px 40px; }
 .wg-sec { margin-bottom: 18px; }
@@ -243,7 +243,7 @@ function openPdf() { if (docMeta.value.pdf) window.open(docMeta.value.pdf, '_bla
 .wg-table tr:nth-child(even) td { background: #fafbfd; }
 .wg-mtags { display: flex; align-items: center; gap: 8px; margin: 6px 0 10px; flex-wrap: wrap; }
 .wg-mpub { font-size: 12px; color: #8a93a6; }
-.wg-file { display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; color: #2f6bff; font-size: 13px; }
+.wg-file { display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; color: #1e87f0; font-size: 13px; }
 .wg-footnote { margin-top: 24px; padding: 12px 16px; background: #f7f9ff; border-radius: 8px; font-size: 12.5px; color: #6b7280; line-height: 1.7; }
-.wg-footnote a { color: #2f6bff; cursor: pointer; }
+.wg-footnote a { color: #1e87f0; cursor: pointer; }
 </style>
