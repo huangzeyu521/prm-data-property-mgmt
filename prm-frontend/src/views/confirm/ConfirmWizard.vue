@@ -83,12 +83,30 @@
             </el-table>
             <div style="font-size:12px;color:#67c23a;margin-top:4px">另有 {{ changeUnchanged }} 项维持原值(无需改动)。</div>
           </div>
-          <el-form-item label="资产名称" prop="assetName"><el-input v-model="form.assetName" readonly placeholder="选取卡片后自动带出" /></el-form-item>
-          <el-form-item label="所属业务系统">
-            <el-input v-model="form.systemName" placeholder="选取卡片后自动带出(附录F表1 系统名称)">
-              <template #suffix><span v-if="form.systemName" style="color:#67c23a;font-size:12px">平台卡片</span></template>
-            </el-input>
-          </el-form-item>
+          <!-- B 身份摘要(R2):平台带出的身份字段折叠为只读摘要,聚焦下方权属研判项;可展开编辑 -->
+          <el-collapse v-model="identityPanel" class="identity-card">
+            <el-collapse-item name="id">
+              <template #title>
+                <span style="font-size:13px;color:#606266"><b style="color:#303133">资产身份</b>　{{ identitySummary }}</span>
+              </template>
+              <el-form-item label="资产名称" prop="assetName"><el-input v-model="form.assetName" readonly placeholder="选取卡片后自动带出" /></el-form-item>
+              <el-form-item label="所属业务系统">
+                <el-input v-model="form.systemName" placeholder="选取卡片后自动带出(附录F表1 系统名称)">
+                  <template #suffix><span v-if="form.systemName" style="color:#67c23a;font-size:12px">平台卡片</span></template>
+                </el-input>
+              </el-form-item>
+              <el-form-item label="系统负责人">
+                <el-input v-model="form.systemOwner" placeholder="选取卡片后自动带出(卡片责任人)">
+                  <template #suffix><span v-if="form.systemOwner" style="color:#67c23a;font-size:12px">平台卡片</span></template>
+                </el-input>
+              </el-form-item>
+              <el-form-item label="联系方式">
+                <el-input v-model="form.contactInfo" placeholder="选取卡片后自动带出(责任人电话)">
+                  <template #suffix><span v-if="form.contactInfo" style="color:#67c23a;font-size:12px">平台卡片</span></template>
+                </el-input>
+              </el-form-item>
+            </el-collapse-item>
+          </el-collapse>
           <el-form-item label="申报权属主体">
             <el-input v-model="form.rightHolder" placeholder="当前申报主体,最终权属以确权审核结果为准" />
             <div class="form-tip">分省上报的数据产权,确权通过后统一归口中国南方电网有限责任公司</div>
@@ -113,16 +131,6 @@
               <el-tag v-if="dimMarks['责任部门'].changed" size="small" type="warning" effect="plain">已修改 · 原值「{{ dimMarks['责任部门'].before || '空' }}」</el-tag>
               <el-tag v-else size="small" type="info" effect="plain">维持原值</el-tag>
             </div>
-          </el-form-item>
-          <el-form-item label="系统负责人">
-            <el-input v-model="form.systemOwner" placeholder="选取卡片后自动带出(卡片责任人)">
-              <template #suffix><span v-if="form.systemOwner" style="color:#67c23a;font-size:12px">平台卡片</span></template>
-            </el-input>
-          </el-form-item>
-          <el-form-item label="联系方式">
-            <el-input v-model="form.contactInfo" placeholder="选取卡片后自动带出(责任人电话)">
-              <template #suffix><span v-if="form.contactInfo" style="color:#67c23a;font-size:12px">平台卡片</span></template>
-            </el-input>
           </el-form-item>
           <el-form-item label="管制属性">
             <el-radio-group v-model="form.regulated">
@@ -833,6 +841,14 @@ async function checkAssetConfirmState(assetId) {
   } catch (e) { /* 平台/产权查询失败:不阻断,保留用户当前选择 */ }
 }
 
+// R2 资产身份摘要:平台带出的身份字段默认折叠为只读摘要条,聚焦权属研判项;可展开编辑
+const identityPanel = ref([]) // 默认折叠([]);展开为 ['id']
+const identitySummary = computed(() => {
+  const parts = [form.assetName, form.systemName,
+    form.systemOwner && ('负责人 ' + form.systemOwner), form.contactInfo].filter(Boolean)
+  return parts.length ? parts.join(' · ') : '选取资产后自动带出(系统 / 负责人 / 联系方式)'
+})
+
 // 变更前后对照(P0):确权变更时,8 个关键维度当前值 ↔ 基线值实时比对,仅列变化项
 // 权属类型基线串可能用 ,/，/、 任一分隔:统一规范化为「、」拼接,避免分隔符差异误报"已修改"
 const canonTypes = (v) => String(v == null ? '' : v).split(/[、,，]/).map(s => s.trim()).filter(Boolean).join('、')
@@ -983,7 +999,12 @@ function onAutoFillSilent() {
 
 // 步骤1 -> 2:暂存草稿,生成 A–J 应交材料清单
 async function next0() {
-  await formRef.value.validate()
+  try {
+    await formRef.value.validate()
+  } catch (e) {
+    identityPanel.value = ['id'] // 校验失败:展开资产身份摘要,避免折叠中的必填项(资产名称)错误不可见
+    return
+  }
   // 申请要素逐维必填(与后端 validateRegistration 同源,前移到填报,杜绝"材料全过却提交被拒")
   if (form.registerType === '确权变更' && !form.changeTrigger) {
     ElMessage.warning('确权变更须选择变更触发类型(数据新增/数据来源变更/管理要求变更/权益到期/其他)'); return
@@ -1213,6 +1234,7 @@ function reset() {
   checklist.value = []; materials.value = []
   Object.assign(form, { assetId: '', assetName: '', systemName: '', rightTypes: [], rightHolder: '', respDept: '', systemOwner: '', contactInfo: '', assetSecretLevel: '', region: '', registerType: '初始确权', changeTrigger: '', applyMode: '常规', purpose: '', thirdPartyInfo: '', sourceSubject: '', sourceLimit: '', relationSubject: '', equityRisk: '', privacyInfo: '', sourceIdent: [], relationIdent: [] })
   assetConfirmState.value = ''; assetConfirmed.value = false; changeBaseline.value = null
+  identityPanel.value = []
   tableItems.value = []; tableItemText.value = ''
 }
 </script>
@@ -1226,4 +1248,8 @@ function reset() {
 /* R3 维持原值折叠区:与 form-item 行距对齐,弱化呈现 */
 .change-fold { margin-bottom: 18px; border-top: none; border-bottom: none; }
 .change-fold :deep(.el-collapse-item__header) { font-size: 13px; height: 36px; line-height: 36px; }
+/* R2 资产身份摘要折叠条:弱化的只读身份摘要,展开可编辑平台带出字段 */
+.identity-card { margin-bottom: 18px; border: 1px solid var(--el-border-color-lighter); border-radius: 6px; padding: 0 12px; background: #fafcff; }
+.identity-card :deep(.el-collapse-item__header) { height: 40px; line-height: 40px; border-bottom: none; }
+.identity-card :deep(.el-collapse-item__wrap) { border-bottom: none; background: transparent; }
 </style>
