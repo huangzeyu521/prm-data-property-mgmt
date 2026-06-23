@@ -235,6 +235,7 @@
 import { reactive, ref, nextTick, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import * as echarts from 'echarts'
+import { C } from '@/lib/chartPalette'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { aitAddClaim, aitDetectConflict, aitConflicts, aitResolveConflict, aitConflictReport, aitConflictReportExportUrl, buildAitClaimFromMaterial, aitKgGraph, aitClaims, updateAitClaim, deleteAitClaim, syncAitHistoryClaims, aitConflictAdvice } from '@/api/aitool'
 import AiThinking from '@/components/AiThinking.vue'
@@ -251,7 +252,8 @@ const conflictTypes = ['主体冲突', '范围冲突', '时效冲突', '历史�
 const riskLevels = ['高', '中', '低']
 // #9 语义建主张 + 知识图谱
 const semMaterialId = ref(''); const graphAsset = ref('DA-DEMO-1'); const graphRef = ref(); const graphEmpty = ref(false)
-const NODE_COLOR = { 主体: '#2f6bff', 客体: '#13c2c2', 授权事项: '#722ed1', 有效期: '#52c41a' }
+// 知识图谱节点按规范图表色板取分类色(冲突边仍用语义红,见下)
+const NODE_COLOR = { 主体: C.blue, 客体: C.cyan, 授权事项: C.purple, 有效期: C.green }
 const claimList = ref([]); const editDlg = ref(false); const editClaim = reactive({ claimId: '', subject: '', rightType: '', authScope: '', exclusive: false, sourceType: '' })
 // #16 冲突解决方案建议
 const adviceDlg = ref(false); const advice = ref(null)

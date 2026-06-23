@@ -27,7 +27,7 @@
 
 <script setup>
 import { onMounted, reactive, ref, nextTick } from 'vue'
-import * as echarts from 'echarts'
+import { initChart } from '@/lib/chartBase'
 import { getAlertStats, pageAlert } from '@/api/monitor'
 
 const stats = reactive({ total: 0, pending: 0, processing: 0, closed: 0, closureRate: 0 })
@@ -45,7 +45,7 @@ async function load() {
     const res = await pageAlert({ current: 1, size: 50 })
     rows.value = res.records || []
     await nextTick()
-    echarts.init(levelRef.value).setOption({
+    initChart(levelRef.value, {
       tooltip: { trigger: 'item' }, legend: { bottom: 0 },
       series: [{ type: 'pie', radius: ['40%', '70%'], data: pairs(s.levelDistribution) }]
     })

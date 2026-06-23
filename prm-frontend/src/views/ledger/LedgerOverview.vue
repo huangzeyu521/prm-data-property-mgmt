@@ -30,7 +30,8 @@
 
 <script setup>
 import { onMounted, reactive, ref, nextTick } from 'vue'
-import * as echarts from 'echarts'
+import { initChart } from '@/lib/chartBase'
+import { C } from '@/lib/chartPalette'
 import { getOverview } from '@/api/ledger'
 import PropertyTree from './PropertyTree.vue'
 
@@ -47,19 +48,17 @@ async function load() {
   const res = await getOverview()
   Object.assign(data, res)
   await nextTick()
-  const pie = echarts.init(pieRef.value)
-  pie.setOption({
+  initChart(pieRef.value, {
     tooltip: { trigger: 'item' },
     legend: { bottom: 0 },
     series: [{ type: 'pie', radius: ['40%', '70%'], data: toPairs(res.rightTypeDistribution) }]
   })
-  const bar = echarts.init(barRef.value)
   const subs = toPairs(res.subsidiaryDistribution)
-  bar.setOption({
+  initChart(barRef.value, {
     tooltip: { trigger: 'axis' },
     xAxis: { type: 'category', data: subs.map((s) => s.name), axisLabel: { interval: 0, rotate: 20 } },
     yAxis: { type: 'value' },
-    series: [{ type: 'bar', data: subs.map((s) => s.value), itemStyle: { color: '#2f6bff' }, barMaxWidth: 48 }]
+    series: [{ type: 'bar', data: subs.map((s) => s.value), itemStyle: { color: C.blue }, barMaxWidth: 48 }]
   })
 }
 

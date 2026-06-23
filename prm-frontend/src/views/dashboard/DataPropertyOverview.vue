@@ -36,7 +36,8 @@
 </template>
 <script setup>
 import { onMounted, reactive, ref, nextTick } from 'vue'
-import * as echarts from 'echarts'
+import { initChart } from '@/lib/chartBase'
+import { CHART_COLORS, C } from '@/lib/chartPalette'
 import { getOverview, getLedgerStatistics } from '@/api/ledger'
 import { getConfirmDashboard } from '@/api/confirm'
 import { getAuthDashboard, expiringAuthCerts } from '@/api/authorize'
@@ -63,31 +64,31 @@ async function load() {
   Object.assign(ov, o); Object.assign(cf, c); Object.assign(au, a)
   loadLinkage(c, a)
   await nextTick()
-  echarts.init(rtRef.value).setOption({ tooltip: { trigger: 'item' }, legend: { bottom: 0 }, series: [{ type: 'pie', radius: ['40%', '70%'], data: pairs(o.rightTypeDistribution) }] })
-  echarts.init(csRef.value).setOption({ tooltip: { trigger: 'item' }, legend: { bottom: 0 }, series: [{ type: 'pie', radius: '65%', data: pairs(c.statusDistribution) }] })
-  echarts.init(amRef.value).setOption({ tooltip: { trigger: 'item' }, legend: { bottom: 0 }, series: [{ type: 'pie', radius: ['40%', '70%'], data: pairs(a.modeDistribution) }] })
+  initChart(rtRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'item' }, legend: { bottom: 0 }, series: [{ type: 'pie', radius: ['40%', '70%'], data: pairs(o.rightTypeDistribution) }] })
+  initChart(csRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'item' }, legend: { bottom: 0 }, series: [{ type: 'pie', radius: '65%', data: pairs(c.statusDistribution) }] })
+  initChart(amRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'item' }, legend: { bottom: 0 }, series: [{ type: 'pie', radius: ['40%', '70%'], data: pairs(a.modeDistribution) }] })
 
   // 趋势 + 同比环比 + 部门/地域 维度(接入台账统计)
   const st = await getLedgerStatistics()
   const tr = st.trend || []
-  echarts.init(trendRef.value).setOption({
-    tooltip: { trigger: 'axis' },
+  initChart(trendRef.value,{
+    color: CHART_COLORS, tooltip: { trigger: 'axis' },
     legend: { bottom: 0, data: ['确权登记数', '环比MoM%', '同比YoY%'] },
     grid: { left: 48, right: 48, top: 20, bottom: 40 },
     xAxis: { type: 'category', data: tr.map(p => p.month) },
     yAxis: [{ type: 'value', name: '登记数' }, { type: 'value', name: '%', axisLabel: { formatter: '{value}%' } }],
     series: [
-      { name: '确权登记数', type: 'bar', data: tr.map(p => p.count), itemStyle: { color: '#2f6bff' } },
-      { name: '环比MoM%', type: 'line', yAxisIndex: 1, smooth: true, data: tr.map(p => p.momRate), itemStyle: { color: '#ff7800' } },
-      { name: '同比YoY%', type: 'line', yAxisIndex: 1, smooth: true, data: tr.map(p => p.yoyRate), itemStyle: { color: '#67c23a' } }
+      { name: '确权登记数', type: 'bar', data: tr.map(p => p.count), itemStyle: { color: C.blue } },
+      { name: '环比MoM%', type: 'line', yAxisIndex: 1, smooth: true, data: tr.map(p => p.momRate), itemStyle: { color: C.orange } },
+      { name: '同比YoY%', type: 'line', yAxisIndex: 1, smooth: true, data: tr.map(p => p.yoyRate), itemStyle: { color: C.green } }
     ]
   })
-  echarts.init(authStatusRef.value).setOption({ tooltip: { trigger: 'item' }, legend: { bottom: 0 }, series: [{ type: 'pie', radius: '65%', data: pairs(st.byAuthStatus) }] })
-  echarts.init(regionRef.value).setOption({
-    tooltip: { trigger: 'axis' }, grid: { left: 48, right: 24, top: 20, bottom: 30 },
+  initChart(authStatusRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'item' }, legend: { bottom: 0 }, series: [{ type: 'pie', radius: '65%', data: pairs(st.byAuthStatus) }] })
+  initChart(regionRef.value,{
+    color: CHART_COLORS, tooltip: { trigger: 'axis' }, grid: { left: 48, right: 24, top: 20, bottom: 30 },
     xAxis: { type: 'category', data: Object.keys(st.byRegion || {}) },
     yAxis: { type: 'value', name: '台账数' },
-    series: [{ type: 'bar', data: Object.values(st.byRegion || {}), barWidth: '40%', itemStyle: { color: '#409eff' } }]
+    series: [{ type: 'bar', data: Object.values(st.byRegion || {}), barWidth: '40%', itemStyle: { color: C.blue } }]
   })
 }
 onMounted(load)

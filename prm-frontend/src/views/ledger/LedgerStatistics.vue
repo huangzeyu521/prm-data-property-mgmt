@@ -25,7 +25,8 @@
 
 <script setup>
 import { onMounted, reactive, ref, nextTick } from 'vue'
-import * as echarts from 'echarts'
+import { initChart } from '@/lib/chartBase'
+import { CHART_COLORS, C } from '@/lib/chartPalette'
 import { getLedgerStatistics } from '@/api/ledger'
 
 const d = reactive({ totalArchive: 0, mom: null, yoy: null, regions: 0 })
@@ -36,6 +37,7 @@ const rateClass = (r) => (r == null ? '' : r > 0 ? 'up' : r < 0 ? 'down' : '')
 
 function barOpt(arr, color) {
   return {
+    color: CHART_COLORS,
     tooltip: { trigger: 'axis' },
     xAxis: { type: 'category', data: arr.map(x => x.name), axisLabel: { interval: 0, rotate: 20 } },
     yAxis: { type: 'value' },
@@ -43,7 +45,7 @@ function barOpt(arr, color) {
   }
 }
 function pieOpt(arr, radius) {
-  return { tooltip: { trigger: 'item' }, legend: { bottom: 0 }, series: [{ type: 'pie', radius, data: arr }] }
+  return { color: CHART_COLORS, tooltip: { trigger: 'item' }, legend: { bottom: 0 }, series: [{ type: 'pie', radius, data: arr }] }
 }
 
 async function load() {
@@ -56,7 +58,8 @@ async function load() {
   d.yoy = latest.yoyRate ?? null
   await nextTick()
 
-  echarts.init(trendRef.value).setOption({
+  initChart(trendRef.value,{
+    color: CHART_COLORS,
     tooltip: {
       trigger: 'axis',
       formatter: (ps) => {
@@ -72,15 +75,15 @@ async function load() {
       { type: 'value', name: '环比%', axisLabel: { formatter: '{value}%' } }
     ],
     series: [
-      { name: '新增档案数', type: 'bar', data: t.map(x => x.count), itemStyle: { color: '#2f6bff' }, barMaxWidth: 36 },
-      { name: '环比%', type: 'line', yAxisIndex: 1, data: t.map(x => x.momRate), connectNulls: true, smooth: true, itemStyle: { color: '#f0a020' } }
+      { name: '新增档案数', type: 'bar', data: t.map(x => x.count), itemStyle: { color: C.blue }, barMaxWidth: 36 },
+      { name: '环比%', type: 'line', yAxisIndex: 1, data: t.map(x => x.momRate), connectNulls: true, smooth: true, itemStyle: { color: C.gold } }
     ]
   })
-  echarts.init(subRef.value).setOption(barOpt(pairs(res.bySubsidiary), '#2f6bff'))
-  echarts.init(rtRef.value).setOption(pieOpt(pairs(res.byRightType), ['40%', '70%']))
-  echarts.init(csRef.value).setOption(pieOpt(pairs(res.byConfirmStatus), '65%'))
-  echarts.init(regionRef.value).setOption(pieOpt(pairs(res.byRegion), ['40%', '70%']))
-  echarts.init(authRef.value).setOption(pieOpt(pairs(res.byAuthStatus), '65%'))
+  initChart(subRef.value,barOpt(pairs(res.bySubsidiary), C.blue))
+  initChart(rtRef.value,pieOpt(pairs(res.byRightType), ['40%', '70%']))
+  initChart(csRef.value,pieOpt(pairs(res.byConfirmStatus), '65%'))
+  initChart(regionRef.value,pieOpt(pairs(res.byRegion), ['40%', '70%']))
+  initChart(authRef.value,pieOpt(pairs(res.byAuthStatus), '65%'))
 }
 onMounted(load)
 </script>

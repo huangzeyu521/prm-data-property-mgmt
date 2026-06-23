@@ -38,7 +38,8 @@
 
 <script setup>
 import { onMounted, reactive, ref, nextTick } from 'vue'
-import * as echarts from 'echarts'
+import { initChart } from '@/lib/chartBase'
+import { CHART_COLORS, C, RISK_RAMP } from '@/lib/chartPalette'
 import { getAuthDashboard } from '@/api/authorize'
 
 const d = reactive({ totalApply: 0, effective: 0, inReview: 0, rejected: 0, effectiveRate: 0, certCount: 0, riskAlerts: [] })
@@ -46,7 +47,8 @@ const q = reactive({ scenario: '', deptName: '' })
 const range = ref([])
 const modeRef = ref(); const rightRef = ref(); const compRef = ref(); const scenarioRef = ref(); const trendRef = ref()
 const pairs = (m) => Object.entries(m || {}).map(([name, value]) => ({ name, value }))
-const COMP_COLOR = { '红': '#d03050', '高': '#d03050', '黄': '#f0a020', '中': '#f0a020', '绿': '#18a058', '低': '#18a058' }
+// 合规分布按规范色板的暖→冷风险梯度取色(高=橙/中=金/低=绿),不再用非规范红
+const COMP_COLOR = { '红': RISK_RAMP['高'], '高': RISK_RAMP['高'], '黄': RISK_RAMP['中'], '中': RISK_RAMP['中'], '绿': RISK_RAMP['低'], '低': RISK_RAMP['低'] }
 
 function onReset() { q.scenario = ''; q.deptName = ''; range.value = []; load() }
 
@@ -59,24 +61,24 @@ async function load() {
   })
   Object.assign(d, res)
   await nextTick()
-  echarts.init(modeRef.value).setOption({ tooltip: { trigger: 'item' }, legend: { bottom: 0 }, series: [{ type: 'pie', radius: ['40%', '70%'], data: pairs(res.modeDistribution) }] })
+  initChart(modeRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'item' }, legend: { bottom: 0 }, series: [{ type: 'pie', radius: ['40%', '70%'], data: pairs(res.modeDistribution) }] })
   const rt = pairs(res.rightTypeDistribution)
-  echarts.init(rightRef.value).setOption({ tooltip: { trigger: 'axis' }, grid: { left: 40, right: 16, top: 20, bottom: 30 }, xAxis: { type: 'category', data: rt.map(x => x.name) }, yAxis: { type: 'value' }, series: [{ type: 'bar', data: rt.map(x => x.value), itemStyle: { color: '#2f6bff' }, barMaxWidth: 50 }] })
-  echarts.init(compRef.value).setOption({
-    tooltip: { trigger: 'item' }, legend: { bottom: 0 },
+  initChart(rightRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'axis' }, grid: { left: 40, right: 16, top: 20, bottom: 30 }, xAxis: { type: 'category', data: rt.map(x => x.name) }, yAxis: { type: 'value' }, series: [{ type: 'bar', data: rt.map(x => x.value), itemStyle: { color: C.blue }, barMaxWidth: 50 }] })
+  initChart(compRef.value,{
+    color: CHART_COLORS, tooltip: { trigger: 'item' }, legend: { bottom: 0 },
     series: [{ type: 'pie', radius: ['40%', '70%'], data: pairs(res.complianceDist).map(x => ({ ...x, itemStyle: { color: COMP_COLOR[x.name] } })) }]
   })
   const sc = pairs(res.byScenario)
-  echarts.init(scenarioRef.value).setOption({ tooltip: { trigger: 'axis' }, grid: { left: 40, right: 16, top: 20, bottom: 45 }, xAxis: { type: 'category', data: sc.map(x => x.name), axisLabel: { interval: 0, rotate: 20 } }, yAxis: { type: 'value', name: '频次' }, series: [{ type: 'bar', data: sc.map(x => x.value), itemStyle: { color: '#13c2c2' }, barMaxWidth: 40 }] })
+  initChart(scenarioRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'axis' }, grid: { left: 40, right: 16, top: 20, bottom: 45 }, xAxis: { type: 'category', data: sc.map(x => x.name), axisLabel: { interval: 0, rotate: 20 } }, yAxis: { type: 'value', name: '频次' }, series: [{ type: 'bar', data: sc.map(x => x.value), itemStyle: { color: C.cyan }, barMaxWidth: 40 }] })
   const tr = res.trend || []
-  echarts.init(trendRef.value).setOption({
-    tooltip: { trigger: 'axis' }, legend: { bottom: 0, data: ['申请量', '生效率%'] },
+  initChart(trendRef.value,{
+    color: CHART_COLORS, tooltip: { trigger: 'axis' }, legend: { bottom: 0, data: ['申请量', '生效率%'] },
     grid: { left: 48, right: 48, top: 20, bottom: 40 },
     xAxis: { type: 'category', data: tr.map(p => p.month) },
     yAxis: [{ type: 'value', name: '申请量' }, { type: 'value', name: '%', axisLabel: { formatter: '{value}%' } }],
     series: [
-      { name: '申请量', type: 'bar', data: tr.map(p => p.applyCount), itemStyle: { color: '#2f6bff' } },
-      { name: '生效率%', type: 'line', yAxisIndex: 1, smooth: true, data: tr.map(p => p.effectiveRate), itemStyle: { color: '#18a058' } }
+      { name: '申请量', type: 'bar', data: tr.map(p => p.applyCount), itemStyle: { color: C.blue } },
+      { name: '生效率%', type: 'line', yAxisIndex: 1, smooth: true, data: tr.map(p => p.effectiveRate), itemStyle: { color: C.green } }
     ]
   })
 }

@@ -38,7 +38,8 @@
 
 <script setup>
 import { onMounted, reactive, ref, nextTick } from 'vue'
-import * as echarts from 'echarts'
+import { initChart } from '@/lib/chartBase'
+import { CHART_COLORS, C } from '@/lib/chartPalette'
 import { getConfirmDashboard } from '@/api/confirm'
 
 const d = reactive({ totalApply: 0, done: 0, pending: 0, rejected: 0, passRate: 0, cardCount: 0, bottleneckNode: '', riskAlerts: [] })
@@ -57,24 +58,24 @@ async function load() {
   })
   Object.assign(d, res)
   await nextTick()
-  echarts.init(statusRef.value).setOption({ tooltip: { trigger: 'item' }, legend: { bottom: 0 }, series: [{ type: 'pie', radius: ['40%', '70%'], data: pairs(res.statusDistribution) }] })
-  echarts.init(rightRef.value).setOption({ tooltip: { trigger: 'item' }, legend: { bottom: 0 }, series: [{ type: 'pie', radius: '65%', data: pairs(res.rightTypeDistribution) }] })
+  initChart(statusRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'item' }, legend: { bottom: 0 }, series: [{ type: 'pie', radius: ['40%', '70%'], data: pairs(res.statusDistribution) }] })
+  initChart(rightRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'item' }, legend: { bottom: 0 }, series: [{ type: 'pie', radius: '65%', data: pairs(res.rightTypeDistribution) }] })
   const bk = res.nodeBacklog || {}
-  echarts.init(backlogRef.value).setOption({
-    tooltip: { trigger: 'axis' }, grid: { left: 40, right: 20, top: 20, bottom: 40 },
+  initChart(backlogRef.value,{
+    color: CHART_COLORS, tooltip: { trigger: 'axis' }, grid: { left: 40, right: 20, top: 20, bottom: 40 },
     xAxis: { type: 'category', data: Object.keys(bk), axisLabel: { interval: 0, rotate: 15 } },
     yAxis: { type: 'value', name: '积压数' },
-    series: [{ type: 'bar', data: Object.values(bk), barWidth: '45%', itemStyle: { color: '#f0a020' } }]
+    series: [{ type: 'bar', data: Object.values(bk), barWidth: '45%', itemStyle: { color: C.gold } }]
   })
   const tr = res.trend || []
-  echarts.init(trendRef.value).setOption({
-    tooltip: { trigger: 'axis' }, legend: { bottom: 0, data: ['申请量', '通过率%'] },
+  initChart(trendRef.value,{
+    color: CHART_COLORS, tooltip: { trigger: 'axis' }, legend: { bottom: 0, data: ['申请量', '通过率%'] },
     grid: { left: 48, right: 48, top: 20, bottom: 40 },
     xAxis: { type: 'category', data: tr.map(p => p.month) },
     yAxis: [{ type: 'value', name: '申请量' }, { type: 'value', name: '%', axisLabel: { formatter: '{value}%' } }],
     series: [
-      { name: '申请量', type: 'bar', data: tr.map(p => p.applyCount), itemStyle: { color: '#2f6bff' } },
-      { name: '通过率%', type: 'line', yAxisIndex: 1, smooth: true, data: tr.map(p => p.passRate), itemStyle: { color: '#18a058' } }
+      { name: '申请量', type: 'bar', data: tr.map(p => p.applyCount), itemStyle: { color: C.blue } },
+      { name: '通过率%', type: 'line', yAxisIndex: 1, smooth: true, data: tr.map(p => p.passRate), itemStyle: { color: C.green } }
     ]
   })
 }
