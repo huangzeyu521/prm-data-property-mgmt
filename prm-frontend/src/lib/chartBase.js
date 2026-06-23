@@ -9,9 +9,10 @@ import { CHART_COLORS } from './chartPalette'
 const FONT = 12
 const LABEL_COLOR = '#606266'
 
-// 数据标签按系列类型注入(规范:数值直接标在图元上/旁)
+// 数据标签按系列类型注入(规范:数值直接标在图元上/旁,始终可见无需悬停)
 function labelFor(type) {
-  if (type === 'pie') return { show: true, formatter: '{b} {c}', fontSize: FONT }
+  // 饼/环:只标数值(名称交给图例)——长中文名会撑爆窄卡片并把数值挤掉截断,故数值优先保证常显
+  if (type === 'pie') return { show: true, formatter: '{c}', fontSize: FONT, color: '#262626' }
   if (type === 'bar' || type === 'line') return { show: true, position: 'top', fontSize: FONT, color: LABEL_COLOR }
   return undefined // graph/gauge 等特殊图不强加数据标签
 }
