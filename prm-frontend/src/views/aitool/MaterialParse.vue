@@ -53,8 +53,8 @@
           </template>
         </el-table-column>
       </el-table>
-      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, prev, pager, next"
-        :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" />
+      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
+        :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" @size-change="s=>{q.size=s;q.current=1;load()}" />
     </div>
 
     <el-dialog v-model="dlg" title="上传确权证明材料(真实文件 · 可批量)" width="600px" align-center @closed="resetUpload">
@@ -267,8 +267,8 @@
           <template #default="{ row }">{{ row.operatorName || row.operatorId || '—' }}</template>
         </el-table-column>
       </el-table>
-      <el-pagination style="margin-top:10px;justify-content:flex-end" background layout="total, prev, pager, next"
-        :total="recTotal" :current-page="recQuery.current" :page-size="recQuery.size" @current-change="p=>{recQuery.current=p;loadRecords()}" />
+      <el-pagination style="margin-top:10px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
+        :total="recTotal" :current-page="recQuery.current" :page-size="recQuery.size" @current-change="p=>{recQuery.current=p;loadRecords()}" @size-change="s=>{recQuery.size=s;recQuery.current=1;loadRecords()}" />
     </el-dialog>
 
     <!-- 1.4#2 批量解析进度 -->
@@ -351,7 +351,7 @@
         <el-form-item label="场景"><el-input v-model="cfgForm.scene" :disabled="cfgForm.scene==='default'" /></el-form-item>
         <el-form-item label="置信度阈值"><el-input-number v-model="cfgForm.confidenceThreshold" :min="0" :max="1" :step="0.01" /></el-form-item>
         <el-form-item label="字段映射JSON"><el-input v-model="cfgForm.fieldMappingJson" type="textarea" :rows="3" placeholder='{"原始字段名":"模板字段键"}' /></el-form-item>
-        <el-form-item label="提取逻辑JSON"><el-input v-model="cfgForm.extractLogicJson" type="textarea" :rows="2" placeholder='{"enableModel":true}' /></el-form-item>
+        <el-form-item label="提取逻辑JSON"><el-input v-model="cfgForm.extractLogicJson" type="textarea" maxlength="500" show-word-limit :rows="2" placeholder='{"enableModel":true}' /></el-form-item>
         <el-form-item label="启用"><el-switch v-model="cfgForm.enabledBool" /></el-form-item>
       </el-form>
       <template #footer>

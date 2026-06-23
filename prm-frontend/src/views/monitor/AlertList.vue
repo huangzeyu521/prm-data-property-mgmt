@@ -46,7 +46,7 @@
             <el-option label="数据持有权" value="数据持有权" /><el-option label="数据加工使用权" value="数据加工使用权" /><el-option label="数据产品经营权" value="数据产品经营权" />
           </el-select>
         </el-form-item>
-        <el-form-item label="说明"><el-input v-model="rc.desc" type="textarea" :rows="2" /></el-form-item>
+        <el-form-item label="说明"><el-input v-model="rc.desc" type="textarea" maxlength="500" show-word-limit :rows="2" /></el-form-item>
       </el-form>
       <template #footer><el-button type="primary" @click="confirmReConfirm">派生重确权</el-button><el-button @click="rcDlg = false">取消</el-button></template>
     </el-dialog>
@@ -62,7 +62,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="规则ID"><el-input v-model="vio.ruleId" placeholder="可空;关联熔断规则则按规则配置" /></el-form-item>
-        <el-form-item label="异常描述"><el-input v-model="vio.desc" type="textarea" :rows="2" /></el-form-item>
+        <el-form-item label="异常描述"><el-input v-model="vio.desc" type="textarea" maxlength="500" show-word-limit :rows="2" /></el-form-item>
       </el-form>
       <template #footer><el-button type="danger" @click="confirmViolation">确认熔断</el-button><el-button @click="vioDlg = false">取消</el-button></template>
     </el-dialog>
@@ -89,8 +89,8 @@
       </el-table>
       <el-pagination
         style="margin-top: 16px; justify-content: flex-end"
-        background layout="total, prev, pager, next" :total="total"
-        :current-page="query.current" :page-size="query.size" @current-change="onPage" />
+        background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]" :total="total"
+        :current-page="query.current" :page-size="query.size" @current-change="onPage" @size-change="s=>{query.size=s;query.current=1;load()}" />
     </div>
   </div>
 </template>

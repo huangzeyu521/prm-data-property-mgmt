@@ -51,8 +51,8 @@
         </el-table-column>
       </el-table>
       <div class="prm-table-note">注:变更记录由确权/授权审批流自动生成,SM3 指纹上链(防篡改),不可人工删改;支持按 资产/类型/来源流程/操作人/时间 多维追溯。</div>
-      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, prev, pager, next"
-        :total="total" :current-page="query.current" :page-size="query.size" @current-change="onPage" />
+      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
+        :total="total" :current-page="query.current" :page-size="query.size" @current-change="onPage" @size-change="s=>{query.size=s;query.current=1;load()}" />
     </div>
   </div>
 </template>

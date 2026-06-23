@@ -189,7 +189,7 @@
               </div>
             </el-form-item>
             <el-form-item label="来源权益限制摘要">
-              <el-input v-model="form.sourceLimit" type="textarea" :rows="2" placeholder="表2:BCDEF 来源权益限制说明" />
+              <el-input v-model="form.sourceLimit" type="textarea" maxlength="500" show-word-limit :rows="2" placeholder="表2:BCDEF 来源权益限制说明" />
               <div v-if="dimMarks['来源说明/约束']" class="form-tip" style="margin-top:2px">
                 <el-tag v-if="dimMarks['来源说明/约束'].changed" size="small" type="warning" effect="plain">已修改 · 原值「{{ dimMarks['来源说明/约束'].before || '空' }}」</el-tag>
                 <el-tag v-else size="small" type="info" effect="plain">维持原值</el-tag>
@@ -203,15 +203,15 @@
               </div>
             </el-form-item>
             <el-form-item v-if="form.relationIdent.includes('H')" label="隐私关联主体说明" required>
-              <el-input v-model="form.privacyInfo" type="textarea" :rows="2" placeholder="涉个人/家庭隐私(H)必填:隐私关联主体及授权情况说明(如用户入网协议授权范围)" />
+              <el-input v-model="form.privacyInfo" type="textarea" maxlength="500" show-word-limit :rows="2" placeholder="涉个人/家庭隐私(H)必填:隐私关联主体及授权情况说明(如用户入网协议授权范围)" />
               <div v-if="dimMarks['隐私关联说明(H)']" class="form-tip" style="margin-top:2px">
                 <el-tag v-if="dimMarks['隐私关联说明(H)'].changed" size="small" type="warning" effect="plain">已修改 · 原值「{{ dimMarks['隐私关联说明(H)'].before || '空' }}」</el-tag>
                 <el-tag v-else size="small" type="info" effect="plain">维持原值</el-tag>
               </div>
             </el-form-item>
-            <el-form-item label="权益风险说明"><el-input v-model="form.equityRisk" type="textarea" :rows="2" placeholder="表2:权益风险说明" /></el-form-item>
+            <el-form-item label="权益风险说明"><el-input v-model="form.equityRisk" type="textarea" maxlength="500" show-word-limit :rows="2" placeholder="表2:权益风险说明" /></el-form-item>
           </template>
-          <el-form-item label="用途说明"><el-input v-model="form.purpose" type="textarea" /></el-form-item>
+          <el-form-item label="用途说明"><el-input v-model="form.purpose" type="textarea" maxlength="500" show-word-limit /></el-form-item>
 
           <el-divider content-position="left" style="font-size:12px;color:#909399">表级数据确权清单(确权粒度到库表,对齐附录F表2/表3;补录工单归类 M02)</el-divider>
           <el-form-item label="库表清单">

@@ -22,14 +22,14 @@
           </template>
         </el-table-column>
       </el-table>
-      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, prev, pager, next"
-        :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" />
+      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
+        :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" @size-change="s=>{q.size=s;q.current=1;load()}" />
     </div>
     <el-dialog v-model="dlg" :title="'新增'+label" width="520px" align-center>
       <el-form :model="form" label-width="100px">
         <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
         <el-form-item label="类型"><el-input v-model="form.itemType" /></el-form-item>
-        <el-form-item label="内容"><el-input v-model="form.content" type="textarea" /></el-form-item>
+        <el-form-item label="内容"><el-input v-model="form.content" type="textarea" maxlength="500" show-word-limit /></el-form-item>
       </el-form>
       <template #footer><el-button type="primary" @click="onSave">确定</el-button><el-button @click="dlg=false">取消</el-button></template>
     </el-dialog>

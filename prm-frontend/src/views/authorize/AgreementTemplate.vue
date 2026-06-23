@@ -50,8 +50,8 @@
         </el-table-column>
       </el-table>
       <div class="prm-table-note">注:按授权类型/使用目的分类集中管理协议模板;修改保存自动版本自增;申请/签署时按类型选用匹配模板。</div>
-      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, prev, pager, next"
-        :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" />
+      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
+        :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" @size-change="s=>{q.size=s;q.current=1;load()}" />
     </div>
 
     <el-dialog v-model="dlg" :title="form.templateId ? '修改协议模板（保存自增版本）' : '新增协议模板'" width="640px" align-center>

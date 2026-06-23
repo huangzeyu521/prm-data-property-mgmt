@@ -49,8 +49,8 @@
       <div class="prm-table-note">注:仅"草稿"规则可物理删除;生效中/历史规则不支持物理删除,仅可停用并生成新版本(守可审计红线)。</div>
       <el-pagination
         style="margin-top: 16px; justify-content: flex-end"
-        background layout="total, prev, pager, next" :total="total"
-        :current-page="query.current" :page-size="query.size" @current-change="onPage" />
+        background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]" :total="total"
+        :current-page="query.current" :page-size="query.size" @current-change="onPage" @size-change="s=>{query.size=s;query.current=1;load()}" />
     </div>
 
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="560px" align-center :close-on-click-modal="false">

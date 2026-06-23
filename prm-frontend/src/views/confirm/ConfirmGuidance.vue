@@ -36,8 +36,8 @@
         </el-table-column>
       </el-table>
       <div class="prm-table-note">注:列表仅显示各标题最新版本;同标题再次保存/上传将自动版本号自增并保留历史版本(可"版本历史"查看与回设)。</div>
-      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, prev, pager, next"
-        :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" />
+      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
+        :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" @size-change="s=>{q.size=s;q.current=1;load()}" />
     </div>
 
     <!-- 新增/修改 -->
@@ -50,7 +50,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="发布人"><el-input v-model="form.publisher" /></el-form-item>
-        <el-form-item label="内容"><el-input v-model="form.content" type="textarea" :rows="3" /></el-form-item>
+        <el-form-item label="内容"><el-input v-model="form.content" type="textarea" maxlength="500" show-word-limit :rows="3" /></el-form-item>
         <el-form-item v-if="!form.guidanceId" label="上传文件">
           <el-upload :auto-upload="false" :limit="1" :on-change="onFilePick" :on-remove="()=>{ pickedFile=null }">
             <el-button>选择文件(流程图/样例/政策PDF)</el-button>

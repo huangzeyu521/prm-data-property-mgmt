@@ -27,8 +27,8 @@
         </el-table-column>
       </el-table>
       <div class="prm-table-note">注:冻结/失效的权益卡片不可用于下游数据授权(风险熔断);全程变更留痕(权益可追溯 3.2.6)。</div>
-      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, prev, pager, next"
-        :total="total" :current-page="query.current" :page-size="query.size" @current-change="onPage" />
+      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
+        :total="total" :current-page="query.current" :page-size="query.size" @current-change="onPage" @size-change="s=>{query.size=s;query.current=1;load()}" />
     </div>
     <el-dialog v-model="logDlg" title="权益卡片变更历史" width="560px" align-center>
       <el-timeline>

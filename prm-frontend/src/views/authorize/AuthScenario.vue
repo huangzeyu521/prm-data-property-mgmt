@@ -40,8 +40,8 @@
         </el-table-column>
       </el-table>
       <div class="prm-table-note">注:应用场景与申请原因模板供授权申请时"选择/搜索"使用;停用的场景不出现在申请选择列表中。</div>
-      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, prev, pager, next"
-        :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" />
+      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
+        :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" @size-change="s=>{q.size=s;q.current=1;load()}" />
     </div>
 
     <el-dialog v-model="dlg" :title="form.scenarioId ? '修改应用场景' : '新增应用场景'" width="560px" align-center>
@@ -52,8 +52,8 @@
             <el-option v-for="c in categories" :key="c" :label="c" :value="c" />
           </el-select>
         </el-form-item>
-        <el-form-item label="场景描述"><el-input v-model="form.description" type="textarea" :rows="2" /></el-form-item>
-        <el-form-item label="申请原因模板"><el-input v-model="form.reasonTemplate" type="textarea" :rows="3" placeholder="申请人选中本场景时自动带出的申请原因" /></el-form-item>
+        <el-form-item label="场景描述"><el-input v-model="form.description" type="textarea" maxlength="500" show-word-limit :rows="2" /></el-form-item>
+        <el-form-item label="申请原因模板"><el-input v-model="form.reasonTemplate" type="textarea" maxlength="500" show-word-limit :rows="3" placeholder="申请人选中本场景时自动带出的申请原因" /></el-form-item>
       </el-form>
       <template #footer><el-button type="primary" :loading="saving" @click="onSave">确定</el-button><el-button @click="dlg=false">取消</el-button></template>
     </el-dialog>

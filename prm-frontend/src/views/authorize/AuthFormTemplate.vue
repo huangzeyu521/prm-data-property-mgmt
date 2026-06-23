@@ -38,8 +38,8 @@
         </el-table-column>
       </el-table>
       <div class="prm-table-note">注:按授权类型(独占/共享/委托)配置申请表单的字段、流程与验证规则;修改保存自动版本自增。</div>
-      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, prev, pager, next"
-        :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" />
+      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
+        :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" @size-change="s=>{q.size=s;q.current=1;load()}" />
     </div>
 
     <!-- 新增/修改 -->
@@ -66,7 +66,7 @@
             </el-table>
           </div>
         </el-form-item>
-        <el-form-item label="流程说明"><el-input v-model="form.flowDesc" type="textarea" :rows="2" placeholder="如:填报申请 → 合规审核 → 主管审批 → 签订协议 → 发证" /></el-form-item>
+        <el-form-item label="流程说明"><el-input v-model="form.flowDesc" type="textarea" maxlength="500" show-word-limit :rows="2" placeholder="如:填报申请 → 合规审核 → 主管审批 → 签订协议 → 发证" /></el-form-item>
         <el-form-item label="备注"><el-input v-model="form.remark" /></el-form-item>
       </el-form>
       <template #footer><el-button type="primary" :loading="saving" @click="onSave">确定</el-button><el-button @click="dlg=false">取消</el-button></template>

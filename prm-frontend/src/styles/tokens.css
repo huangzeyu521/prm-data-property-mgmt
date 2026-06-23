@@ -2,7 +2,8 @@
    主色 #1E87F0;成功 #36B21D;警告/提示 #FFC417(金黄,非橙);错误 #E21F0C;链接 #126CFD;
    文字 #262626/#595959/#8C8C8C;边框 #D8D8D8;底 #F5F5F6;辅助橙 #F65C09 仅限图标/图表标识。
    栅格/圆角/字体沿用《数据中心工具平台典型界面切图标注 202605》(圆角 4px、选中浅蓝 #E5F4FF、微软雅黑 14px)。
-   注:此前 warning 用切图橙 #FF7800,因与 PDF p6(警告=金黄)冲突且客户投诉,已按客户裁定改回 PDF。 */
+   注1:此前 warning 用切图橙 #FF7800,因与 PDF p6(警告=金黄)冲突且客户投诉,已按客户裁定改回 PDF。
+   注2:正文字号——PDF p11(强管制)为 16px,202605 切图为 14px,经客户裁定以「切图 14px」为准(2026-06),故 --prm-font-size-base 维持 14px。 */
 :root {
   --prm-font-family: "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
   --prm-color-primary: #1e87f0;        /* 规范主色(p6):按钮/控件/导航栏 */
@@ -25,7 +26,7 @@
   /* 规范辅助色橙(p6 #F65C09):仅用于图标/图表标识,不作按钮/提示框/状态标签 */
   --prm-color-accent: #f65c09;
   --prm-radius: 4px;
-  --prm-font-size-base: 14px;
+  --prm-font-size-base: 14px;        /* 正文:以 202605 切图 14px 为准(客户裁定);PDF p11 强管制为 16px,已覆盖 */
   --prm-font-size-min: 12px;
   --prm-space-sm: 8px;
   --prm-space-md: 16px;
@@ -114,12 +115,13 @@ body {
   font-size: var(--prm-font-size-min);
 }
 
-/* 表格:浅灰蓝表头 + 深主文字(典型界面-面包屑-表格列表) */
+/* 表格(规范 p98):表头浅灰蓝 #F5F8FA、选中/悬停行 #EFF7FF、边框 #EFEFEF */
 .el-table {
-  --el-table-header-bg-color: var(--prm-color-bg);
+  --el-table-header-bg-color: #f5f8fa;
   --el-table-header-text-color: var(--prm-color-text);
-  --el-table-row-hover-bg-color: var(--prm-color-selected-bg);
-  --el-table-border-color: #e8e8e8;
+  --el-table-row-hover-bg-color: #eff7ff;
+  --el-table-current-row-bg-color: #eff7ff;
+  --el-table-border-color: #efefef;
 }
 .el-table th.el-table__cell {
   font-weight: 600;
@@ -187,3 +189,19 @@ body {
 .el-tag--warning.is-plain { background-color: var(--el-color-warning-light-9); }
 .el-tag--danger.is-plain { background-color: var(--el-color-danger-light-9); }
 .el-tag--info.is-plain { background-color: var(--el-color-info-light-9); }
+
+/* 超链接(p90):链接文字用规范链接色 #126CFD(区别于按钮主色 #1E87F0) */
+.el-link.el-link--primary {
+  --el-link-text-color: var(--prm-color-link);
+  --el-link-hover-text-color: var(--prm-color-link);
+}
+
+/* 复选框/单选框尺寸 → 规范 ~20px(p85/p87):整体缩放,勾选/圆点随之等比、对齐不破 */
+.el-checkbox__inner,
+.el-radio__inner { transform: scale(1.4); transform-origin: center; }
+/* 缩放后补足复选/单选框与文字间隔(规范约 10px) */
+.el-checkbox .el-checkbox__label { padding-left: 14px; }
+.el-radio .el-radio__label { padding-left: 14px; }
+
+/* 开关尺寸 → 规范 48×24(p89):整体缩放,圆点等比对齐;左对齐origin避免位移 */
+.el-switch { transform: scale(1.2); transform-origin: left center; margin-right: 10px; }

@@ -79,6 +79,8 @@
         <div class="prm-content">
           <router-view :key="$route.fullPath" />
         </div>
+        <!-- 全局页脚(规范 p37 强管制:底部版权信息);登录/aitool 走裸 router-view 不含 -->
+        <footer class="prm-footer">© 2026 中国南方电网有限责任公司　数据资产管理平台 V3.6 · 数据产权管理模块</footer>
       </el-main>
     </el-container>
   </el-container>
@@ -282,4 +284,14 @@ const openeds = computed(() => {
   border-bottom: 1px solid var(--prm-color-border);
 }
 .prm-content { flex: 1; overflow: auto; }
+/* 全局页脚(规范 p37):工作区底部常显,白底+顶部细线、居中弱化文字 */
+.prm-footer {
+  flex: 0 0 auto;
+  text-align: center;
+  padding: 9px 16px;
+  font-size: 12px;
+  color: var(--prm-color-text-weak);
+  background: #fff;
+  border-top: 1px solid var(--prm-color-border);
+}
 </style>

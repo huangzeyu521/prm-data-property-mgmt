@@ -86,7 +86,9 @@ const routes = [
   // 登录页(无平台布局)
   { path: '/login', name: 'Login', component: () => import('@/views/Login.vue'), meta: { title: '登录', public: true } },
   // 旧路径兼容重定向(保留历史链接/收藏)
-  { path: '/dpr/aitool/:page(material|conflict|decision)', redirect: (to) => ({ path: '/aitool/' + to.params.page, query: to.query }) }
+  { path: '/dpr/aitool/:page(material|conflict|decision)', redirect: (to) => ({ path: '/aitool/' + to.params.page, query: to.query }) },
+  // 404 兜底(规范 p122 强管制):无匹配路径 → 异常数据页(在主框架内渲染,带导航/面包屑)
+  { path: '/:pathMatch(.*)*', name: 'NotFound', component: () => import('@/views/NotFound.vue'), meta: { title: '页面不存在' } }
 ]
 
 const router = createRouter({

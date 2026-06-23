@@ -37,8 +37,8 @@
         </el-table-column>
       </el-table>
       <div class="prm-table-note">注:合规检查为多维自动巡检——有效期 / 权限范围(越权) / 申请材料 / 协议内容;命中生成检查结果+预警,并产出检查报告。已由定时器周期自动执行。</div>
-      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, prev, pager, next"
-        :total="total" :current-page="query.current" :page-size="query.size" @current-change="onPage" />
+      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
+        :total="total" :current-page="query.current" :page-size="query.size" @current-change="onPage" @size-change="s=>{query.size=s;query.current=1;load()}" />
     </div>
 
     <el-dialog v-model="reportDlg" title="数据资产合规性检查报告" width="560px">

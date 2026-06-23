@@ -26,8 +26,8 @@
           </template>
         </el-table-column>
       </el-table>
-      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, prev, pager, next"
-        :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" />
+      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
+        :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" @size-change="s=>{q.size=s;q.current=1;load()}" />
     </div>
     <el-dialog v-model="dlg" title="新增对外经营权授权备案" width="520px" align-center>
       <el-form :model="form" label-width="100px">
@@ -38,7 +38,7 @@
         </el-form-item>
         <el-form-item label="关联协议ID"><el-input v-model="form.agreementId" placeholder="附录D 运营授权协议ID(可选)" /></el-form-item>
         <el-form-item label="关联申请ID"><el-input v-model="form.applyId" placeholder="可选" /></el-form-item>
-        <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" :rows="2" /></el-form-item>
+        <el-form-item label="备注"><el-input v-model="form.remark" type="textarea" maxlength="500" show-word-limit :rows="2" /></el-form-item>
       </el-form>
       <template #footer><el-button type="primary" @click="onSave">确定</el-button><el-button @click="dlg=false">取消</el-button></template>
     </el-dialog>

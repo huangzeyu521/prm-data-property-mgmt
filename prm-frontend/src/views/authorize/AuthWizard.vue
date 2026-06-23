@@ -24,7 +24,7 @@
         <el-form ref="formRef" :model="form" :rules="rules" label-width="150px" :disabled="!!applyId && !editing" style="max-width:680px">
           <el-form-item label="AI 智能填单">
             <div style="width:100%">
-              <el-input v-model="aiText" type="textarea" :rows="2" placeholder="用自然语言描述授权诉求,如:拟向广州供电局开放数据用于电力金融征信,全字段" />
+              <el-input v-model="aiText" type="textarea" maxlength="500" show-word-limit :rows="2" placeholder="用自然语言描述授权诉求,如:拟向广州供电局开放数据用于电力金融征信,全字段" />
               <el-button type="primary" plain size="small" :loading="aiLoading" style="margin-top:6px" @click="onAiFill">大瓦特 AI 识别意图并填单</el-button>
               <span v-if="aiTip" style="margin-left:10px;color:#909399;font-size:12px">{{ aiTip }}</span>
               <AiThinking v-bind="aiThink.state" />
@@ -87,7 +87,7 @@
           <el-form-item label="涉个人隐私/商密"><el-input v-model="form.sensitiveType" placeholder="个人隐私 / 商业秘密 / 无" /></el-form-item>
           <el-form-item label="第三方来源方式"><el-input v-model="form.thirdPartySource" placeholder="涉及第三方时填" /></el-form-item>
           <el-form-item v-if="form.thirdPartySource" label="第三方许可凭证" required>
-            <el-input v-model="form.thirdPartyLicense" type="textarea" :rows="2" placeholder="第三方许可凭证或说明(涉第三方必填)" />
+            <el-input v-model="form.thirdPartyLicense" type="textarea" maxlength="500" show-word-limit :rows="2" placeholder="第三方许可凭证或说明(涉第三方必填)" />
           </el-form-item>
           <el-form-item label="信息授权协议" :required="!!(form.sensitiveType && form.sensitiveType.trim() && form.sensitiveType !== '无')">
             <el-input v-model="form.infoAuthAgreement" placeholder="信息授权协议名称/地址(涉个人隐私/商密必填)" />

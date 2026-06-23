@@ -47,11 +47,11 @@
       <el-pagination
         class="prm-pager"
         background
-        layout="total, sizes, prev, pager, next"
+        layout="total, sizes, prev, pager, next, jumper"
         :total="total"
         :current-page="q.current"
         :page-size="q.size"
-        :page-sizes="[10, 20, 50]"
+        :page-sizes="[10, 20, 50, 100]"
         @current-change="onPage"
         @size-change="onSize"
       />

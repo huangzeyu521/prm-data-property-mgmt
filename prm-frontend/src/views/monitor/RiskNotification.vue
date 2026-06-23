@@ -25,8 +25,8 @@
           <template #default><el-tag size="small">站内消息</el-tag> <el-tag size="small" type="success">eLink</el-tag></template>
         </el-table-column>
       </el-table>
-      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, prev, pager, next"
-        :total="total" :current-page="query.current" :page-size="query.size" @current-change="onPage" />
+      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
+        :total="total" :current-page="query.current" :page-size="query.size" @current-change="onPage" @size-change="s=>{query.size=s;query.current=1;load()}" />
     </div>
   </div>
 </template>

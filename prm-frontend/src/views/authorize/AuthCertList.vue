@@ -38,8 +38,8 @@
         注:证书撤销后数据资源权限将被回收;<strong>已暂停</strong>为监测联动熔断(违规/越权),整改后可"续签"恢复生效。
       </div>
       <el-pagination v-if="!expiringMode" style="margin-top:16px;justify-content:flex-end" background
-        layout="total, prev, pager, next" :total="total" :current-page="query.current" :page-size="query.size"
-        @current-change="onPage" />
+        layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]" :total="total" :current-page="query.current" :page-size="query.size"
+        @current-change="onPage" @size-change="s=>{query.size=s;query.current=1;load()}" />
     </div>
 
     <el-dialog v-model="renewDlg" title="授权证书续签" width="460px" align-center>

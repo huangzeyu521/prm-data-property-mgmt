@@ -23,7 +23,7 @@
             </template>
           </el-alert>
           <el-form-item label="授权年度" required><el-input v-model="listForm.listYear" placeholder="如 2026" /></el-form-item>
-          <el-form-item label="清单备注"><el-input v-model="listForm.remark" type="textarea" :rows="2" placeholder="如:综能板块年度批量授权" /></el-form-item>
+          <el-form-item label="清单备注"><el-input v-model="listForm.remark" type="textarea" maxlength="500" show-word-limit :rows="2" placeholder="如:综能板块年度批量授权" /></el-form-item>
         </el-form>
         <el-alert v-if="batchListId" type="success" :closable="false" show-icon :title="`清单已创建(${listNo})，开始逐条添加授权项`" style="max-width:520px;margin-top:8px" />
       </el-card>
@@ -32,7 +32,7 @@
       <el-card v-show="step === 1" shadow="never">
         <!-- AI 批量填单(qwen3-max,stub 回退):一段话解析出共享字段+多条明细 -->
         <div class="ai-batch">
-          <el-input v-model="aiBatchText" type="textarea" :rows="2"
+          <el-input v-model="aiBatchText" type="textarea" maxlength="500" show-word-limit :rows="2"
             placeholder="AI 批量填单:如 向南网综合能源股份有限公司授权台区负荷数据、充电桩运营数据、线损分析数据用于综合能源服务,数据加工使用权,批量授权" />
           <el-button type="warning" :loading="aiParsing" style="margin-top:6px" @click="runAiBatch">大瓦特 AI 解析并预填明细</el-button>
           <el-button v-if="aiItems.length" type="primary" plain :loading="aiAdding" style="margin-top:6px;margin-left:8px" @click="addAiItems">
