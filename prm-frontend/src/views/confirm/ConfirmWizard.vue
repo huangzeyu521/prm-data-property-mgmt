@@ -14,6 +14,20 @@
     <div class="wz-body">
       <!-- 步骤1:填写申请 -->
       <el-card v-show="step === 0" shadow="never">
+        <!-- P0 变更前后对照:确权变更时,以已有确权结论为基线,一眼看见改了什么/没改什么 -->
+        <div v-if="form.registerType === '确权变更' && changeBaseline" style="margin-bottom:12px">
+          <el-alert :type="changeDiff.length ? 'warning' : 'info'" :closable="false" :title="changeSummary" />
+          <el-table v-if="changeDiff.length" :data="changeDiff" border size="small" style="margin-top:8px;max-width:840px">
+            <el-table-column prop="key" label="变更维度" width="150" />
+            <el-table-column label="原值(已有确权)" min-width="180">
+              <template #default="{ row }"><span style="color:#909399;text-decoration:line-through">{{ row.before || '空' }}</span></template>
+            </el-table-column>
+            <el-table-column label="新值(本次变更)" min-width="180">
+              <template #default="{ row }"><span style="color:#e6a23c;font-weight:600">{{ row.after || '空' }}</span></template>
+            </el-table-column>
+          </el-table>
+          <div style="font-size:12px;color:#67c23a;margin-top:4px">另有 {{ changeUnchanged }} 项维持原值(无需改动)。</div>
+        </div>
         <el-alert v-if="!applyId" type="info" :closable="false" style="margin-bottom:12px;max-width:640px">
           <template #title>
             第一次填写?可
@@ -53,12 +67,26 @@
               <el-option v-for="t in rightTypes" :key="t" :label="t" :value="t" />
             </el-select>
             <div class="form-tip">支持多选:多种权属类型合并发起同一份申请(评审优化)</div>
+            <div v-if="dimMarks['权属类型']" class="form-tip" style="margin-top:2px">
+              <el-tag v-if="dimMarks['权属类型'].changed" size="small" type="warning" effect="plain">已修改 · 原值「{{ dimMarks['权属类型'].before || '空' }}」</el-tag>
+              <el-tag v-else size="small" type="info" effect="plain">维持原值</el-tag>
+            </div>
           </el-form-item>
           <el-form-item label="申报权属主体">
             <el-input v-model="form.rightHolder" placeholder="当前申报主体,最终权属以确权审核结果为准" />
             <div class="form-tip">分省上报的数据产权,确权通过后统一归口中国南方电网有限责任公司</div>
+            <div v-if="dimMarks['权属主体']" class="form-tip" style="margin-top:2px">
+              <el-tag v-if="dimMarks['权属主体'].changed" size="small" type="warning" effect="plain">已修改 · 原值「{{ dimMarks['权属主体'].before || '空' }}」</el-tag>
+              <el-tag v-else size="small" type="info" effect="plain">维持原值</el-tag>
+            </div>
           </el-form-item>
-          <el-form-item label="责任部门"><el-input v-model="form.respDept" placeholder="选取卡片后自动带出(卡片管理部门)" /></el-form-item>
+          <el-form-item label="责任部门">
+            <el-input v-model="form.respDept" placeholder="选取卡片后自动带出(卡片管理部门)" />
+            <div v-if="dimMarks['责任部门']" class="form-tip" style="margin-top:2px">
+              <el-tag v-if="dimMarks['责任部门'].changed" size="small" type="warning" effect="plain">已修改 · 原值「{{ dimMarks['责任部门'].before || '空' }}」</el-tag>
+              <el-tag v-else size="small" type="info" effect="plain">维持原值</el-tag>
+            </div>
+          </el-form-item>
           <el-form-item label="系统负责人">
             <el-input v-model="form.systemOwner" placeholder="选取卡片后自动带出(卡片责任人)">
               <template #suffix><span v-if="form.systemOwner" style="color:#67c23a;font-size:12px">平台卡片</span></template>
@@ -70,11 +98,26 @@
             </el-input>
           </el-form-item>
           <el-form-item label="登记类型">
-            <el-radio-group v-model="form.registerType">
+            <el-radio-group v-model="form.registerType" @change="onRegisterTypeChange">
               <el-radio value="初始确权">初始确权</el-radio>
               <el-radio value="确权变更">确权变更</el-radio>
-              <el-radio value="产权补录">产权补录(存量系统 MDAU 工单)</el-radio>
             </el-radio-group>
+            <div v-if="assetConfirmState" class="form-tip">
+              <span v-if="assetConfirmed" style="color:#e6a23c">该资产<b>已确权</b>,选取后默认「确权变更」;如确需重新初始登记请知悉已存在确权结论。</span>
+              <span v-else style="color:#67c23a">该资产<b>未确权</b>(状态:{{ assetConfirmState }}),默认「初始确权」。</span>
+            </div>
+          </el-form-item>
+          <!-- 确权变更差异化(附录F §3.3.2 重新确权):须选变更触发类型 -->
+          <el-form-item v-if="form.registerType === '确权变更'" prop="changeTrigger" required>
+            <template #label><span style="color:#f56c6c">*</span> 变更触发类型</template>
+            <el-select v-model="form.changeTrigger" placeholder="本次确权变更的触发动因(附录F §3.3.2)" style="width:100%">
+              <el-option label="数据新增" value="数据新增" />
+              <el-option label="数据来源变更" value="数据来源变更" />
+              <el-option label="管理要求变更" value="管理要求变更" />
+              <el-option label="数据权益到期" value="权益到期" />
+              <el-option label="其他" value="其他" />
+            </el-select>
+            <div class="form-tip">确权变更=对该资产已有确权结论的修订;下方字段已基于现状预填,请只改动发生变动的维度。</div>
           </el-form-item>
           <el-form-item label="管制属性">
             <el-radio-group v-model="form.regulated">
@@ -104,11 +147,33 @@
           </el-form-item>
           <template v-if="needTable2">
             <el-divider content-position="left" style="font-size:12px;color:#909399">表2 涉及第三方权益(结构化)</el-divider>
-            <el-form-item label="来源主体名称" prop="sourceSubject"><el-input v-model="form.sourceSubject" placeholder="表2:第三方来源主体" /></el-form-item>
-            <el-form-item label="来源权益限制摘要"><el-input v-model="form.sourceLimit" type="textarea" :rows="2" placeholder="表2:BCDEF 来源权益限制说明" /></el-form-item>
-            <el-form-item label="信息识别关联主体"><el-input v-model="form.relationSubject" placeholder="表2:GHIJ 信息识别关联主体说明(其他第三方协议 J 必填)" /></el-form-item>
+            <el-form-item label="来源主体名称" prop="sourceSubject">
+              <el-input v-model="form.sourceSubject" placeholder="表2:第三方来源主体" />
+              <div v-if="dimMarks['来源主体']" class="form-tip" style="margin-top:2px">
+                <el-tag v-if="dimMarks['来源主体'].changed" size="small" type="warning" effect="plain">已修改 · 原值「{{ dimMarks['来源主体'].before || '空' }}」</el-tag>
+                <el-tag v-else size="small" type="info" effect="plain">维持原值</el-tag>
+              </div>
+            </el-form-item>
+            <el-form-item label="来源权益限制摘要">
+              <el-input v-model="form.sourceLimit" type="textarea" :rows="2" placeholder="表2:BCDEF 来源权益限制说明" />
+              <div v-if="dimMarks['来源说明/约束']" class="form-tip" style="margin-top:2px">
+                <el-tag v-if="dimMarks['来源说明/约束'].changed" size="small" type="warning" effect="plain">已修改 · 原值「{{ dimMarks['来源说明/约束'].before || '空' }}」</el-tag>
+                <el-tag v-else size="small" type="info" effect="plain">维持原值</el-tag>
+              </div>
+            </el-form-item>
+            <el-form-item label="信息识别关联主体">
+              <el-input v-model="form.relationSubject" placeholder="表2:GHIJ 信息识别关联主体说明(其他第三方协议 J 必填)" />
+              <div v-if="dimMarks['关联主体说明(J)']" class="form-tip" style="margin-top:2px">
+                <el-tag v-if="dimMarks['关联主体说明(J)'].changed" size="small" type="warning" effect="plain">已修改 · 原值「{{ dimMarks['关联主体说明(J)'].before || '空' }}」</el-tag>
+                <el-tag v-else size="small" type="info" effect="plain">维持原值</el-tag>
+              </div>
+            </el-form-item>
             <el-form-item v-if="form.relationIdent.includes('H')" label="隐私关联主体说明" required>
               <el-input v-model="form.privacyInfo" type="textarea" :rows="2" placeholder="涉个人/家庭隐私(H)必填:隐私关联主体及授权情况说明(如用户入网协议授权范围)" />
+              <div v-if="dimMarks['隐私关联说明(H)']" class="form-tip" style="margin-top:2px">
+                <el-tag v-if="dimMarks['隐私关联说明(H)'].changed" size="small" type="warning" effect="plain">已修改 · 原值「{{ dimMarks['隐私关联说明(H)'].before || '空' }}」</el-tag>
+                <el-tag v-else size="small" type="info" effect="plain">维持原值</el-tag>
+              </div>
             </el-form-item>
             <el-form-item label="权益风险说明"><el-input v-model="form.equityRisk" type="textarea" :rows="2" placeholder="表2:权益风险说明" /></el-form-item>
           </template>
@@ -166,6 +231,8 @@
 
       <!-- 步骤2:上传材料(先从平台元数据同步已上传材料,再补全缺口) -->
       <el-card v-show="step === 1" shadow="never">
+        <el-alert v-if="form.registerType === '确权变更' && form.changeTrigger" type="warning" :closable="false" style="margin-bottom:10px"
+          :title="`确权变更(触发:${form.changeTrigger}）—— 应交材料已收敛为差异项,仅需提交与本次变更相关的材料,无需重复全套`" />
         <div class="prm-table-note" style="margin-bottom:10px">
           材料优先<b>从数据资产管理平台元数据同步已上传项</b>(标「已同步·平台」免上传),仅需补全平台未覆盖的缺口。补全时"上传原件"(仅 PDF/Word/JPG/PNG,自动格式验证)或"仅登记"占位。
           <el-button size="small" type="primary" plain style="margin-left:12px" :loading="syncing" @click="doSyncPlatform(false)">
@@ -643,7 +710,7 @@ async function loadConsolidation() {
 const form = reactive({
   assetId: '', assetName: '', systemName: '', rightTypes: [], rightHolder: '', respDept: '',
   systemOwner: '', contactInfo: '', assetSecretLevel: '', region: '',
-  registerType: '初始确权', applyMode: '常规', regulated: '非管制',
+  registerType: '初始确权', changeTrigger: '', applyMode: '常规', regulated: '非管制',
   purpose: '', thirdPartyInfo: '', sourceSubject: '', sourceLimit: '', relationSubject: '', equityRisk: '',
   privacyInfo: '', sourceIdent: [], relationIdent: []
 })
@@ -670,8 +737,13 @@ function parseIdentCodes(s, allowed) {
     .filter(c => allowed.includes(c))
 }
 
-onMounted(() => {
+onMounted(async () => {
   loadMaterialRules()
+  // 主动入口「发起变更」(P1):列表页带 assetId 进入,预选资产并按确权状态自动定登记类型(已确权→确权变更+基线对照)
+  if (route.query.assetId && !applyId.value) {
+    await initAssetEntry(String(route.query.assetId))
+    return
+  }
   if (!route.query.reopen) return
   try {
     const o = JSON.parse(sessionStorage.getItem('prm-reopen') || '{}')
@@ -680,7 +752,7 @@ onMounted(() => {
       Object.assign(form, {
         assetId: r.assetId || '', assetName: r.assetName || '', systemName: r.systemName || '', rightHolder: r.rightHolder || '',
         respDept: r.respDept || '', systemOwner: r.systemOwner || '', contactInfo: r.contactInfo || '',
-        registerType: r.registerType || '初始确权', regulated: r.regulated || '非管制',
+        registerType: r.registerType || '初始确权', changeTrigger: r.changeTrigger || '', regulated: r.regulated || '非管制',
         purpose: r.purpose || '', sourceSubject: r.sourceSubject || '', sourceLimit: r.sourceLimit || '',
         relationSubject: r.relationSubject || '', equityRisk: r.equityRisk || '', privacyInfo: r.privacyInfo || '',
         rightTypes: r.rightType ? String(r.rightType).split(/[、,，]/).map(s => s.trim()).filter(Boolean) : [],
@@ -698,10 +770,92 @@ const needTable2 = computed(() =>
   form.relationIdent.some(c => ['G', 'H', 'I', 'J'].includes(c)))
 
 // 关联数据资产卡片:按 名称/编码/系统 搜索平台卡片并选取(平台为源,台账兜底);存ID、带出名,不手填
-import { searchAssetCards, listAssetTables } from '@/api/assetCard'
+import { searchAssetCards, listAssetTables, getAssetProperty } from '@/api/assetCard'
 const assetOpts = ref([])
 const assetSearching = ref(false)
 const pickedCard = ref(null)
+// 选卡后查该资产确权状态:已确权→默认确权变更,未确权→默认初始确权(登记类型二选一)
+const assetConfirmState = ref('')      // 待确权/确权中/已确权/已驳回
+const assetConfirmed = ref(false)      // 是否已确权(state==='已确权')
+const changeBaseline = ref(null)       // 确权变更基线:已有确权结论(/property),用于变更前后 diff
+async function checkAssetConfirmState(assetId) {
+  assetConfirmState.value = ''; assetConfirmed.value = false; changeBaseline.value = null
+  if (!assetId) return
+  try {
+    const p = await getAssetProperty(assetId)
+    const st = p && p.state ? p.state : '待确权'
+    assetConfirmState.value = st
+    assetConfirmed.value = st === '已确权'
+    // 自动默认登记类型:已确权→确权变更;未确权→初始确权(reConfirm 在保存时由 registerType 派生)
+    form.registerType = assetConfirmed.value ? '确权变更' : '初始确权'
+    if (assetConfirmed.value) {
+      changeBaseline.value = p // 留存基线,供"变更前后对照"
+      // 确权变更=对已有确权结论的修订:基于现状预填全部对照维度(覆盖平台带出值),
+      // 使初始 diff 为空,用户改动哪一维即真实高亮哪一维(否则未预填维度会误报"X→空")
+      if (p.rightHolder) form.rightHolder = p.rightHolder
+      if (p.rightType) form.rightTypes = String(p.rightType).split(/[、,，]/).map(s => s.trim()).filter(Boolean)
+      if (p.respDept) form.respDept = p.respDept
+      if (p.sourceSubject) form.sourceSubject = p.sourceSubject
+      if (p.sourceLimit) form.sourceLimit = p.sourceLimit
+      if (p.privacyInfo) form.privacyInfo = p.privacyInfo
+      if (p.thirdPartyInfo) form.thirdPartyInfo = p.thirdPartyInfo
+      if (p.relationSubject) form.relationSubject = p.relationSubject
+      ElMessage.info('该资产已确权,已默认「确权变更」并基于现有确权结论预填,请只改动发生变动的维度')
+    } else {
+      form.changeTrigger = '' // 未确权回到初始确权:清空变更触发类型
+    }
+  } catch (e) { /* 平台/产权查询失败:不阻断,保留用户当前选择 */ }
+}
+
+// 变更前后对照(P0):确权变更时,8 个关键维度当前值 ↔ 基线值实时比对,仅列变化项
+// 权属类型基线串可能用 ,/，/、 任一分隔:统一规范化为「、」拼接,避免分隔符差异误报"已修改"
+const canonTypes = (v) => String(v == null ? '' : v).split(/[、,，]/).map(s => s.trim()).filter(Boolean).join('、')
+const CHANGE_DIMS = [
+  { key: '权属主体', cur: () => form.rightHolder, base: b => b.rightHolder },
+  { key: '权属类型', cur: () => canonTypes((form.rightTypes || []).join('、')), base: b => canonTypes(b.rightType) },
+  { key: '责任部门', cur: () => form.respDept, base: b => b.respDept },
+  { key: '来源主体', cur: () => form.sourceSubject, base: b => b.sourceSubject },
+  { key: '来源说明/约束', cur: () => form.sourceLimit, base: b => b.sourceLimit },
+  { key: '隐私关联说明(H)', cur: () => form.privacyInfo, base: b => b.privacyInfo },
+  { key: '第三方信息(I)', cur: () => form.thirdPartyInfo, base: b => b.thirdPartyInfo },
+  { key: '关联主体说明(J)', cur: () => form.relationSubject, base: b => b.relationSubject }
+]
+const norm = (v) => (v == null ? '' : String(v).trim())
+const changeDiff = computed(() => {
+  if (form.registerType !== '确权变更' || !changeBaseline.value) return []
+  const b = changeBaseline.value
+  return CHANGE_DIMS
+    .map(d => ({ key: d.key, before: norm(d.base(b)), after: norm(d.cur()) }))
+    .filter(x => x.before !== x.after)
+})
+const changeUnchanged = computed(() => {
+  if (form.registerType !== '确权变更' || !changeBaseline.value) return 0
+  return CHANGE_DIMS.length - changeDiff.value.length
+})
+const changeSummary = computed(() => {
+  if (form.registerType !== '确权变更' || !changeBaseline.value) return ''
+  if (!changeDiff.value.length) return `确权变更(触发:${form.changeTrigger || '未选'})—— 暂未检测到与原确权结论的差异,请核对是否确需变更`
+  return `本次确权变更(触发:${form.changeTrigger || '未选'})共修改 ${changeDiff.value.length} 项:`
+    + changeDiff.value.map(d => `${d.key}「${d.before || '空'}→${d.after || '空'}」`).join('、')
+})
+// 变更点引导(P1):各维度字段旁的内联标记 —— 已改(高亮原值)/维持原值(弱化),按维度键取
+const dimMarks = computed(() => {
+  const map = {}
+  if (form.registerType !== '确权变更' || !changeBaseline.value) return map
+  const b = changeBaseline.value
+  for (const d of CHANGE_DIMS) {
+    const before = norm(d.base(b))
+    map[d.key] = { changed: before !== norm(d.cur()), before }
+  }
+  return map
+})
+// 登记类型门禁:已确权却手动选「初始确权」→ 提示(附录F:已确权应走确权变更)
+function onRegisterTypeChange(val) {
+  if (val === '初始确权') {
+    if (assetConfirmed.value) ElMessage.warning('该资产已确权,若需修订请选「确权变更」;选择「初始确权」将重复登记')
+    form.changeTrigger = '' // 初始确权无变更触发类型
+  }
+}
 async function searchAssets(kw) {
   if (!kw) { assetOpts.value = []; return }
   assetSearching.value = true
@@ -709,11 +863,22 @@ async function searchAssets(kw) {
     assetOpts.value = (await searchAssetCards(kw, 10)) || []
   } finally { assetSearching.value = false }
 }
-function onAssetPicked(id) {
+async function onAssetPicked(id) {
   const hit = assetOpts.value.find(a => a.assetId === id)
   pickedCard.value = hit || null
   if (hit) form.assetName = hit.assetName || hit.assetId
-  if (id) onAutofill(true)
+  // 顺序:先平台带出,再按确权状态(确权变更时以已有确权结论现值预填覆盖)
+  if (id) { await onAutofill(true); await checkAssetConfirmState(id) }
+}
+
+// 主动入口「发起变更」:从列表带 assetId 进入,补齐选择器选项并复用选卡逻辑(自动定登记类型+基线)
+async function initAssetEntry(assetId) {
+  form.assetId = assetId
+  try { assetOpts.value = (await searchAssetCards(assetId, 5)) || [] } catch (e) { /* 选择器选项兜底 */ }
+  await onAssetPicked(assetId)
+  if (!assetConfirmed.value) {
+    ElMessage.warning('该资产尚未确权,已按「初始确权」进入;完成初始确权后方可发起确权变更')
+  }
 }
 
 // 一键填充示例(测试/演示):对齐 test/确权申请 手册 AST-001 全套数据
@@ -767,6 +932,9 @@ function onAutoFillSilent() {
 async function next0() {
   await formRef.value.validate()
   // 申请要素逐维必填(与后端 validateRegistration 同源,前移到填报,杜绝"材料全过却提交被拒")
+  if (form.registerType === '确权变更' && !form.changeTrigger) {
+    ElMessage.warning('确权变更须选择变更触发类型(数据新增/数据来源变更/管理要求变更/权益到期/其他)'); return
+  }
   if (!form.sourceIdent.length) { ElMessage.warning('请至少选择一种数据来源方式(A–F)'); return }
   if (form.sourceIdent.some(c => ['B', 'C', 'D', 'E', 'F'].includes(c)) && !form.sourceSubject) {
     ElMessage.warning('数据来源涉公开采集/受让/委托/交易等(B–F),须填写来源主体名称'); return
@@ -857,13 +1025,33 @@ function buildChecklist() {
     if (r.triggerType === 'RELATION') return form.relationIdent.includes(r.triggerCode)
     return false
   }
-  checklist.value = materialRules.value.filter(hit).map((r, i) => ({
+  let rules = materialRules.value.filter(hit)
+  // 确权变更:按变更触发类型收敛为差异项(与后端 narrowForChange 一致),不必重复提交全套
+  if (form.registerType === '确权变更' && form.changeTrigger) rules = narrowForChange(rules, form.changeTrigger)
+  checklist.value = rules.map((r, i) => ({
     code: r.triggerCode || (r.triggerType === 'TABLE2' ? '表2' : '核心'),
     name: r.materialName,
     m: r.triggerLabel || r.evidenceType || '材料',
     required: r.required, detail: r.detail,
     id: 'ck' + i, done: false
   }))
+}
+// 确权变更应交材料收敛(镜像后端 ConfirmMaterialRuleService.narrowForChange):核心表单/凭证(ALWAYS)始终保留;
+// 来源类仅当触发涉来源、关联类仅当触发涉管理要求时保留;表2仅当仍保留来源/关联差异材料时保留。
+function narrowForChange(rules, trigger) {
+  // 容错匹配(与后端一致):触发可组合表述,按关键词判定;未识别触发→保守不收敛返回全集
+  const known = ['来源', '新增', '管理', '监管', '到期'].some(k => trigger.includes(k)) || trigger === '其他'
+  if (!known) return rules
+  const keepSrc = trigger.includes('来源') || trigger.includes('新增') || trigger === '其他'
+  const keepRel = trigger.includes('管理') || trigger.includes('监管') || trigger === '其他'
+  const out = []; let anyDiff = false
+  for (const r of rules) {
+    if (r.triggerType === 'ALWAYS') out.push(r)
+    else if (r.triggerType === 'SOURCE') { if (keepSrc) { out.push(r); anyDiff = true } }
+    else if (r.triggerType === 'RELATION') { if (keepRel) { out.push(r); anyDiff = true } }
+  }
+  if (anyDiff) out.push(...rules.filter(r => r.triggerType === 'TABLE2'))
+  return out
 }
 
 // 规则接口不可用时的内置兜底(与默认规则一致),保证向导可离线生成清单
@@ -970,7 +1158,8 @@ function goProgress() { router.push('/dpr/confirm/history') }
 function reset() {
   step.value = 0; applyId.value = ''; applyNo.value = ''; quality.value = null
   checklist.value = []; materials.value = []
-  Object.assign(form, { assetId: '', assetName: '', systemName: '', rightTypes: [], rightHolder: '', respDept: '', systemOwner: '', contactInfo: '', assetSecretLevel: '', region: '', registerType: '初始确权', applyMode: '常规', purpose: '', thirdPartyInfo: '', sourceSubject: '', sourceLimit: '', relationSubject: '', equityRisk: '', privacyInfo: '', sourceIdent: [], relationIdent: [] })
+  Object.assign(form, { assetId: '', assetName: '', systemName: '', rightTypes: [], rightHolder: '', respDept: '', systemOwner: '', contactInfo: '', assetSecretLevel: '', region: '', registerType: '初始确权', changeTrigger: '', applyMode: '常规', purpose: '', thirdPartyInfo: '', sourceSubject: '', sourceLimit: '', relationSubject: '', equityRisk: '', privacyInfo: '', sourceIdent: [], relationIdent: [] })
+  assetConfirmState.value = ''; assetConfirmed.value = false
   tableItems.value = []; tableItemText.value = ''
 }
 </script>

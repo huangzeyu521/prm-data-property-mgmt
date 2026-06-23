@@ -8,6 +8,7 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -74,7 +75,49 @@ public class ConfirmMaterialRuleService implements ApplicationRunner {
                 req.add(r);
             }
         }
+        // 确权变更(附录F §3.3.2 重新确权):按变更触发类型收敛为差异项,不必重复提交全套
+        if ("确权变更".equals(apply.getRegisterType()) && StringUtils.hasText(apply.getChangeTrigger())) {
+            return narrowForChange(req, apply.getChangeTrigger());
+        }
         return req;
+    }
+
+    /**
+     * 确权变更应交材料收敛:核心表单/凭证(ALWAYS)始终保留;来源类(A–F)仅当触发涉来源、
+     * 关联类(G–J)仅当触发涉管理要求时保留;表2仅当仍保留来源/关联差异材料时保留。
+     */
+    private List<ConfirmMaterialRule> narrowForChange(List<ConfirmMaterialRule> hit, String trigger) {
+        // 容错匹配:附录F §3.3.2 触发可组合表述(如"数据来源变更和管理要求变更"),按关键词判定;
+        // 未识别的触发(非来源/新增/管理/监管/到期/其他)→ 保守不收敛,返回全集,杜绝漏要材料。
+        boolean known = trigger.contains("来源") || trigger.contains("新增") || trigger.contains("管理")
+                || trigger.contains("监管") || trigger.contains("到期") || "其他".equals(trigger);
+        if (!known) {
+            return hit;
+        }
+        boolean keepSource = trigger.contains("来源") || trigger.contains("新增") || "其他".equals(trigger);
+        boolean keepRelation = trigger.contains("管理") || trigger.contains("监管") || "其他".equals(trigger);
+        List<ConfirmMaterialRule> out = new ArrayList<>();
+        boolean anyDiff = false;
+        for (ConfirmMaterialRule r : hit) {
+            switch (r.getTriggerType()) {
+                case ConfirmMaterialRule.T_ALWAYS -> out.add(r);
+                case ConfirmMaterialRule.T_SOURCE -> {
+                    if (keepSource) { out.add(r); anyDiff = true; }
+                }
+                case ConfirmMaterialRule.T_RELATION -> {
+                    if (keepRelation) { out.add(r); anyDiff = true; }
+                }
+                default -> { /* T_TABLE2 末尾按是否保留差异材料决定 */ }
+            }
+        }
+        if (anyDiff) {
+            for (ConfirmMaterialRule r : hit) {
+                if (ConfirmMaterialRule.T_TABLE2.equals(r.getTriggerType())) {
+                    out.add(r);
+                }
+            }
+        }
+        return out;
     }
 
     private boolean hit(ConfirmMaterialRule r, Set<String> src, Set<String> rel, boolean t2) {

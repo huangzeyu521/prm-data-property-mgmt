@@ -465,6 +465,10 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
      * ③ 关联识别 G/H/I/J 涉及则对应主体说明逐维必填("填是则后两列必填")。
      */
     private void validateRegistration(ConfirmApply apply) {
+        // 确权变更(附录F §3.3.2 重新确权):须填写变更触发类型(数据新增/来源变更/管理要求变更/权益到期/其他)
+        if ("确权变更".equals(apply.getRegisterType()) && !StringUtils.hasText(apply.getChangeTrigger())) {
+            throw new BizException("确权变更须选择变更触发类型(数据新增/数据来源变更/管理要求变更/权益到期/其他)");
+        }
         String src = apply.getSourceIdentification() == null ? "" : apply.getSourceIdentification().toUpperCase();
         String rel = apply.getRelationIdentification() == null ? "" : apply.getRelationIdentification().toUpperCase();
         if (!containsAny(src, "A", "B", "C", "D", "E", "F")) {

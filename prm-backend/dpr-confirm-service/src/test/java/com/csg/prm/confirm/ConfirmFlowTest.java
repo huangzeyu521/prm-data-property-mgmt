@@ -108,4 +108,14 @@ class ConfirmFlowTest {
         String id = applyService.saveDraft(draft("DA-CFM-004", "未提交表"));
         assertThrows(BizException.class, () -> applyService.approve(id));
     }
+
+    /** 确权变更(附录F §3.3.2 重新确权)须填变更触发类型,否则提交被拦。 */
+    @Test
+    void change_registration_requires_change_trigger() {
+        ConfirmApply a = draft("DA-CFM-CHG", "确权变更校验");
+        a.setRegisterType("确权变更"); // 未填 changeTrigger
+        String id = applyService.saveDraft(a);
+        BizException ex = assertThrows(BizException.class, () -> applyService.submit(id));
+        assertTrue(ex.getMessage().contains("变更触发类型"), "确权变更未填触发类型应被拦:" + ex.getMessage());
+    }
 }

@@ -65,4 +65,54 @@ class ConfirmMaterialRuleTest {
         assertTrue(req.stream().anyMatch(n -> n.contains("表2")), "涉三方应含表2");
         assertFalse(req.stream().anyMatch(n -> n.contains("行政监管")), "未选 G 不应入清单");
     }
+
+    /** 确权变更:应交材料按变更触发类型收敛为差异项(核心表单始终留;来源/关联仅留相关维度)。 */
+    @Test
+    void change_registration_narrows_to_trigger_dimension() {
+        ConfirmApply a = new ConfirmApply();
+        a.setSourceIdentification("A");        // A 来源
+        a.setRelationIdentification("G");      // G 关联
+        a.setRegisterType("确权变更");
+
+        // 数据来源变更 → 保留来源(A),不留关联(G);核心表单始终保留
+        a.setChangeTrigger("数据来源变更");
+        List<String> src = ruleService.requiredNames(a);
+        assertTrue(src.stream().anyMatch(n -> n.contains("表1")), "核心表单(表1)始终保留");
+        assertTrue(src.stream().anyMatch(n -> n.contains("来源设备")), "来源变更应保留 A 来源材料");
+        assertFalse(src.stream().anyMatch(n -> n.contains("行政监管")), "来源变更不应含 G 关联材料");
+
+        // 管理要求变更 → 保留关联(G),不留来源(A)
+        a.setChangeTrigger("管理要求变更");
+        List<String> rel = ruleService.requiredNames(a);
+        assertTrue(rel.stream().anyMatch(n -> n.contains("行政监管")), "管理要求变更应保留 G 关联材料");
+        assertFalse(rel.stream().anyMatch(n -> n.contains("来源设备")), "管理要求变更不应含 A 来源材料");
+
+        // 初始确权(对照):不收敛,来源+关联都在
+        a.setRegisterType("初始确权");
+        a.setChangeTrigger(null);
+        List<String> init = ruleService.requiredNames(a);
+        assertTrue(init.stream().anyMatch(n -> n.contains("来源设备"))
+                && init.stream().anyMatch(n -> n.contains("行政监管")), "初始确权不收敛,A+G 均在");
+    }
+
+    /** 确权变更·组合/未知触发不可过度收敛:组合触发须两维都留,未知触发须不收敛(全留),杜绝漏要材料。 */
+    @Test
+    void change_combined_or_unknown_trigger_does_not_over_narrow() {
+        ConfirmApply a = new ConfirmApply();
+        a.setSourceIdentification("A");
+        a.setRelationIdentification("G");
+        a.setRegisterType("确权变更");
+
+        // 附录F §3.3.2 组合表述:"数据来源变更和管理要求变更" → 来源(A)+关联(G) 都应保留
+        a.setChangeTrigger("数据来源变更和管理要求变更");
+        List<String> both = ruleService.requiredNames(a);
+        assertTrue(both.stream().anyMatch(n -> n.contains("来源设备")), "组合触发应保留 A 来源");
+        assertTrue(both.stream().anyMatch(n -> n.contains("行政监管")), "组合触发应保留 G 关联");
+
+        // 未识别触发 → 保守不收敛(全留),不得漏掉来源/关联材料
+        a.setChangeTrigger("某种未列举的变更原因XYZ");
+        List<String> unknown = ruleService.requiredNames(a);
+        assertTrue(unknown.stream().anyMatch(n -> n.contains("来源设备"))
+                && unknown.stream().anyMatch(n -> n.contains("行政监管")), "未知触发应不收敛,A+G 均在");
+    }
 }

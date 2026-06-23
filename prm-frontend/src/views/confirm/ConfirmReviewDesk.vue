@@ -40,6 +40,28 @@
         <el-descriptions-item label="用途" :span="2">{{ cur.purpose || '-' }}</el-descriptions-item>
       </el-descriptions>
 
+      <!-- P2 审批侧变更对照:确权变更单展示「上一版确权结论 → 本次申报」差异,审核聚焦变动项 -->
+      <template v-if="isChangeApply">
+        <div class="rv-h">
+          确权变更对照
+          <el-tag type="warning" size="small" effect="plain" style="margin-left:8px">登记类型:确权变更{{ cur.changeTrigger ? ' · 触发:' + cur.changeTrigger : '' }}</el-tag>
+        </div>
+        <el-alert v-if="!changeBaseline" type="info" :closable="false" title="未取到上一版已确权结论作基线(可能为首次确权后直接变更或平台未接入),仅按本次申报内容审核。" />
+        <template v-else>
+          <el-alert :type="changeDiff.length ? 'warning' : 'info'" :closable="false"
+            :title="changeDiff.length ? `本次确权变更共修改 ${changeDiff.length} 项,请重点核对下列变动维度` : '本次确权变更与上一版结论无字段差异,请核对是否确需变更'" />
+          <el-table v-if="changeDiff.length" :data="changeDiff" border size="small" style="margin-top:8px">
+            <el-table-column prop="key" label="变更维度" width="150" />
+            <el-table-column label="原值(上一版确权)" min-width="170">
+              <template #default="{ row }"><span style="color:#909399;text-decoration:line-through">{{ row.before || '空' }}</span></template>
+            </el-table-column>
+            <el-table-column label="新值(本次申报)" min-width="170">
+              <template #default="{ row }"><span style="color:#e6a23c;font-weight:600">{{ row.after || '空' }}</span></template>
+            </el-table-column>
+          </el-table>
+        </template>
+      </template>
+
       <div class="rv-h">
         AI 校验结果（人工预审依据）
         <el-tag v-if="cur.status === '人工预审中'" type="warning" size="small" effect="plain" style="margin-left:8px">本环节须人工复核 AI 结果</el-tag>
@@ -165,6 +187,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { pageConfirmApply, approveConfirm, rejectConfirm, batchApproveConfirm, batchRejectConfirm, listMaterialByApply, getConfirmFlowLog, materialFileUrl, getAiCheckLogic, getAiRunlog, verifyAiSnapshot } from '@/api/confirm'
+import { getAssetProperty } from '@/api/assetCard'
 import { openFilePreview } from '@/composables/useFilePreview'
 import { currentRole } from '@/lib/roles'
 
@@ -183,6 +206,29 @@ const rows = ref([]); const loading = ref(false); const sel = ref([])
 const drawer = ref(false); const cur = ref({}); const materials = ref([]); const logs = ref([])
 // 大模型校验机制完善:校验逻辑可视化 / 校验过程回放 / 快照防篡改验真
 const checkLogic = ref(null); const aiRunlog = ref([]); const snapVerify = ref(null)
+// 审批侧变更对照(P2):确权变更单 —— 以该资产「上一版已确权结论」为基线,审核人一眼看清本次改了哪些维度
+const changeBaseline = ref(null)
+const isChangeApply = computed(() => cur.value && cur.value.registerType === '确权变更')
+// 权属类型分隔符可能为 ,/，/、:统一规范化比对,避免分隔符差异误报"已修改"
+const canonTypes = (v) => String(v == null ? '' : v).split(/[、,，]/).map(s => s.trim()).filter(Boolean).join('、')
+const CHANGE_DIMS = [
+  { key: '权属主体', cur: () => cur.value.rightHolder, base: b => b.rightHolder },
+  { key: '权属类型', cur: () => canonTypes(cur.value.rightType), base: b => canonTypes(b.rightType) },
+  { key: '责任部门', cur: () => cur.value.respDept, base: b => b.respDept },
+  { key: '来源主体', cur: () => cur.value.sourceSubject, base: b => b.sourceSubject },
+  { key: '来源说明/约束', cur: () => cur.value.sourceLimit, base: b => b.sourceLimit },
+  { key: '隐私关联说明(H)', cur: () => cur.value.privacyInfo, base: b => b.privacyInfo },
+  { key: '第三方信息(I)', cur: () => cur.value.thirdPartyInfo, base: b => b.thirdPartyInfo },
+  { key: '关联主体说明(J)', cur: () => cur.value.relationSubject, base: b => b.relationSubject }
+]
+const rvNorm = (v) => (v == null ? '' : String(v).trim())
+const changeDiff = computed(() => {
+  if (!isChangeApply.value || !changeBaseline.value) return []
+  const b = changeBaseline.value
+  return CHANGE_DIMS
+    .map(d => ({ key: d.key, before: rvNorm(d.base(b)), after: rvNorm(d.cur()) }))
+    .filter(x => x.before !== x.after)
+})
 const reviewing = computed(() => rows.value.filter(r => ['人工预审中', '合规审核中', '主管复核中', '经理终审中'].includes(r.status)))
 // 人工预审依据:解析提交时固化的 AI 校验快照(防篡改包:取 payload;兼容旧顶层格式)
 const aiSnap = computed(() => {
@@ -221,10 +267,14 @@ function onBatchReject() {
 }
 async function onDetail(row) {
   cur.value = row
-  checkLogic.value = null; aiRunlog.value = []; snapVerify.value = null
+  checkLogic.value = null; aiRunlog.value = []; snapVerify.value = null; changeBaseline.value = null
   const [m, l] = await Promise.all([listMaterialByApply(row.applyId), getConfirmFlowLog(row.applyId)])
   materials.value = m || []; logs.value = l || []
   drawer.value = true
+  // 确权变更:取上一版已确权结论作基线(在途变更单非 DONE,/property 返回的即上一版),供审批侧 diff
+  if (row.registerType === '确权变更' && row.assetId) {
+    getAssetProperty(row.assetId).then(p => { changeBaseline.value = p }).catch(() => { changeBaseline.value = null })
+  }
   // 大模型校验机制(规则可视化 / 回放 / 快照验真):best-effort,任一失败不影响详情
   getAiCheckLogic(row.applyId).then(r => { checkLogic.value = r }).catch(() => {})
   getAiRunlog(row.applyId).then(r => { aiRunlog.value = r || [] }).catch(() => {})

@@ -37,9 +37,10 @@
           <template #default="{ row }">{{ fmtDate(row.validDate) }}</template>
         </el-table-column>
         <el-table-column prop="equityCount" label="权益条目" width="90" align="center" />
-        <el-table-column label="操作" width="100" align="center" fixed="right">
+        <el-table-column label="操作" width="150" align="center" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="onView(row)">查看</el-button>
+            <el-button v-if="row.state === '已确权'" link type="warning" @click="onChange(row)">发起变更</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -109,8 +110,15 @@
 
 <script setup>
 import { reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { pageAssetArchive, getAssetProperty, getAssetEquity } from '@/api/assetCard'
 import PrmDialog from '@/components/PrmDialog.vue'
+
+const router = useRouter()
+// 已确权资产「发起变更」:跳一站式确权向导并预选该资产,向导按确权状态自动定为「确权变更」(附录F §3.3.2)
+function onChange(row) {
+  router.push({ path: '/dpr/confirm/wizard', query: { assetId: row.assetId } })
+}
 
 const STATES = ['待确权', '确权中', '已确权', '已驳回']
 

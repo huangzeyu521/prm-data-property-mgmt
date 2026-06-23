@@ -13,9 +13,10 @@
         <el-table-column prop="cardStatus" label="状态" width="90" align="center">
           <template #default="{ row }"><el-tag :type="statusTag(row.cardStatus)">{{ row.cardStatus }}</el-tag></template>
         </el-table-column>
-        <el-table-column label="操作" width="430" fixed="right">
+        <el-table-column label="操作" width="500" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="onDetail(row)">详情</el-button>
+            <el-button link type="warning" :disabled="row.cardStatus !== '正常'" @click="onChange(row)">发起变更</el-button>
             <el-button link type="success" :disabled="row.cardStatus !== '正常'" @click="onAuthorize(row)">发起授权</el-button>
             <el-button link type="primary" @click="onPreview(row)">预览证书</el-button>
             <el-button link type="warning" :disabled="row.cardStatus !== '正常'" @click="onFreeze(row)">冻结</el-button>
@@ -99,6 +100,10 @@ const router = useRouter()
 // 先确后授一键衔接:正常卡直接发起授权,带资产+卡号到授权向导
 function onAuthorize(row) {
   router.push({ path: '/dpr/auth/wizard', query: { assetId: row.assetId, assetName: row.assetName, cardNo: row.cardNo } })
+}
+// 已确权资产「发起变更」:跳确权向导预选资产,向导按确权状态自动定为「确权变更」(附录F §3.3.2 重新确权)
+function onChange(row) {
+  router.push({ path: '/dpr/confirm/wizard', query: { assetId: row.assetId } })
 }
 
 const query = reactive({ current: 1, size: 10 })
