@@ -39,6 +39,19 @@ export function applyChartBase(option) {
       const lab = labelFor(s.type)
       return lab ? { ...s, label: lab } : s
     })
+    // 环图中心放总数(规范 p105:利用空心区显示信息)——仅当恰有一个环图(内径>0)且未自定义 title 时
+    if (!o.title) {
+      const donuts = o.series.filter((s) => s.type === 'pie' && Array.isArray(s.radius) && parseFloat(s.radius[0]) > 0)
+      if (donuts.length === 1) {
+        const total = (donuts[0].data || []).reduce(
+          (sum, d) => sum + (Number(d && typeof d === 'object' ? d.value : d) || 0), 0)
+        o.title = {
+          text: String(total), subtext: '总数', left: 'center', top: 'middle', textAlign: 'center',
+          textStyle: { fontSize: 22, fontWeight: 700, color: '#262626' },
+          subtextStyle: { fontSize: 12, color: '#8A8A8A' }
+        }
+      }
+    }
   }
   return o
 }
