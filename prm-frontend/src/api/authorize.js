@@ -3,6 +3,8 @@ import request from './request'
 // 数据授权申请与审批
 export const pageAuthApply = (query) => request.post('/dpr/auth/apply/page', query)
 export const saveAuthDraft = (data) => request.post('/dpr/auth/apply/draft', data)
+// 删除授权申请(仅草稿态,如批量清单加错/重复的明细项)
+export const deleteAuthApply = (applyId) => request.delete(`/dpr/auth/apply/${applyId}`)
 export const submitAuth = (applyId) => request.post(`/dpr/auth/apply/${applyId}/submit`)
 export const approveAuth = (applyId, opinion) =>
   request.post(`/dpr/auth/apply/${applyId}/approve`, null, { params: { opinion } })

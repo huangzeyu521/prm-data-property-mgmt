@@ -15,6 +15,12 @@ public interface ConfirmApplyService {
     /** 元数据自动填充确权表单要素(含质量评分) */
     MetadataGateway.MetadataInfo autofill(String assetId);
 
+    /**
+     * 权益事实(确权信息带出):按资产取最新已完成确权,推导第三方来源/隐私商密事实,
+     * 供授权侧只读带出,避免人工低报击穿应交材料与合规校验。
+     */
+    com.csg.prm.confirm.dto.RightsFactsVO rightsFacts(String assetId);
+
     /** 暂存草稿,返回申请ID */
     String saveDraft(ConfirmApply apply);
 

@@ -14,6 +14,9 @@ public interface AuthApplyService {
 
     String saveDraft(AuthApply apply);
 
+    /** 删除授权申请(仅草稿态可删,如批量清单里加错/重复的明细项);逻辑删除。 */
+    void deleteApply(String applyId);
+
     /** 按批量清单ID查其下授权项(表6 明细行) */
     List<AuthApply> byBatch(String batchListId);
 

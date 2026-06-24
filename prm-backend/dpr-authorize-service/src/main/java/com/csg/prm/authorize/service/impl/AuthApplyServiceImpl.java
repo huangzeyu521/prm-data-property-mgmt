@@ -101,6 +101,16 @@ public class AuthApplyServiceImpl implements AuthApplyService {
 
     @Override
     @Transactional
+    public void deleteApply(String applyId) {
+        AuthApply apply = require(applyId);
+        if (!AuthApply.STATUS_DRAFT.equals(apply.getStatus())) {
+            throw new BizException("仅草稿状态可删除,当前状态:" + apply.getStatus());
+        }
+        mapper.deleteById(applyId); // 逻辑删除(@TableLogic delFlag)
+    }
+
+    @Override
+    @Transactional
     public void submit(String applyId) {
         AuthApply apply = require(applyId);
         if (!AuthApply.STATUS_DRAFT.equals(apply.getStatus())) {

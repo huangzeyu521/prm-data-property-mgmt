@@ -108,6 +108,55 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
     }
 
     @Override
+    public com.csg.prm.confirm.dto.RightsFactsVO rightsFacts(String assetId) {
+        com.csg.prm.confirm.dto.RightsFactsVO vo = new com.csg.prm.confirm.dto.RightsFactsVO(assetId);
+        if (!StringUtils.hasText(assetId)) {
+            return vo;
+        }
+        // 取该资产最新「已完成」确权(制卡归集态),作为权益事实真源
+        List<ConfirmApply> list = mapper.selectList(new LambdaQueryWrapper<ConfirmApply>()
+                .eq(ConfirmApply::getAssetId, assetId)
+                .eq(ConfirmApply::getStatus, ConfirmApply.STATUS_DONE)
+                .orderByDesc(ConfirmApply::getCreateTime));
+        if (list.isEmpty()) {
+            return vo;
+        }
+        ConfirmApply a = list.get(0);
+        vo.setConfirmed(true);
+        // null 安全:复用既有 containsAny(不做 null 校验),入参先兜底为空串
+        String source = a.getSourceIdentification() == null ? "" : a.getSourceIdentification();
+        String relation = a.getRelationIdentification() == null ? "" : a.getRelationIdentification();
+        // 第三方来源(表2 涉第三方,或表1 来源识别 B/C/D/E 非自行生产)→ 带出来源主体/说明
+        boolean thirdParty = Boolean.TRUE.equals(a.getInvolvesThirdParty())
+                || containsAny(source, "B", "C", "D", "E");
+        if (thirdParty) {
+            vo.setThirdPartySource(firstNonBlank(a.getSourceSubject(), a.getThirdPartyInfo(), "涉及第三方来源"));
+        }
+        // 隐私/商密(表1 信息关联识别 H个人隐私 / I第三方商密)
+        StringBuilder sb = new StringBuilder();
+        if (containsAny(relation, "H") || StringUtils.hasText(a.getPrivacyInfo())) {
+            sb.append("个人隐私");
+        }
+        if (containsAny(relation, "I")) {
+            if (sb.length() > 0) {
+                sb.append("、");
+            }
+            sb.append("商业秘密");
+        }
+        vo.setSensitiveType(sb.length() > 0 ? sb.toString() : "无");
+        return vo;
+    }
+
+    private static String firstNonBlank(String... vals) {
+        for (String v : vals) {
+            if (StringUtils.hasText(v)) {
+                return v;
+            }
+        }
+        return "";
+    }
+
+    @Override
     @Transactional
     public String saveDraft(ConfirmApply apply) {
         validate(apply);

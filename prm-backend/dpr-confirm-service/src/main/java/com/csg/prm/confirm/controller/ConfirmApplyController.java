@@ -51,6 +51,12 @@ public class ConfirmApplyController {
         return R.ok(service.autofill(assetId));
     }
 
+    /** 权益事实(确权信息带出):按资产返回第三方来源/隐私商密事实,供授权侧只读带出。 */
+    @GetMapping("/rights-facts")
+    public R<com.csg.prm.confirm.dto.RightsFactsVO> rightsFacts(@RequestParam String assetId) {
+        return R.ok(service.rightsFacts(assetId));
+    }
+
     /**
      * 派生重确权工单(草稿)。供权益动态监测识别数据新增/来源变更/到期时联动调用(附录F 3.3.2)。
      */

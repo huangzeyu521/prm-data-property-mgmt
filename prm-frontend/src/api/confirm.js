@@ -25,6 +25,9 @@ export const withdrawConfirm = (applyId, reason) =>
 // 确权表单 元数据自动填充(含质量评分,P1)
 export const autofillConfirm = (assetId) => request.get('/dpr/confirm/apply/autofill', { params: { assetId } })
 
+// 权益事实(确权信息带出):按资产取最新已完成确权的第三方来源/隐私商密事实,供授权侧只读带出
+export const getRightsFacts = (assetId) => request.get('/dpr/confirm/apply/rights-facts', { params: { assetId } })
+
 // 权益卡片(P4 生命周期:冻结/解冻/注销/变更历史)
 export const pageEquityCard = (query) => request.post('/dpr/confirm/card/page', query)
 export const freezeEquityCard = (cardId) => request.post(`/dpr/confirm/card/${cardId}/freeze`)

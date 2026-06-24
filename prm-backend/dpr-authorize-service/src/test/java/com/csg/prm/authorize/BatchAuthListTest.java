@@ -98,6 +98,32 @@ class BatchAuthListTest {
     }
 
     @Test
+    void deleteApply_removesDraftItem_fromBatchList() {
+        BatchAuthList l = new BatchAuthList();
+        l.setListYear("2026");
+        String id = service.create(l);
+        String a1 = addItem(id, "DA-DEL-1", "待删资产");
+        String a2 = addItem(id, "DA-DEL-2", "保留资产");
+        assertEquals(2, applyService.byBatch(id).size());
+
+        applyService.deleteApply(a1);
+        java.util.List<AuthApply> remain = applyService.byBatch(id);
+        assertEquals(1, remain.size(), "删后只剩一条");
+        assertEquals(a2, remain.get(0).getApplyId());
+    }
+
+    @Test
+    void deleteApply_rejectsNonDraft() {
+        BatchAuthList l = new BatchAuthList();
+        l.setListYear("2026");
+        String id = service.create(l);
+        String a1 = addItem(id, "DA-DEL-3", "已提交资产");
+        service.submit(id); // 明细进合规审核中(非草稿)
+        BizException ex = assertThrows(BizException.class, () -> applyService.deleteApply(a1));
+        assertTrue(ex.getMessage().contains("草稿"), "非草稿不可删:" + ex.getMessage());
+    }
+
+    @Test
     void cannot_approve_draft_directly() {
         BatchAuthList l = new BatchAuthList();
         l.setListYear("2026");

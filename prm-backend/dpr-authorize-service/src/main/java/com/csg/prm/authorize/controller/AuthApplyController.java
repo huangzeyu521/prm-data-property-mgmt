@@ -9,6 +9,7 @@ import com.csg.prm.authorize.service.AuthFlowLogService;
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.R;
 import java.util.List;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -35,6 +36,13 @@ public class AuthApplyController {
     @PostMapping("/draft")
     public R<String> saveDraft(@RequestBody AuthApply apply) {
         return R.ok(service.saveDraft(apply));
+    }
+
+    /** 删除授权申请(仅草稿态,如批量清单加错/重复的明细项)。 */
+    @DeleteMapping("/{applyId}")
+    public R<Void> delete(@PathVariable String applyId) {
+        service.deleteApply(applyId);
+        return R.ok();
     }
 
     @PostMapping("/{applyId}/submit")
