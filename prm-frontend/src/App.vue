@@ -1,3 +1,8 @@
+<!--
+  Copyright (C) 2026 China Southern Power Grid Co., Ltd. All Rights Reserved.
+  中国南方电网 · 数据资产管理平台 V3.6 · 数据产权管理模块(IM-DAM-DPR)。
+  本软件版权归中国南方电网所有,未经书面授权不得复制、修改或发布。
+-->
 <template>
   <!-- 登录页 / 智能确权辅助工具:独立外壳,不渲染主平台布局 -->
   <router-view v-if="isAitool || isLogin" />

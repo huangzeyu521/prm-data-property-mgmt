@@ -6,6 +6,8 @@ import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.ResultCode;
 import com.csg.prm.common.evidence.ChainEvidenceService;
 import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.org.Jurisdiction;
+import com.csg.prm.common.org.OrgService;
 import com.csg.prm.common.query.PageQuery;
 import com.csg.prm.common.writeback.LedgerWritebackGateway;
 import com.csg.prm.common.writeback.RightsEvent;
@@ -38,18 +40,30 @@ public class EquityCardServiceImpl implements EquityCardService {
     private final LedgerWritebackGateway ledgerWriteback;
     private final EquityCertService certService;
     private final ConfirmTableItemMapper tableItemMapper;
+    private final OrgService orgService;
 
     public EquityCardServiceImpl(EquityCardMapper mapper, EquityCardLogMapper logMapper,
                                  ChainEvidenceService chainEvidenceService,
                                  LedgerWritebackGateway ledgerWriteback,
                                  EquityCertService certService,
-                                 ConfirmTableItemMapper tableItemMapper) {
+                                 ConfirmTableItemMapper tableItemMapper,
+                                 OrgService orgService) {
         this.mapper = mapper;
         this.logMapper = logMapper;
         this.chainEvidenceService = chainEvidenceService;
         this.ledgerWriteback = ledgerWriteback;
         this.certService = certService;
         this.tableItemMapper = tableItemMapper;
+        this.orgService = orgService;
+    }
+
+    /** 归口网级:按权属人(权属单位)优先解析,退回责任部门;供卡片/存证 province_code/bureau_code 回填。 */
+    private Jurisdiction jurisdictionOf(ConfirmApply apply) {
+        Jurisdiction j = orgService.resolve(apply.getRightHolder());
+        if (j.isEmpty()) {
+            j = orgService.resolve(apply.getRespDept());
+        }
+        return j;
     }
 
     /**
@@ -78,10 +92,12 @@ public class EquityCardServiceImpl implements EquityCardService {
         int newVersion = 1;
         String supersededNo = null;
         if (isChange) {
+            // 前序卡含"正常"与"冻结"两态:冻结也是该资产+权利的现存卡,变更生效须一并取代并参与版本递增,
+            // 否则冻结卡被漏算→新卡版本号与冻结卡撞号、且冻结卡未失效,出现两张同号当前卡(唯一性破坏)
             List<EquityCard> priors = mapper.selectList(new LambdaQueryWrapper<EquityCard>()
                     .eq(EquityCard::getAssetId, apply.getAssetId())
                     .eq(EquityCard::getRightType, apply.getRightType())
-                    .eq(EquityCard::getCardStatus, EquityCard.STATUS_NORMAL)
+                    .in(EquityCard::getCardStatus, EquityCard.STATUS_NORMAL, EquityCard.STATUS_FROZEN)
                     .orderByDesc(EquityCard::getVersion));
             for (EquityCard prior : priors) {
                 int pv = prior.getVersion() == null ? 1 : prior.getVersion();
@@ -91,6 +107,8 @@ public class EquityCardServiceImpl implements EquityCardService {
                         "被取代", "确权变更生成新版,本卡失效被取代");
             }
         }
+        // 归口网级回填:按申报组织(权属人/责任部门)解析省/地市码,落到卡片与制卡存证(补此前的 null)
+        Jurisdiction jur = jurisdictionOf(apply);
         EquityCard card = new EquityCard();
         card.setCardNo(generateCardNo());
         card.setApplyId(apply.getApplyId());
@@ -107,13 +125,20 @@ public class EquityCardServiceImpl implements EquityCardService {
         // 权益归集原则(F指导书):确权时网公司直接取得权益、直接归属中国南方电网有限责任公司
         //(五所口径:不存在"分省先确权再转让"的动作,确权即直接确给网公司)
         card.setConsolidatedUnit("中国南方电网有限责任公司");
+        if (StringUtils.hasText(jur.provinceCode())) {
+            card.setProvinceCode(jur.provinceCode());
+        }
+        if (StringUtils.hasText(jur.bureauCode())) {
+            card.setBureauCode(jur.bureauCode());
+        }
         mapper.insert(card);
         recordLog(card.getCardId(), "生成", null, EquityCard.STATUS_NORMAL, "确权终审通过自动制卡");
-        // 关键节点上链存证(确权制卡):SM3 指纹锚定上链,防篡改、可追溯
+        // 关键节点上链存证(确权制卡):SM3 指纹锚定上链,防篡改、可追溯;带归口网级省/地市码
         chainEvidenceService.anchor("确权制卡", card.getCardId(),
                 "权益卡片 " + card.getCardNo() + " / " + card.getAssetName(),
                 String.join("|", card.getCardNo(), card.getApplyId(), card.getAssetId(),
-                        card.getRightType(), card.getRightOwner() == null ? "" : card.getRightOwner()));
+                        card.getRightType(), card.getRightOwner() == null ? "" : card.getRightOwner()),
+                jur.provinceCode(), jur.bureauCode());
         // P0-① 产权事件回写:确权制卡 -> 台账更新确权状态/卡片 + 变更留痕(实时一致)
         ledgerWriteback.apply(RightsEvent.confirmed(card.getAssetId(), card.getAssetName(),
                 card.getRightType(), card.getRightOwner(), card.getCardNo(), apply.getApplyId()));

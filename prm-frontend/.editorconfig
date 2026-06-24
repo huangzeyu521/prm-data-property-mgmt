@@ -1,0 +1,9 @@
+root = true
+
+# 对齐南网前端规范(.editorconfig):2 空格缩进、去除行尾空格、文件末尾保留换行
+[*.{js,jsx,ts,tsx,vue,css}]
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = true
+insert_final_newline = true
+charset = utf-8

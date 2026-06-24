@@ -1,3 +1,8 @@
+<!--
+  Copyright (C) 2026 China Southern Power Grid Co., Ltd. All Rights Reserved.
+  中国南方电网 · 数据资产管理平台 V3.6 · 数据产权管理模块(IM-DAM-DPR)。
+  本软件版权归中国南方电网所有,未经书面授权不得复制、修改或发布。
+-->
 <template>
   <div class="prm-page">
     <div class="prm-table-note" style="margin:0 0 12px">
@@ -60,7 +65,9 @@
               </el-option>
             </el-select>
           </el-form-item>
-          <el-form-item label="申请主体(被授权方)" prop="granteeOrg"><el-input v-model="form.granteeOrg" /></el-form-item>
+          <el-form-item label="申请主体(被授权方)" prop="granteeOrg">
+            <el-autocomplete v-model="form.granteeOrg" :fetch-suggestions="queryOrg" placeholder="输入并从真实组织树中选取(可自定义外部主体)" clearable style="width:100%" />
+          </el-form-item>
           <el-form-item label="授权权益类型" prop="rightType">
             <el-select v-model="form.rightType" style="width:100%">
               <el-option v-for="t in rightTypes" :key="t" :label="t" :value="t" />
@@ -244,6 +251,7 @@ import { AI_PHASES } from '@/lib/aiPhases'
 const aiThink = useAiThinking()
 import { pageEquityCard } from '@/api/confirm'
 import { getAsset } from '@/api/ledger'
+import { listOrg } from '@/api/org'
 
 const router = useRouter()
 const route = useRoute()
@@ -360,8 +368,19 @@ async function doUploadForItem(materialName, file) {
   } finally { matUploading.value = false }
 }
 
+// 被授权方建议:取真实组织树(网/省/地市),输入时按名称/简称过滤;允许自定义外部主体
+const orgOptions = ref([])
+function queryOrg(queryString, cb) {
+  const kw = (queryString || '').trim()
+  const list = orgOptions.value
+    .filter(o => !kw || (o.bizOrgName || '').includes(kw) || (o.shortName || '').includes(kw))
+    .map(o => ({ value: o.bizOrgName }))
+  cb(list)
+}
+
 onMounted(async () => {
   loadAuthMaterialRules()
+  try { orgOptions.value = (await listOrg()) || [] } catch { orgOptions.value = [] }
   const r = await pageScenario({ status: '生效中', size: 100 })
   scenarioOpts.value = r.records || []
   // 先确后授一键衔接:从权益卡片页"发起授权"带来 资产+卡号,直接预填(免去重新搜索选卡)

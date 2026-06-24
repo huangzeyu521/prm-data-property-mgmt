@@ -2,6 +2,8 @@ package com.csg.prm.common.exception;
 
 import com.csg.prm.common.api.R;
 import com.csg.prm.common.api.ResultCode;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -35,6 +37,19 @@ public class GlobalExceptionHandler {
         String msg = e.getBindingResult().getFieldErrors().stream()
                 .map(FieldError::getDefaultMessage)
                 .collect(Collectors.joining("；"));
+        return R.fail(ResultCode.PARAM_ERROR.getCode(), msg.isEmpty() ? ResultCode.PARAM_ERROR.getMessage() : msg);
+    }
+
+    /**
+     * 方法级参数校验失败(@Validated + @RequestParam/@PathVariable 上的 jakarta 约束)。
+     * 属客户端 400,须单独处理,否则会落入兜底 handler 被误判为 999 系统异常。
+     */
+    @ExceptionHandler(ConstraintViolationException.class)
+    public R<Void> handleConstraintViolation(ConstraintViolationException e) {
+        String msg = e.getConstraintViolations().stream()
+                .map(ConstraintViolation::getMessage)
+                .collect(Collectors.joining("；"));
+        log.warn("参数校验失败: {}", msg);
         return R.fail(ResultCode.PARAM_ERROR.getCode(), msg.isEmpty() ? ResultCode.PARAM_ERROR.getMessage() : msg);
     }
 

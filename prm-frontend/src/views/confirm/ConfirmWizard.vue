@@ -1,3 +1,8 @@
+<!--
+  Copyright (C) 2026 China Southern Power Grid Co., Ltd. All Rights Reserved.
+  中国南方电网 · 数据资产管理平台 V3.6 · 数据产权管理模块(IM-DAM-DPR)。
+  本软件版权归中国南方电网所有,未经书面授权不得复制、修改或发布。
+-->
 <template>
   <div class="prm-page">
     <div class="prm-table-note" style="margin:0 0 12px">
@@ -1237,6 +1242,8 @@ function reset() {
   assetConfirmState.value = ''; assetConfirmed.value = false; changeBaseline.value = null
   identityPanel.value = []
   tableItems.value = []; tableItemText.value = ''
+  // 校验闸门态必须一并清零,否则"再发起一笔"会继承上一笔的"已校验通过",新表单未校验即点亮提交(闭环失效)
+  checkReport.value = null; aiMatResult.value = null; needRecheck.value = false; aiAck.value = []
 }
 </script>
 

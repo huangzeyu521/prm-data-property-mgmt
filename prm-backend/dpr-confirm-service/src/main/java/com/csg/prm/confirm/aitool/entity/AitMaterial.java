@@ -66,7 +66,11 @@ public class AitMaterial extends BaseEntity {
     @TableField("CEC_CONTENT")
     private String content;
 
-    /** 材料类别(#4 归集):元数据/制度附件/授权材料/合同材料/来源说明/确权证明/其他 */
+    /**
+     * 材料类别(#4 归集)。存「编码」01–07,非中文:01元数据/02制度附件/03授权材料/04合同材料/05来源说明/06确权证明/07其他。
+     * 取值/比对一律经 {@link com.csg.prm.confirm.aitool.enums.MaterialDataType}:codeOf(中文/编码)→编码、labelOf(编码)→中文;
+     * 切勿直接 getCategory().equals("元数据") —— 列存编码,中文等值比较恒为 false。
+     */
     @TableField("CEC_CATEGORY")
     private String category;
 

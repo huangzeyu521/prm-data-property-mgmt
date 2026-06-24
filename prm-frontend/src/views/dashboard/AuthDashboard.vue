@@ -1,9 +1,18 @@
+<!--
+  Copyright (C) 2026 China Southern Power Grid Co., Ltd. All Rights Reserved.
+  中国南方电网 · 数据资产管理平台 V3.6 · 数据产权管理模块(IM-DAM-DPR)。
+  本软件版权归中国南方电网所有,未经书面授权不得复制、修改或发布。
+-->
 <template>
   <div class="prm-page">
     <div class="prm-query-bar">
       <el-form :inline="true" @submit.prevent>
         <el-form-item label="使用场景"><el-input v-model="q.scenario" placeholder="授权使用场景" clearable style="width:160px" /></el-form-item>
-        <el-form-item label="业务部门"><el-input v-model="q.deptName" placeholder="组织/业务域" clearable style="width:140px" /></el-form-item>
+        <el-form-item label="业务部门">
+          <el-select v-model="q.deptName" placeholder="组织/业务域(真实组织树)" clearable filterable allow-create default-first-option style="width:200px">
+            <el-option v-for="o in orgOptions" :key="o.id" :label="o.bizOrgName" :value="o.bizOrgName" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="时间周期">
           <el-date-picker v-model="range" type="daterange" value-format="YYYY-MM-DD" range-separator="至" start-placeholder="开始" end-placeholder="结束" style="width:230px" />
         </el-form-item>
@@ -41,9 +50,11 @@ import { onMounted, reactive, ref, nextTick } from 'vue'
 import { initChart } from '@/lib/chartBase'
 import { CHART_COLORS, C, RISK_RAMP } from '@/lib/chartPalette'
 import { getAuthDashboard } from '@/api/authorize'
+import { listOrg } from '@/api/org'
 
 const d = reactive({ totalApply: 0, effective: 0, inReview: 0, rejected: 0, effectiveRate: 0, certCount: 0, riskAlerts: [] })
 const q = reactive({ scenario: '', deptName: '' })
+const orgOptions = ref([])
 const range = ref([])
 const modeRef = ref(); const rightRef = ref(); const compRef = ref(); const scenarioRef = ref(); const trendRef = ref()
 const pairs = (m) => Object.entries(m || {}).map(([name, value]) => ({ name, value }))
@@ -82,7 +93,10 @@ async function load() {
     ]
   })
 }
-onMounted(load)
+async function loadOrgs() {
+  try { orgOptions.value = (await listOrg()) || [] } catch { orgOptions.value = [] }
+}
+onMounted(() => { loadOrgs(); load() })
 </script>
 
 <style scoped>

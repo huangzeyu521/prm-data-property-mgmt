@@ -1,3 +1,8 @@
+<!--
+  Copyright (C) 2026 China Southern Power Grid Co., Ltd. All Rights Reserved.
+  中国南方电网 · 数据资产管理平台 V3.6 · 数据产权管理模块(IM-DAM-DPR)。
+  本软件版权归中国南方电网所有,未经书面授权不得复制、修改或发布。
+-->
 <template>
   <!-- 把页面主操作按钮统一传送到面包屑行右上角的操作区(规范:操作按钮置于页面右上角,替代底部布局)。
        插槽内容仍在调用页的渲染作用域内,响应式/事件照常工作;仅 DOM 位置移动到 #prm-page-actions。 -->

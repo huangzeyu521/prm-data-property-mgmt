@@ -10,6 +10,7 @@
 | `01_schema.sql` | 建库 + 41 张业务表 DDL（utf8mb4、InnoDB、注释、索引） |
 | `02_data.sql` | 测试数据（34 张表有数据，含存证/智能工具表补充数据；日志/记录类表运行态生成不预置） |
 | `03_seata_undo_log.sql` | **(prod 可选)** Seata AT 模式 `undo_log` 表，仅分布式事务需要 |
+| `06_sys_organization.sql` | 组织主数据只读镜像表 `SYS_ORGANIZATION`（部门/归口下拉、Dashboard 筛选、制卡/发证省地市编码回填消费；数据由平台/4A 同步，PRM 不写；`CREATE TABLE IF NOT EXISTS` 幂等可重跑） |
 
 > 库名：`prm_dpr`　字符集：`utf8mb4`
 

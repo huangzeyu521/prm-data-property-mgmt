@@ -29,6 +29,13 @@ public class ChainEvidenceServiceImpl implements ChainEvidenceService {
     @Override
     @Transactional
     public String anchor(String bizType, String bizId, String summary, String payload) {
+        return anchor(bizType, bizId, summary, payload, null, null);
+    }
+
+    @Override
+    @Transactional
+    public String anchor(String bizType, String bizId, String summary, String payload,
+                         String provinceCode, String bureauCode) {
         if (!StringUtils.hasText(bizType) || !StringUtils.hasText(bizId)) {
             throw new BizException(ResultCode.PARAM_ERROR.getCode(), "存证业务类型与主键不能为空");
         }
@@ -44,6 +51,13 @@ public class ChainEvidenceServiceImpl implements ChainEvidenceService {
         e.setBlockHeight(receipt.getBlockHeight());
         e.setAnchorStatus(ChainEvidence.STATUS_ANCHORED);
         e.setEvidenceTime(LocalDateTime.now());
+        // 显式归口网级优先;为空则由公共字段填充器随用户上下文补全(strictInsertFill 仅填空值)
+        if (StringUtils.hasText(provinceCode)) {
+            e.setProvinceCode(provinceCode);
+        }
+        if (StringUtils.hasText(bureauCode)) {
+            e.setBureauCode(bureauCode);
+        }
         mapper.insert(e);
         return e.getEvidenceId();
     }

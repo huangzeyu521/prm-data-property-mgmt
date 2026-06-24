@@ -12,6 +12,8 @@ import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.ResultCode;
 import com.csg.prm.common.evidence.ChainEvidenceService;
 import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.org.Jurisdiction;
+import com.csg.prm.common.org.OrgService;
 import com.csg.prm.common.query.PageQuery;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,18 +35,21 @@ public class AuthCertServiceImpl implements AuthCertService {
     private final com.csg.prm.authorize.mapper.AuthCertTemplateMapper templateMapper;
     private final com.csg.prm.authorize.mapper.AuthApplyMapper applyMapper;
     private final com.csg.prm.authorize.gateway.EquityCardGateway equityCardGateway;
+    private final OrgService orgService;
 
     public AuthCertServiceImpl(AuthCertMapper mapper, AccountabilityService accountabilityService,
                                ChainEvidenceService chainEvidenceService,
                                com.csg.prm.authorize.mapper.AuthCertTemplateMapper templateMapper,
                                com.csg.prm.authorize.mapper.AuthApplyMapper applyMapper,
-                               com.csg.prm.authorize.gateway.EquityCardGateway equityCardGateway) {
+                               com.csg.prm.authorize.gateway.EquityCardGateway equityCardGateway,
+                               OrgService orgService) {
         this.mapper = mapper;
         this.accountabilityService = accountabilityService;
         this.chainEvidenceService = chainEvidenceService;
         this.templateMapper = templateMapper;
         this.applyMapper = applyMapper;
         this.equityCardGateway = equityCardGateway;
+        this.orgService = orgService;
     }
 
     /** 按授权类型(模式)+权益类型 选生效证书模板(自选/自动匹配)。 */
@@ -70,6 +75,8 @@ public class AuthCertServiceImpl implements AuthCertService {
                 && StringUtils.hasText(apply.getScope()) && !b.scope().equals(apply.getScope())) {
             throw new BizException("授权范围超出确权边界,出证拦截(确权范围:" + b.scope() + ")");
         }
+        // 归口网级回填:按被授权方组织解析省/地市码,落到证书与发证存证(补此前的 null)
+        Jurisdiction jur = orgService.resolve(apply.getGranteeOrg());
         AuthCert cert = new AuthCert();
         cert.setCertNo(generateCertNo());
         cert.setApplyId(apply.getApplyId());
@@ -87,12 +94,19 @@ public class AuthCertServiceImpl implements AuthCertService {
         } else {
             cert.setTemplateName("标准授权证书(默认)");
         }
+        if (StringUtils.hasText(jur.provinceCode())) {
+            cert.setProvinceCode(jur.provinceCode());
+        }
+        if (StringUtils.hasText(jur.bureauCode())) {
+            cert.setBureauCode(jur.bureauCode());
+        }
         mapper.insert(cert);
-        // 关键节点上链存证(授权发证):SM3 指纹锚定上链,防篡改、可追溯
+        // 关键节点上链存证(授权发证):SM3 指纹锚定上链,防篡改、可追溯;带归口网级省/地市码
         chainEvidenceService.anchor("授权发证", cert.getCertId(),
                 "授权证书 " + cert.getCertNo() + " / " + cert.getGranteeOrg(),
                 String.join("|", cert.getCertNo(), cert.getApplyId(), cert.getAssetId(),
-                        cert.getGranteeOrg(), cert.getRightType()));
+                        cert.getGranteeOrg(), cert.getRightType()),
+                jur.provinceCode(), jur.bureauCode());
         return cert.getCertId();
     }
 

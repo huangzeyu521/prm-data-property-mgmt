@@ -25,6 +25,7 @@
 |---|---|---|
 | 1 | `04_alter_change_lifecycle_dm.sql` | 补齐近期新增列/表(见下) |
 | 2 | `07_normalize_material_datatype_dm.sql` | 资料类型 `CEC_CATEGORY`(CEC_DATA_TYPE)中文→编码 01–07,**幂等可重跑** |
+| 3 | `08_sys_organization_dm.sql` | 组织主数据只读镜像表 `SYS_ORGANIZATION`(部门/归口下拉、Dashboard 筛选、制卡/发证省地市编码回填消费;数据由平台/4A 同步,PRM 不写)。达梦不支持 `IF NOT EXISTS`,对象已存在则忽略本段继续 |
 
 `04_alter_change_lifecycle_dm.sql` 覆盖的增量项:
 1. 确权变更生命周期:`IM_CONFIRM_APPLY.CEC_CHANGE_TRIGGER`、`IM_EQUITY_CARD_INFO.CEC_VERSION` / `CEC_SUPERSEDED_NO`(+ 存量版本号回填)

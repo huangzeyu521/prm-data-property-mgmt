@@ -1,10 +1,15 @@
+<!--
+  Copyright (C) 2026 China Southern Power Grid Co., Ltd. All Rights Reserved.
+  中国南方电网 · 数据资产管理平台 V3.6 · 数据产权管理模块(IM-DAM-DPR)。
+  本软件版权归中国南方电网所有,未经书面授权不得复制、修改或发布。
+-->
 <template>
   <div class="prm-page">
     <el-row :gutter="16" style="margin-bottom:16px">
       <el-col :span="6"><el-card shadow="hover"><div class="st"><b>{{ d.totalArchive }}</b><span>产权档案总数</span></div></el-card></el-col>
       <el-col :span="6"><el-card shadow="hover"><div class="st"><b :class="rateClass(d.mom)">{{ fmtRate(d.mom) }}</b><span>本月新增 环比(MoM)</span></div></el-card></el-col>
       <el-col :span="6"><el-card shadow="hover"><div class="st"><b :class="rateClass(d.yoy)">{{ fmtRate(d.yoy) }}</b><span>本月新增 同比(YoY)</span></div></el-card></el-col>
-      <el-col :span="6"><el-card shadow="hover"><div class="st"><b>{{ d.regions }}</b><span>覆盖地域(区域)数</span></div></el-card></el-col>
+      <el-col :span="6"><el-card shadow="hover"><div class="st"><b>{{ d.provinces }}</b><span>覆盖省域数</span></div></el-card></el-col>
     </el-row>
 
     <el-card header="产权档案新增趋势 · 同比/环比" style="margin-bottom:16px">
@@ -16,8 +21,11 @@
       <el-col :span="8"><el-card header="按产权类型分布"><div ref="rtRef" style="height:300px"></div></el-card></el-col>
       <el-col :span="8"><el-card header="按确权状态分布"><div ref="csRef" style="height:300px"></div></el-card></el-col>
     </el-row>
+    <el-row :gutter="16" style="margin-bottom:16px">
+      <el-col :span="12"><el-card header="按省域分布(点击柱形下钻地市)"><div ref="provinceRef" style="height:300px"></div></el-card></el-col>
+      <el-col :span="12"><el-card :header="`按地市分布(${drillProvince || '全部省域'})`"><div ref="bureauRef" style="height:300px"></div></el-card></el-col>
+    </el-row>
     <el-row :gutter="16">
-      <el-col :span="12"><el-card header="按地域(区域)分布"><div ref="regionRef" style="height:300px"></div></el-card></el-col>
       <el-col :span="12"><el-card header="按授权状态分布"><div ref="authRef" style="height:300px"></div></el-card></el-col>
     </el-row>
   </div>
@@ -25,13 +33,21 @@
 
 <script setup>
 import { onMounted, reactive, ref, nextTick } from 'vue'
-import { initChart } from '@/lib/chartBase'
+import { initChart, applyChartBase } from '@/lib/chartBase'
 import { CHART_COLORS, C } from '@/lib/chartPalette'
 import { getLedgerStatistics } from '@/api/ledger'
 
-const d = reactive({ totalArchive: 0, mom: null, yoy: null, regions: 0 })
-const trendRef = ref(); const subRef = ref(); const rtRef = ref(); const csRef = ref(); const regionRef = ref(); const authRef = ref()
+const d = reactive({ totalArchive: 0, mom: null, yoy: null, provinces: 0 })
+const trendRef = ref(); const subRef = ref(); const rtRef = ref(); const csRef = ref(); const provinceRef = ref(); const bureauRef = ref(); const authRef = ref()
+const drillProvince = ref('')
+let bureauChart = null
 const pairs = (m) => Object.entries(m || {}).map(([name, value]) => ({ name, value }))
+// 省→地市嵌套压平为「全部省域」视图(返回 {name,value} 数组)
+const flattenBureau = (bb) => {
+  const out = {}
+  Object.values(bb || {}).forEach(m => Object.entries(m).forEach(([k, v]) => { out[k] = (out[k] || 0) + v }))
+  return pairs(out)
+}
 const fmtRate = (r) => (r == null ? '—' : (r > 0 ? '+' : '') + r + '%')
 const rateClass = (r) => (r == null ? '' : r > 0 ? 'up' : r < 0 ? 'down' : '')
 
@@ -51,7 +67,7 @@ function pieOpt(arr, radius) {
 async function load() {
   const res = await getLedgerStatistics()
   d.totalArchive = res.totalArchive
-  d.regions = Object.keys(res.byRegion || {}).length
+  d.provinces = Object.keys(res.byProvince || {}).length
   const t = res.trend || []
   const latest = t[t.length - 1] || {}
   d.mom = latest.momRate ?? null
@@ -82,7 +98,15 @@ async function load() {
   initChart(subRef.value,barOpt(pairs(res.bySubsidiary), C.blue))
   initChart(rtRef.value,pieOpt(pairs(res.byRightType), ['40%', '70%']))
   initChart(csRef.value,pieOpt(pairs(res.byConfirmStatus), '65%'))
-  initChart(regionRef.value,pieOpt(pairs(res.byRegion), ['40%', '70%']))
+  const byBureau = res.byBureau || {}
+  const provinceChart = initChart(provinceRef.value,barOpt(pairs(res.byProvince), C.blue))
+  bureauChart = initChart(bureauRef.value,barOpt(flattenBureau(byBureau), C.green))
+  // 真下钻:点省柱→该省地市;再点同省→回到全部省域
+  provinceChart.on('click', (p) => {
+    drillProvince.value = (drillProvince.value === p.name) ? '' : p.name
+    const arr = drillProvince.value ? pairs(byBureau[drillProvince.value] || {}) : flattenBureau(byBureau)
+    bureauChart.setOption(applyChartBase(barOpt(arr, C.green)), true)
+  })
   initChart(authRef.value,pieOpt(pairs(res.byAuthStatus), '65%'))
 }
 onMounted(load)

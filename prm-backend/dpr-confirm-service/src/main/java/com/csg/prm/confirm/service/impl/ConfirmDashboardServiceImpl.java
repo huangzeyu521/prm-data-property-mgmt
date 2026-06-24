@@ -51,7 +51,8 @@ public class ConfirmDashboardServiceImpl implements ConfirmDashboardService {
         long rejected = applies.stream().filter(a -> ConfirmApply.STATUS_REJECTED.equals(a.getStatus())).count();
         // 已撤回为终态,不计入"审批中(待办)";否则减法会把撤回单错算成在审(枚举一致性)
         long withdrawn = applies.stream().filter(a -> ConfirmApply.STATUS_WITHDRAWN.equals(a.getStatus())).count();
-        long pending = total - done - rejected - withdrawn;
+        // 待处理=审批中(IN_REVIEW)实计,而非"非终态"减法——草稿(未提交)不是待办,不能算进积压(否则误触积压预警)
+        long pending = applies.stream().filter(a -> a.getStatus() != null && IN_REVIEW.contains(a.getStatus())).count();
         long decided = done + rejected;
         double passRate = decided == 0 ? 0d
                 : BigDecimal.valueOf(done * 100.0 / decided).setScale(2, RoundingMode.HALF_UP).doubleValue();

@@ -21,6 +21,14 @@ public interface ChainEvidenceService {
     String anchor(String bizType, String bizId, String summary, String payload);
 
     /**
+     * 同 {@link #anchor(String, String, String, String)},但显式带归口网级(省/地市码),
+     * 用于确权制卡/授权发证等按"申报组织"回填存证的 province_code/bureau_code(否则随用户上下文,可能为空)。
+     * 省/地市码为空时回退到公共字段自动填充(用户上下文)。
+     */
+    String anchor(String bizType, String bizId, String summary, String payload,
+                  String provinceCode, String bureauCode);
+
+    /**
      * 校验:用当前业务数据重算 SM3,与存证记录指纹比对(防篡改验真)。
      * @return true 表示数据与上链指纹一致
      */
