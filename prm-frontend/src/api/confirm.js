@@ -54,6 +54,8 @@ export const uploadGuidanceFile = (formData) =>
 export const guidanceVersions = (title) => request.get('/dpr/confirm/guidance/versions', { params: { title } })
 export const setGuidanceLatest = (id) => request.post(`/dpr/confirm/guidance/${id}/set-latest`)
 export const guidanceDownloadUrl = (id) => `/api/dpr/confirm/guidance/${id}/download`
+// 在线阅览(inline:PDF 浏览器内嵌)。供「工作指引存档」在线查看
+export const guidancePreviewUrl = (id) => `/api/dpr/confirm/guidance/${id}/preview`
 
 // 确权材料 + 校验
 export const uploadMaterial = (data) => request.post('/dpr/confirm/material', data)

@@ -148,9 +148,15 @@ public class ConfirmGuidanceServiceImpl implements ConfirmGuidanceService {
 
     @Override
     public PageResult<ConfirmGuidance> page(long current, long size, String title, String guidanceType, boolean latestOnly) {
+        return page(current, size, title, guidanceType, null, latestOnly);
+    }
+
+    @Override
+    public PageResult<ConfirmGuidance> page(long current, long size, String title, String guidanceType, String excludeType, boolean latestOnly) {
         LambdaQueryWrapper<ConfirmGuidance> w = new LambdaQueryWrapper<>();
         w.like(StringUtils.hasText(title), ConfirmGuidance::getTitle, title)
                 .eq(StringUtils.hasText(guidanceType), ConfirmGuidance::getGuidanceType, guidanceType)
+                .ne(StringUtils.hasText(excludeType), ConfirmGuidance::getGuidanceType, excludeType)
                 .eq(latestOnly, ConfirmGuidance::getIsLatest, Boolean.TRUE)
                 .orderByDesc(ConfirmGuidance::getCreateTime);
         IPage<ConfirmGuidance> p = mapper.selectPage(new Page<>(current <= 0 ? 1 : current, size <= 0 ? 10 : size), w);

@@ -3,8 +3,9 @@
   中国南方电网 · 数据资产管理平台 V3.6 · 数据产权管理模块(IM-DAM-DPR)。
   本软件版权归中国南方电网所有,未经书面授权不得复制、修改或发布。
 -->
+<!-- 指引材料管理(参数化):domain=confirm|auth 决定接口与类型枚举。消费(查看/下载)全员可用,维护(增删改/版本)仅 admin。 -->
 <template>
-  <div class="prm-page">
+  <div>
     <div class="prm-query-bar">
       <el-form :inline="true" @submit.prevent>
         <el-form-item label="标题"><el-input v-model="q.title" placeholder="指引标题" clearable style="width:200px" /></el-form-item>
@@ -16,7 +17,7 @@
         <el-form-item>
           <el-button type="primary" @click="onSearch">查询</el-button>
           <el-button @click="onReset">重置</el-button>
-          <el-button type="primary" @click="onAdd">新增</el-button>
+          <el-button v-if="canManage" type="primary" @click="onAdd">新增</el-button>
         </el-form-item>
       </el-form>
     </div>
@@ -30,13 +31,16 @@
         <el-table-column label="原件" width="120" show-overflow-tooltip>
           <template #default="{ row }"><span v-if="row.fileName">{{ row.fileName }}</span><span v-else style="color:#bbb">（纯文本）</span></template>
         </el-table-column>
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column label="操作" :width="canManage ? 340 : 190" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="onView(row)">查看</el-button>
-            <el-button link type="primary" @click="onEdit(row)">修改</el-button>
+            <el-button link type="primary" :disabled="!row.fileName" @click="onPreview(row)">阅览</el-button>
+            <el-button link type="primary" @click="onView(row)">详情</el-button>
             <el-button link type="success" :disabled="!row.fileName" @click="onDownload(row)">下载</el-button>
-            <el-button link type="primary" @click="onVersions(row)">版本历史</el-button>
-            <el-button link type="danger" @click="onDel(row)">删除</el-button>
+            <template v-if="canManage">
+              <el-button link type="primary" @click="onEdit(row)">修改</el-button>
+              <el-button link type="primary" @click="onVersions(row)">版本历史</el-button>
+              <el-button link type="danger" @click="onDel(row)">删除</el-button>
+            </template>
           </template>
         </el-table-column>
       </el-table>
@@ -45,7 +49,7 @@
         :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" @size-change="s=>{q.size=s;q.current=1;load()}" />
     </div>
 
-    <!-- 新增/修改 -->
+    <!-- 新增/修改(仅 admin) -->
     <el-dialog v-model="dlg" :title="form.guidanceId ? '修改指引材料' : '新增指引材料'" width="540px" align-center>
       <el-form :model="form" label-width="100px">
         <el-form-item label="标题"><el-input v-model="form.title" /></el-form-item>
@@ -82,7 +86,7 @@
       </el-descriptions>
     </el-dialog>
 
-    <!-- 历史版本 -->
+    <!-- 历史版本(仅 admin) -->
     <el-dialog v-model="verDlg" :title="`历史版本 — ${verTitle}`" width="620px" align-center>
       <el-table :data="verRows" border size="small">
         <el-table-column prop="version" label="版本" width="80" align="center" />
@@ -97,19 +101,46 @@
         </el-table-column>
       </el-table>
     </el-dialog>
+
+    <!-- 在线阅览(PDF 内嵌) -->
+    <el-dialog v-model="pvDlg" :title="pvTitle" width="82%" top="5vh" class="gt-pv">
+      <iframe v-if="pvUrl" :src="pvUrl" class="gt-frame" title="指引在线阅览"></iframe>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { openFilePreview } from '@/composables/useFilePreview'
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { currentRole } from '@/lib/roles'
 import {
   pageGuidance, saveGuidance, deleteGuidance, getGuidance,
-  uploadGuidanceFile, guidanceVersions, setGuidanceLatest, guidanceDownloadUrl
+  uploadGuidanceFile, guidanceVersions, setGuidanceLatest, guidanceDownloadUrl, guidancePreviewUrl
 } from '@/api/confirm'
+import {
+  pageAuthGuidance, saveAuthGuidance, deleteAuthGuidance, getAuthGuidance,
+  uploadAuthGuidanceFile, authGuidanceVersions, setAuthGuidanceLatest, authGuidanceDownloadUrl, authGuidancePreviewUrl
+} from '@/api/authorize'
 
-const types = ['政策文件', '流程图', '材料样例', '操作说明', 'FAQ']
+const props = defineProps({
+  domain: { type: String, required: true }, // 'confirm' | 'auth'
+  excludeType: { type: String, default: '' } // 排除某类型(确权 Tab 排除"工作指引"存档)
+})
+const isAuth = props.domain === 'auth'
+
+// 类型枚举按域差异(对齐各自可研口径)
+const types = isAuth
+  ? ['政策文件', '流程图', '常见问答', '申请步骤', '材料样例']
+  : ['政策文件', '流程图', '材料样例', '操作说明', 'FAQ']
+
+// 接口按域取(授权侧统一走 /dpr/auth/guidance,与抽屉旧 catalog 源不一致问题由此消除)
+const api = isAuth
+  ? { page: pageAuthGuidance, save: saveAuthGuidance, del: deleteAuthGuidance, get: getAuthGuidance, upload: uploadAuthGuidanceFile, versions: authGuidanceVersions, setLatest: setAuthGuidanceLatest, downloadUrl: authGuidanceDownloadUrl, previewUrl: authGuidancePreviewUrl }
+  : { page: pageGuidance, save: saveGuidance, del: deleteGuidance, get: getGuidance, upload: uploadGuidanceFile, versions: guidanceVersions, setLatest: setGuidanceLatest, downloadUrl: guidanceDownloadUrl, previewUrl: guidancePreviewUrl }
+
+// 维护权:配置管理员(admin)及"全部·管理员视图"(all,全站约定全权)可新增/修改/版本/删除
+const canManage = computed(() => ['all', 'admin'].includes(currentRole()))
 const q = reactive({ current: 1, size: 10, title: '', guidanceType: '' })
 const rows = ref([]); const total = ref(0); const loading = ref(false)
 const dlg = ref(false); const saving = ref(false)
@@ -122,7 +153,7 @@ function fmt(t) { return t ? String(t).replace('T', ' ').slice(0, 19) : '-' }
 
 async function load() {
   loading.value = true
-  try { const r = await pageGuidance({ ...q, latestOnly: true }); rows.value = r.records || []; total.value = r.total || 0 }
+  try { const r = await api.page({ ...q, excludeType: props.excludeType || undefined, latestOnly: true }); rows.value = r.records || []; total.value = r.total || 0 }
   finally { loading.value = false }
 }
 function onSearch() { q.current = 1; load() }
@@ -143,32 +174,51 @@ async function onSave() {
       fd.append('guidanceType', form.guidanceType || '')
       fd.append('publisher', form.publisher || '')
       fd.append('content', form.content || '')
-      await uploadGuidanceFile(fd)
+      await api.upload(fd)
       ElMessage.success('已上传并入库为新版本')
     } else {
-      await saveGuidance({ ...form })
+      await api.save({ ...form })
       ElMessage.success(form.guidanceId ? '已修改' : '已保存为新版本')
     }
     dlg.value = false; load()
   } finally { saving.value = false }
 }
 
-async function onView(row) { cur.value = await getGuidance(row.guidanceId); viewDlg.value = true }
-function onDownload(row) { openFilePreview(guidanceDownloadUrl(row.guidanceId), row.fileName) }
+async function onView(row) { cur.value = await api.get(row.guidanceId); viewDlg.value = true }
+function onDownload(row) { openFilePreview(api.downloadUrl(row.guidanceId), row.fileName) }
+
+// 在线阅览:PDF 内嵌弹层;非 PDF 自动下载查看(与工作指引一致)
+const pvDlg = ref(false); const pvUrl = ref(''); const pvTitle = ref('')
+function onPreview(row) {
+  if (!row.fileName) { ElMessage.warning('该指引无可阅览的原件(纯文本)'); return }
+  if (row.fileName.toLowerCase().endsWith('.pdf')) {
+    pvUrl.value = api.previewUrl(row.guidanceId); pvTitle.value = row.title; pvDlg.value = true
+  } else {
+    ElMessage.info('Word 等文档暂不支持内嵌预览,已为您下载查看')
+    openFilePreview(api.downloadUrl(row.guidanceId), row.fileName)
+  }
+}
 async function onVersions(row) {
   verTitle.value = row.title
-  verRows.value = await guidanceVersions(row.title)
+  verRows.value = await api.versions(row.title)
   verDlg.value = true
 }
 async function onSetLatest(row) {
-  await setGuidanceLatest(row.guidanceId)
+  await api.setLatest(row.guidanceId)
   ElMessage.success(`已将 ${row.version} 设为最新`)
-  verRows.value = await guidanceVersions(verTitle.value)
+  verRows.value = await api.versions(verTitle.value)
   load()
 }
 function onDel(row) {
   ElMessageBox.confirm('确认删除该指引版本吗', '提示', { type: 'warning' })
-    .then(async () => { await deleteGuidance(row.guidanceId); ElMessage.success('已删除'); load() }).catch(() => {})
+    .then(async () => { await api.del(row.guidanceId); ElMessage.success('已删除'); load() }).catch(() => {})
 }
 onMounted(load)
 </script>
+
+<style scoped>
+.gt-frame { width: 100%; height: 76vh; border: none; }
+</style>
+<style>
+.gt-pv .el-dialog__body { padding: 8px 16px 16px; }
+</style>

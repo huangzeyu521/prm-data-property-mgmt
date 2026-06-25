@@ -32,4 +32,7 @@ public interface ConfirmGuidanceService {
 
     /** 分页;latestOnly=true 时仅返回每个标题的最新版本。 */
     PageResult<ConfirmGuidance> page(long current, long size, String title, String guidanceType, boolean latestOnly);
+
+    /** 同上,新增 excludeType:排除某类型(如确权指引列表排除"工作指引"存档,保持二者隔离)。 */
+    PageResult<ConfirmGuidance> page(long current, long size, String title, String guidanceType, String excludeType, boolean latestOnly);
 }

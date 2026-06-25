@@ -11,6 +11,8 @@ export const ROLES = [
 
 // 菜单配置:数据驱动侧栏。每项 roles=[] 表示对所有角色可见;否则仅列出的角色(+all)可见。
 export const MENU = [
+  // 指引中心(三合一一级入口):全员可查阅工作指引/流程表单/确权·授权指引,admin 在此维护。取代原顶栏抽屉+两套分散管理页。
+  { top: true, path: '/dpr/guidance', title: '指引中心', icon: 'Reading' },
   { top: true, path: '/dpr/workbench/my', title: '我的申请', icon: 'Tickets', roles: ['apply'] },
   { top: true, path: '/dpr/workbench/todo', title: '统一待办中心', icon: 'Compass', roles: ['review'] },
   {
@@ -37,7 +39,6 @@ export const MENU = [
       { path: '/dpr/confirm/review', title: '审核申请提交', roles: ['review'] },
       { path: '/dpr/confirm/card', title: '权益卡片生成', roles: ['admin', 'apply'] },
       { path: '/dpr/confirm/cert', title: '权益证书管理', roles: ['admin'] },
-      { path: '/dpr/confirm/guidance', title: '确权指引管理', roles: ['admin'] },
     ],
   },
   {
@@ -57,7 +58,6 @@ export const MENU = [
   {
     // P2-5:配置类(低频、管理员专属)单列二级区,与日常操作分层
     group: '授权配置', icon: 'Setting', index: '07', items: [
-      { path: '/dpr/auth/guidance', title: '授权指引管理', roles: ['admin'] },
       { path: '/dpr/auth/form-template', title: '申请表单设计', roles: ['admin'] },
       { path: '/dpr/auth/scenario', title: '应用场景管理', roles: ['admin'] },
       { path: '/dpr/auth/agreement-template', title: '协议模板库', roles: ['admin'] },
@@ -86,7 +86,7 @@ export const ROLE_HOME = {
   all: '/dpr/dashboard/overview',
   apply: '/dpr/workbench/my',
   review: '/dpr/workbench/todo',
-  admin: '/dpr/auth/guidance',
+  admin: '/dpr/guidance',
   view: '/dpr/dashboard/overview',
 }
 

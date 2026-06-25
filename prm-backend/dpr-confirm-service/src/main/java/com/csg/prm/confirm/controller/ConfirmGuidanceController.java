@@ -75,6 +75,20 @@ public class ConfirmGuidanceController {
                 .body(data);
     }
 
+    /** 在线阅览原件(inline:PDF 浏览器内嵌,其余按二进制流)。供"工作指引存档"在线查看。 */
+    @GetMapping("/{guidanceId}/preview")
+    public ResponseEntity<byte[]> preview(@PathVariable String guidanceId) {
+        ConfirmGuidance g = service.getById(guidanceId);
+        byte[] data = service.download(guidanceId);
+        String fn = g.getFileName() == null ? guidanceId : g.getFileName();
+        MediaType mt = fn.toLowerCase().endsWith(".pdf") ? MediaType.APPLICATION_PDF : MediaType.APPLICATION_OCTET_STREAM;
+        ContentDisposition cd = ContentDisposition.inline().filename(fn, StandardCharsets.UTF_8).build();
+        return ResponseEntity.ok()
+                .header("Content-Disposition", cd.toString())
+                .contentType(mt)
+                .body(data);
+    }
+
     @DeleteMapping("/{guidanceId}")
     public R<Void> delete(@PathVariable String guidanceId) {
         service.delete(guidanceId);
@@ -104,7 +118,8 @@ public class ConfirmGuidanceController {
                                                @RequestParam(defaultValue = "10") long size,
                                                @RequestParam(required = false) String title,
                                                @RequestParam(required = false) String guidanceType,
+                                               @RequestParam(required = false) String excludeType,
                                                @RequestParam(defaultValue = "true") boolean latestOnly) {
-        return R.ok(service.page(current, size, title, guidanceType, latestOnly));
+        return R.ok(service.page(current, size, title, guidanceType, excludeType, latestOnly));
     }
 }

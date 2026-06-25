@@ -7,6 +7,11 @@ spring:
   profiles:
     # 本地/演示默认 dev(H2,可独立运行);部署用环境变量 SPRING_PROFILES_ACTIVE=prod 覆盖(MySQL)。
     active: ${SPRING_PROFILES_ACTIVE:dev}
+  # 指引/协议等原件上传:与确权侧对齐(单文件 500MB、整体 2GB),否则默认 1MB 会拦下指引 PDF
+  servlet:
+    multipart:
+      max-file-size: 500MB
+      max-request-size: 2GB
 
 mybatis-plus:
   global-config:

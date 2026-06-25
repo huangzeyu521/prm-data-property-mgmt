@@ -91,6 +91,8 @@ export const uploadAuthGuidanceFile = (formData) =>
 export const authGuidanceVersions = (title) => request.get('/dpr/auth/guidance/versions', { params: { title } })
 export const setAuthGuidanceLatest = (id) => request.post(`/dpr/auth/guidance/${id}/set-latest`)
 export const authGuidanceDownloadUrl = (id) => `/api/dpr/auth/guidance/${id}/download`
+// 在线阅览(inline:PDF 浏览器内嵌)。供「指引存档」在线查看
+export const authGuidancePreviewUrl = (id) => `/api/dpr/auth/guidance/${id}/preview`
 
 // 授权申请表单模板(可研 3.2.2.1.1.3.1.2)
 export const pageApplyTemplate = (params) => request.get('/dpr/auth/apply-template/page', { params })

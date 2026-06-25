@@ -42,7 +42,6 @@
           <el-option v-for="r in ROLES" :key="r.key" :label="r.label" :value="r.key" />
         </el-select>
       </el-tooltip>
-      <work-guide />
       <notification-center />
       <el-dropdown @command="onUserCmd">
         <span class="prm-user"><el-icon><Avatar /></el-icon>{{ userName }}</span>
@@ -97,7 +96,6 @@
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import NotificationCenter from '@/components/NotificationCenter.vue'
-import WorkGuide from '@/components/WorkGuide.vue'
 import FilePreview from '@/components/FilePreview.vue'
 import { ROLES, ROLE_HOME, currentRole, visibleMenu } from '@/lib/roles'
 import { currentUser, clearSession } from '@/api/auth'
@@ -147,7 +145,7 @@ function onJump(path) {
   }
 }
 
-const AUTH_CONFIG = ['/dpr/auth/guidance', '/dpr/auth/form-template', '/dpr/auth/scenario', '/dpr/auth/agreement-template', '/dpr/auth/cert-template']
+const AUTH_CONFIG = ['/dpr/auth/form-template', '/dpr/auth/scenario', '/dpr/auth/agreement-template', '/dpr/auth/cert-template']
 
 const GROUP_NAMES = {
   '/dpr/ledger': '产权信息管理',
@@ -237,11 +235,9 @@ const openeds = computed(() => {
 .prm-user:hover { color: rgba(255, 255, 255, 0.8); }
 .prm-ait-btn { color: #fff; font-size: 13px; }
 .prm-ait-btn:hover { color: rgba(255, 255, 255, 0.8); }
-/* 顶栏内铃铛/工作指引触发器:蓝底上改白 */
-.prm-header :deep(.nc-bell),
-.prm-header :deep(.wg-trigger) { color: #fff; }
-.prm-header :deep(.nc-bell:hover),
-.prm-header :deep(.wg-trigger:hover) { color: rgba(255, 255, 255, 0.8); }
+/* 顶栏内铃铛:蓝底上改白 */
+.prm-header :deep(.nc-bell) { color: #fff; }
+.prm-header :deep(.nc-bell:hover) { color: rgba(255, 255, 255, 0.8); }
 /* 侧栏:白底菜单(数研院典型界面母版),激活项主色文字+浅蓝底+左主色竖条 */
 .prm-aside {
   background: #fff;
