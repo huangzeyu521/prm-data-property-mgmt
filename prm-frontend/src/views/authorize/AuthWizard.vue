@@ -50,26 +50,29 @@
             </div>
             <div class="auth-tip">从已确权资产中选取,自动带出"生效"权益卡片(先确后授);仅已确权资产可被授权</div>
           </el-form-item>
-          <el-form-item label="资产名称" prop="assetName"><el-input v-model="form.assetName" readonly placeholder="选取卡片后自动带出" /></el-form-item>
+          <el-form-item label="数据表(资产名)" prop="assetName"><el-input v-model="form.assetName" readonly placeholder="选取卡片后自动带出" /></el-form-item>
           <el-alert v-if="assetRef" type="success" :closable="false" style="margin:0 0 12px 0">
             已引用外部资产信息 — 系统:{{ assetRef.systemName || '-' }} / 模式:{{ assetRef.schemaName || '-' }} / 安全等级:{{ assetRef.securityLevel || '-' }} / 责任部门:{{ assetRef.respDept || '-' }}
           </el-alert>
-          <el-form-item label="权益卡片ID" prop="equityCardId">
-            <el-select v-model="form.equityCardId" filterable allow-create default-first-option clearable style="width:100%"
-              placeholder="先确后授:搜索已确权权益卡片,如 EC-PRA-0001" @focus="loadCards" @change="onCardPicked">
-              <el-option v-for="c in cardOpts" :key="c.cardNo || c.cardId" :value="c.cardNo || c.cardId"
-                :label="(c.cardNo || c.cardId) + '　' + (c.assetName || c.assetId)" :disabled="!CARD_OK.includes(c.cardStatus)">
-                <span>{{ c.cardNo || c.cardId }}</span>
-                <span style="float:right;font-size:12px" :style="{color: CARD_OK.includes(c.cardStatus) ? '#36b21d' : '#b4b4b4'}">
-                  {{ c.assetName || c.assetId }} · {{ c.cardStatus }}</span>
-              </el-option>
-            </el-select>
+          <el-form-item label="生效权益卡片" prop="equityCardId"><el-input v-model="form.equityCardId" readonly placeholder="选取资产后自动匹配生效卡片(先确后授)" /></el-form-item>
+          <el-divider content-position="left" style="margin:8px 0"><span style="font-size:12px;color:#909399">数据信息(第三方/隐私 由确权带出)</span></el-divider>
+          <el-form-item label="第三方来源方式"><el-input v-model="form.thirdPartySource" readonly placeholder="选取资产后由确权记录自动带出(不涉及则空)" /></el-form-item>
+          <el-form-item label="涉个人隐私/商密"><el-input v-model="form.sensitiveType" readonly placeholder="选取资产后由确权记录自动带出" /></el-form-item>
+          <el-form-item v-if="form.thirdPartySource" label="第三方许可凭证">
+            <el-input v-model="form.thirdPartyLicense" type="textarea" maxlength="500" show-word-limit :rows="2" placeholder="填写许可凭证/说明,或在下方应交清单上传《第三方许可凭证或说明》" />
+            <div style="font-size:12px;color:#e6a23c;line-height:1.5;margin-top:2px">确权识别涉第三方,二选一即可:① 此处填说明　② 应交清单上传同名材料(上传后自动回填引用)</div>
           </el-form-item>
+          <el-form-item label="信息授权协议">
+            <el-input v-model="form.infoAuthAgreement" placeholder="填写协议名称/地址,或在下方应交清单上传《信息授权协议》" />
+            <div v-if="form.sensitiveType && form.sensitiveType.trim() && form.sensitiveType !== '无'" style="font-size:12px;color:#e6a23c;line-height:1.5;margin-top:2px">涉个人隐私/商密,二选一即可:① 此处填名称/地址　② 应交清单上传同名材料(上传后自动回填引用)</div>
+          </el-form-item>
+          <el-form-item label="所属业务域"><el-input v-model="form.businessDomain" placeholder="营销/生产/调度/财务..." /></el-form-item>
+          <el-divider content-position="left" style="margin:8px 0"><span style="font-size:12px;color:#909399">授权内容</span></el-divider>
           <el-form-item label="申请主体(被授权方)" prop="granteeOrg">
-            <el-autocomplete v-model="form.granteeOrg" :fetch-suggestions="queryOrg" placeholder="输入并从真实组织树中选取(可自定义外部主体)" clearable style="width:100%" />
+            <el-autocomplete v-model="form.granteeOrg" :fetch-suggestions="queryOrg" placeholder="表5 申请主体:输入并从真实组织树中选取(可自定义外部主体)" clearable style="width:100%" />
           </el-form-item>
-          <el-form-item label="授权权益类型" prop="rightType">
-            <el-select v-model="form.rightType" style="width:100%">
+          <el-form-item label="授权权益类型(单选)" prop="rightType">
+            <el-select v-model="form.rightType" style="width:100%" placeholder="单选(授权仅授使用权/经营权;持有权经确权认定取得)">
               <el-option v-for="t in rightTypes" :key="t" :label="t" :value="t" />
             </el-select>
           </el-form-item>
@@ -86,19 +89,18 @@
             <el-alert :closable="false" type="info" style="width:100%">{{ selectedReason }}</el-alert>
           </el-form-item>
           <el-form-item label="授权范围"><el-input v-model="form.scope" /></el-form-item>
-          <el-form-item label="有效期(权益时效)"><el-date-picker v-model="form.validDate" type="date" value-format="YYYY-MM-DD HH:mm:ss" style="width:100%" /></el-form-item>
-          <el-form-item label="所属业务域"><el-input v-model="form.businessDomain" placeholder="营销/生产/调度/财务..." /></el-form-item>
+          <el-form-item label="授权时效">
+            <el-select v-model="form.validTerm" style="width:100%" placeholder="默认两年(时长)">
+              <el-option v-for="t in validTerms" :key="t" :label="t" :value="t" />
+            </el-select>
+            <div style="font-size:12px;color:#909399;line-height:1.5;margin-top:2px">
+              映射到期日(预期):{{ expiryOf(form.validTerm) ? expiryOf(form.validTerm).slice(0,10) : '—' }};协议签订时按附录D最终落定
+            </div>
+          </el-form-item>
+          <el-divider content-position="left" style="margin:8px 0"><span style="font-size:12px;color:#909399">范围与联系</span></el-divider>
+          <el-form-item label="是否跨区域/跨域"><el-switch v-model="form.crossRegion" /></el-form-item>
           <el-form-item label="申请单位主管"><el-input v-model="form.applicantManager" /></el-form-item>
           <el-form-item label="联系方式"><el-input v-model="form.contactInfo" placeholder="电话 / 邮箱" /></el-form-item>
-          <el-form-item label="是否跨区域/跨域"><el-switch v-model="form.crossRegion" /></el-form-item>
-          <el-form-item label="涉个人隐私/商密"><el-input v-model="form.sensitiveType" placeholder="个人隐私 / 商业秘密 / 无" /></el-form-item>
-          <el-form-item label="第三方来源方式"><el-input v-model="form.thirdPartySource" placeholder="涉及第三方时填" /></el-form-item>
-          <el-form-item v-if="form.thirdPartySource" label="第三方许可凭证" required>
-            <el-input v-model="form.thirdPartyLicense" type="textarea" maxlength="500" show-word-limit :rows="2" placeholder="第三方许可凭证或说明(涉第三方必填)" />
-          </el-form-item>
-          <el-form-item label="信息授权协议" :required="!!(form.sensitiveType && form.sensitiveType.trim() && form.sensitiveType !== '无')">
-            <el-input v-model="form.infoAuthAgreement" placeholder="信息授权协议名称/地址(涉个人隐私/商密必填)" />
-          </el-form-item>
           <el-form-item label="需保密承诺函"><el-switch v-model="form.needConfidentiality" /><span style="margin-left:8px;color:#909399;font-size:12px">附录E</span></el-form-item>
           <el-form-item v-if="form.needConfidentiality" label="保密承诺函"><el-input v-model="form.confidentialityFile" placeholder="保密承诺函文件地址" /></el-form-item>
         </el-form>
@@ -249,13 +251,24 @@ import { useAiThinking } from '@/composables/useAiThinking'
 import { openFilePreview } from '@/composables/useFilePreview'
 import { AI_PHASES } from '@/lib/aiPhases'
 const aiThink = useAiThinking()
-import { pageEquityCard } from '@/api/confirm'
+import { pageEquityCard, getRightsFacts } from '@/api/confirm'
 import { getAsset } from '@/api/ledger'
 import { listOrg } from '@/api/org'
 
 const router = useRouter()
 const route = useRoute()
 const rightTypes = ['数据加工使用权', '数据产品经营权']
+// 授权时效:申报阶段填「时长」(表5 默认两年),保存时映射为预期到期日(validDate);协议签订时按附录D最终落定
+const validTerms = ['两年', '三年', '五年']
+const TERM_YEARS = { 两年: 2, 三年: 3, 五年: 5 }
+function expiryOf(term) {
+  const years = TERM_YEARS[term]
+  if (!years) return ''
+  const d = new Date()
+  d.setFullYear(d.getFullYear() + years)
+  const p = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
+}
 const step = ref(0)
 const formRef = ref()
 const saving = ref(false)
@@ -321,7 +334,15 @@ function ackAi(name) { if (!aiAck.value.includes(name)) aiAck.value.push(name); 
 const aiText = ref(''); const aiLoading = ref(false); const aiTip = ref('')
 
 function empty() {
-  return { assetId: '', assetName: '', equityCardId: '', granteeOrg: '', rightType: '', scenario: '', scope: '', validDate: '', businessDomain: '', applicantManager: '', contactInfo: '', crossRegion: false, sensitiveType: '', thirdPartySource: '', thirdPartyLicense: '', infoAuthAgreement: '', needConfidentiality: false, confidentialityFile: '' }
+  return { assetId: '', assetName: '', equityCardId: '', granteeOrg: '', rightType: '', scenario: '', scope: '', validTerm: '两年', validDate: '', businessDomain: '', applicantManager: '', contactInfo: '', crossRegion: false, sensitiveType: '', thirdPartySource: '', thirdPartyLicense: '', infoAuthAgreement: '', needConfidentiality: false, confidentialityFile: '' }
+}
+// 确权带出(B-1):按资产取最新已完成确权的第三方来源/隐私商密事实(只读),堵人工低报击穿合规
+async function deriveFacts(assetId) {
+  try {
+    const f = await getRightsFacts(assetId)
+    form.thirdPartySource = f?.thirdPartySource || ''
+    form.sensitiveType = f?.sensitiveType || '无'
+  } catch { form.thirdPartySource = ''; form.sensitiveType = '无' }
 }
 const form = reactive(empty())
 const scenarioOpts = ref([])
@@ -335,6 +356,13 @@ const FALLBACK_RULES = [
   { triggerType: 'THIRD_PARTY', materialName: '第三方许可凭证或说明', required: '视情况', detail: '申请数据涉及第三方来源方式时必须提供:第三方关于数据授权的许可文件或详细情况说明' },
   { triggerType: 'SENSITIVE', materialName: '信息授权协议', required: '视情况', detail: '申请数据涉及个人隐私或商业秘密时必须提供:相应的信息授权协议附件(如个人隐私授权协议范本)' }
 ]
+// 材料名模糊匹配:应交项名 ⇄ 已上传材料名(双向 includes),供清单状态与门禁校验双轨复用
+function matchMaterial(name) {
+  return materials.value.find(m => {
+    const mn = m.materialName || ''
+    return mn === name || mn.includes(name) || name.includes(mn)
+  })
+}
 const requiredChecklist = computed(() => {
   const tp = !!(form.thirdPartySource && form.thirdPartySource.trim())
   const sv = !!(form.sensitiveType && form.sensitiveType.trim() && form.sensitiveType !== '无')
@@ -342,13 +370,7 @@ const requiredChecklist = computed(() => {
     || (r.triggerType === 'THIRD_PARTY' && tp)
     || (r.triggerType === 'SENSITIVE' && sv)
   const src = materialRules.value.length ? materialRules.value : FALLBACK_RULES
-  return src.filter(hit).map(r => ({
-    ...r,
-    uploaded: materials.value.some(m => {
-      const mn = m.materialName || ''
-      return mn === r.materialName || mn.includes(r.materialName) || r.materialName.includes(mn)
-    })
-  }))
+  return src.filter(hit).map(r => ({ ...r, uploaded: !!matchMaterial(r.materialName) }))
 })
 async function loadAuthMaterialRules() {
   try {
@@ -455,7 +477,7 @@ async function searchAssets(kw) {
 async function onAssetPicked(id) {
   const hit = assetOpts.value.find(a => a.assetId === id)
   if (hit) form.assetName = hit.assetName
-  if (!id) return
+  if (!id) { form.thirdPartySource = ''; form.sensitiveType = ''; return }
   onAssetBlur()
   await loadCards()
   const card = cardOpts.value.find(c => c.assetId === id && CARD_OK.includes(c.cardStatus))
@@ -465,6 +487,7 @@ async function onAssetPicked(id) {
   } else {
     ElMessage.warning('该资产暂无生效权益卡片,请先完成确权(先确后授)')
   }
+  await deriveFacts(id) // 确权带出:第三方来源/隐私商密(只读)
 }
 
 // 权益卡片选择器(失效卡禁选,选卡反向回填资产)
@@ -486,17 +509,18 @@ function onCardPicked(no) {
 }
 
 // 一键填充示例(测试/演示):对齐 test/一事一议授权申请 手册
-function fillDemo() {
+async function fillDemo() {
   Object.assign(form, {
     assetId: 'AST-001', assetName: '客户用电信息表', equityCardId: 'EC-PRA-0001',
     granteeOrg: '广州供电局', rightType: '数据产品经营权', scenario: '电力金融征信',
-    scope: '全字段', validDate: '2028-06-11 00:00:00', businessDomain: '营销域',
+    scope: '全字段', validTerm: '三年', businessDomain: '营销域',
     applicantManager: '李主管', contactInfo: '020-66668888', crossRegion: false,
-    sensitiveType: '个人隐私', thirdPartySource: '', needConfidentiality: true,
+    needConfidentiality: true,
     confidentialityFile: '04-保密承诺函(附录E)-广州供电局.docx',
     infoAuthAgreement: '03-信息授权协议-征信客户授权说明.docx'
   })
   onAssetBlur()
+  await deriveFacts('AST-001') // 第三方/隐私 由确权带出(只读)
   ElMessage.success('已填充示例,可直接"下一步";材料文件在 test/一事一议授权申请 目录')
 }
 
@@ -517,7 +541,10 @@ async function onAssetBlur() {
 // 申请材料上传/管理(需先有草稿ID)
 const materials = ref([]); const matUploading = ref(false)
 async function ensureDraft() {
-  if (!applyId.value) applyId.value = await saveAuthDraft({ authMode: '一事一议', ...form })
+  if (!applyId.value) {
+    form.validDate = expiryOf(form.validTerm) // 时长→预期到期日(映射存储)
+    applyId.value = await saveAuthDraft({ authMode: '一事一议', ...form })
+  }
   return applyId.value
 }
 async function refreshMaterials() { if (applyId.value) materials.value = await listAuthMaterial(applyId.value) || [] }
@@ -567,8 +594,23 @@ async function onAiFill() {
 
 async function next0() {
   await formRef.value.validate()
-  if (form.thirdPartySource && !form.thirdPartyLicense) { ElMessage.warning('涉及第三方来源,须填第三方许可凭证或说明'); return }
-  if (form.sensitiveType && form.sensitiveType.trim() && form.sensitiveType !== '无' && !form.infoAuthAgreement) { ElMessage.warning('涉个人隐私/商密,须填信息授权协议'); return }
+  form.validDate = expiryOf(form.validTerm) // 时长→预期到期日(映射存储)
+  // 凭证/协议双轨:内联说明 与 应交清单同名材料 二者其一即满足。仅上传材料时回填文件引用到字段,保持单一数据源(前端门禁 + 后端提交门禁同源通过)
+  const blank = (v) => !v || !String(v).trim()
+  if (form.thirdPartySource && form.thirdPartySource.trim()) {
+    if (blank(form.thirdPartyLicense)) {
+      const m = matchMaterial('第三方许可凭证或说明')
+      if (m) form.thirdPartyLicense = '见附件:' + (m.fileName || m.materialName)
+    }
+    if (blank(form.thirdPartyLicense)) { ElMessage.warning('涉及第三方来源:请在「第三方许可凭证」填写说明,或在下方应交材料清单上传《第三方许可凭证或说明》(二选一)'); return }
+  }
+  if (form.sensitiveType && form.sensitiveType.trim() && form.sensitiveType !== '无') {
+    if (blank(form.infoAuthAgreement)) {
+      const m = matchMaterial('信息授权协议')
+      if (m) form.infoAuthAgreement = m.fileName || m.materialName
+    }
+    if (blank(form.infoAuthAgreement)) { ElMessage.warning('涉个人隐私/商密:请在「信息授权协议」填写名称/地址,或在下方上传《信息授权协议》(二选一)'); return }
+  }
   if (!applyId.value) {
     saving.value = true
     try { applyId.value = await saveAuthDraft({ authMode: '一事一议', ...form }) }
