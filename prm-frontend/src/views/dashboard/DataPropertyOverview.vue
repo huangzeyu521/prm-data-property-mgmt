@@ -29,28 +29,20 @@
       <el-col :span="8" :sm="12" :xs="24"><el-card header="授权模式分布"><div ref="amRef" style="height:300px"></div></el-card></el-col>
     </el-row>
 
-    <div class="lk-title">趋势与多维统计（部门/地域 · 时间 · 同比环比）</div>
+    <div class="lk-title">趋势与多维统计(系统部署单位 · 时间 · 同比环比)</div>
     <el-row :gutter="16">
       <el-col :span="16" :sm="24" :xs="24"><el-card header="确权登记趋势 + 同比(YoY)/环比(MoM)（月度）"><div ref="trendRef" style="height:320px"></div></el-card></el-col>
       <el-col :span="8" :sm="24" :xs="24"><el-card header="授权状态分布"><div ref="authStatusRef" style="height:320px"></div></el-card></el-col>
     </el-row>
     <el-row :gutter="16" style="margin-top:16px">
-      <el-col :span="12" :sm="24" :xs="24"><el-card header="省域分布（点击柱形下钻地市）"><div ref="provinceRef" style="height:300px"></div></el-card></el-col>
-      <el-col :span="12" :sm="24" :xs="24"><el-card :header="`地市分布（${drillProvince || '全部省域'}）`"><div ref="bureauRef" style="height:300px"></div></el-card></el-col>
-    </el-row>
-    <el-row :gutter="16" style="margin-top:16px">
       <el-col :span="24"><el-card header="按系统部署单位分布(总部 · 超高压 · 双调 · 五省网 · 广州 · 深圳)"><div ref="deployRef" style="height:300px"></div></el-card></el-col>
     </el-row>
-    <el-row :gutter="16" style="margin-top:16px">
-      <el-col :span="12" :sm="24" :xs="24"><el-card header="各省确权覆盖率对比"><div ref="confirmRateRef" style="height:300px"></div></el-card></el-col>
-      <el-col :span="12" :sm="24" :xs="24"><el-card header="各省授权状态结构"><div ref="authStructRef" style="height:300px"></div></el-card></el-col>
-    </el-row>
-    <div class="prm-table-note" style="margin-top:12px">注:数据产权概览跨域聚合确权、授权、台账核心指标,含趋势/同比环比/部门地域多维统计,支撑公司数据产权全貌战略决策。</div>
+    <div class="prm-table-note" style="margin-top:12px">注:数据产权概览跨域聚合确权、授权、台账核心指标,含趋势/同比环比/系统部署单位多维统计(南网打√口径,不按地理省域统计),支撑公司数据产权全貌战略决策。</div>
   </div>
 </template>
 <script setup>
 import { onMounted, reactive, ref, nextTick } from 'vue'
-import { initChart, applyChartBase } from '@/lib/chartBase'
+import { initChart } from '@/lib/chartBase'
 import { CHART_COLORS, C } from '@/lib/chartPalette'
 import { getOverview, getLedgerStatistics } from '@/api/ledger'
 import { getConfirmDashboard } from '@/api/confirm'
@@ -61,23 +53,8 @@ const cf = reactive({ cardCount: 0, passRate: 0 })
 const au = reactive({ certCount: 0, effectiveRate: 0 })
 const lk = reactive({ reConfirmCount: 0, suspendedCount: 0, expiring: 0, closureRate: 0 })
 const rtRef = ref(); const csRef = ref(); const amRef = ref()
-const trendRef = ref(); const authStatusRef = ref(); const provinceRef = ref(); const bureauRef = ref()
-const confirmRateRef = ref(); const authStructRef = ref(); const deployRef = ref()
-const drillProvince = ref('')
-let bureauChart = null
+const trendRef = ref(); const authStatusRef = ref(); const deployRef = ref()
 const pairs = (m) => Object.entries(m || {}).map(([name, value]) => ({ name, value }))
-// 省→地市嵌套压平为「全部省域」视图
-const flattenBureau = (bb) => {
-  const out = {}
-  Object.values(bb || {}).forEach(m => Object.entries(m).forEach(([k, v]) => { out[k] = (out[k] || 0) + v }))
-  return out
-}
-const bureauOption = (map) => ({
-  color: CHART_COLORS, tooltip: { trigger: 'axis' }, grid: { left: 48, right: 24, top: 20, bottom: 50 },
-  xAxis: { type: 'category', data: Object.keys(map || {}), axisLabel: { interval: 0, rotate: 20 } },
-  yAxis: { type: 'value', name: '台账数' },
-  series: [{ type: 'bar', data: Object.values(map || {}), barWidth: '40%', itemStyle: { color: C.green } }]
-})
 async function loadLinkage(c, a) {
   const [exp, alert] = await Promise.all([
     expiringAuthCerts(30),
@@ -97,7 +74,7 @@ async function load() {
   initChart(csRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'item' }, legend: { bottom: 0 }, series: [{ type: 'pie', radius: '65%', data: pairs(c.statusDistribution) }] })
   initChart(amRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'item' }, legend: { bottom: 0 }, series: [{ type: 'pie', radius: ['40%', '70%'], data: pairs(a.modeDistribution) }] })
 
-  // 趋势 + 同比环比 + 部门/地域 维度(接入台账统计)
+  // 趋势 + 同比环比 + 系统部署单位 维度(接入台账统计;不按地理省域)
   const st = await getLedgerStatistics()
   const tr = st.trend || []
   initChart(trendRef.value,{
@@ -113,22 +90,8 @@ async function load() {
     ]
   })
   initChart(authStatusRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'item' }, legend: { bottom: 0 }, series: [{ type: 'pie', radius: '65%', data: pairs(st.byAuthStatus) }] })
-  const byBureau = st.byBureau || {}
-  const provinceChart = initChart(provinceRef.value,{
-    color: CHART_COLORS, tooltip: { trigger: 'axis' }, grid: { left: 48, right: 24, top: 20, bottom: 50 },
-    xAxis: { type: 'category', data: Object.keys(st.byProvince || {}), axisLabel: { interval: 0, rotate: 20 } },
-    yAxis: { type: 'value', name: '台账数' },
-    series: [{ type: 'bar', data: Object.values(st.byProvince || {}), barWidth: '40%', itemStyle: { color: C.blue } }]
-  })
-  bureauChart = initChart(bureauRef.value, bureauOption(flattenBureau(byBureau)))
-  // 真下钻:点省柱→该省地市;再点同省→回到全部省域
-  provinceChart.on('click', (p) => {
-    drillProvince.value = (drillProvince.value === p.name) ? '' : p.name
-    const map = drillProvince.value ? (byBureau[drillProvince.value] || {}) : flattenBureau(byBureau)
-    bureauChart.setOption(applyChartBase(bureauOption(map)), true)
-  })
 
-  // 系统部署单位(打√口径固定10桶,服务端零填充恒显;保持服务端顺序)
+  // 系统部署单位(打√口径固定10桶,服务端零填充恒显;保持服务端顺序)——不按地理省域统计
   const du = st.byDeploymentUnit || {}
   initChart(deployRef.value,{
     color: CHART_COLORS, tooltip: { trigger: 'axis' }, grid: { left: 48, right: 24, top: 20, bottom: 50 },
@@ -136,33 +99,6 @@ async function load() {
     yAxis: { type: 'value', name: '资产数' },
     series: [{ type: 'bar', data: Object.values(du), barWidth: '40%', itemStyle: { color: C.green },
       label: { show: true, position: 'top' } }]
-  })
-
-  // 跨维:各省确权覆盖率对比
-  const pc = st.provinceConfirm || []
-  initChart(confirmRateRef.value,{
-    color: CHART_COLORS,
-    tooltip: { trigger: 'axis', formatter: (ps) => {
-      const x = pc[ps[0].dataIndex] || {}
-      return `${x.province}<br/>确权率: <b>${x.rate}%</b><br/>已确权/总数: ${x.confirmed}/${x.total}`
-    } },
-    grid: { left: 48, right: 24, top: 20, bottom: 50 },
-    xAxis: { type: 'category', data: pc.map(x => x.province), axisLabel: { interval: 0, rotate: 20 } },
-    yAxis: { type: 'value', name: '确权率%', max: 100, axisLabel: { formatter: '{value}%' } },
-    series: [{ type: 'bar', data: pc.map(x => x.rate), barWidth: '40%', itemStyle: { color: C.blue },
-      label: { show: true, position: 'top', formatter: '{c}%' } }]
-  })
-
-  // 跨维:各省授权状态结构(堆叠)
-  const pas = st.provinceAuthStatus || {}
-  const provs = Object.keys(pas)
-  const statuses = [...new Set(provs.flatMap(p => Object.keys(pas[p] || {})))]
-  initChart(authStructRef.value,{
-    color: CHART_COLORS, tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } }, legend: { bottom: 0 },
-    grid: { left: 48, right: 24, top: 20, bottom: 50 },
-    xAxis: { type: 'category', data: provs, axisLabel: { interval: 0, rotate: 20 } },
-    yAxis: { type: 'value', name: '档案数' },
-    series: statuses.map(s => ({ name: s, type: 'bar', stack: 'auth', data: provs.map(p => (pas[p] || {})[s] || 0) }))
   })
 }
 onMounted(load)

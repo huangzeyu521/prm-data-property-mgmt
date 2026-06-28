@@ -23,7 +23,7 @@ const routes = [
   },
   { path: '/dpr/ledger/dataset', name: 'DatasetDetail', component: () => import('@/views/ledger/DatasetDetail.vue'), meta: { title: '数据集详情展示', goal: '查看数据集明细与产权要素,核对资产信息' } },
   { path: '/dpr/ledger/change', name: 'ChangeRecord', component: () => import('@/views/ledger/ChangeRecordList.vue'), meta: { title: '产权变更记录管理', goal: '追溯产权变更历史与上链凭证,保障全程可审计' } },
-  { path: '/dpr/ledger/statistics', name: 'LedgerStatistics', component: () => import('@/views/ledger/LedgerStatistics.vue'), meta: { title: '产权台账统计分析', goal: '多维统计产权台账(类型/地域/趋势),支撑管理决策' } },
+  { path: '/dpr/ledger/statistics', name: 'LedgerStatistics', component: () => import('@/views/ledger/LedgerStatistics.vue'), meta: { title: '产权台账统计分析', goal: '多维统计产权台账(类型/系统部署单位/趋势),支撑管理决策' } },
   { path: '/dpr/monitor/status', name: 'RightsStatusMonitor', component: () => import('@/views/monitor/RightsStatusMonitor.vue'), meta: { title: '权益状态监控', goal: '实时监控权益状态变化,发现异常及时处置' } },
   {
     path: '/dpr/monitor/alert',
