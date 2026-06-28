@@ -9,7 +9,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint:tokens": "node scripts/lint-tokens.mjs",
-    "prebuild": "node scripts/lint-tokens.mjs",
+    "test:roles": "node scripts/test-roles.mjs",
+    "prebuild": "node scripts/lint-tokens.mjs && node scripts/test-roles.mjs",
     "e2e": "playwright test",
     "e2e:install": "playwright install chromium"
   },
