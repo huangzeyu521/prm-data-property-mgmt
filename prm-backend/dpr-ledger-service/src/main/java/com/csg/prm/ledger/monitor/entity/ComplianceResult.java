@@ -25,6 +25,10 @@ public class ComplianceResult extends BaseEntity {
     @TableField("CEC_ASSET_ID")
     private String assetId;
 
+    /** 数据表(库表名);所属系统由 assetId 去 SYS: 前缀派生 */
+    @TableField("CEC_ASSET_NAME")
+    private String assetName;
+
     @TableField("CEC_RULE_ID")
     private String ruleId;
 
@@ -57,6 +61,14 @@ public class ComplianceResult extends BaseEntity {
 
     public void setCheckDim(String checkDim) {
         this.checkDim = checkDim;
+    }
+
+    public String getAssetName() {
+        return assetName;
+    }
+
+    public void setAssetName(String assetName) {
+        this.assetName = assetName;
     }
 
     public String getCheckId() {
