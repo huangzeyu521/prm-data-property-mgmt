@@ -83,4 +83,40 @@ class ApplicantRbacGuardTest {
         c.setRoles(Set.of(roles));
         return c;
     }
+
+    /**
+     * 授权审批 approve/reject 的粗粒度 @RequiresRole 必须放行所有节点审批角色(含 gm 副总/总经理),
+     * 否则该角色在到达服务层 assertNodeRole(逐节点门禁)之前就被控制器拦死——多级审批名存实亡。
+     * (历史 bug:授权侧曾为 {review,admin},gm/business/manager/director/leadership 全被挡,仅 admin 能审。)
+     */
+    @Test
+    void approveReject_admitAllNodeApprovers_inclGm_excludeApply() throws Exception {
+        String[] nodeRoles = {"review", "business", "manager", "director", "gm", "leadership"};
+        for (String mn : new String[]{"approve", "reject"}) {
+            RequiresRole rr = AuthApplyController.class.getMethod(mn, String.class, String.class).getAnnotation(RequiresRole.class);
+            assertNotNull(rr, mn + " 须标注 @RequiresRole");
+            var roles = Arrays.asList(rr.value());
+            for (String need : nodeRoles) {
+                assertTrue(roles.contains(need),
+                        mn + " 粗粒度门禁须放行节点角色「" + need + "」(再由 assertNodeRole 校验具体节点)");
+            }
+            assertFalse(roles.contains("apply"), mn + " 仍不得放行申报人(职责分离)");
+        }
+    }
+
+    /** 运行时:gm(副总/总经理)能进入授权审批控制器;申报人仍被拦。节点匹配另由 AuthNodeRoleTest 覆盖。 */
+    @Test
+    void enforcement_gmReachesApprove_applyStillBlocked() throws Exception {
+        Method m = AuthApplyController.class.getMethod("approve", String.class, String.class);
+        HandlerMethod hm = new HandlerMethod(new AuthApplyController(null, null), m);
+        RbacInterceptor it = new RbacInterceptor(true);
+        try {
+            UserContextHolder.set(ctxWithRoles("gm"));
+            assertTrue(it.preHandle(null, null, hm), "gm 副总/总经理应能进入授权审批控制器");
+            UserContextHolder.set(ctxWithRoles("apply"));
+            assertThrows(BusinessException.class, () -> it.preHandle(null, null, hm), "申报人仍被拦");
+        } finally {
+            UserContextHolder.clear();
+        }
+    }
 }

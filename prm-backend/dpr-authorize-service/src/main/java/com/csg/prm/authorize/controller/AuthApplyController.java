@@ -54,13 +54,13 @@ public class AuthApplyController {
         return Result.success();
     }
 
-    @com.csg.prm.common.auth.RequiresRole({"review", "admin"})
+    @com.csg.prm.common.auth.RequiresRole({"review", "business", "manager", "director", "gm", "leadership", "admin"})
     @PostMapping("/{applyId}/approve")
     public Result<String> approve(@PathVariable String applyId, @RequestParam(required = false) String opinion) {
         return Result.success(service.approve(applyId, opinion));
     }
 
-    @com.csg.prm.common.auth.RequiresRole({"review", "admin"})
+    @com.csg.prm.common.auth.RequiresRole({"review", "business", "manager", "director", "gm", "leadership", "admin"})
     @PostMapping("/{applyId}/reject")
     public Result<Void> reject(@PathVariable String applyId, @RequestParam(required = false) String reason) {
         service.reject(applyId, reason);
@@ -68,14 +68,14 @@ public class AuthApplyController {
     }
 
     /** 批量审批通过(带审核意见,逐条)。与单条 approve 一致,申报人不得自批。 */
-    @com.csg.prm.common.auth.RequiresRole({"review", "admin"})
+    @com.csg.prm.common.auth.RequiresRole({"review", "business", "manager", "director", "gm", "leadership", "admin"})
     @PostMapping("/batch-approve")
     public Result<BatchResult> batchApprove(@RequestBody List<String> applyIds) {
         return Result.success(service.batchApprove(applyIds));
     }
 
     /** 批量驳回(统一原因)。与单条 reject 一致,申报人不得自驳。 */
-    @com.csg.prm.common.auth.RequiresRole({"review", "admin"})
+    @com.csg.prm.common.auth.RequiresRole({"review", "business", "manager", "director", "gm", "leadership", "admin"})
     @PostMapping("/batch-reject")
     public Result<BatchResult> batchReject(@RequestBody List<String> applyIds,
                                       @RequestParam(required = false) String reason) {
