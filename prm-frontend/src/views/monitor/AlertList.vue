@@ -37,7 +37,7 @@
 
     <el-dialog v-model="rcDlg" title="权属变动 · 联动派生重确权" width="500px" align-center>
       <el-alert type="info" :closable="false" show-icon style="margin-bottom:12px"
-        title="附录F 3.3.2:数据新增/来源变更/到期将生成重要预警并派生重确权工单(草稿)进入确权流程。" />
+        title="附录F §3.3.2 四触发:数据新增/数据来源变更/管理要求变更/权益到期 将生成重要预警并派生重确权工单(草稿)进入确权变更流程(按季度重确权)。" />
       <el-form :model="rc" label-width="100px">
         <el-form-item label="资产ID" required><el-input v-model="rc.assetId" placeholder="发生权属变动的资产ID" /></el-form-item>
         <el-form-item label="资产名称"><el-input v-model="rc.assetName" /></el-form-item>
@@ -48,7 +48,7 @@
         </el-form-item>
         <el-form-item label="权属类型">
           <el-select v-model="rc.rightType" style="width:100%">
-            <el-option label="数据持有权" value="数据持有权" /><el-option label="数据加工使用权" value="数据加工使用权" /><el-option label="数据产品经营权" value="数据产品经营权" />
+            <el-option label="数据资源持有权" value="数据资源持有权" /><el-option label="数据加工使用权" value="数据加工使用权" /><el-option label="数据产品经营权" value="数据产品经营权" />
           </el-select>
         </el-form-item>
         <el-form-item label="说明"><el-input v-model="rc.desc" type="textarea" maxlength="500" show-word-limit :rows="2" /></el-form-item>
@@ -78,9 +78,10 @@
         <el-table-column prop="alertLevel" label="级别" width="90" align="center">
           <template #default="{ row }"><el-tag :type="levelTag(row.alertLevel)">{{ row.alertLevel }}</el-tag></template>
         </el-table-column>
-        <el-table-column prop="source" label="来源" width="110" />
-        <el-table-column prop="assetId" label="资产ID" width="160" show-overflow-tooltip />
-        <el-table-column prop="abnormalDesc" label="异常描述" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="source" label="来源" width="100" />
+        <el-table-column label="所属系统" min-width="120" show-overflow-tooltip><template #default="{ row }">{{ sysName(row) }}</template></el-table-column>
+        <el-table-column prop="assetName" label="数据表" min-width="120" show-overflow-tooltip><template #default="{ row }">{{ row.assetName || '—' }}</template></el-table-column>
+        <el-table-column prop="abnormalDesc" label="异常描述" min-width="180" show-overflow-tooltip />
         <el-table-column prop="disposeStatus" label="处置状态" width="100" align="center">
           <template #default="{ row }"><el-tag :type="statusTag(row.disposeStatus)">{{ row.disposeStatus }}</el-tag></template>
         </el-table-column>
@@ -108,11 +109,14 @@ import { pageAlert, disposeAlert, closeAlert, getAlertStats, runComplianceCheck,
 const levels = ['紧急', '重要', '普通']
 const statuses = ['待处理', '处理中', '已关闭']
 const violationTypes = ['越权调用', '违规使用', '超范围', '到期未续']
-const triggerTypes = ['数据新增', '来源变更', '到期']
+// 确权变更 §3.3.2 四触发(对齐 ConfirmWizard CHANGE_TRIGGER_OPTS):数据新增/数据来源变更/管理要求变更/权益到期
+const triggerTypes = ['数据新增', '数据来源变更', '管理要求变更', '权益到期']
 const vioDlg = ref(false)
 const vio = reactive({ assetId: '', violationType: '越权调用', ruleId: '', desc: '' })
 const rcDlg = ref(false)
-const rc = reactive({ assetId: '', assetName: '', triggerType: '来源变更', rightType: '数据持有权', desc: '' })
+const rc = reactive({ assetId: '', assetName: '', triggerType: '数据来源变更', rightType: '数据资源持有权', desc: '' })
+// 库表级:assetId=SYS:系统名 → 所属系统;非 SYS: 原样(兼容旧告警 assetId)
+function sysName(row) { const a = (row && row.assetId) || ''; return a.startsWith('SYS:') ? a.slice(4) : (a || '—') }
 const query = reactive({ current: 1, size: 10, alertLevel: '', disposeStatus: '' })
 const rows = ref([])
 const total = ref(0)
@@ -184,7 +188,7 @@ async function confirmReConfirm() {
   const r = await triggerReConfirm(rc.assetId, rc.assetName, rc.rightType, rc.triggerType, rc.desc)
   ElMessage.success(r.reConfirmId ? `已派生重确权工单 ${r.reConfirmId}` : '已生成预警,重确权工单已联动派生(本地桩)')
   rcDlg.value = false
-  Object.assign(rc, { assetId: '', assetName: '', triggerType: '来源变更', rightType: '数据持有权', desc: '' })
+  Object.assign(rc, { assetId: '', assetName: '', triggerType: '数据来源变更', rightType: '数据资源持有权', desc: '' })
   load()
 }
 
