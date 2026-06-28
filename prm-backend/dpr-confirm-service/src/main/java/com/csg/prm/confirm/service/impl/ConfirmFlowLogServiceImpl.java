@@ -53,6 +53,9 @@ public class ConfirmFlowLogServiceImpl implements ConfirmFlowLogService {
     }
 
     private Integer nodeOf(String status) {
+        if (ConfirmApply.STATUS_PRECHECK.equals(status)) {
+            return ConfirmApply.NODE_PRECHECK;
+        }
         if (ConfirmApply.STATUS_COMPLIANCE.equals(status)) {
             return ConfirmApply.NODE_COMPLIANCE;
         }
@@ -69,6 +72,9 @@ public class ConfirmFlowLogServiceImpl implements ConfirmFlowLogService {
     }
 
     private String nameOf(String status) {
+        if (ConfirmApply.STATUS_PRECHECK.equals(status)) {
+            return "人工预审";
+        }
         if (ConfirmApply.STATUS_COMPLIANCE.equals(status)) {
             return "合规审核";
         }
@@ -92,8 +98,11 @@ public class ConfirmFlowLogServiceImpl implements ConfirmFlowLogService {
 
     private String notify(ConfirmApply a, String to, String opinion) {
         String no = a.getApplyNo() == null ? a.getApplyId() : a.getApplyNo();
+        if (ConfirmApply.STATUS_PRECHECK.equals(to)) {
+            return "您的确权申请 " + no + " 已提交,进入【人工预审】(归集预审团队复核AI校验结果)";
+        }
         if (ConfirmApply.STATUS_COMPLIANCE.equals(to)) {
-            return "您的确权申请 " + no + " 已提交,进入【合规审核】";
+            return "确权申请 " + no + " 已通过人工预审,进入【合规审核】";
         }
         if (ConfirmApply.STATUS_MANAGER.equals(to)) {
             return "确权申请 " + no + " 已通过合规审核,进入【主管复核】";
