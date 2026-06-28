@@ -45,6 +45,9 @@ public interface AuthAgreementService {
 
     AuthAgreement getById(String agreementId);
 
+    /** 协议要素核对视图(附录D §3.4.4):协议 + join 来源申请单的协议要素,供协议审核核对内容一致。 */
+    com.csg.prm.authorize.dto.AgreementElementsVO elements(String agreementId);
+
     /** 存档多维检索:审核/归档状态 + 类型/部门 + 归档时间范围。 */
     PageResult<AuthAgreement> page(long current, long size, String reviewStatus, String archiveStatus,
                                    String agreementType, String deptName, String archiveStart, String archiveEnd);

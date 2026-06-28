@@ -307,6 +307,15 @@ public class AuthAgreementServiceImpl implements AuthAgreementService {
                         .orderByDesc(com.csg.prm.authorize.entity.AgreementArchiveLog::getOperateTime));
     }
 
+    @Override
+    public com.csg.prm.authorize.dto.AgreementElementsVO elements(String agreementId) {
+        AuthAgreement ag = require(agreementId);
+        // 协议要素(§3.4.4)在来源授权申请单上,按 applyId join 带出供核对(申请单缺失时容错只返回协议侧字段)
+        com.csg.prm.authorize.entity.AuthApply apply = StringUtils.hasText(ag.getApplyId())
+                ? applyMapper.selectById(ag.getApplyId()) : null;
+        return com.csg.prm.authorize.dto.AgreementElementsVO.of(ag, apply);
+    }
+
     private AuthAgreement require(String agreementId) {
         if (!StringUtils.hasText(agreementId)) {
             throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "协议ID不能为空");

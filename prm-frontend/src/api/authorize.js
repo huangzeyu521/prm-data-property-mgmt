@@ -54,6 +54,8 @@ export const getAgreementArchiveLogs = (id) => request.get(`/dpr/auth/agreement/
 export const recordAgreementAccess = (id, action) => request.post(`/dpr/auth/agreement/${id}/access`, null, { params: { action } })
 export const archiveAgreement = (id) => request.post(`/dpr/auth/agreement/${id}/archive`)
 export const pageAgreement = (params) => request.get('/dpr/auth/agreement/page', { params })
+// 协议要素核对(附录D §3.4.4):协议 + 来源申请单 数据范围/场景/目的/利益分配/安全保障
+export const getAgreementElements = (id) => request.get(`/dpr/auth/agreement/${id}/elements`)
 export const uploadAgreementSeal = (id, fd) => request.post(`/dpr/auth/agreement/${id}/upload-seal`, fd)
 export const getAgreementSealLogs = (id) => request.get(`/dpr/auth/agreement/${id}/upload-logs`)
 export const agreementSealFileUrl = (logId) => `/api/dpr/auth/agreement/upload-log/${logId}/file`

@@ -112,6 +112,12 @@ public class AuthAgreementController {
         return Result.success(service.getById(agreementId));
     }
 
+    /** 协议要素核对(附录D §3.4.4):协议 + 来源申请单的 数据范围/场景/目的/利益分配/安全保障,供协议审核核对一致性。 */
+    @GetMapping("/{agreementId}/elements")
+    public Result<com.csg.prm.authorize.dto.AgreementElementsVO> elements(@PathVariable String agreementId) {
+        return Result.success(service.elements(agreementId));
+    }
+
     @GetMapping("/page")
     public Result<PageResult<AuthAgreement>> page(@Valid PageQuery page,
                                              @RequestParam(required = false) String reviewStatus,

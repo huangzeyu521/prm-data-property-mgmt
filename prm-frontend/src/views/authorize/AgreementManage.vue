@@ -37,8 +37,9 @@
         <el-table-column prop="reviewStatus" label="审核" width="100" align="center" />
         <el-table-column prop="archiveStatus" label="归档" width="90" align="center" />
         <el-table-column v-if="action==='archive'" prop="archiveTime" label="归档时间" width="160"><template #default="{ row }">{{ (row.archiveTime||'').replace('T',' ').slice(0,19) || '—' }}</template></el-table-column>
-        <el-table-column label="操作" :width="action==='seal'?330:(action==='archive'?180:260)" fixed="right">
+        <el-table-column label="操作" :width="action==='seal'?410:(action==='archive'?260:340)" fixed="right">
           <template #default="{ row }">
+            <el-button link type="warning" @click="onElements(row)">协议要素核对</el-button>
             <template v-if="action==='seal'">
               <el-upload :show-file-list="false" :http-request="(o)=>doUploadSeal(row,'授权方',o.file)" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" style="display:inline-block">
                 <el-button link type="primary" :disabled="row.grantorSigned">甲方签章上传</el-button>
@@ -100,6 +101,29 @@
       </el-table>
       <el-empty v-if="!archiveLogs.length" :image-size="50" description="暂无审计日志" />
     </el-dialog>
+
+    <!-- 协议要素核对(附录D §3.4.4):协议 vs 来源申请单,审核人据此核对内容一致、防阴阳合同 -->
+    <el-dialog v-model="elemDlg" :title="`协议要素核对(附录D §3.4.4) — ${curNo}`" width="720px" align-center>
+      <el-alert type="info" :closable="false" style="margin-bottom:10px" title="核对要点:上传的协议文件中约定的 数据范围 / 使用场景及目的 / 利益分配 / 安全保障,须与下方来源申请单一致(防篡改、防阴阳合同)。" />
+      <el-descriptions v-if="elem" :column="2" border size="small">
+        <el-descriptions-item label="所属系统">{{ elem.sysName || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="模式名称">{{ elem.schemaName || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="数据表">{{ elem.dataTable || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="业务域">{{ elem.businessDomain || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="授权方式">{{ elem.authMode || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="权益类型">{{ elem.rightType || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="被授权方" :span="2">{{ elem.granteeOrg || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="使用场景及目的(§3.4.4)" :span="2">{{ elem.scenario || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="数据范围(§3.4.4)" :span="2">{{ elem.scope || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="授权时效">{{ elem.validDate || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="是否跨域">{{ elem.crossRegion ? '是' : '否' }}</el-descriptions-item>
+        <el-descriptions-item label="涉第三方来源">{{ elem.thirdPartySource && String(elem.thirdPartySource).trim() ? elem.thirdPartySource : '不涉及' }}</el-descriptions-item>
+        <el-descriptions-item label="涉隐私/商密">{{ elem.sensitiveType && String(elem.sensitiveType).trim() && elem.sensitiveType !== '无' ? elem.sensitiveType : '不涉及' }}</el-descriptions-item>
+        <el-descriptions-item label="利益分配约定(§3.4.4)" :span="2">{{ elem.benefitAllocation || (elem.authMode === '批量' ? '批量:在《运营授权协议》(清单级)统一约定' : '— 未填(协议签订前须补充)') }}</el-descriptions-item>
+        <el-descriptions-item label="安全保障要求(§3.4.4)" :span="2">{{ elem.securityReq || (elem.authMode === '批量' ? '批量:在《运营授权协议》(清单级)统一约定' : '— 未填(协议签订前须补充)') }}</el-descriptions-item>
+      </el-descriptions>
+      <el-empty v-else :image-size="50" description="未取到来源申请单要素" />
+    </el-dialog>
   </div>
 </template>
 <script setup>
@@ -107,7 +131,7 @@ import { openFilePreview } from '@/composables/useFilePreview'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { pageAgreement, generateAgreement, signAgreementGrantor, signAgreementGrantee, reviewAgreement, archiveAgreement, uploadAgreementSeal, getAgreementSealLogs, agreementSealFileUrl, getAgreementReviewLogs, getAgreementArchiveLogs, recordAgreementAccess } from '@/api/authorize'
+import { pageAgreement, generateAgreement, signAgreementGrantor, signAgreementGrantee, reviewAgreement, archiveAgreement, uploadAgreementSeal, getAgreementSealLogs, agreementSealFileUrl, getAgreementReviewLogs, getAgreementArchiveLogs, recordAgreementAccess, getAgreementElements } from '@/api/authorize'
 const route = useRoute()
 // 协议工作台(标签页)以 actionProp 复用本组件;独立路由仍读 route.meta.action
 const props = defineProps({ actionProp: { type: String, default: '' } })
@@ -153,6 +177,14 @@ function onReview(row, pass) {
 }
 const reviewLogDlg = ref(false); const reviewLogs = ref([])
 async function onReviewLogs(row) { curNo.value = row.agreementNo; reviewLogs.value = await getAgreementReviewLogs(row.agreementId) || []; reviewLogDlg.value = true }
+// 协议要素核对(§3.4.4):取协议来源申请单要素,供审核人对照协议文件
+const elemDlg = ref(false); const elem = ref(null)
+async function onElements(row) {
+  curNo.value = row.agreementNo
+  elem.value = null
+  elemDlg.value = true
+  elem.value = await getAgreementElements(row.agreementId)
+}
 async function onArchive(row) { await archiveAgreement(row.agreementId); ElMessage.success('已归档'); load() }
 function onPreview(row) { ElMessage.info(`预览协议 ${row.agreementNo}`) }
 async function onDownload(row) { try { await recordAgreementAccess(row.agreementId, '下载') } catch { /* 审计失败不阻断 */ } ElMessage.success(`下载协议 ${row.agreementNo}.pdf（已留痕）`) }
