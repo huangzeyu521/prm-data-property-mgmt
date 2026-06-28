@@ -60,6 +60,27 @@ public class AuthDashboardVO {
     private Map<String, Long> modeDistribution;
     /** 授权权益类型分布 */
     private Map<String, Long> rightTypeDistribution;
+    /** 按业务域分布(表5/表6 所属业务域) */
+    private Map<String, Long> byBusinessDomain;
+    /** 批量授权清单数(表6 一站式产出 IM_BATCH_AUTH_LIST) */
+    private long batchListCount;
+    /** 跨区域/跨系统域授权数(表5/表6) */
+    private long crossRegionCount;
+    /** 涉第三方来源授权数(表5,须第三方许可凭证) */
+    private long thirdPartyCount;
+    /** 涉个人隐私/商业秘密授权数(表5,须信息授权协议) */
+    private long sensitiveCount;
+
+    public Map<String, Long> getByBusinessDomain() { return byBusinessDomain; }
+    public void setByBusinessDomain(Map<String, Long> byBusinessDomain) { this.byBusinessDomain = byBusinessDomain; }
+    public long getBatchListCount() { return batchListCount; }
+    public void setBatchListCount(long batchListCount) { this.batchListCount = batchListCount; }
+    public long getCrossRegionCount() { return crossRegionCount; }
+    public void setCrossRegionCount(long crossRegionCount) { this.crossRegionCount = crossRegionCount; }
+    public long getThirdPartyCount() { return thirdPartyCount; }
+    public void setThirdPartyCount(long thirdPartyCount) { this.thirdPartyCount = thirdPartyCount; }
+    public long getSensitiveCount() { return sensitiveCount; }
+    public void setSensitiveCount(long sensitiveCount) { this.sensitiveCount = sensitiveCount; }
 
     public long getTotalApply() {
         return totalApply;

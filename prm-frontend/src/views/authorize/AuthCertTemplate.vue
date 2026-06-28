@@ -76,7 +76,15 @@
             <el-option label="数据产品经营权" value="数据产品经营权" />
           </el-select>
         </el-form-item>
-        <el-form-item label="证书正文模板"><el-input v-model="form.templateContent" type="textarea" :rows="4" placeholder="可含占位符,如 {资产名称}/{被授权方}/{授权范围}/{有效期}" /></el-form-item>
+        <el-form-item label="证书正文模板">
+          <div style="width:100%">
+            <div style="margin-bottom:6px">
+              <el-button size="small" type="warning" plain @click="loadStdPlaceholders">载入标准证书占位符</el-button>
+              <span style="margin-left:8px;font-size:12px;color:var(--prm-color-text-weak)">出证时按模板自动填充:{所属系统}/{数据表}/{模式名称}/{权益类型}/{使用场景及目的}/{授权范围}/{授权期限}/{被授权方}/{证书编号}</span>
+            </div>
+            <el-input v-model="form.templateContent" type="textarea" :rows="5" placeholder="证书正文,可含占位符;出证时自动替换为该证书的所属系统/数据表/权益/使用场景及目的等" />
+          </div>
+        </el-form-item>
       </el-form>
       <template #footer><el-button type="primary" @click="onSave">确定</el-button><el-button @click="dlg=false">取消</el-button></template>
     </el-dialog>
@@ -98,6 +106,13 @@ const rows = ref([]); const total = ref(0); const loading = ref(false)
 const dlg = ref(false); const editing = ref(false)
 const form = reactive(empty())
 function empty() { return { templateId: '', templateName: '', certType: '专项授权证书', rightType: '数据加工使用权', templateContent: '' } }
+// 一键载入标准证书占位符正文(对齐证书 render 富化字段;批量证书引用《数据授权清单》)
+function loadStdPlaceholders() {
+  const batch = form.certType === '批量授权证书'
+  form.templateContent = batch
+    ? '兹证明被授权方 {被授权方} 经批量授权,对 {所属系统} / {数据表} 享有 {权益类型}(本批授权明细以《数据授权清单》为准)。使用场景及目的:{使用场景及目的};授权期限至 {授权期限}。证书编号:{证书编号}。'
+    : '兹证明被授权方 {被授权方} 经专项授权,对 {所属系统} / {数据表}(模式 {模式名称})享有 {权益类型}。授权范围:{授权范围};使用场景及目的:{使用场景及目的};授权期限至 {授权期限}。证书编号:{证书编号}。'
+}
 
 async function load() {
   loading.value = true

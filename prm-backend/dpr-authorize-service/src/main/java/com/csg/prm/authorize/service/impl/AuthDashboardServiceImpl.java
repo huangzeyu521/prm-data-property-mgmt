@@ -8,6 +8,7 @@ import com.csg.prm.authorize.entity.AuthCompliance;
 import com.csg.prm.authorize.mapper.AuthApplyMapper;
 import com.csg.prm.authorize.mapper.AuthCertMapper;
 import com.csg.prm.authorize.mapper.AuthComplianceMapper;
+import com.csg.prm.authorize.mapper.BatchAuthListMapper;
 import com.csg.prm.authorize.service.AuthDashboardService;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -29,12 +30,14 @@ public class AuthDashboardServiceImpl implements AuthDashboardService {
     private final AuthApplyMapper applyMapper;
     private final AuthCertMapper certMapper;
     private final AuthComplianceMapper complianceMapper;
+    private final BatchAuthListMapper batchListMapper;
 
     public AuthDashboardServiceImpl(AuthApplyMapper applyMapper, AuthCertMapper certMapper,
-                                    AuthComplianceMapper complianceMapper) {
+                                    AuthComplianceMapper complianceMapper, BatchAuthListMapper batchListMapper) {
         this.applyMapper = applyMapper;
         this.certMapper = certMapper;
         this.complianceMapper = complianceMapper;
+        this.batchListMapper = batchListMapper;
     }
 
     @Override
@@ -73,6 +76,19 @@ public class AuthDashboardServiceImpl implements AuthDashboardService {
         vo.setEffectiveRate(effectiveRate);
         vo.setModeDistribution(modeDist);
         vo.setRightTypeDistribution(rightTypeDist);
+
+        // 表5/表6 一站式设计新维度:业务域分布 + 批量清单(表6)计数 + 敏感合规三字段计数
+        Map<String, Long> byBusinessDomain = applies.stream()
+                .collect(Collectors.groupingBy(a -> StringUtils.hasText(a.getBusinessDomain()) ? a.getBusinessDomain() : UNKNOWN,
+                        Collectors.counting()));
+        vo.setByBusinessDomain(byBusinessDomain);
+        vo.setBatchListCount(batchListMapper.selectCount(null));
+        long crossRegion = applies.stream().filter(a -> Boolean.TRUE.equals(a.getCrossRegion())).count();
+        long thirdParty = applies.stream().filter(a -> StringUtils.hasText(a.getThirdPartySource())).count();
+        long sensitive = applies.stream().filter(a -> StringUtils.hasText(a.getSensitiveType())).count();
+        vo.setCrossRegionCount(crossRegion);
+        vo.setThirdPartyCount(thirdParty);
+        vo.setSensitiveCount(sensitive);
 
         // 合规性检查结果分析(红/黄/绿,限筛选范围内的申请)
         Set<String> applyIds = applies.stream().map(AuthApply::getApplyId).collect(Collectors.toSet());
@@ -118,6 +134,10 @@ public class AuthDashboardServiceImpl implements AuthDashboardService {
         }
         if (suspended > 0) {
             alerts.add("监测联动熔断暂停证书 " + suspended + " 件,疑似违规用数,须整改");
+        }
+        if (thirdParty > 0 || sensitive > 0) {
+            alerts.add("涉第三方来源 " + thirdParty + " 件 / 涉个人隐私·商业秘密 " + sensitive
+                    + " 件(表5),须核验第三方许可凭证与信息授权协议");
         }
         if (total > 0 && inReview > total * 0.5) {
             alerts.add("审核中积压占比高(" + inReview + "/" + total + "),授权处理效率需关注");

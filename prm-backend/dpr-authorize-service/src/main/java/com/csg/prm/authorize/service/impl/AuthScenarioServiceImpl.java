@@ -73,13 +73,14 @@ public class AuthScenarioServiceImpl implements AuthScenarioService {
     }
 
     @Override
-    public PageResult<AuthScenario> page(long current, long size, String keyword, String category, String status) {
+    public PageResult<AuthScenario> page(long current, long size, String keyword, String category, String status, String rightType) {
         LambdaQueryWrapper<AuthScenario> w = new LambdaQueryWrapper<>();
         w.and(StringUtils.hasText(keyword), q -> q
                         .like(AuthScenario::getScenarioName, keyword)
                         .or().like(AuthScenario::getDescription, keyword))
                 .eq(StringUtils.hasText(category), AuthScenario::getCategory, category)
                 .eq(StringUtils.hasText(status), AuthScenario::getScenarioStatus, status)
+                .eq(StringUtils.hasText(rightType), AuthScenario::getRightType, rightType)
                 .orderByDesc(AuthScenario::getCreateTime);
         IPage<AuthScenario> p = mapper.selectPage(new Page<>(current <= 0 ? 1 : current, size <= 0 ? 10 : size), w);
         return PageResult.of(p);

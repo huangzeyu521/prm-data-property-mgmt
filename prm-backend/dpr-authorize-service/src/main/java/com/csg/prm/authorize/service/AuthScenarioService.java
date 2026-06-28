@@ -20,6 +20,6 @@ public interface AuthScenarioService {
 
     AuthScenario getById(String scenarioId);
 
-    /** 分页/搜索:keyword 模糊匹配名称或描述;category/status 精确过滤。 */
-    PageResult<AuthScenario> page(long current, long size, String keyword, String category, String status);
+    /** 分页/搜索:keyword 模糊匹配名称或描述;category/status/rightType(适用权益类型) 精确过滤。 */
+    PageResult<AuthScenario> page(long current, long size, String keyword, String category, String status, String rightType);
 }

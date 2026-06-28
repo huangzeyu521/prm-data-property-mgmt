@@ -67,7 +67,8 @@ public class AuthScenarioController {
     public Result<PageResult<AuthScenario>> page(@Valid PageQuery page,
                                             @RequestParam(required = false) String keyword,
                                             @RequestParam(required = false) String category,
-                                            @RequestParam(required = false) String status) {
-        return Result.success(service.page(page.getCurrent(), page.getSize(), keyword, category, status));
+                                            @RequestParam(required = false) String status,
+                                            @RequestParam(required = false) String rightType) {
+        return Result.success(service.page(page.getCurrent(), page.getSize(), keyword, category, status, rightType));
     }
 }

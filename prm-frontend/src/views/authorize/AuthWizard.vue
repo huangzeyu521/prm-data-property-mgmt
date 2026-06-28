@@ -77,13 +77,14 @@
             </el-select>
           </el-form-item>
           <el-form-item label="使用场景及目的">
-            <el-select v-model="form.scenario" filterable clearable placeholder="选择或搜索应用场景（选后自动带出申请原因）"
+            <el-select v-model="form.scenario" filterable clearable :placeholder="form.rightType ? `选择「${form.rightType}」适用的应用场景` : '选择或搜索应用场景(选后自动带出申请原因)'"
               style="width:100%" @change="onScenarioChange">
-              <el-option v-for="s in scenarioOpts" :key="s.scenarioId" :label="`${s.scenarioName}（${s.category}）`" :value="s.scenarioName">
+              <el-option v-for="s in filteredScenarios" :key="s.scenarioId" :label="`${s.scenarioName}（${s.category}）`" :value="s.scenarioName">
                 <span>{{ s.scenarioName }}</span>
-                <span style="float:right;color:#8492a6;font-size:12px">{{ s.category }}</span>
+                <span style="float:right;color:#8492a6;font-size:12px">{{ s.category }}{{ s.rightType && s.rightType !== '通用' ? ' · ' + s.rightType : '' }}</span>
               </el-option>
             </el-select>
+            <div v-if="form.rightType" style="font-size:12px;color:var(--prm-color-text-weak);line-height:1.5;margin-top:2px">仅列适用「{{ form.rightType }}」及通用的场景(应用场景管理按权益类型配置)</div>
           </el-form-item>
           <el-form-item v-if="selectedReason" label="申请原因模板">
             <el-alert :closable="false" type="info" style="width:100%">{{ selectedReason }}</el-alert>
@@ -356,6 +357,11 @@ async function deriveFacts(assetId) {
 const form = reactive(empty())
 const scenarioOpts = ref([])
 const selectedReason = ref('')
+// 使用场景按所选授权权益类型过滤(通用恒显;未选权益类型时全显)——与应用场景管理「适用权益类型」联动
+const filteredScenarios = computed(() => {
+  if (!form.rightType) return scenarioOpts.value
+  return scenarioOpts.value.filter(s => !s.rightType || s.rightType === '通用' || s.rightType === form.rightType)
+})
 
 // 应交材料清单由后端可配置规则(单一真源·场景一事一议)生成;规则不可用时回退内置默认,保证申请人永远看得到"该传哪些材料"
 const materialRules = ref([])

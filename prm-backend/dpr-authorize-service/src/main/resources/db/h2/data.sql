@@ -56,10 +56,10 @@ INSERT INTO IM_AUTH_ACCOUNTABILITY (CEC_ACCOUNT_ID,CEC_CERT_ID,CEC_ASSET_ID,CEC_
 ('ACC-002','ACERT-002','AST-006','广东电网综能公司','超范围','AL-002','疑似超出对外开放目录','已追责',CURRENT_TIMESTAMP,0);
 
 -- 授权权益证书模板(3)
-INSERT INTO IM_AUTH_CERT_TEMPLATE (CEC_TEMPLATE_ID,CEC_TEMPLATE_NAME,CEC_TEMPLATE_VERSION,CEC_CERT_TYPE,CEC_RIGHT_TYPE,CEC_TEMPLATE_STATUS,CEC_CREATE_TIME,CEC_DEL_FLAG) VALUES
-('ATPL-001','专项授权-数据加工使用权证书模板','v1','专项授权证书','数据加工使用权','生效中',CURRENT_TIMESTAMP,0),
-('ATPL-002','专项授权-数据产品经营权证书模板','v1','专项授权证书','数据产品经营权','生效中',CURRENT_TIMESTAMP,0),
-('ATPL-003','批量授权-数据加工使用权证书模板','v1','批量授权证书','数据加工使用权','生效中',CURRENT_TIMESTAMP,0);
+INSERT INTO IM_AUTH_CERT_TEMPLATE (CEC_TEMPLATE_ID,CEC_TEMPLATE_NAME,CEC_TEMPLATE_VERSION,CEC_CERT_TYPE,CEC_RIGHT_TYPE,CEC_TEMPLATE_CONTENT,CEC_TEMPLATE_STATUS,CEC_CREATE_TIME,CEC_DEL_FLAG) VALUES
+('ATPL-001','专项授权-数据加工使用权证书模板','v1','专项授权证书','数据加工使用权','兹证明被授权方 {被授权方} 经专项授权,对 {所属系统} / {数据表}(模式 {模式名称})享有 {权益类型}。授权范围:{授权范围};使用场景及目的:{使用场景及目的};授权期限至 {授权期限}。本证书依审核通过的授权协议与确权信息标准化生成,授权范围不超确权边界。证书编号:{证书编号}。','生效中',CURRENT_TIMESTAMP,0),
+('ATPL-002','专项授权-数据产品经营权证书模板','v1','专项授权证书','数据产品经营权','兹证明被授权方 {被授权方} 经专项授权,对 {所属系统} / {数据表}(模式 {模式名称})享有 {权益类型}。授权范围:{授权范围};使用场景及目的:{使用场景及目的};授权期限至 {授权期限}。经营权对外提供数据产品/服务须在公司备案(附录G),授权范围仅限对外开放目录。证书编号:{证书编号}。','生效中',CURRENT_TIMESTAMP,0),
+('ATPL-003','批量授权-数据加工使用权证书模板','v1','批量授权证书','数据加工使用权','兹证明被授权方 {被授权方} 经批量授权,对 {所属系统} / {数据表} 享有 {权益类型}(本批授权明细以《数据授权清单》为准)。使用场景及目的:{使用场景及目的};授权期限至 {授权期限}。证书编号:{证书编号}。','生效中',CURRENT_TIMESTAMP,0);
 
 -- 授权指引材料(可研 3.2.2.1.1.3.1.1)
 INSERT INTO IM_AUTH_GUIDANCE (CEC_GUIDANCE_ID,CEC_TITLE,CEC_GUIDANCE_TYPE,CEC_VERSION,CEC_PUBLISHER,CEC_PUBLISH_DATE,CEC_FILE_URL,CEC_IS_LATEST,CEC_CONTENT,CEC_CREATE_TIME,CEC_DEL_FLAG) VALUES
@@ -75,17 +75,14 @@ INSERT INTO IM_AUTH_APPLY_TEMPLATE (CEC_TEMPLATE_ID,CEC_TEMPLATE_NAME,CEC_AUTH_T
 ('AAT-002','批量授权清单模板(表6)','批量','[{"name":"listYear","label":"授权年度","type":"文本","required":true,"rule":"按年度"},{"name":"granteeOrg","label":"申请主体(被授权方)","type":"文本","required":true,"rule":"批量共享"},{"name":"rightType","label":"默认权益类型","type":"下拉","required":true,"rule":"资源池过滤键"},{"name":"itemSysName","label":"逐项·所属系统","type":"文本","required":true,"rule":"确权目录带出"},{"name":"itemSchemaName","label":"逐项·模式名称","type":"文本","required":false,"rule":"表6"},{"name":"itemAssetName","label":"逐项·数据表","type":"文本","required":true,"rule":"库表名"},{"name":"itemRightType","label":"逐项·权益类型","type":"下拉","required":true,"rule":""},{"name":"itemEquityCardId","label":"逐项·生效卡片","type":"文本","required":true,"rule":"先确后授"},{"name":"itemThirdParty","label":"逐项·涉第三方","type":"文本","required":false,"rule":"确权带出"},{"name":"itemSensitive","label":"逐项·涉隐私商密","type":"文本","required":false,"rule":"确权带出"},{"name":"itemCrossRegion","label":"逐项·是否跨系统域","type":"下拉","required":false,"rule":"清单系统并集判定"}]','需求归集 → 合规审核 → 主管审核 → 经理审核 → 副总审批 → 领导小组审批 → 已生效(一清单一《运营授权协议》·发证)','v1','生效中','批量按年度;一清单一协议',CURRENT_TIMESTAMP,0);
 
 -- 授权应用场景配置(可研 3.2.2.1.1.3.1.3)
-INSERT INTO IM_AUTH_SCENARIO (CEC_SCENARIO_ID,CEC_SCENARIO_NAME,CEC_CATEGORY,CEC_DESCRIPTION,CEC_REASON_TEMPLATE,CEC_SCENARIO_STATUS,CEC_CREATE_TIME,CEC_DEL_FLAG) VALUES
-('SC-001','内部经营分析','内部分析','本单位内部经营/运营数据统计与分析,不对外提供','用于本单位内部经营分析,数据不出域、不对外提供,使用范围限于授权部门。','生效中',CURRENT_TIMESTAMP,0),
-('SC-002','对外数据服务','对外服务','向取得经营权的外部单位提供数据产品/服务','为对外提供数据产品/服务,被授权方仅在约定范围内使用,不得再授权或超范围使用。','生效中',CURRENT_TIMESTAMP,0),
-('SC-003','联合建模','联合建模','与合作方在隐私计算/可信环境下联合建模','用于与合作方在隐私计算环境联合建模,原始数据不出域,仅交换模型/结果。','生效中',CURRENT_TIMESTAMP,0),
-('SC-004','监管报送','监管报送','按行政监管要求向监管机构报送数据','应行政监管要求报送数据,使用范围限于监管报送目的,符合相关法规。','生效中',CURRENT_TIMESTAMP,0),
-('SC-005','科研合作','对外服务','向高校/科研机构提供脱敏数据用于科研','用于科研合作,提供脱敏数据,仅限约定科研课题使用,到期销毁。','停用',CURRENT_TIMESTAMP,0);
+INSERT INTO IM_AUTH_SCENARIO (CEC_SCENARIO_ID,CEC_SCENARIO_NAME,CEC_CATEGORY,CEC_RIGHT_TYPE,CEC_DESCRIPTION,CEC_REASON_TEMPLATE,CEC_SCENARIO_STATUS,CEC_CREATE_TIME,CEC_DEL_FLAG) VALUES
+('SC-001','内部经营分析','内部分析','数据加工使用权','本单位内部经营/运营数据统计与分析,不对外提供','用于本单位内部经营分析,数据不出域、不对外提供,使用范围限于授权部门。','生效中',CURRENT_TIMESTAMP,0),
+('SC-002','对外数据服务','对外服务','数据产品经营权','向取得经营权的外部单位提供数据产品/服务','为对外提供数据产品/服务,被授权方仅在约定范围内使用,不得再授权或超范围使用。','生效中',CURRENT_TIMESTAMP,0),
+('SC-003','联合建模','联合建模','数据加工使用权','与合作方在隐私计算/可信环境下联合建模','用于与合作方在隐私计算环境联合建模,原始数据不出域,仅交换模型/结果。','生效中',CURRENT_TIMESTAMP,0),
+('SC-004','监管报送','监管报送','通用','按行政监管要求向监管机构报送数据','应行政监管要求报送数据,使用范围限于监管报送目的,符合相关法规。','生效中',CURRENT_TIMESTAMP,0),
+('SC-005','科研合作','对外服务','数据产品经营权','向高校/科研机构提供脱敏数据用于科研','用于科研合作,提供脱敏数据,仅限约定科研课题使用,到期销毁。','停用',CURRENT_TIMESTAMP,0);
 
 -- 授权协议模板库(可研 3.2.2.1.1.3.3.1)
 INSERT INTO IM_AUTH_AGREEMENT_TEMPLATE (CEC_TEMPLATE_ID,CEC_TEMPLATE_NAME,CEC_AUTH_TYPE,CEC_PURPOSE,CEC_TEMPLATE_CONTENT,CEC_TEMPLATE_VERSION,CEC_TEMPLATE_STATUS,CEC_CREATE_TIME,CEC_DEL_FLAG) VALUES
-('AGT-001','运营授权协议(附录D)','运营','对外服务','甲乙双方就数据产品经营权授权达成协议:授权范围、期限、再授权限制、违约责任、数据安全义务等;对外提供数据须备案。','v1','生效中',CURRENT_TIMESTAMP,0),
-('AGT-002','数据使用授权协议','独占','内部分析','被授权方在约定范围内使用数据,不得超范围、不得对外提供,到期销毁或归还。','v1','生效中',CURRENT_TIMESTAMP,0),
-('AGT-003','数据共享协议','共享','联合建模','多方共享数据用于联合建模,原始数据不出域,仅交换模型/结果,各方承担同等安全义务。','v1','生效中',CURRENT_TIMESTAMP,0),
-('AGT-004','数据委托处理协议','委托','对外服务','委托方委托受托方处理数据,明确处理目的/方式/期限,受托方不得留存或另作他用。','v1','生效中',CURRENT_TIMESTAMP,0),
-('AGT-005','旧版运营授权协议','运营','对外服务','早期模板,已停用。','v1','停用',CURRENT_TIMESTAMP,0);
+('AGT-001','专项数据授权运营协议(附录D·一事一议)','一事一议','对外服务','《南方电网数据授权运营协议》(附录D)。授权方(甲方)/被授权方(乙方);授权方式:一事一议;授权权益类型。一、数据范围:授权数据表(系统/模式/库表)及字段范围,不得超出确权边界。二、使用场景及目的:仅限约定场景使用,不得超范围、不得再授权。三、授权期限:默认两年,不超确权有效期,到期销毁。四、利益分配:双方约定(免费内部共享/按次计费/收益分成)。五、安全保障:加密传输、最小授权访问控制、操作留痕审计、数据脱敏。六、合规与备案:经营权对外提供须备案(附录G),范围仅限对外开放目录。七、违约责任/争议解决。','v1','生效中',CURRENT_TIMESTAMP,0),
+('AGT-002','数据批量授权运营协议(附录D·批量)','批量','对外服务','《南方电网数据授权运营协议》(附录D)。授权方(甲方)/被授权方(乙方);授权方式:批量(一清单一协议)。一、数据范围:以本协议附件《数据授权清单》逐表列明为准。二、使用场景及目的:各授权项按清单约定场景使用,不得超范围、不得再授权。三、授权期限:默认两年,不超确权有效期,到期销毁。四、利益分配:本清单整体约定(免费内部共享/按次计费/收益分成)。五、安全保障:加密传输、最小授权访问控制、操作留痕审计、数据脱敏。六、合规与备案:经营权对外提供须备案(附录G),范围仅限对外开放目录。七、违约责任/争议解决。','v1','生效中',CURRENT_TIMESTAMP,0);

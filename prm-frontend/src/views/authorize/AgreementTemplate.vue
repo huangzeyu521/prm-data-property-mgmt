@@ -68,7 +68,16 @@
         <el-form-item label="使用目的">
           <el-select v-model="form.purpose" allow-create filterable style="width:220px"><el-option v-for="p in purposes" :key="p" :label="p" :value="p" /></el-select>
         </el-form-item>
-        <el-form-item label="协议内容"><el-input v-model="form.templateContent" type="textarea" :rows="5" placeholder="协议正文/条款" /></el-form-item>
+        <el-form-item label="协议内容">
+          <div style="width:100%">
+            <div style="margin-bottom:6px">
+              <el-button size="small" type="warning" plain @click="loadStdClauses">载入附录D §3.4.4 标准协议条款</el-button>
+              <el-tag v-if="missingElements.length===0" type="success" size="small" effect="plain" style="margin-left:8px">§3.4.4 五要素已覆盖 ✓</el-tag>
+              <el-tag v-else type="danger" size="small" effect="plain" style="margin-left:8px">缺 §3.4.4 要素:{{ missingElements.join('、') }}</el-tag>
+            </div>
+            <el-input v-model="form.templateContent" type="textarea" :rows="8" placeholder="协议正文/条款(须含 数据范围/使用场景及目的/利益分配/安全保障)" />
+          </div>
+        </el-form-item>
       </el-form>
       <template #footer><el-button type="primary" @click="onSave">确定</el-button><el-button @click="dlg=false">取消</el-button></template>
     </el-dialog>
@@ -88,18 +97,55 @@
 
 <script setup>
 import { openFilePreview } from '@/composables/useFilePreview'
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   pageAgrTemplate, getAgrTemplate, createAgrTemplate, updateAgrTemplate, deleteAgrTemplate,
   enableAgrTemplate, disableAgrTemplate, uploadAgrTemplateFile, agrTemplateFileUrl
 } from '@/api/authorize'
 
-const authTypes = ['独占', '共享', '委托', '运营']
+// 协议=附录D《运营授权协议》,按授权方式(一事一议/批量)分;取代旧 独占/共享/委托/运营 泛化分类
+const authTypes = ['一事一议', '批量']
 const purposes = ['内部分析', '对外服务', '联合建模', '监管报送']
 const q = reactive({ current: 1, size: 10, templateName: '', authType: '', purpose: '' })
 const rows = ref([]); const total = ref(0); const loading = ref(false)
-const dlg = ref(false); const form = reactive({ templateId: '', templateName: '', authType: '运营', purpose: '对外服务', templateContent: '' })
+const dlg = ref(false); const form = reactive({ templateId: '', templateName: '', authType: '一事一议', purpose: '对外服务', templateContent: '' })
+
+// 附录D §3.4.4 五要素(协议须约定);用于「要素覆盖」提示
+const D344_ELEMENTS = ['数据范围', '使用场景及目的', '利益分配', '安全保障']
+const missingElements = computed(() => D344_ELEMENTS.filter(e => !(form.templateContent || '').includes(e)))
+// 一键载入附录D §3.4.4 标准协议条款骨架(含五要素占位符),按授权方式略有差异
+function loadStdClauses() {
+  const isBatch = form.authType === '批量'
+  const dataRange = isBatch
+    ? '甲方授予乙方的数据范围以本协议附件《数据授权清单》逐表列明为准。'
+    : '数据范围:{{授权数据表}}(所属系统/模式/库表),授权字段范围 {{授权范围}},不得超出确权边界。'
+  form.templateContent =
+`《南方电网数据授权运营协议》(附录D)
+授权方(甲方):{{授权单位}}　被授权方(乙方):{{被授权单位}}
+授权方式:${form.authType}　授权权益类型:{{权益类型}}
+
+一、数据范围
+${dataRange}
+
+二、使用场景及目的
+乙方仅可将授权数据用于:{{使用场景及目的}};不得超出约定场景/目的使用,不得再授权第三方。
+
+三、授权期限
+自协议生效之日起 {{授权期限}}(默认两年,不超确权有效期);到期数据销毁并出具证明。
+
+四、利益分配
+双方就授权数据的利益分配约定如下:{{利益分配}}(如:免费内部共享/按调用次数计费/收益按比例分成)。
+
+五、安全保障
+乙方应落实数据安全保障措施:{{安全保障}}(加密传输、最小授权访问控制、操作留痕审计、数据脱敏);因乙方原因致数据泄露的,承担相应责任。
+
+六、合规与备案
+${isBatch ? '本批量授权依《数据批量授权清单》整体签订一份协议;' : ''}涉数据产品经营权对外提供的,乙方须在甲方处备案(附录G);经营权授权范围仅限对外开放目录。
+
+七、违约责任 / 八、争议解决 / 九、其他
+(略,按公司合同范本补充)`
+}
 const viewDlg = ref(false); const cur = ref(null)
 
 async function load() {
@@ -110,7 +156,7 @@ async function load() {
 function onSearch() { q.current = 1; load() }
 function onReset() { Object.assign(q, { templateName: '', authType: '', purpose: '' }); onSearch() }
 
-function onAdd() { Object.assign(form, { templateId: '', templateName: '', authType: '运营', purpose: '对外服务', templateContent: '' }); dlg.value = true }
+function onAdd() { Object.assign(form, { templateId: '', templateName: '', authType: '一事一议', purpose: '对外服务', templateContent: '' }); dlg.value = true }
 function onEdit(row) { Object.assign(form, { templateId: row.templateId, templateName: row.templateName, authType: row.authType, purpose: row.purpose, templateContent: row.templateContent || '' }); dlg.value = true }
 async function onSave() {
   if (!form.templateName) { ElMessage.warning('请填写模板名称'); return }

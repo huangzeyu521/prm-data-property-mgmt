@@ -161,7 +161,33 @@ public class AuthCertServiceImpl implements AuthCertService {
         }
         vo.setComplianceOk(ok);
         vo.setComplianceResult(result);
+        // 出证按模板自动填充:把证书模板正文中的占位符替换为本证书富化字段(兑现配置化模板)
+        vo.setTemplateContent(fillCertPlaceholders(vo.getTemplateContent(), vo));
         return vo;
+    }
+
+    /** 证书正文占位符替换:{所属系统}/{数据表}/{模式名称}/{权益类型}/{使用场景及目的}/{授权范围}/{授权期限}/{被授权方}/{证书编号}。 */
+    private String fillCertPlaceholders(String content, com.csg.prm.authorize.dto.AuthCertRenderVO vo) {
+        if (!StringUtils.hasText(content)) {
+            return content;
+        }
+        String validDate = vo.getValidDate() != null ? vo.getValidDate().toString().substring(0, 10) : "—";
+        return content
+                .replace("{所属系统}", nz(vo.getSysName()))
+                .replace("{数据表}", nz(vo.getAssetName()))
+                .replace("{资产名称}", nz(vo.getAssetName()))     // 兼容旧占位符
+                .replace("{模式名称}", nz(vo.getSchemaName()))
+                .replace("{权益类型}", nz(vo.getRightType()))
+                .replace("{使用场景及目的}", nz(vo.getScenario()))
+                .replace("{授权范围}", nz(vo.getScope()))
+                .replace("{授权期限}", validDate)
+                .replace("{有效期}", validDate)                  // 兼容旧占位符
+                .replace("{被授权方}", nz(vo.getGranteeOrg()))
+                .replace("{证书编号}", nz(vo.getCertNo()));
+    }
+
+    private static String nz(String s) {
+        return s == null || s.isBlank() ? "—" : s;
     }
 
     @Override

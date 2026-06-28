@@ -27,6 +27,10 @@ public class AuthScenario extends BaseEntity {
     @TableField("CEC_CATEGORY")
     private String category;
 
+    /** 适用授权权益类型:数据加工使用权/数据产品经营权/通用(供向导按权益类型过滤场景) */
+    @TableField("CEC_RIGHT_TYPE")
+    private String rightType;
+
     @TableField("CEC_DESCRIPTION")
     private String description;
 
@@ -43,6 +47,8 @@ public class AuthScenario extends BaseEntity {
     public void setScenarioName(String scenarioName) { this.scenarioName = scenarioName; }
     public String getCategory() { return category; }
     public void setCategory(String category) { this.category = category; }
+    public String getRightType() { return rightType; }
+    public void setRightType(String rightType) { this.rightType = rightType; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
     public String getReasonTemplate() { return reasonTemplate; }

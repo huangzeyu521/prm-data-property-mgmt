@@ -13,6 +13,11 @@
             <el-option v-for="c in categories" :key="c" :label="c" :value="c" />
           </el-select>
         </el-form-item>
+        <el-form-item label="适用权益">
+          <el-select v-model="q.rightType" placeholder="全部" clearable style="width:150px">
+            <el-option v-for="t in rightTypes" :key="t" :label="t" :value="t" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="q.status" placeholder="全部" clearable style="width:120px">
             <el-option label="生效中" value="生效中" /><el-option label="停用" value="停用" />
@@ -30,7 +35,10 @@
         <el-table-column type="index" label="序号" width="56" align="center" />
         <el-table-column prop="scenarioName" label="场景名称" width="150" show-overflow-tooltip />
         <el-table-column prop="category" label="分类" width="110" align="center"><template #default="{ row }"><el-tag>{{ row.category }}</el-tag></template></el-table-column>
-        <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="rightType" label="适用权益类型" width="140" align="center">
+          <template #default="{ row }"><el-tag :type="row.rightType==='数据产品经营权'?'warning':(row.rightType==='数据加工使用权'?'primary':'info')" effect="plain">{{ row.rightType || '通用' }}</el-tag></template>
+        </el-table-column>
+        <el-table-column prop="description" label="描述" min-width="180" show-overflow-tooltip />
         <el-table-column prop="reasonTemplate" label="申请原因模板" min-width="220" show-overflow-tooltip />
         <el-table-column prop="scenarioStatus" label="状态" width="90" align="center">
           <template #default="{ row }"><el-tag :type="row.scenarioStatus==='生效中'?'success':'warning'">{{ row.scenarioStatus }}</el-tag></template>
@@ -57,6 +65,12 @@
             <el-option v-for="c in categories" :key="c" :label="c" :value="c" />
           </el-select>
         </el-form-item>
+        <el-form-item label="适用权益类型">
+          <el-select v-model="form.rightType" style="width:100%" placeholder="该场景适用的授权权益(向导按此过滤场景)">
+            <el-option v-for="t in rightTypes" :key="t" :label="t" :value="t" />
+          </el-select>
+          <div style="font-size:12px;color:var(--prm-color-text-weak);line-height:1.5;margin-top:2px">通用=使用权/经营权均可选;经营场景须经营权(对外经营仅限对外开放目录 §3.4.3)</div>
+        </el-form-item>
         <el-form-item label="场景描述"><el-input v-model="form.description" type="textarea" maxlength="500" show-word-limit :rows="2" /></el-form-item>
         <el-form-item label="申请原因模板"><el-input v-model="form.reasonTemplate" type="textarea" maxlength="500" show-word-limit :rows="3" placeholder="申请人选中本场景时自动带出的申请原因" /></el-form-item>
       </el-form>
@@ -71,10 +85,12 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { pageScenario, createScenario, updateScenario, deleteScenario, enableScenario, disableScenario } from '@/api/authorize'
 
 const categories = ['内部分析', '对外服务', '联合建模', '监管报送']
-const q = reactive({ current: 1, size: 10, keyword: '', category: '', status: '' })
+// 适用权益类型:对齐授权权益(使用权/经营权)+ 通用,供一站式向导按权益类型过滤场景
+const rightTypes = ['数据加工使用权', '数据产品经营权', '通用']
+const q = reactive({ current: 1, size: 10, keyword: '', category: '', status: '', rightType: '' })
 const rows = ref([]); const total = ref(0); const loading = ref(false)
 const dlg = ref(false); const saving = ref(false)
-const form = reactive({ scenarioId: '', scenarioName: '', category: '内部分析', description: '', reasonTemplate: '' })
+const form = reactive({ scenarioId: '', scenarioName: '', category: '内部分析', rightType: '通用', description: '', reasonTemplate: '' })
 
 async function load() {
   loading.value = true
@@ -82,10 +98,10 @@ async function load() {
   finally { loading.value = false }
 }
 function onSearch() { q.current = 1; load() }
-function onReset() { q.keyword = ''; q.category = ''; q.status = ''; onSearch() }
+function onReset() { q.keyword = ''; q.category = ''; q.status = ''; q.rightType = ''; onSearch() }
 
-function onAdd() { Object.assign(form, { scenarioId: '', scenarioName: '', category: '内部分析', description: '', reasonTemplate: '' }); dlg.value = true }
-function onEdit(row) { Object.assign(form, { scenarioId: row.scenarioId, scenarioName: row.scenarioName, category: row.category, description: row.description || '', reasonTemplate: row.reasonTemplate || '' }); dlg.value = true }
+function onAdd() { Object.assign(form, { scenarioId: '', scenarioName: '', category: '内部分析', rightType: '通用', description: '', reasonTemplate: '' }); dlg.value = true }
+function onEdit(row) { Object.assign(form, { scenarioId: row.scenarioId, scenarioName: row.scenarioName, category: row.category, rightType: row.rightType || '通用', description: row.description || '', reasonTemplate: row.reasonTemplate || '' }); dlg.value = true }
 async function onSave() {
   if (!form.scenarioName) { ElMessage.warning('请填写场景名称'); return }
   saving.value = true
