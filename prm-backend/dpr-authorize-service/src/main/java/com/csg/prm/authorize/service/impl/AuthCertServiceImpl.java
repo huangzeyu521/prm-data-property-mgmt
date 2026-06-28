@@ -126,6 +126,9 @@ public class AuthCertServiceImpl implements AuthCertService {
         vo.setCertNo(cert.getCertNo());
         vo.setGranteeOrg(cert.getGranteeOrg());
         vo.setAssetId(cert.getAssetId());
+        // 所属系统:assetId 去 SYS: 前缀(库表级证书,凭证显系统而非 raw assetId)
+        String assetId = cert.getAssetId();
+        vo.setSysName(assetId != null && assetId.startsWith("SYS:") ? assetId.substring(4) : assetId);
         vo.setRightType(cert.getRightType());
         vo.setScope(cert.getScope());
         vo.setValidDate(cert.getValidDate());
@@ -143,6 +146,10 @@ public class AuthCertServiceImpl implements AuthCertService {
         String result = "授权范围未超确权边界,内容合规";
         AuthApply apply = StringUtils.hasText(cert.getApplyId()) ? applyMapper.selectById(cert.getApplyId()) : null;
         if (apply != null) {
+            // 表5/表6/§3.4.4:数据表(库表名)/模式/使用场景 由申请单 join 带出(render 本就加载 apply,零额外查询)
+            vo.setAssetName(apply.getAssetName());
+            vo.setSchemaName(apply.getSchemaName());
+            vo.setScenario(apply.getScenario());
             com.csg.prm.authorize.gateway.EquityCardGateway.CardBoundary b = equityCardGateway.boundary(apply.getEquityCardId());
             if (b != null && StringUtils.hasText(b.scope()) && !"全字段".equals(b.scope())
                     && StringUtils.hasText(cert.getScope()) && !b.scope().equals(cert.getScope())) {

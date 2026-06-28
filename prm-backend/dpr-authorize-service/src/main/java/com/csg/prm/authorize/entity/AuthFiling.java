@@ -44,6 +44,14 @@ public class AuthFiling extends BaseEntity {
     @TableField("CEC_RIGHT_TYPE")
     private String rightType;
 
+    /** 协议编号(附录G 备案表;建档时由关联协议快照) */
+    @TableField("CEC_AGREEMENT_NO")
+    private String agreementNo;
+
+    /** 授权期限(附录G 备案表;由关联授权申请快照) */
+    @TableField("CEC_VALID_DATE")
+    private LocalDateTime validDate;
+
     @TableField("CEC_FILING_STATUS")
     private String filingStatus;
 
@@ -67,6 +75,10 @@ public class AuthFiling extends BaseEntity {
     public void setGranteeOrg(String granteeOrg) { this.granteeOrg = granteeOrg; }
     public String getRightType() { return rightType; }
     public void setRightType(String rightType) { this.rightType = rightType; }
+    public String getAgreementNo() { return agreementNo; }
+    public void setAgreementNo(String agreementNo) { this.agreementNo = agreementNo; }
+    public LocalDateTime getValidDate() { return validDate; }
+    public void setValidDate(LocalDateTime validDate) { this.validDate = validDate; }
     public String getFilingStatus() { return filingStatus; }
     public void setFilingStatus(String filingStatus) { this.filingStatus = filingStatus; }
     public LocalDateTime getFilingTime() { return filingTime; }

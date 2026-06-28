@@ -3,7 +3,11 @@ package com.csg.prm.authorize.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.csg.prm.authorize.entity.AuthAgreement;
+import com.csg.prm.authorize.entity.AuthApply;
 import com.csg.prm.authorize.entity.AuthFiling;
+import com.csg.prm.authorize.mapper.AuthAgreementMapper;
+import com.csg.prm.authorize.mapper.AuthApplyMapper;
 import com.csg.prm.authorize.mapper.AuthFilingMapper;
 import com.csg.prm.authorize.service.AuthFilingService;
 import com.csg.prm.common.api.PageResult;
@@ -20,14 +24,40 @@ import java.util.UUID;
 public class AuthFilingServiceImpl implements AuthFilingService {
 
     private final AuthFilingMapper mapper;
+    private final AuthAgreementMapper agreementMapper;
+    private final AuthApplyMapper applyMapper;
 
-    public AuthFilingServiceImpl(AuthFilingMapper mapper) {
+    public AuthFilingServiceImpl(AuthFilingMapper mapper, AuthAgreementMapper agreementMapper,
+                                 AuthApplyMapper applyMapper) {
         this.mapper = mapper;
+        this.agreementMapper = agreementMapper;
+        this.applyMapper = applyMapper;
     }
 
     @Override
     @Transactional
     public String create(AuthFiling filing) {
+        // 附录G:备案对象=一份已生效经营权授权协议。关联协议时,快照 协议编号/授权期限/被授权方/产权类型,
+        // 令备案记录自包含(列表零 join 即显附录G 备案表列),并堵手填与真实授权背离。
+        if (StringUtils.hasText(filing.getAgreementId())) {
+            AuthAgreement ag = agreementMapper.selectById(filing.getAgreementId());
+            if (ag != null) {
+                filing.setAgreementNo(ag.getAgreementNo());
+                if (!StringUtils.hasText(filing.getGranteeOrg())) {
+                    filing.setGranteeOrg(ag.getGranteeOrg());
+                }
+                if (!StringUtils.hasText(filing.getApplyId())) {
+                    filing.setApplyId(ag.getApplyId());
+                }
+                AuthApply apply = StringUtils.hasText(ag.getApplyId()) ? applyMapper.selectById(ag.getApplyId()) : null;
+                if (apply != null) {
+                    filing.setValidDate(apply.getValidDate());
+                    if (!StringUtils.hasText(filing.getRightType())) {
+                        filing.setRightType(apply.getRightType());
+                    }
+                }
+            }
+        }
         if (!StringUtils.hasText(filing.getGranteeOrg())) {
             throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "被授权方不能为空");
         }

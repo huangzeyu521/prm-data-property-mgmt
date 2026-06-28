@@ -17,7 +17,7 @@
       <el-table :data="rows" v-loading="loading" border stripe>
         <el-table-column type="index" label="序号" width="64" align="center" />
         <el-table-column prop="certNo" label="授权证书编号" width="200" show-overflow-tooltip />
-        <el-table-column prop="assetId" label="资产ID" width="140" show-overflow-tooltip />
+        <el-table-column label="所属系统" min-width="130" show-overflow-tooltip><template #default="{ row }">{{ sysName(row) }}</template></el-table-column>
         <el-table-column prop="granteeOrg" label="被授权方" min-width="150" show-overflow-tooltip />
         <el-table-column prop="rightType" label="授权权益" width="120" />
         <el-table-column prop="templateName" label="出证模板" min-width="160" show-overflow-tooltip><template #default="{ row }">{{ row.templateName || '—' }}</template></el-table-column>
@@ -73,8 +73,10 @@
         <div class="cert-no">证书编号：{{ certVO.certNo }}</div>
         <table class="cert-tbl">
           <tr><td class="k">被授权方</td><td>{{ certVO.granteeOrg }}</td></tr>
-          <tr><td class="k">数据资产</td><td>{{ certVO.assetId }}</td></tr>
+          <tr><td class="k">所属系统</td><td>{{ certVO.sysName || certVO.assetId || '—' }}</td></tr>
+          <tr><td class="k">数据表</td><td>{{ certVO.assetName || '—' }}<span v-if="certVO.schemaName" style="color:#6a82aa">（模式 {{ certVO.schemaName }}）</span></td></tr>
           <tr><td class="k">授权权益类型</td><td>{{ certVO.rightType }}</td></tr>
+          <tr><td class="k">使用场景及目的</td><td>{{ certVO.scenario || '—' }}</td></tr>
           <tr><td class="k">授权范围</td><td>{{ certVO.scope || '—' }}</td></tr>
           <tr><td class="k">有效期至</td><td>{{ fmt(certVO.validDate) }}</td></tr>
           <tr><td class="k">出证模板</td><td>{{ certVO.templateName || '—' }}</td></tr>
@@ -111,6 +113,8 @@ function statusType(s) {
   if (s === '已暂停') return 'warning'
   return 'danger'
 }
+// 库表级:assetId=SYS:系统名 → 所属系统(凭证不暴露 raw assetId)。与向导/审核台/历史页同一派生。
+function sysName(row) { const a = (row && row.assetId) || ''; return a.startsWith('SYS:') ? a.slice(4) : (a || '—') }
 function fmt(v) { return v ? String(v).replace('T', ' ').slice(0, 16) : '-' }
 
 async function load() {

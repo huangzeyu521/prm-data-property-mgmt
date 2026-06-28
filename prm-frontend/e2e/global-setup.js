@@ -6,8 +6,38 @@ import path from 'node:path'
  * 全局前置:用演示账号 admin/Prm@1234 登录一次,把会话(localStorage token)存为 storageState,
  * 供各 spec 复用(避免每个用例重复登录)。需要后端 confirm-service(9102,内建登录)在跑。
  */
+/**
+ * 后端三服务体检:gate 经 vite 代理直连活容器(9101/9102/9103)。任一不可达时,
+ * 路由用例会成片爆 api≥400,看起来像「代码回归」,实为「服务未起」。此处先探活,
+ * 让基础设施问题在 setup 阶段就以清晰信息失败,而非淹没在 19 条 500 里。
+ */
+async function preflightBackends() {
+  const probes = [
+    { name: 'dpr-ledger-service(9101)', url: 'http://localhost:9101/api/dpr/ledger/property/page?current=1&size=1' },
+    { name: 'dpr-confirm-service(9102)', url: 'http://localhost:9102/api/dpr/confirm/scenario/list' },
+    { name: 'dpr-authorize-service(9103)', url: 'http://localhost:9103/api/dpr/auth/scenario/list' },
+  ]
+  const down = []
+  for (const p of probes) {
+    try {
+      const res = await fetch(p.url, { method: 'GET' })
+      if (res.status >= 500 || res.status === 0) down.push(`${p.name} -> HTTP ${res.status}`)
+    } catch (e) {
+      down.push(`${p.name} -> 不可达(${e.cause?.code || e.message})`)
+    }
+  }
+  if (down.length) {
+    throw new Error(
+      '后端服务未就绪(基础设施问题,非代码 bug):\n  ' + down.join('\n  ') +
+      '\n修复:docker start prm-ledger prm-confirm prm-authorize —— 待其返回 200 后重跑 E2E。' +
+      '\n注意:勿与重型 Gradle 构建并发跑 E2E,Docker Desktop 内存吃紧会 SIGTERM(143)掉容器。'
+    )
+  }
+}
+
 export default async function globalSetup() {
   const base = process.env.PW_BASE || 'http://localhost:5173'
+  await preflightBackends()
   const browser = await chromium.launch({ headless: true, executablePath: process.env.PW_CHROME || undefined })
   const ctx = await browser.newContext()
   const page = await ctx.newPage()
