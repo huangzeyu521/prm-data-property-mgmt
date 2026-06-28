@@ -111,7 +111,7 @@ public class ComplianceCheckServiceImpl implements ComplianceCheckService {
             if (STATUS_CONFIRMED.equals(a.getConfirmStatus()) && a.getValidDate() != null
                     && a.getValidDate().isBefore(now.plusDays(30))) {
                 boolean expired = a.getValidDate().isBefore(now);
-                record(reportId, DIM_EXPIRY, a.getAssetId(),
+                record(reportId, DIM_EXPIRY, a.getAssetId(), a.getAssetName(),
                         expired ? ComplianceResult.RESULT_FAIL : ComplianceResult.RESULT_WARN,
                         expired ? "确权权益已过期仍处于已确权状态" : "确权权益有效期临近(30天内)",
                         "请发起确权变更(续期)或办理权益注销",
@@ -120,14 +120,14 @@ public class ComplianceCheckServiceImpl implements ComplianceCheckService {
             // ② 权限范围:对外开放/经营权 但未取得对外授权 -> 越权
             boolean openScope = "对外开放".equals(a.getUseScope()) || "数据产品经营权".equals(a.getRightType());
             if (openScope && !STATUS_AUTHORIZED.equals(a.getAuthStatus())) {
-                record(reportId, DIM_SCOPE, a.getAssetId(), ComplianceResult.RESULT_FAIL,
+                record(reportId, DIM_SCOPE, a.getAssetId(), a.getAssetName(), ComplianceResult.RESULT_FAIL,
                         "对外经营/开放使用但未取得对外授权,超出权限范围(越权风险)",
                         "核查对外开放目录并补办授权,或收紧使用范围",
                         AlertRecord.LEVEL_URGENT, byDim, wf);
             }
             // ③ 申请材料:待确权 -> 申请材料/确权流程未完成
             if (STATUS_PENDING_CONFIRM.equals(a.getConfirmStatus())) {
-                record(reportId, DIM_MATERIAL, a.getAssetId(), ComplianceResult.RESULT_WARN,
+                record(reportId, DIM_MATERIAL, a.getAssetId(), a.getAssetName(), ComplianceResult.RESULT_WARN,
                         "资产确权未完成(待确权),申请材料/确权流程待补齐",
                         "补齐确权申请材料并推进确权流程",
                         AlertRecord.LEVEL_IMPORTANT, byDim, wf);
@@ -135,7 +135,7 @@ public class ComplianceCheckServiceImpl implements ComplianceCheckService {
             // ④ 协议内容:已授权 但有效期已过 -> 授权协议到期未续
             if (STATUS_AUTHORIZED.equals(a.getAuthStatus()) && a.getValidDate() != null
                     && a.getValidDate().isBefore(now)) {
-                record(reportId, DIM_AGREEMENT, a.getAssetId(), ComplianceResult.RESULT_FAIL,
+                record(reportId, DIM_AGREEMENT, a.getAssetId(), a.getAssetName(), ComplianceResult.RESULT_FAIL,
                         "授权协议有效期已过仍处于已授权状态,协议到期未续签",
                         "启动授权续签或终止授权并解除协议",
                         AlertRecord.LEVEL_URGENT, byDim, wf);
@@ -165,7 +165,7 @@ public class ComplianceCheckServiceImpl implements ComplianceCheckService {
     }
 
     /** 记录一条命中:去重(同资产+同维度未关闭预警则跳过)后写检查结果并联动预警,并累计维度/结果计数。 */
-    private void record(String reportId, String dim, String assetId, String result, String desc,
+    private void record(String reportId, String dim, String assetId, String assetName, String result, String desc,
                         String suggestion, String level, Map<String, Integer> byDim, int[] wf) {
         if (!StringUtils.hasText(assetId) || alertRecordService.existsOpen(assetId, dim)) {
             return;
@@ -173,6 +173,7 @@ public class ComplianceCheckServiceImpl implements ComplianceCheckService {
         String full = "【" + dim + "】" + desc;
         ComplianceResult cr = new ComplianceResult();
         cr.setAssetId(assetId);
+        cr.setAssetName(assetName);
         cr.setCheckDim(dim);
         cr.setCheckResult(result);
         cr.setProblemDesc(full);
