@@ -50,8 +50,8 @@
               <el-button link type="info" @click="onSealLogs(row)">上传记录</el-button>
             </template>
             <template v-else-if="action==='review'">
-              <el-button link type="success" :disabled="row.sealStatus!=='已双签'||row.reviewStatus!=='待审核'" @click="onReview(row,true)">通过</el-button>
-              <el-button link type="danger" :disabled="row.reviewStatus!=='待审核'" @click="onReview(row,false)">驳回重签</el-button>
+              <el-button v-if="isApprover" link type="success" :disabled="row.sealStatus!=='已双签'||row.reviewStatus!=='待审核'" @click="onReview(row,true)">通过</el-button>
+              <el-button v-if="isApprover" link type="danger" :disabled="row.reviewStatus!=='待审核'" @click="onReview(row,false)">驳回重签</el-button>
               <el-button link type="info" @click="onReviewLogs(row)">审核记录</el-button>
             </template>
             <template v-else-if="action==='archive'">
@@ -151,7 +151,10 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { pageAgreement, generateAgreement, signAgreementGrantor, signAgreementGrantee, reviewAgreement, archiveAgreement, uploadAgreementSeal, getAgreementSealLogs, agreementSealFileUrl, getAgreementReviewLogs, getAgreementArchiveLogs, recordAgreementAccess, getAgreementElements } from '@/api/authorize'
+import { currentRole } from '@/lib/roles'
 const route = useRoute()
+// 申报人在协议台只做签章/上传/归档查看;审核(通过/驳回重签)属审核角色,与后端 @RequiresRole 一致
+const isApprover = ['review', 'admin', 'all'].includes(currentRole())
 // 协议工作台(标签页)以 actionProp 复用本组件;独立路由仍读 route.meta.action
 const props = defineProps({ actionProp: { type: String, default: '' } })
 const action = computed(() => props.actionProp || route.meta.action || 'download')

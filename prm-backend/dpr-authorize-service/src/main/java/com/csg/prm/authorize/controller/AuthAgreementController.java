@@ -94,6 +94,8 @@ public class AuthAgreementController {
         return Result.success(service.listUploadLogs(agreementId));
     }
 
+    /** 协议审核(通过/驳回重签)。申报人只做签章/上传,不得自审。 */
+    @com.csg.prm.common.auth.RequiresRole({"review", "admin"})
     @PostMapping("/{agreementId}/review")
     public Result<Void> review(@PathVariable String agreementId, @RequestParam boolean pass,
                           @RequestParam(required = false) String opinion) {

@@ -67,13 +67,15 @@ public class AuthApplyController {
         return Result.success();
     }
 
-    /** 批量审批通过(带审核意见,逐条)。 */
+    /** 批量审批通过(带审核意见,逐条)。与单条 approve 一致,申报人不得自批。 */
+    @com.csg.prm.common.auth.RequiresRole({"review", "admin"})
     @PostMapping("/batch-approve")
     public Result<BatchResult> batchApprove(@RequestBody List<String> applyIds) {
         return Result.success(service.batchApprove(applyIds));
     }
 
-    /** 批量驳回(统一原因)。 */
+    /** 批量驳回(统一原因)。与单条 reject 一致,申报人不得自驳。 */
+    @com.csg.prm.common.auth.RequiresRole({"review", "admin"})
     @PostMapping("/batch-reject")
     public Result<BatchResult> batchReject(@RequestBody List<String> applyIds,
                                       @RequestParam(required = false) String reason) {

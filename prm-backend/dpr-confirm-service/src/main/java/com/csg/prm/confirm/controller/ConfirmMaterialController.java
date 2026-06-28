@@ -98,6 +98,8 @@ public class ConfirmMaterialController {
         return Result.success(service.listByApply(applyId));
     }
 
+    /** 材料人工核验给定结论(通过/不通过)。属预审/审核动作,申报人自助走 check-run/push-review,不得自核。 */
+    @com.csg.prm.common.auth.RequiresRole({"precheck", "review", "manager", "director", "admin"})
     @PostMapping("/{materialId}/check")
     public Result<Void> check(@PathVariable String materialId,
                          @RequestParam boolean pass,

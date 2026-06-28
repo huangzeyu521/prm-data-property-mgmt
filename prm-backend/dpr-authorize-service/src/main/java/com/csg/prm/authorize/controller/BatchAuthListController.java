@@ -91,6 +91,8 @@ public class BatchAuthListController {
         return Result.success();
     }
 
+    /** 批准批量清单(逐节点推进至生效)。申报人只能 submit,不得自批。 */
+    @com.csg.prm.common.auth.RequiresRole({"review", "manager", "director", "gm", "leadership", "admin"})
     @PostMapping("/{batchListId}/approve")
     public Result<Void> approve(@PathVariable String batchListId) {
         service.approve(batchListId);
