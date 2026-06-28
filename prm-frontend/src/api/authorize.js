@@ -46,6 +46,8 @@ export const authComplianceExportUrl = (params) => {
 
 // 授权协议(双签/审核/存档/下载)
 export const generateAgreement = (params) => request.post('/dpr/auth/agreement/generate', null, { params })
+// 批量授权:一份批量清单生成一份《运营授权协议》(一清单一协议)
+export const generateAgreementForBatch = (batchListId) => request.post('/dpr/auth/agreement/generate-for-batch', null, { params: { batchListId } })
 export const signAgreementGrantor = (id, fileUrl) => request.post(`/dpr/auth/agreement/${id}/sign-grantor`, null, { params: { fileUrl } })
 export const signAgreementGrantee = (id, fileUrl) => request.post(`/dpr/auth/agreement/${id}/sign-grantee`, null, { params: { fileUrl } })
 export const reviewAgreement = (id, pass, opinion) => request.post(`/dpr/auth/agreement/${id}/review`, null, { params: { pass, opinion } })

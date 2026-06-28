@@ -21,6 +21,9 @@
       <el-col :span="8"><el-card header="按产权类型分布"><div ref="rtRef" style="height:300px"></div></el-card></el-col>
       <el-col :span="8"><el-card header="按确权状态分布"><div ref="csRef" style="height:300px"></div></el-card></el-col>
     </el-row>
+    <el-card header="按系统部署单位分布(总部 · 超高压 · 双调 · 五省网 · 广州 · 深圳)" style="margin-bottom:16px">
+      <div ref="deployRef" style="height:300px"></div>
+    </el-card>
     <el-row :gutter="16" style="margin-bottom:16px">
       <el-col :span="12"><el-card header="按省域分布(点击柱形下钻地市)"><div ref="provinceRef" style="height:300px"></div></el-card></el-col>
       <el-col :span="12"><el-card :header="`按地市分布(${drillProvince || '全部省域'})`"><div ref="bureauRef" style="height:300px"></div></el-card></el-col>
@@ -38,7 +41,7 @@ import { CHART_COLORS, C } from '@/lib/chartPalette'
 import { getLedgerStatistics } from '@/api/ledger'
 
 const d = reactive({ totalArchive: 0, mom: null, yoy: null, provinces: 0 })
-const trendRef = ref(); const subRef = ref(); const rtRef = ref(); const csRef = ref(); const provinceRef = ref(); const bureauRef = ref(); const authRef = ref()
+const trendRef = ref(); const subRef = ref(); const rtRef = ref(); const csRef = ref(); const deployRef = ref(); const provinceRef = ref(); const bureauRef = ref(); const authRef = ref()
 const drillProvince = ref('')
 let bureauChart = null
 const pairs = (m) => Object.entries(m || {}).map(([name, value]) => ({ name, value }))
@@ -96,6 +99,8 @@ async function load() {
     ]
   })
   initChart(subRef.value,barOpt(pairs(res.bySubsidiary), C.blue))
+  // 系统部署单位:固定 10 桶(后端按打√清单顺序零填充),保持服务端顺序不再二次排序
+  initChart(deployRef.value,barOpt(pairs(res.byDeploymentUnit), C.green))
   initChart(rtRef.value,pieOpt(pairs(res.byRightType), ['40%', '70%']))
   initChart(csRef.value,pieOpt(pairs(res.byConfirmStatus), '65%'))
   const byBureau = res.byBureau || {}

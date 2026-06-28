@@ -1,5 +1,6 @@
 package com.csg.prm.ledger.service.impl;
 
+import com.csg.prm.common.org.DeploymentUnits;
 import com.csg.prm.common.org.Jurisdiction;
 import com.csg.prm.common.org.OrgService;
 import com.csg.prm.ledger.dto.LedgerStatisticsVO;
@@ -53,6 +54,17 @@ public class LedgerStatisticsServiceImpl implements LedgerStatisticsService {
         Map<String, Long> bySubsidiary = assets.stream()
                 .collect(Collectors.groupingBy(a -> orUnknown(a.getSubsidiaryName()), Collectors.counting()));
 
+        // 系统部署单位(打√口径):固定 10 桶恒显(零填充),据资产现有省/地市码或归属名派生归类;不可归类计入「未标识」(仅>0时附加)
+        Map<String, Long> byDeploymentUnit = new LinkedHashMap<>();
+        for (String unit : DeploymentUnits.ORDER) {
+            byDeploymentUnit.put(unit, 0L);
+        }
+        for (DataAssetInfo a : assets) {
+            String unit = DeploymentUnits.classify(a.getProvinceCode(), a.getBureauCode(), a.getSubsidiaryName());
+            byDeploymentUnit.merge(unit, 1L, Long::sum);
+        }
+        byDeploymentUnit.remove(DeploymentUnits.UNIDENTIFIED, 0L); // 无未标识资产则不显示该桶
+
         // 省域计数 + 省→地市嵌套(真下钻):优先已存编码译名,无码按子公司名兜底,仍不中落「未标识」。
         Map<String, Long> byProvince = new LinkedHashMap<>();
         Map<String, Map<String, Long>> byBureau = new LinkedHashMap<>();
@@ -92,6 +104,7 @@ public class LedgerStatisticsServiceImpl implements LedgerStatisticsService {
         vo.setByConfirmStatus(byConfirmStatus);
         vo.setByAuthStatus(byAuthStatus);
         vo.setBySubsidiary(bySubsidiary);
+        vo.setByDeploymentUnit(byDeploymentUnit);
         vo.setByProvince(byProvince);
         vo.setByBureau(byBureau);
         vo.setProvinceConfirm(provinceConfirm);

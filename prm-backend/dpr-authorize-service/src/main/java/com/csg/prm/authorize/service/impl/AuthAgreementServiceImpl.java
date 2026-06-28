@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.csg.prm.authorize.entity.AuthAgreement;
+import com.csg.prm.authorize.entity.AuthApply;
 import com.csg.prm.authorize.mapper.AuthAgreementMapper;
 import com.csg.prm.authorize.service.AuthAgreementService;
 import com.csg.prm.common.api.PageResult;
@@ -30,13 +31,15 @@ public class AuthAgreementServiceImpl implements AuthAgreementService {
     private final com.csg.prm.authorize.mapper.AgreementReviewLogMapper reviewLogMapper;
     private final com.csg.prm.authorize.mapper.AuthApplyMapper applyMapper;
     private final com.csg.prm.authorize.mapper.AgreementArchiveLogMapper archiveLogMapper;
+    private final com.csg.prm.authorize.mapper.BatchAuthListMapper batchListMapper;
 
     public AuthAgreementServiceImpl(AuthAgreementMapper mapper, ChainEvidenceService chainEvidenceService,
                                     com.csg.prm.authorize.gateway.DataAccessGateway dataAccessGateway,
                                     com.csg.prm.authorize.mapper.AuthSealUploadLogMapper sealLogMapper,
                                     com.csg.prm.authorize.mapper.AgreementReviewLogMapper reviewLogMapper,
                                     com.csg.prm.authorize.mapper.AuthApplyMapper applyMapper,
-                                    com.csg.prm.authorize.mapper.AgreementArchiveLogMapper archiveLogMapper) {
+                                    com.csg.prm.authorize.mapper.AgreementArchiveLogMapper archiveLogMapper,
+                                    com.csg.prm.authorize.mapper.BatchAuthListMapper batchListMapper) {
         this.mapper = mapper;
         this.chainEvidenceService = chainEvidenceService;
         this.dataAccessGateway = dataAccessGateway;
@@ -44,6 +47,7 @@ public class AuthAgreementServiceImpl implements AuthAgreementService {
         this.reviewLogMapper = reviewLogMapper;
         this.applyMapper = applyMapper;
         this.archiveLogMapper = archiveLogMapper;
+        this.batchListMapper = batchListMapper;
     }
 
     private void recordArchiveLog(AuthAgreement a, String action, String operator) {
@@ -170,6 +174,46 @@ public class AuthAgreementServiceImpl implements AuthAgreementService {
                 a.setGranteeOrg(apply.getGranteeOrg());
             }
         }
+        mapper.insert(a);
+        return a.getAgreementId();
+    }
+
+    @Override
+    @Transactional
+    public String generateForBatch(String batchListId) {
+        // 批量授权:一份《数据批量授权清单》→ 一份《运营授权协议》(清单各项=协议附件,授权方↔被授权方框架合同)。
+        // 工作指引:清单经领导小组批准后,授权方/被授权方签运营授权协议;附录G 备案附件=授权协议+数据授权清单。
+        if (!StringUtils.hasText(batchListId)) {
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "批量清单ID不能为空");
+        }
+        com.csg.prm.authorize.entity.BatchAuthList list = batchListMapper.selectById(batchListId);
+        if (list == null) {
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "批量授权清单不存在");
+        }
+        if (!com.csg.prm.authorize.entity.BatchAuthList.STATUS_APPROVED.equals(list.getListStatus())) {
+            throw new BusinessException("仅领导小组批准的批量清单可签订运营授权协议(当前:" + list.getListStatus() + ")");
+        }
+        // 一清单一协议:已生成则直接返回(幂等防重)
+        AuthAgreement exist = mapper.selectOne(new LambdaQueryWrapper<AuthAgreement>()
+                .eq(AuthAgreement::getBatchListId, batchListId).last("limit 1"));
+        if (exist != null) {
+            return exist.getAgreementId();
+        }
+        java.util.List<AuthApply> items = applyMapper.selectList(new LambdaQueryWrapper<AuthApply>()
+                .eq(AuthApply::getBatchListId, batchListId));
+        if (items.isEmpty()) {
+            throw new BusinessException("批量清单无授权项,无法生成协议");
+        }
+        AuthApply first = items.get(0);
+        AuthAgreement a = new AuthAgreement();
+        a.setAgreementNo("XY-" + UUID.randomUUID().toString().replace("-", "").substring(0, 14).toUpperCase());
+        a.setBatchListId(batchListId);
+        a.setGranteeOrg(first.getGranteeOrg());          // 清单被授权方批量共享
+        a.setAgreementType(first.getRightType());
+        a.setDeptName(StringUtils.hasText(first.getBusinessDomain()) ? first.getBusinessDomain() : first.getApplicantManager());
+        a.setSealStatus(AuthAgreement.SEAL_PENDING);
+        a.setReviewStatus(AuthAgreement.REVIEW_PENDING);
+        a.setArchiveStatus(AuthAgreement.ARCHIVE_NO);
         mapper.insert(a);
         return a.getAgreementId();
     }
@@ -310,7 +354,13 @@ public class AuthAgreementServiceImpl implements AuthAgreementService {
     @Override
     public com.csg.prm.authorize.dto.AgreementElementsVO elements(String agreementId) {
         AuthAgreement ag = require(agreementId);
-        // 协议要素(§3.4.4)在来源授权申请单上,按 applyId join 带出供核对(申请单缺失时容错只返回协议侧字段)
+        // 批量协议:挂在清单上(一清单一协议),聚合清单各项=协议附件《数据授权清单》供核对
+        if (StringUtils.hasText(ag.getBatchListId())) {
+            java.util.List<AuthApply> items = applyMapper.selectList(new LambdaQueryWrapper<AuthApply>()
+                    .eq(AuthApply::getBatchListId, ag.getBatchListId()));
+            return com.csg.prm.authorize.dto.AgreementElementsVO.ofBatch(ag, items);
+        }
+        // 专项协议:协议要素(§3.4.4)在来源申请单上,按 applyId join 带出(申请单缺失容错)
         com.csg.prm.authorize.entity.AuthApply apply = StringUtils.hasText(ag.getApplyId())
                 ? applyMapper.selectById(ag.getApplyId()) : null;
         return com.csg.prm.authorize.dto.AgreementElementsVO.of(ag, apply);

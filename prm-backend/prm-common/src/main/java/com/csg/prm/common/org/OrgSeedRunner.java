@@ -34,6 +34,9 @@ public class OrgSeedRunner implements ApplicationRunner {
         }
         // 网级
         ins("ORG-CSG", "中国南方电网有限责任公司", "CSG", "南方电网", null, "网级", "总部", null, "00");
+        // 网级直属单位(系统部署单位"打√"口径:与五省网并列单列)
+        ins("ORG-EHV", "南方电网超高压输电公司", "EHV", "超高压", "ORG-CSG", "网级", "直属单位", null, "01");
+        ins("ORG-DISP", "南方电网总调(双调中心)", "DISP", "双调", "ORG-CSG", "网级", "直属单位", null, "02");
         // 省级(五省网)
         ins("ORG-GD", "广东电网有限责任公司", "GD", "广东电网", "ORG-CSG", "省级", "省级单位", null, "10");
         ins("ORG-GX", "广西电网有限责任公司", "GX", "广西电网", "ORG-CSG", "省级", "省级单位", null, "20");

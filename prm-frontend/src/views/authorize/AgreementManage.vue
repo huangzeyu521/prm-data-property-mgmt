@@ -105,7 +105,26 @@
     <!-- 协议要素核对(附录D §3.4.4):协议 vs 来源申请单,审核人据此核对内容一致、防阴阳合同 -->
     <el-dialog v-model="elemDlg" :title="`协议要素核对(附录D §3.4.4) — ${curNo}`" width="720px" align-center>
       <el-alert type="info" :closable="false" style="margin-bottom:10px" title="核对要点:上传的协议文件中约定的 数据范围 / 使用场景及目的 / 利益分配 / 安全保障,须与下方来源申请单一致(防篡改、防阴阳合同)。" />
-      <el-descriptions v-if="elem" :column="2" border size="small">
+      <!-- 批量协议:一清单一协议,附件=《数据授权清单》,核对覆盖的多张数据表 -->
+      <template v-if="elem && elem.batchListId">
+        <el-descriptions :column="2" border size="small" style="margin-bottom:12px">
+          <el-descriptions-item label="授权方式">批量授权(一清单一协议)</el-descriptions-item>
+          <el-descriptions-item label="权益类型">{{ elem.rightType || '—' }}</el-descriptions-item>
+          <el-descriptions-item label="被授权方" :span="2">{{ elem.granteeOrg || '—' }}</el-descriptions-item>
+          <el-descriptions-item label="利益分配/安全保障(§3.4.4)" :span="2">批量:在本《运营授权协议》(清单级)统一约定</el-descriptions-item>
+        </el-descriptions>
+        <div class="prm-table-note" style="margin-bottom:6px">协议附件《数据授权清单》— 本协议覆盖 {{ elem.itemCount || (elem.items && elem.items.length) || 0 }} 张数据表</div>
+        <el-table :data="elem.items || []" border size="small" max-height="320">
+          <el-table-column type="index" label="#" width="46" align="center" />
+          <el-table-column prop="sysName" label="所属系统" min-width="110" show-overflow-tooltip />
+          <el-table-column prop="schemaName" label="模式" width="90" show-overflow-tooltip><template #default="{ row }">{{ row.schemaName || '—' }}</template></el-table-column>
+          <el-table-column prop="dataTable" label="数据表" min-width="120" show-overflow-tooltip />
+          <el-table-column prop="rightType" label="权益" width="120" />
+          <el-table-column prop="scenario" label="使用场景" min-width="110" show-overflow-tooltip><template #default="{ row }">{{ row.scenario || '—' }}</template></el-table-column>
+          <el-table-column prop="validDate" label="授权期限" width="110"><template #default="{ row }">{{ row.validDate || '—' }}</template></el-table-column>
+        </el-table>
+      </template>
+      <el-descriptions v-else-if="elem" :column="2" border size="small">
         <el-descriptions-item label="所属系统">{{ elem.sysName || '—' }}</el-descriptions-item>
         <el-descriptions-item label="模式名称">{{ elem.schemaName || '—' }}</el-descriptions-item>
         <el-descriptions-item label="数据表">{{ elem.dataTable || '—' }}</el-descriptions-item>

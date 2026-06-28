@@ -16,6 +16,7 @@ public record AgreementElementsVO(
         String agreementId,
         String agreementNo,
         String applyId,
+        String batchListId,    // 批量协议:挂在清单上(专项为空)
         String authMode,
         String granteeOrg,
         String sysName,        // 所属系统(assetId 去 SYS: 前缀)
@@ -30,8 +31,20 @@ public record AgreementElementsVO(
         String thirdPartySource, // 涉第三方来源
         String sensitiveType,  // 涉个人隐私/商业秘密
         Boolean crossRegion,   // 是否跨域
-        String validDate       // 授权时效
+        String validDate,      // 授权时效
+        Integer itemCount,     // 批量协议覆盖的数据表数(=《数据授权清单》明细数;专项为 1/空)
+        java.util.List<Item> items // 批量协议附件《数据授权清单》明细(专项为空)
 ) implements Serializable {
+
+    /** 批量协议附件《数据授权清单》一行(逐数据表)。 */
+    public record Item(String sysName, String dataTable, String schemaName,
+                       String rightType, String scenario, String validDate) implements Serializable {
+        public static Item of(AuthApply a) {
+            String vd = a.getValidDate() != null ? a.getValidDate().toString().substring(0, 10) : null;
+            return new Item(sysOf(a.getAssetId()), a.getAssetName(), a.getSchemaName(),
+                    a.getRightType(), a.getScenario(), vd);
+        }
+    }
 
     private static String sysOf(String assetId) {
         if (assetId == null) {
@@ -40,12 +53,12 @@ public record AgreementElementsVO(
         return assetId.startsWith("SYS:") ? assetId.substring(4) : assetId;
     }
 
-    /** 协议 + 申请单(可能为空,容错)→ 核对视图。 */
+    /** 专项协议 + 申请单(可能为空,容错)→ 单项核对视图。 */
     public static AgreementElementsVO of(AuthAgreement ag, AuthApply apply) {
         String validDate = apply != null && apply.getValidDate() != null
                 ? apply.getValidDate().toString().substring(0, 10) : null;
         return new AgreementElementsVO(
-                ag.getAgreementId(), ag.getAgreementNo(), ag.getApplyId(),
+                ag.getAgreementId(), ag.getAgreementNo(), ag.getApplyId(), ag.getBatchListId(),
                 apply != null ? apply.getAuthMode() : null,
                 ag.getGranteeOrg(),
                 apply != null ? sysOf(apply.getAssetId()) : null,
@@ -60,6 +73,25 @@ public record AgreementElementsVO(
                 apply != null ? apply.getThirdPartySource() : null,
                 apply != null ? apply.getSensitiveType() : null,
                 apply != null ? apply.getCrossRegion() : null,
-                validDate);
+                validDate, 1, null);
+    }
+
+    /** 批量协议 + 清单各项 → 聚合核对视图(顶层单项字段留空,明细在 items;利益分配/安全保障清单级约定)。 */
+    public static AgreementElementsVO ofBatch(AuthAgreement ag, java.util.List<AuthApply> applies) {
+        java.util.List<Item> items = new java.util.ArrayList<>();
+        for (AuthApply a : applies) {
+            items.add(Item.of(a));
+        }
+        String grantee = ag.getGranteeOrg();
+        if ((grantee == null || grantee.isBlank()) && !applies.isEmpty()) {
+            grantee = applies.get(0).getGranteeOrg();
+        }
+        return new AgreementElementsVO(
+                ag.getAgreementId(), ag.getAgreementNo(), null, ag.getBatchListId(),
+                "批量", grantee,
+                null, null, null,
+                ag.getAgreementType(), null, null, null,
+                null, null, null, null, null, null,
+                items.size(), items);
     }
 }

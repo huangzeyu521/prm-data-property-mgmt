@@ -43,6 +43,12 @@ public class AuthAgreementController {
         return Result.success(service.generate(applyId, templateId, granteeOrg));
     }
 
+    /** 批量授权:一份批量清单生成一份《运营授权协议》(一清单一协议,清单各项=协议附件)。 */
+    @PostMapping("/generate-for-batch")
+    public Result<String> generateForBatch(@RequestParam String batchListId) {
+        return Result.success(service.generateForBatch(batchListId));
+    }
+
     @PostMapping("/{agreementId}/sign-grantor")
     public Result<Void> signByGrantor(@PathVariable String agreementId, @RequestParam(required = false) String fileUrl) {
         service.signByGrantor(agreementId, fileUrl);

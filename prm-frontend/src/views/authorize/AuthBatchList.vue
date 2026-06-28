@@ -32,6 +32,7 @@
             <el-button link type="info" @click="onDetail(row)">明细(表6)</el-button>
             <el-button link type="primary" :disabled="row.listStatus !== '草案'" @click="onSubmit(row)">提交申报稿</el-button>
             <el-button link type="success" :disabled="row.listStatus !== '申报稿'" @click="onApprove(row)">领导小组批准</el-button>
+            <el-button link type="warning" :disabled="row.listStatus !== '批准'" @click="onGenAgreement(row)">生成运营授权协议</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -94,7 +95,7 @@
 <script setup>
 import { onMounted, reactive, ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-import { pageBatchList, createBatchList, submitBatchList, approveBatchList, listAuthByBatch } from '@/api/authorize'
+import { pageBatchList, createBatchList, submitBatchList, approveBatchList, listAuthByBatch, generateAgreementForBatch } from '@/api/authorize'
 const statuses = ['草案', '申报稿', '批准']
 const q = reactive({ current: 1, size: 10, listYear: '', listStatus: '' })
 const rows = ref([]); const total = ref(0); const loading = ref(false)
@@ -121,5 +122,10 @@ function onAdd() { Object.assign(form, { listYear: '', remark: '' }); dlg.value 
 async function onSave() { await createBatchList({ ...form }); ElMessage.success('已新增清单(草案)'); dlg.value = false; load() }
 async function onSubmit(row) { await submitBatchList(row.batchListId); ElMessage.success('已提交为申报稿'); load() }
 async function onApprove(row) { await approveBatchList(row.batchListId); ElMessage.success('领导小组办公室已批准'); load() }
+// 一清单一协议:批准的批量清单 → 生成一份《运营授权协议》(清单各项=协议附件),幂等防重
+async function onGenAgreement(row) {
+  const id = await generateAgreementForBatch(row.batchListId)
+  ElMessage.success(`已生成本清单的《运营授权协议》(${id});请到「协议工作台」签章/审核/存档`)
+}
 onMounted(load)
 </script>

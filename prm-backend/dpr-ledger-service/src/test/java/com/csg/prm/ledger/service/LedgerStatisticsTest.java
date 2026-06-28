@@ -85,6 +85,23 @@ class LedgerStatisticsTest {
         assertTrue(gd.getRate() != null && gd.getRate() > 0, "确权率应 > 0");
     }
 
+    @Test
+    void statistics_byDeploymentUnit_tenBucketsAlwaysShown_andClassified() {
+        // 深圳供电局→深圳桶(单列,不并入广东);广西电网→广西桶
+        insertAsset("DA-DU-SZ", "部署-深圳", "深圳供电局");
+        insertAsset("DA-DU-GX", "部署-广西", "广西电网");
+
+        LedgerStatisticsVO vo = statisticsService.statistics();
+        Map<String, Long> du = vo.getByDeploymentUnit();
+        assertNotNull(du, "应有系统部署单位维度");
+        // 10 桶恒显(零填充):总部/超高压/双调/五省网/广州/深圳
+        for (String unit : com.csg.prm.common.org.DeploymentUnits.ORDER) {
+            assertTrue(du.containsKey(unit), "部署单位应恒显: " + unit);
+        }
+        assertTrue(du.get("深圳") >= 1, "深圳供电局应计入深圳桶");
+        assertTrue(du.get("广西") >= 1, "广西电网应计入广西桶");
+    }
+
     private void insertAsset(String id, String name, String subsidiary) {
         DataAssetInfo a = new DataAssetInfo();
         a.setAssetId(id);

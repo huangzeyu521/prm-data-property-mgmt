@@ -33,6 +33,10 @@ public class AuthAgreement extends BaseEntity {
     @TableField("CEC_APPLY_ID")
     private String applyId;
 
+    /** 批量授权清单ID(批量授权:一清单一协议,清单各项=协议附件《数据授权清单》;专项为空) */
+    @TableField("CEC_BATCH_LIST_ID")
+    private String batchListId;
+
     @TableField("CEC_TEMPLATE_ID")
     private String templateId;
 
@@ -102,6 +106,8 @@ public class AuthAgreement extends BaseEntity {
     public void setAgreementNo(String agreementNo) { this.agreementNo = agreementNo; }
     public String getApplyId() { return applyId; }
     public void setApplyId(String applyId) { this.applyId = applyId; }
+    public String getBatchListId() { return batchListId; }
+    public void setBatchListId(String batchListId) { this.batchListId = batchListId; }
     public String getTemplateId() { return templateId; }
     public void setTemplateId(String templateId) { this.templateId = templateId; }
     public String getGranteeOrg() { return granteeOrg; }

@@ -12,6 +12,8 @@ public class LedgerStatisticsVO {
     private long totalArchive;
     /** 按子公司分布(基于资产) */
     private Map<String, Long> bySubsidiary;
+    /** 按系统部署单位分布(南网"打√"口径:总部/超高压/双调/五省网/广州/深圳,固定10桶恒显;基于资产归属派生) */
+    private Map<String, Long> byDeploymentUnit;
     /** 按省域分布(基于组织主数据 SYS_ORGANIZATION:province_code→省名,无码按子公司名兜底解析) */
     private Map<String, Long> byProvince;
     /** 按省→地市嵌套分布(组织主数据;前端点省下钻该省地市,真联动) */
@@ -191,6 +193,14 @@ public class LedgerStatisticsVO {
 
     public void setBySubsidiary(Map<String, Long> bySubsidiary) {
         this.bySubsidiary = bySubsidiary;
+    }
+
+    public Map<String, Long> getByDeploymentUnit() {
+        return byDeploymentUnit;
+    }
+
+    public void setByDeploymentUnit(Map<String, Long> byDeploymentUnit) {
+        this.byDeploymentUnit = byDeploymentUnit;
     }
 
     public Map<String, Long> getByRightType() {

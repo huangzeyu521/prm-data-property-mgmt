@@ -13,6 +13,9 @@ import java.util.List;
 public interface AuthAgreementService {
     /** 基于审批通过的授权申请生成协议(待双方签章) */
     String generate(String applyId, String templateId, String granteeOrg);
+
+    /** 批量授权:一份批量清单生成一份《运营授权协议》(一清单一协议,幂等防重),清单各项=协议附件。 */
+    String generateForBatch(String batchListId);
     /** 授权方(甲方)签署 */
     void signByGrantor(String agreementId, String fileUrl);
     /** 被授权方(乙方)签署 */
