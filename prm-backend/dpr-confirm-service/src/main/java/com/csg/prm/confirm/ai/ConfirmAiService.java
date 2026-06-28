@@ -1,9 +1,9 @@
 package com.csg.prm.confirm.ai;
 
 import com.csg.prm.common.ai.DawatAiGateway;
-import com.csg.prm.common.api.ResultCode;
+import com.csg.prm.common.api.ResponseCode;
 import com.csg.prm.common.crypto.Sm3Util;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.confirm.entity.ConfirmApply;
 import com.csg.prm.common.aitrace.AiRunLog;
 import com.csg.prm.confirm.entity.ConfirmMaterial;
@@ -172,7 +172,7 @@ public class ConfirmAiService {
         ConfirmApply apply = mustApply(applyId);
         List<ConfirmMaterial> mats = materialService.listByApply(applyId);
         if (mats.isEmpty()) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "尚未上传材料,无法智能解析");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "尚未上传材料,无法智能解析");
         }
         List<MaterialElement> items = new ArrayList<>();
         Map<String, String> seen = new HashMap<>();
@@ -251,7 +251,7 @@ public class ConfirmAiService {
     private ConfirmApply mustApply(String applyId) {
         ConfirmApply a = applyService.getById(applyId);
         if (a == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "确权申请不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "确权申请不存在");
         }
         return a;
     }

@@ -87,14 +87,19 @@ public class ConfirmMaterialRuleService implements ApplicationRunner {
      * 关联类(G–J)仅当触发涉管理要求时保留;表2仅当仍保留来源/关联差异材料时保留。
      */
     private List<ConfirmMaterialRule> narrowForChange(List<ConfirmMaterialRule> hit, String trigger) {
-        // 容错匹配:附录F §3.3.2 触发可组合表述(如"数据来源变更和管理要求变更"),按关键词判定;
-        // 未识别的触发(非来源/新增/管理/监管/到期/其他)→ 保守不收敛,返回全集,杜绝漏要材料。
-        boolean known = trigger.contains("来源") || trigger.contains("新增") || trigger.contains("管理")
+        // 数据新增(对照表第①行)= 新表"整套首次走一遍"(insert 模式),不是对已确权结论的差异修订:
+        // 不收敛,返回全集(新表的 A–F/G–J/表2/凭证全要)。数据新增与其它触发互斥,故 contains("新增") 即纯新增。
+        if (trigger.contains("新增")) {
+            return hit;
+        }
+        // 容错匹配:附录F §3.3.2 触发可组合表述(多选拼接如"数据来源变更、管理要求变更"),按关键词判定;
+        // 未识别的触发(非来源/管理/监管/到期/其他)→ 保守不收敛,返回全集,杜绝漏要材料。
+        boolean known = trigger.contains("来源") || trigger.contains("管理")
                 || trigger.contains("监管") || trigger.contains("到期") || "其他".equals(trigger);
         if (!known) {
             return hit;
         }
-        boolean keepSource = trigger.contains("来源") || trigger.contains("新增") || "其他".equals(trigger);
+        boolean keepSource = trigger.contains("来源") || "其他".equals(trigger);
         boolean keepRelation = trigger.contains("管理") || trigger.contains("监管") || "其他".equals(trigger);
         List<ConfirmMaterialRule> out = new ArrayList<>();
         boolean anyDiff = false;

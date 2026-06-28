@@ -3,8 +3,8 @@ package com.csg.prm.ledger.monitor.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.ResultCode;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.api.ResponseCode;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.ledger.monitor.dto.MonitorRuleQuery;
 import com.csg.prm.ledger.monitor.entity.MonitorRule;
 import com.csg.prm.ledger.monitor.mapper.MonitorRuleMapper;
@@ -26,7 +26,7 @@ public class MonitorRuleServiceImpl implements MonitorRuleService {
     @Transactional
     public String create(MonitorRule rule) {
         if (!StringUtils.hasText(rule.getRuleName())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "规则名称不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "规则名称不能为空");
         }
         rule.setRuleVersion("v1");
         rule.setEffectStatus(MonitorRule.STATUS_DRAFT);
@@ -67,7 +67,7 @@ public class MonitorRuleServiceImpl implements MonitorRuleService {
     public void delete(String ruleId) {
         MonitorRule exist = require(ruleId);
         if (!MonitorRule.STATUS_DRAFT.equals(exist.getEffectStatus())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(),
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(),
                     "仅草稿规则可物理删除;生效中/历史规则请改用停用");
         }
         mapper.deleteById(ruleId);
@@ -91,11 +91,11 @@ public class MonitorRuleServiceImpl implements MonitorRuleService {
 
     private MonitorRule require(String ruleId) {
         if (!StringUtils.hasText(ruleId)) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "规则ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "规则ID不能为空");
         }
         MonitorRule r = mapper.selectById(ruleId);
         if (r == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "监测规则不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "监测规则不存在");
         }
         return r;
     }

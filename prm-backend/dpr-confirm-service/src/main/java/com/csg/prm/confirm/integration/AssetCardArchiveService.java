@@ -49,7 +49,7 @@ public class AssetCardArchiveService {
         long size = query.getSize() <= 0 ? 10 : query.getSize();
         int from = (int) Math.min((current - 1) * size, rows.size());
         int to = (int) Math.min(from + size, rows.size());
-        return new PageResult<>(rows.size(), current, size, rows.subList(from, to));
+        return new PageResult<>((long) rows.size(), (int) current, (int) size, rows.subList(from, to));
     }
 
     /**

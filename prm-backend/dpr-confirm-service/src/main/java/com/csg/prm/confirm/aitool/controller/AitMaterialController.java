@@ -1,7 +1,7 @@
 package com.csg.prm.confirm.aitool.controller;
 
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.R;
+import com.csg.prm.common.api.Result;
 import com.csg.prm.common.query.PageQuery;
 import com.csg.prm.confirm.aitool.entity.AitCompare;
 import com.csg.prm.confirm.aitool.entity.AitDocSegment;
@@ -20,7 +20,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import com.csg.prm.common.exception.BizException;
+import org.springframework.validation.annotation.Validated;
+import jakarta.validation.Valid;
+import com.csg.prm.common.exception.BusinessException;
 
 import java.io.IOException;
 import java.net.URLEncoder;
@@ -32,6 +34,7 @@ import java.util.List;
  * 智能确权辅助工具-材料智能解析接口(M1 / SW-001~004)。
  */
 @RestController
+@Validated
 @RequestMapping("/api/dpr/confirm/aitool/material")
 public class AitMaterialController {
 
@@ -47,45 +50,45 @@ public class AitMaterialController {
     private static final int MAX_BATCH = 50;
 
     @PostMapping("/upload")
-    public R<String> upload(@RequestBody AitMaterial material) {
-        return R.ok(service.upload(material));
+    public Result<String> upload(@Valid @RequestBody AitMaterial material) {
+        return Result.success(service.upload(material));
     }
 
     /** 真实文件上传(单)(#1):multipart 表单字段 file,可选 applyId */
     @PostMapping("/upload-file")
-    public R<String> uploadFile(@RequestParam("file") MultipartFile file,
+    public Result<String> uploadFile(@RequestParam("file") MultipartFile file,
                                 @RequestParam(required = false) String applyId,
                                 @RequestParam(required = false) String assetId) {
-        return R.ok(saveOne(file, applyId, assetId, null));
+        return Result.success(saveOne(file, applyId, assetId, null));
     }
 
     /** 真实文件批量上传(#1):multipart 字段 files[],单次≤50 个 */
     @PostMapping("/upload-batch")
-    public R<List<String>> uploadBatch(@RequestParam("files") MultipartFile[] files,
+    public Result<List<String>> uploadBatch(@RequestParam("files") MultipartFile[] files,
                                        @RequestParam(required = false) String applyId,
                                        @RequestParam(required = false) String assetId) {
         if (files == null || files.length == 0) {
-            throw new BizException("未选择文件");
+            throw new BusinessException("未选择文件");
         }
         if (files.length > MAX_BATCH) {
-            throw new BizException("批量上传单次不超过 " + MAX_BATCH + " 个文件(本次 " + files.length + ")");
+            throw new BusinessException("批量上传单次不超过 " + MAX_BATCH + " 个文件(本次 " + files.length + ")");
         }
         String batchNo = "BATCH-" + System.currentTimeMillis();
         List<String> ids = new ArrayList<>();
         for (MultipartFile f : files) {
             ids.add(saveOne(f, applyId, assetId, batchNo));
         }
-        return R.ok(ids);
+        return Result.success(ids);
     }
 
     private String saveOne(MultipartFile file, String applyId, String assetId, String batchNo) {
         if (file == null || file.isEmpty()) {
-            throw new BizException("文件为空");
+            throw new BusinessException("文件为空");
         }
         try {
             return service.uploadBinary(fixFilename(file.getOriginalFilename()), file.getBytes(), applyId, assetId, batchNo);
         } catch (IOException e) {
-            throw new BizException("读取上传文件失败:" + e.getMessage());
+            throw new BusinessException("读取上传文件失败:" + e.getMessage());
         }
     }
 
@@ -121,22 +124,22 @@ public class AitMaterialController {
 
     /** 触发解析(异步):立即返回,前端轮询 /progress 获取 0–100% 进度(#2) */
     @PostMapping("/{materialId}/parse")
-    public R<Void> parse(@PathVariable String materialId) {
+    public Result<Void> parse(@PathVariable String materialId) {
         // 派发异步前同步校验材料存在:@Async 线程内的"材料不存在"异常无人接收,否则前端误得"成功"
         service.getMaterial(materialId);
         service.submitParse(materialId);
-        return R.ok();
+        return Result.success();
     }
 
     /** 解析进度轮询(#2):返回解析状态、进度百分比、失败原因 */
     @GetMapping("/{materialId}/progress")
-    public R<AitMaterial> progress(@PathVariable String materialId) {
-        return R.ok(service.getMaterial(materialId));
+    public Result<AitMaterial> progress(@PathVariable String materialId) {
+        return Result.success(service.getMaterial(materialId));
     }
 
     @GetMapping("/{materialId}/parse")
-    public R<AitParseResult> parseResult(@PathVariable String materialId) {
-        return R.ok(service.getParse(materialId));
+    public Result<AitParseResult> parseResult(@PathVariable String materialId) {
+        return Result.success(service.getParse(materialId));
     }
 
     /** 导出解析结果为 Excel(#8) */
@@ -152,61 +155,61 @@ public class AitMaterialController {
     }
 
     @GetMapping("/{materialId}/term-check")
-    public R<List<AitMaterialService.TermSuggestion>> termCheck(@PathVariable String materialId) {
-        return R.ok(service.termCheck(materialId));
+    public Result<List<AitMaterialService.TermSuggestion>> termCheck(@PathVariable String materialId) {
+        return Result.success(service.termCheck(materialId));
     }
 
     /** 人工确认修改(#4):把某要素采用为标准术语,写回解析结果。 */
     @PostMapping("/{materialId}/term-confirm")
-    public R<Void> termConfirm(@PathVariable String materialId,
+    public Result<Void> termConfirm(@PathVariable String materialId,
                                @RequestParam String field,
                                @RequestParam String standardTerm) {
         service.confirmTerm(materialId, field, standardTerm);
-        return R.ok();
+        return Result.success();
     }
 
     @GetMapping("/{materialId}/compares")
-    public R<List<AitCompare>> compares(@PathVariable String materialId) {
-        return R.ok(service.compares(materialId));
+    public Result<List<AitCompare>> compares(@PathVariable String materialId) {
+        return Result.success(service.compares(materialId));
     }
 
     @GetMapping("/page")
-    public R<PageResult<AitMaterial>> page(PageQuery query,
+    public Result<PageResult<AitMaterial>> page(@Valid PageQuery query,
                                            @RequestParam(required = false) String batchNo,
                                            @RequestParam(required = false) String parseStatus,
                                            @RequestParam(required = false) String applyId) {
-        return R.ok(service.page(query, batchNo, parseStatus, applyId));
+        return Result.success(service.page(query, batchNo, parseStatus, applyId));
     }
 
     /** #5 多粒度解析片段(granularity 可空=全部:PAGE/PARAGRAPH/CELL/TABLE/TITLE) */
     @GetMapping("/{materialId}/segments")
-    public R<List<AitDocSegment>> segments(@PathVariable String materialId,
+    public Result<List<AitDocSegment>> segments(@PathVariable String materialId,
                                            @RequestParam(required = false) String granularity) {
-        return R.ok(service.segments(materialId, granularity));
+        return Result.success(service.segments(materialId, granularity));
     }
 
     /** #4 按数据表归集关联(applyId 或 dataTableRef 任一过滤) */
     @GetMapping("/aggregate")
-    public R<List<AitMaterialService.MaterialGroup>> aggregate(@RequestParam(required = false) String applyId,
+    public Result<List<AitMaterialService.MaterialGroup>> aggregate(@RequestParam(required = false) String applyId,
                                                                @RequestParam(required = false) String dataTableRef) {
-        return R.ok(service.aggregate(applyId, dataTableRef));
+        return Result.success(service.aggregate(applyId, dataTableRef));
     }
 
     /** #7 解析准确度评测:对标注样本集逐字段比对,输出整体/分字段准确率与是否达标(≥95%)。 */
     @GetMapping("/accuracy")
-    public R<AitAccuracyService.AccuracyReport> accuracy() {
-        return R.ok(accuracyService.evaluate());
+    public Result<AitAccuracyService.AccuracyReport> accuracy() {
+        return Result.success(accuracyService.evaluate());
     }
 
     /** 1.4#2 批量解析:按批次号排队解析其下全部未成功材料,返回派发数量。 */
     @PostMapping("/batch-parse")
-    public R<Integer> batchParse(@RequestParam String batchNo) {
-        return R.ok(service.batchParse(batchNo));
+    public Result<Integer> batchParse(@RequestParam String batchNo) {
+        return Result.success(service.batchParse(batchNo));
     }
 
     /** 1.4#2 批量解析聚合进度(总数/已完成/失败/进行中/待解析 + 明细)。 */
     @GetMapping("/batch-progress")
-    public R<AitMaterialService.BatchProgress> batchProgress(@RequestParam String batchNo) {
-        return R.ok(service.batchProgress(batchNo));
+    public Result<AitMaterialService.BatchProgress> batchProgress(@RequestParam String batchNo) {
+        return Result.success(service.batchProgress(batchNo));
     }
 }

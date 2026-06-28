@@ -1,8 +1,9 @@
 package com.csg.prm.confirm.controller;
 
 import com.csg.prm.common.ai.DawatAiGateway;
-import com.csg.prm.common.api.R;
+import com.csg.prm.common.api.Result;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -18,6 +19,7 @@ import java.util.Map;
  * 授权意图识别 aitool 暂无等价能力,保留于此。经 {@link DawatAiGateway} 共享端口对接。
  */
 @RestController
+@Validated
 @RequestMapping("/api/dpr/confirm/ai")
 public class AiAssistController {
 
@@ -34,14 +36,14 @@ public class AiAssistController {
     }
 
     @GetMapping("/provider")
-    public R<Map<String, String>> provider() {
-        return R.ok(Map.of("provider", provider,
+    public Result<Map<String, String>> provider() {
+        return Result.success(Map.of("provider", provider,
                 "model", "qwen".equals(provider) ? model : "本地规则桩",
                 "impl", ai.getClass().getSimpleName()));
     }
 
     @PostMapping("/auth-intent")
-    public R<DawatAiGateway.AuthIntent> authIntent(@RequestParam String text) {
-        return R.ok(ai.recognizeAuthIntent(text));
+    public Result<DawatAiGateway.AuthIntent> authIntent(@RequestParam String text) {
+        return Result.success(ai.recognizeAuthIntent(text));
     }
 }

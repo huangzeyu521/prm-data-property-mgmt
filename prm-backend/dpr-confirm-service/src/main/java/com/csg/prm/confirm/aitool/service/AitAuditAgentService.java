@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.crypto.Sm3Util;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.common.query.PageQuery;
 import com.csg.prm.confirm.aitool.entity.AitAuditBase;
 import com.csg.prm.confirm.aitool.entity.AitAuditResult;
@@ -82,7 +82,7 @@ public class AitAuditAgentService {
     public AitAuditResult audit(String applyId) {
         ConfirmApply apply = applyMapper.selectById(applyId);
         if (apply == null) {
-            throw new BizException("确权申请不存在");
+            throw new BusinessException("确权申请不存在");
         }
         String assetId = apply.getAssetId();
         List<Map<String, Object>> stages = new ArrayList<>();
@@ -280,7 +280,7 @@ public class AitAuditAgentService {
         AitEvidence e = evidenceMapper.selectOne(new LambdaQueryWrapper<AitEvidence>()
                 .eq(AitEvidence::getApplyId, applyId).orderByDesc(AitEvidence::getCreateTime).last("LIMIT 1"));
         if (e == null) {
-            throw new BizException("尚无审核证据链,请先发起 Agent 审核");
+            throw new BusinessException("尚无审核证据链,请先发起 Agent 审核");
         }
         return e;
     }
@@ -387,7 +387,7 @@ public class AitAuditAgentService {
             wb.write(bos);
             return bos.toByteArray();
         } catch (Exception ex) {
-            throw new BizException("导出审核台账失败:" + ex.getMessage());
+            throw new BusinessException("导出审核台账失败:" + ex.getMessage());
         }
     }
 
@@ -445,7 +445,7 @@ public class AitAuditAgentService {
             doc.write(bos);
             return bos.toByteArray();
         } catch (Exception ex) {
-            throw new BizException("生成文档失败:" + ex.getMessage());
+            throw new BusinessException("生成文档失败:" + ex.getMessage());
         }
     }
 
@@ -476,7 +476,7 @@ public class AitAuditAgentService {
         AitAuditResult r = auditMapper.selectOne(new LambdaQueryWrapper<AitAuditResult>()
                 .eq(AitAuditResult::getApplyId, applyId).orderByDesc(AitAuditResult::getCreateTime).last("LIMIT 1"));
         if (r == null) {
-            throw new BizException("尚未生成 Agent 审核结果,请先发起审核");
+            throw new BusinessException("尚未生成 Agent 审核结果,请先发起审核");
         }
         return r;
     }

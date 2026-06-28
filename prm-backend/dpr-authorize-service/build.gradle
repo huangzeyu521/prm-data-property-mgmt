@@ -1,0 +1,23 @@
+/*
+ * Copyright (C) 2026 China Southern Power Grid Co., Ltd. All Rights Reserved.
+ * dpr-authorize-service 数据授权管理服务(F-03)。
+ */
+apply plugin: 'org.springframework.boot'
+
+dependencies {
+    implementation project(':prm-common')
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'com.baomidou:mybatis-plus-spring-boot3-starter'
+    implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery'
+    implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config'
+    implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-sentinel'
+    implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-seata'
+    runtimeOnly 'com.h2database:h2'
+}
+
+tasks.named('jar') { enabled = false }
+tasks.named('bootJar') {
+    archiveFileName = "${project.name}-${project.version}.jar"
+    destinationDirectory = file("${projectDir}/target")
+    manifest { attributes('Built-company': 'dgri', 'Implementation-Title': project.name, 'Implementation-Version': project.version, 'Build-Jdk': 17) }
+}

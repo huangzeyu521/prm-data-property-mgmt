@@ -1,6 +1,6 @@
 package com.csg.prm.confirm;
 
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.confirm.entity.ConfirmApply;
 import com.csg.prm.confirm.entity.EquityCard;
 import com.csg.prm.confirm.entity.EquityCardLog;
@@ -60,7 +60,7 @@ class ConfirmRefinementsTest {
         ConfirmApply a = base("DA-T2-001");
         a.setRelationIdentification("H");
         String id = applyService.saveDraft(a);
-        BizException ex = assertThrows(BizException.class, () -> applyService.submit(id));
+        BusinessException ex = assertThrows(BusinessException.class, () -> applyService.submit(id));
         assertTrue(ex.getMessage().contains("隐私"), "涉个人隐私须填说明:" + ex.getMessage());
 
         // 补充隐私关联主体说明后可正常进入审批链(首节点:人工预审)
@@ -79,14 +79,14 @@ class ConfirmRefinementsTest {
         ConfirmApply none = base("DA-SRC-NONE");
         none.setSourceIdentification(null);
         String idN = applyService.saveDraft(none);
-        BizException e1 = assertThrows(BizException.class, () -> applyService.submit(idN));
+        BusinessException e1 = assertThrows(BusinessException.class, () -> applyService.submit(idN));
         assertTrue(e1.getMessage().contains("来源方式"), "未选来源方式应拦截:" + e1.getMessage());
 
         // 含 B–F 但缺来源主体 -> 拦截
         ConfirmApply bf = base("DA-SRC-BF");
         bf.setSourceIdentification("B公开采集数据");
         String idB = applyService.saveDraft(bf);
-        BizException e2 = assertThrows(BizException.class, () -> applyService.submit(idB));
+        BusinessException e2 = assertThrows(BusinessException.class, () -> applyService.submit(idB));
         assertTrue(e2.getMessage().contains("来源主体"), "B–F 缺来源主体应拦截:" + e2.getMessage());
 
         // 含 B–F 且填来源主体(+表2)-> 通过进入审批链(首节点:人工预审)
@@ -113,7 +113,7 @@ class ConfirmRefinementsTest {
         cardService.revoke(cardId, "确权撤销");
         assertEquals(EquityCard.STATUS_INVALID, cardService.getById(cardId).getCardStatus());
         // 注销后不可再注销
-        assertThrows(BizException.class, () -> cardService.revoke(cardId, "x"));
+        assertThrows(BusinessException.class, () -> cardService.revoke(cardId, "x"));
 
         List<EquityCardLog> logs = cardService.listLogs(cardId);
         assertTrue(logs.size() >= 4, "应记录 生成/冻结/解冻/注销 全程");

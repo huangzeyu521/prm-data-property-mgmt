@@ -41,9 +41,9 @@
           <template #default="{ row }">
             <el-progress :percentage="row.progress || 0"
               :status="row.parseStatus==='成功'?'success':(row.parseStatus==='失败'?'exception':undefined)" />
-            <div v-if="row.parseStatus==='解析中'" style="font-size:11px;color:#909399;margin-top:2px">{{ stageText(row.progress) }}</div>
+            <div v-if="row.parseStatus==='解析中'" style="font-size:11px;color:var(--prm-color-text-weak);margin-top:2px">{{ stageText(row.progress) }}</div>
             <el-tooltip v-else-if="row.parseStatus==='失败' && row.failReason" :content="row.failReason" placement="top">
-              <div style="font-size:11px;color:#f56c6c;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ row.failReason }}</div>
+              <div style="font-size:11px;color:var(--prm-color-danger);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ row.failReason }}</div>
             </el-tooltip>
           </template>
         </el-table-column>
@@ -103,7 +103,7 @@
         </el-descriptions-item>
         <el-descriptions-item label="材料可信度">
           <el-tag :type="trustTag(parse.trustLevel)">{{ parse.trustLevel || '—' }}</el-tag>
-          <span v-if="parse.trustScore != null" style="margin-left:6px;color:#909399">{{ parse.trustScore }}/100</span>
+          <span v-if="parse.trustScore != null" style="margin-left:6px;color:var(--prm-color-text-weak)">{{ parse.trustScore }}/100</span>
         </el-descriptions-item>
         <el-descriptions-item label="复核标记">
           <el-tag :type="parse.reviewStatus==='自动通过'?'success':'warning'">{{ parse.reviewStatus || '—' }}</el-tag>
@@ -801,6 +801,6 @@ onMounted(() => {
 
 <style scoped>
 .hash { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: #1e87f0; }
-.locate-doc { max-height: 360px; overflow: auto; white-space: pre-wrap; word-break: break-all; line-height: 1.9; font-size: 13px; padding: 12px 14px; background: #f7f9fc; border: 1px solid #e4e7ed; border-radius: 6px; color: #303133; }
+.locate-doc { max-height: 360px; overflow: auto; white-space: pre-wrap; word-break: break-all; line-height: 1.9; font-size: 13px; padding: 12px 14px; background: #f7f9fc; border: 1px solid #e4e7ed; border-radius: 6px; color: var(--prm-color-text); }
 .locate-mark { background: #ffe08a; color: #ad6800; font-weight: 700; padding: 1px 3px; border-radius: 3px; box-shadow: 0 0 0 2px #ffd666; }
 </style>

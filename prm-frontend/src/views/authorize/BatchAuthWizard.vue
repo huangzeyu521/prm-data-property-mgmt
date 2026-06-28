@@ -23,22 +23,28 @@
           <el-alert v-if="!batchListId" type="info" :closable="false" style="margin-bottom:12px;max-width:680px">
             <template #title>
               第一次用?可
-              <el-button link type="primary" style="vertical-align:baseline" :loading="demoFilling" @click="fillDemo">一键示例:建清单并自动加入3条明细(测试/演示)</el-button>
-              生效卡片自动匹配,材料见 test/批量授权申请
+              <el-button link type="primary" style="vertical-align:baseline" :loading="demoFilling" @click="fillDemo">一键示例:建清单并自动加入可授明细(测试/演示)</el-button>
+              资源池按权益类型过滤,生效卡片自动匹配,材料见 test/批量授权申请
             </template>
           </el-alert>
           <el-form-item label="授权年度" required><el-input v-model="listForm.listYear" placeholder="如 2026" /></el-form-item>
           <el-form-item label="申请主体(被授权方)" required>
             <el-input v-model="listForm.granteeOrg" placeholder="表5/表6 申请单位:本批数据统一授给谁(批量共享,逐条沿用)" clearable />
           </el-form-item>
+          <el-form-item label="联系人/单位主管" required>
+            <el-input v-model="listForm.contactPerson" placeholder="表5 申请单位主管 / 表6 联络人(批量共享)" clearable />
+          </el-form-item>
+          <el-form-item label="联系方式" required>
+            <el-input v-model="listForm.contactInfo" placeholder="表5/表6 联系方式(电话/邮箱)" clearable />
+          </el-form-item>
           <el-divider content-position="left" style="margin:8px 0">
-            <span style="font-size:12px;color:#909399">批量默认(逐条加项时自动带入,可逐项调整)</span>
+            <span style="font-size:12px;color:var(--prm-color-text-weak)">批量默认(逐条加项时自动带入,可逐项调整)</span>
           </el-divider>
           <el-form-item label="默认权益类型(单选)">
             <el-select v-model="listForm.rightType" clearable style="width:100%" placeholder="整批默认权益类型(单选;不同表可逐项调整)">
               <el-option v-for="t in rightTypes" :key="t" :label="t" :value="t" />
             </el-select>
-            <div style="font-size:12px;color:#909399;line-height:1.5;margin-top:2px">
+            <div style="font-size:12px;color:var(--prm-color-text-weak);line-height:1.5;margin-top:2px">
               授权仅授「使用权 / 经营权」两类;数据持有权经确权认定取得,不在授权范围(三权分置)。
             </div>
           </el-form-item>
@@ -56,40 +62,13 @@
 
       <!-- 步骤2:逐条加授权项 -->
       <el-card v-show="step === 1" shadow="never">
-        <!-- DC4 主路径:批量任务首选"目录多选"(勾多张表→套清单头默认+确权带出→一次加入) -->
+        <!-- 唯一录入入口:从确权目录批量选取(资源池已按 先确后授 + 权属可授 + 经营权对外开放 过滤) -->
         <div class="batch-primary">
           <el-button type="primary" size="large" @click="openPicker">① 从确权目录批量选取数据资产</el-button>
           <span class="batch-primary-hint">
-            推荐:勾选多张已确权数据表 → 自动套用清单头默认(被授权方/权益类型/场景/时效/业务域)+ 确权带出(第三方/隐私)→ 一次加入。
+            目录按「选系统 → 选模块 → 选库表」展示,且仅列<b>当前权益类型可授</b>的已确权数据表(经营权另需在对外开放目录);
+            勾选后自动套用清单头默认(被授权方/场景/时效/业务域)+ 确权带出(第三方/隐私),可跨系统累加一次加入。
           </span>
-        </div>
-        <!-- ② AI 批量填单(qwen3-max,stub 回退):一段话解析出共享字段+多条明细 -->
-        <div class="ai-batch">
-          <el-input v-model="aiBatchText" type="textarea" maxlength="500" show-word-limit :rows="2"
-            placeholder="AI 批量填单:如 向南网综合能源股份有限公司授权台区负荷数据、充电桩运营数据、线损分析数据用于综合能源服务,数据加工使用权,批量授权" />
-          <el-button type="primary" :loading="aiParsing" style="margin-top:6px" @click="runAiBatch">大瓦特 AI 解析并预填明细</el-button>
-          <el-button v-if="aiItems.length" type="primary" plain :loading="aiAdding" :disabled="aiAddableCount === 0" style="margin-top:6px;margin-left:8px" @click="addAiItems">
-            一键加入可授 {{ aiAddableCount }} 项{{ aiItems.length > aiAddableCount ? `(跳过未确权 ${aiItems.length - aiAddableCount} 项)` : '' }}
-          </el-button>
-          <AiThinking v-bind="aiThink.state" />
-          <el-table v-if="aiItems.length" :data="aiItems" border size="small" style="margin-top:8px;max-width:760px">
-            <el-table-column prop="assetName" label="解析出的数据资产" min-width="160" />
-            <el-table-column label="权益卡片ID" min-width="150">
-              <template #default="{ row }"><el-input v-model="row.equityCardId" size="small" placeholder="先确后授:填卡片ID" /></template>
-            </el-table-column>
-            <el-table-column label="状态" width="150" align="center">
-              <template #default="{ row }">
-                <el-tag v-if="row.equityCardId" type="success" size="small" effect="light">可加入</el-tag>
-                <template v-else>
-                  <el-tag type="warning" size="small" effect="light">未确权</el-tag>
-                  <el-button link type="primary" size="small" style="margin-left:6px" @click="goConfirm(row)">去确权</el-button>
-                </template>
-              </template>
-            </el-table-column>
-          </el-table>
-          <div v-if="aiItems.length && aiItems.length > aiAddableCount" style="margin-top:4px;color:#e6a23c;font-size:12px">
-            未确权项不能授权(先确后授):点「去确权」完成确权生成生效卡片后,回来重新解析即可加入;无需为其手填卡片ID。
-          </div>
         </div>
         <div v-if="requiredChecklist.length" style="margin:8px 0 4px">
           <div style="font-weight:600;margin-bottom:8px">应交材料清单（按全单授权项自动判定）— 请按下表逐项上传</div>
@@ -114,74 +93,66 @@
               </template>
             </el-table-column>
           </el-table>
-          <div style="margin-top:6px;color:#909399;font-size:12px">必填项须上传;"视情况"项按全单是否涉第三方/隐私商密上传。</div>
+          <div style="margin-top:6px;color:var(--prm-color-text-weak);font-size:12px">必填项须上传;"视情况"项按全单是否涉第三方/隐私商密上传。</div>
         </div>
-        <el-divider content-position="left">
-          <span style="font-size:13px;color:#909399">③ 逐条补充 / 微调(可选;单条精确控制)</span>
+        <el-divider content-position="left" style="margin-top:4px">
+          <span style="font-size:13px;color:var(--prm-color-text-weak)">已加入明细(数据表 × 权益,清单头默认逐条沿用)</span>
         </el-divider>
-        <el-row :gutter="16">
-          <el-col :span="11">
-            <el-form ref="itemRef" :model="item" :rules="itemRules" label-width="130px">
-              <el-form-item label="关联数据资产卡片" prop="assetId">
-                <el-select v-model="item.assetId" filterable remote clearable
-                  :remote-method="searchAssets" :loading="assetSearching" style="width:100%"
-                  placeholder="搜索已确权资产(名称/卡片号)选取,先确后授" @change="onItemAssetPicked">
-                  <el-option v-for="a in assetOpts" :key="a.assetId" :value="a.assetId" :label="a.assetName || a.assetId">
-                    <span>{{ a.assetName || a.assetId }}</span><span style="float:right;color:#8a8a8a;font-size:12px">{{ a.cardNo }}</span>
-                  </el-option>
-                </el-select>
-              </el-form-item>
-              <el-divider content-position="left" style="margin:6px 0">
-                <span style="font-size:12px;color:#909399">数据信息(第三方/隐私 由确权带出,跨域自判)</span>
-              </el-divider>
-              <el-form-item label="数据表(资产名)" prop="assetName"><el-input v-model="item.assetName" readonly placeholder="选取卡片后自动带出" /></el-form-item>
-              <el-form-item label="所属系统"><el-input v-model="item.systemName" readonly placeholder="选取资产后自动带出" /></el-form-item>
-              <el-form-item label="模式"><el-input v-model="item.schemaName" readonly placeholder="选取资产后自动带出" /></el-form-item>
-              <el-form-item label="生效权益卡片" prop="equityCardId"><el-input v-model="item.equityCardId" readonly placeholder="选取资产后自动匹配生效卡片(先确后授)" /></el-form-item>
-              <el-form-item label="第三方来源"><el-input v-model="item.thirdPartySource" readonly placeholder="选取资产后由确权记录自动带出(不涉及则空)" /></el-form-item>
-              <el-form-item label="隐私/商密"><el-input v-model="item.sensitiveType" readonly placeholder="选取资产后由确权记录自动带出" /></el-form-item>
-              <el-form-item label="是否跨域"><el-switch v-model="item.crossRegion" /></el-form-item>
-              <el-divider content-position="left" style="margin:6px 0">
-                <span style="font-size:12px;color:#909399">授权内容(默认取清单头,可调)</span>
-              </el-divider>
-              <el-form-item label="权益类型(单选)" prop="rightType">
-                <el-select v-model="item.rightType" style="width:100%" placeholder="单选(表5/表6:权益名称选一个)">
-                  <el-option v-for="t in rightTypes" :key="t" :label="t" :value="t" />
-                </el-select>
-              </el-form-item>
-              <el-form-item label="使用场景及目的"><el-input v-model="item.scenario" /></el-form-item>
-              <el-form-item label="授权时效">
-                <el-select v-model="item.validTerm" style="width:100%" placeholder="默认两年(时长)">
-                  <el-option v-for="t in validTerms" :key="t" :label="t" :value="t" />
-                </el-select>
-                <div style="font-size:12px;color:#909399;line-height:1.5;margin-top:2px">
-                  映射到期日(预期):{{ expiryOf(item.validTerm) ? expiryOf(item.validTerm).slice(0,10) : '—' }};协议签订时按附录D最终落定
-                </div>
-              </el-form-item>
-              <el-form-item>
-                <el-button type="primary" :loading="adding" @click="addItem">加入这一条</el-button>
-                <span style="margin-left:10px;color:#c0c4cc;font-size:12px">批量请用上方「① 目录批量选取」</span>
-              </el-form-item>
-            </el-form>
-          </el-col>
-          <el-col :span="13">
-            <div class="prm-table-note" style="margin-bottom:6px">已加入明细({{ items.length }} 项)</div>
-            <el-table :data="items" border size="small" max-height="420">
-              <el-table-column type="index" label="#" width="44" align="center" />
-              <el-table-column prop="assetName" label="数据表" min-width="120" show-overflow-tooltip />
-              <el-table-column prop="rightType" label="权益" width="130" />
-              <el-table-column prop="scenario" label="使用场景" min-width="120" show-overflow-tooltip>
-                <template #default="{ row }">{{ row.scenario || '—' }}</template>
-              </el-table-column>
-              <el-table-column label="操作" width="70" align="center">
-                <template #default="{ row, $index }">
-                  <el-button link type="danger" size="small" @click="removeItem(row, $index)">删除</el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-            <el-empty v-if="items.length===0" :image-size="60" description="尚未添加授权项" />
-          </el-col>
-        </el-row>
+        <div class="prm-table-note" style="margin-bottom:6px">已加入明细({{ items.length }} 项)</div>
+        <!-- 表6「是否跨系统域、跨地域」:批量可跨多系统,按已加入项自动判定(只读) -->
+        <el-alert v-if="items.length" :type="crossSystemInfo.isCross ? 'warning' : 'info'" :closable="false" style="margin-bottom:8px;max-width:880px">
+          <template #title>
+            <span>是否跨系统域:</span>
+            <el-tag :type="crossSystemInfo.isCross ? 'warning' : 'info'" size="small" effect="dark" style="margin:0 6px">{{ crossSystemInfo.isCross ? '是(跨系统域)' : '否(单系统)' }}</el-tag>
+            本清单覆盖 {{ crossSystemInfo.systems.length }} 个系统{{ crossSystemInfo.systems.length ? '(' + crossSystemInfo.systems.join('、') + ')' : '' }};批量授权可跨多系统聚合(表6 专设此判定),已自动写入各授权项。
+          </template>
+        </el-alert>
+        <el-table :data="items" border size="small" max-height="420">
+          <el-table-column type="index" label="#" width="44" align="center" />
+          <el-table-column prop="assetName" label="数据表" min-width="140" show-overflow-tooltip />
+          <el-table-column prop="systemName" label="所属系统" min-width="120" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.systemName || '—' }}</template>
+          </el-table-column>
+          <el-table-column prop="schemaName" label="模式名称" min-width="110" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.schemaName || '—' }}</template>
+          </el-table-column>
+          <el-table-column prop="businessDomain" label="业务域" min-width="100" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.businessDomain || '—' }}</template>
+          </el-table-column>
+          <el-table-column prop="rightType" label="权益" width="140" />
+          <el-table-column prop="equityCardId" label="生效卡片" min-width="120" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.equityCardId || '—' }}</template>
+          </el-table-column>
+          <el-table-column prop="scenario" label="使用场景" min-width="120" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.scenario || '—' }}</template>
+          </el-table-column>
+          <!-- 表6 合规判定列:第三方/隐私商密 由确权事实带出(只读,堵人工低报);跨域按全清单系统并集判定 -->
+          <el-table-column label="涉第三方" width="92" align="center">
+            <template #default="{ row }">
+              <el-tag :type="row.thirdPartySource && String(row.thirdPartySource).trim() ? 'warning' : 'info'" size="small" effect="plain">
+                {{ row.thirdPartySource && String(row.thirdPartySource).trim() ? '涉' : '否' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="涉隐私/商密" width="104" align="center">
+            <template #default="{ row }">
+              <el-tag :type="row.sensitiveType && String(row.sensitiveType).trim() && row.sensitiveType !== '无' ? 'danger' : 'info'" size="small" effect="plain">
+                {{ row.sensitiveType && String(row.sensitiveType).trim() && row.sensitiveType !== '无' ? row.sensitiveType : '否' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="跨域" width="72" align="center">
+            <template #default>
+              <el-tag :type="crossSystemInfo.isCross ? 'warning' : 'info'" size="small" effect="plain">{{ crossSystemInfo.isCross ? '是' : '否' }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="70" align="center">
+            <template #default="{ row, $index }">
+              <el-button link type="danger" size="small" @click="removeItem(row, $index)">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+        <el-empty v-if="items.length===0" :image-size="60" description="尚未添加授权项 — 点上方「① 从确权目录批量选取数据资产」" />
       </el-card>
 
       <!-- 步骤3:提交清单审批 -->
@@ -198,14 +169,14 @@
           </el-button>
         </div>
         <!-- 次要:AI 辅助(可选,不影响提交门禁) -->
-        <div style="text-align:center;margin:4px 0 0;color:#909399;font-size:12px">
+        <div style="text-align:center;margin:4px 0 0;color:var(--prm-color-text-weak);font-size:12px">
           AI 辅助(可选,不影响提交):
           <el-button link type="primary" :loading="listReviewing" @click="runListPreReview">AI 清单预审(qwen3-max)</el-button>
         </div>
         <AiThinking v-bind="aiThink.state" />
         <!-- 统一待处理清单(单一闭环):被拦明细逐项「去修正」(回 step1)→ 重新一键校验,直至通过 -->
         <el-card v-if="complianceResult && !complianceResult.allPass && complianceResult.blocked.length" shadow="never" style="margin-top:12px;border:1px solid #fde2e2;background:#fff8f8">
-          <div style="font-weight:600;color:#f56c6c;margin-bottom:8px">需处理以下 {{ complianceResult.blocked.length }} 项后方可提交(处理完点上方「重新一键校验」)</div>
+          <div style="font-weight:600;color:var(--prm-color-danger);margin-bottom:8px">需处理以下 {{ complianceResult.blocked.length }} 项后方可提交(处理完点上方「重新一键校验」)</div>
           <el-table :data="complianceResult.blocked" border size="small">
             <el-table-column label="来源" width="76" align="center"><template #default><el-tag type="danger" size="small">合规</el-tag></template></el-table-column>
             <el-table-column prop="assetName" label="数据资产" min-width="180" show-overflow-tooltip />
@@ -241,20 +212,16 @@
       <el-button v-else-if="step === 2" type="primary" :loading="submitting" @click="doSubmit">提交审批</el-button>
     </PageActions>
 
-    <!-- 从目录多选资产 -->
-    <el-dialog v-model="pickerDlg" title="从确权目录多选数据资产" width="560px" align-center>
+    <!-- 从确权目录多选资产(资源池:先确后授 + 权属可授 + 经营权对外开放,展示对齐确权范围树) -->
+    <el-dialog v-model="pickerDlg" title="从确权目录批量选取数据资产" width="600px" align-center>
       <el-alert type="info" :closable="false" style="margin-bottom:10px">
-        勾选多个数据集，统一加入清单。被授权方取清单头(批量共享)，权益类型/场景/时效取清单头默认(可逐条调整)。
+        仅列「{{ listForm.rightType || '所选权益' }}」可授的已确权数据表(有生效权益卡片{{ listForm.rightType === '数据产品经营权' ? ' + 在对外开放目录' : '' }});
+        被授权方/场景/时效取清单头(批量共享),勾选多个可跨系统累加一次加入。
       </el-alert>
-      <el-tree ref="pickTreeRef" :data="tree" :props="{ label: 'label', children: 'children' }" node-key="id"
-        show-checkbox default-expand-all style="max-height:380px;overflow:auto">
-        <template #default="{ data }">
-          <span>{{ data.label }}</span>
-          <span v-if="data.assetId" style="color:#909399;font-size:12px;margin-left:8px">{{ data.assetId }} · {{ data.confirmStatus }}</span>
-        </template>
-      </el-tree>
+      <GrantableCatalogTree v-if="pickerDlg" :right-type="listForm.rightType" @change="onPickChange" />
       <template #footer>
-        <el-button type="primary" :loading="picking" @click="confirmPick">加入选中资产</el-button>
+        <span style="float:left;color:var(--prm-color-text-weak);font-size:12px;line-height:32px">已勾选 {{ pickedLeaves.length }} 张数据表</span>
+        <el-button type="primary" :loading="picking" :disabled="!pickedLeaves.length" @click="confirmPick">加入选中资产</el-button>
         <el-button @click="pickerDlg=false">取消</el-button>
       </template>
     </el-dialog>
@@ -265,15 +232,15 @@
 import { reactive, ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { createBatchList, saveAuthDraft, deleteAuthApply, submitBatchList, aiBatchIntent, aiBatchPreReview, listAuthMaterialRules, checkBatchCompliance, uploadAuthMaterialFile, listAuthMaterial, authMaterialFileUrl } from '@/api/authorize'
+import { createBatchList, saveAuthDraft, deleteAuthApply, submitBatchList, aiBatchPreReview, listAuthMaterialRules, checkBatchCompliance, uploadAuthMaterialFile, listAuthMaterial, authMaterialFileUrl } from '@/api/authorize'
 import { openFilePreview } from '@/composables/useFilePreview'
 import AiThinking from '@/components/AiThinking.vue'
 import PageActions from '@/components/PageActions.vue'
+import GrantableCatalogTree from './GrantableCatalogTree.vue'
 import { useAiThinking } from '@/composables/useAiThinking'
 import { AI_PHASES } from '@/lib/aiPhases'
 const aiThink = useAiThinking()
 import { pageEquityCard, getRightsFacts } from '@/api/confirm'
-import { getPropertyTree, getAsset } from '@/api/ledger'
 
 const router = useRouter()
 const rightTypes = ['数据加工使用权', '数据产品经营权']
@@ -290,35 +257,24 @@ function expiryOf(term) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
 }
 const step = ref(0)
-const creating = ref(false); const adding = ref(false); const submitting = ref(false)
+const creating = ref(false); const submitting = ref(false)
 const batchListId = ref(''); const listNo = ref('')
 const items = ref([])
-const itemRef = ref()
-// 清单头(批量级):被授权方为批量共享;权益类型/场景/时效为整批默认,逐条加项时带入可调
-const listForm = reactive({ listYear: '', granteeOrg: '', rightType: '', scenario: '', validTerm: '两年', businessDomain: '', remark: '' })
-const item = reactive(emptyItem())
-const itemRules = {
-  assetId: [{ required: true, message: '请输入资产ID', trigger: 'blur' }],
-  assetName: [{ required: true, message: '请输入资产名称', trigger: 'blur' }],
-  equityCardId: [{ required: true, message: '先确后授:必须引用权益卡片', trigger: 'blur' }],
-  rightType: [{ required: true, message: '请选择权益类型', trigger: 'change' }]
-}
+// 清单头(批量级):被授权方为批量共享;权益类型/场景/时效为整批默认,加项时带入(资源池按权益类型过滤)
+const listForm = reactive({ listYear: '', granteeOrg: '', contactPerson: '', contactInfo: '', rightType: '', scenario: '', validTerm: '两年', businessDomain: '', remark: '' })
 function emptyItem() {
-  return { assetId: '', assetName: '', systemName: '', schemaName: '', equityCardId: '', granteeOrg: '', rightType: '', scenario: '', validTerm: '两年', validDate: '', businessDomain: '', thirdPartySource: '', sensitiveType: '', crossRegion: false }
+  return { assetId: '', assetName: '', tableCode: '', systemName: '', schemaName: '', equityCardId: '', granteeOrg: '', rightType: '', scenario: '', validTerm: '两年', validDate: '', businessDomain: '', thirdPartySource: '', sensitiveType: '', crossRegion: false, applicantManager: '', contactInfo: '' }
 }
-// 重置明细表单:清空数据信息,授权内容(被授权方/权益类型/场景/时效)默认取清单头
-function resetItem() {
-  Object.assign(item, emptyItem(), {
-    granteeOrg: listForm.granteeOrg,
-    rightType: listForm.rightType,
-    scenario: listForm.scenario,
-    validTerm: listForm.validTerm || '两年',
-    businessDomain: listForm.businessDomain
-  })
-}
-// 去重键:被授权方批量恒定,故行唯一性=数据表+权益类型+场景(对齐表4/表6:同表可多权益/多场景,三者全同才是真重复)
+// 表6「是否跨系统域、跨地域」:批量可跨多系统 → 按清单已加入项的系统/业务域去重自动判定(只读呈现 + 写回 crossRegion)
+const crossSystemInfo = computed(() => {
+  const systems = [...new Set(items.value.map(x => x.systemName).filter(Boolean))]
+  const domains = [...new Set(items.value.map(x => x.businessDomain).filter(Boolean))]
+  return { systems, domains, isCross: systems.length > 1 || domains.length > 1 }
+})
+// 去重键:被授权方批量恒定,故行唯一性=库表+权益类型+场景(对齐表4/表6:同表可多权益/多场景,三者全同才是真重复)。
+// 注:权益卡片库表级后 assetId=SYS:系统(同系统多库表共享),故须并入 tableCode/库表名 区分,避免同系统不同库表被误判重复。
 function dupKey(x) {
-  return `${x.assetId || x.assetName}|${x.rightType || ''}|${(x.scenario || '').trim()}`
+  return `${x.assetId || ''}|${x.tableCode || x.assetName || ''}|${x.rightType || ''}|${(x.scenario || '').trim()}`
 }
 
 // 应交材料清单由后端可配置规则(单一真源·场景批量)生成;规则不可用时回退内置默认,保证申请人永远看得到"该传哪些材料"
@@ -332,7 +288,7 @@ const FALLBACK_RULES = [
   { triggerType: 'SENSITIVE', materialName: '信息授权协议', required: '视情况', detail: '清单中任一授权项涉及个人隐私或商业秘密时必须提供:相应的信息授权协议附件(如个人隐私授权协议范本)' }
 ]
 const requiredChecklist = computed(() => {
-  const all = [...items.value, item]
+  const all = items.value
   const tp = all.some(x => x.thirdPartySource && String(x.thirdPartySource).trim())
   const sv = all.some(x => x.sensitiveType && String(x.sensitiveType).trim() && x.sensitiveType !== '无')
   const hit = (r) => r.triggerType === 'ALWAYS'
@@ -403,6 +359,9 @@ async function runComplianceCheck() {
 async function next0() {
   if (!listForm.listYear) { ElMessage.warning('请填写授权年度'); return }
   if (!listForm.granteeOrg) { ElMessage.warning('请填写被授权方(本批数据统一授给谁)'); return }
+  if (!listForm.contactPerson) { ElMessage.warning('请填写联系人/申请单位主管(表5/表6 必填)'); return }
+  if (!listForm.contactInfo) { ElMessage.warning('请填写联系方式(表5/表6 必填)'); return }
+  if (!listForm.rightType) { ElMessage.warning('请选择默认权益类型(确权目录资源池按权益类型过滤可授数据表)'); return }
   if (!batchListId.value) {
     creating.value = true
     try {
@@ -410,120 +369,52 @@ async function next0() {
       listNo.value = listForm.listYear + ' 批量授权清单'
     } finally { creating.value = false }
   }
-  resetItem() // 进入逐条加项:用清单头默认预填明细
   step.value = 1
 }
 
-// 从目录多选资产批量加入清单
-const pickerDlg = ref(false); const picking = ref(false); const tree = ref([]); const pickTreeRef = ref()
+// 唯一录入入口:从确权目录资源池多选(先确后授 + 权属可授 + 经营权对外开放,已在树侧过滤)
+const pickerDlg = ref(false); const picking = ref(false); const pickedLeaves = ref([])
 async function openPicker() {
   if (!listForm.granteeOrg) { ElMessage.warning('请先在步骤1清单头填写"被授权方"(批量共享)'); return }
-  if (!item.rightType && !listForm.rightType) { ElMessage.warning('请先选择"权益类型"(可在清单头设默认或左侧明细选)'); return }
-  if (!tree.value.length) tree.value = await getPropertyTree() || []
+  if (!listForm.rightType) { ElMessage.warning('请先在清单头选择"权益类型"(资源池据此过滤可授数据表)'); return }
+  pickedLeaves.value = []
   pickerDlg.value = true
 }
+// 资源池树勾选回传(每个叶子带 assetId/equityCardId/rightType/系统/模块)
+function onPickChange(leaves) { pickedLeaves.value = leaves || [] }
 async function confirmPick() {
-  const leaves = pickTreeRef.value.getCheckedNodes().filter(n => n.type === 'DATASET' && n.assetId)
-  if (!leaves.length) { ElMessage.warning('请至少勾选一个数据集'); return }
+  if (!pickedLeaves.value.length) { ElMessage.warning('请至少勾选一张数据表'); return }
   picking.value = true
   try {
-    await loadCards()
     let ok = 0
-    const skipped = []
     const dups = []
     const seen = new Set(items.value.map(dupKey))
-    for (const lf of leaves) {
-      // 先确后授:自动匹配生效权益卡片,无卡项跳过并提示(后端会拦截空卡)
-      const card = findUsableCard(lf.assetId)
-      if (!card) { skipped.push(lf.label || lf.assetId); continue }
+    // 跨系统域自动判定:并入本批所选系统后,清单是否跨 >1 系统/业务域(写回每条 crossRegion)
+    const sysUnion = new Set([...items.value.map(x => x.systemName).filter(Boolean),
+      ...pickedLeaves.value.map(l => l.systemName).filter(Boolean)])
+    const isCross = sysUnion.size > 1
+    for (const lf of pickedLeaves.value) {
       const f = await deriveFacts(lf.assetId)
-      const it = { ...emptyItem(), assetId: lf.assetId, assetName: lf.label, equityCardId: card,
-        granteeOrg: listForm.granteeOrg, rightType: item.rightType || listForm.rightType,
-        scenario: item.scenario || listForm.scenario, validDate: expiryOf(item.validTerm || listForm.validTerm),
-        businessDomain: listForm.businessDomain, thirdPartySource: f.thirdPartySource, sensitiveType: f.sensitiveType }
+      const it = { ...emptyItem(), assetId: lf.assetId, assetName: lf.assetName, tableCode: lf.tableCode,
+        systemName: lf.systemName, schemaName: lf.schemaName, equityCardId: lf.equityCardId,
+        granteeOrg: listForm.granteeOrg, rightType: lf.rightType || listForm.rightType,
+        scenario: listForm.scenario, validDate: expiryOf(listForm.validTerm),
+        businessDomain: lf.businessDomain || f.businessDomain || listForm.businessDomain,
+        thirdPartySource: f.thirdPartySource, sensitiveType: f.sensitiveType,
+        crossRegion: isCross, applicantManager: listForm.contactPerson, contactInfo: listForm.contactInfo }
       const k = dupKey(it)
-      if (seen.has(k)) { dups.push(lf.label || lf.assetId); continue } // 同表+权益+场景已在清单,去重
+      if (seen.has(k)) { dups.push(lf.assetName); continue } // 同表+权益+场景已在清单,去重
       seen.add(k)
       const id = await saveAuthDraft({ authMode: '批量', batchListId: batchListId.value, ...it })
       items.value.push({ ...it, applyId: id })
       ok++
     }
-    ElMessage[(skipped.length || dups.length) ? 'warning' : 'success'](
-      `已加入 ${ok} 项(生效卡自动匹配)`
-      + (skipped.length ? `;跳过未确权 ${skipped.length} 项:${skipped.slice(0, 3).join('、')}` : '')
+    ElMessage[dups.length ? 'warning' : 'success'](
+      `已加入 ${ok} 项(资源池均已确权+权属可授,生效卡自动带入)`
       + (dups.length ? `;跳过重复 ${dups.length} 项:${dups.slice(0, 3).join('、')}` : ''))
     pickerDlg.value = false
+    pickedLeaves.value = []
   } finally { picking.value = false }
-}
-
-// AI 批量填单(qwen3-max,stub 回退)
-const aiBatchText = ref(''); const aiParsing = ref(false); const aiItems = ref([]); const aiAdding = ref(false)
-// 可加入条数(有生效卡=已确权);未确权项不计入,按钮与提示按此显示
-const aiAddableCount = computed(() => aiItems.value.filter(x => x.equityCardId).length)
-const aiShared = ref({ granteeOrg: '', rightType: '', scenario: '' })
-async function runAiBatch() {
-  if (!aiBatchText.value) { ElMessage.warning('请先描述批量授权诉求'); return }
-  aiParsing.value = true
-  try {
-    const raw = await aiThink.run(() => aiBatchIntent(aiBatchText.value),
-      { phases: AI_PHASES.batchIntent, title: '大模型解析批量诉求中' })
-    const r = typeof raw === 'string' ? JSON.parse(raw) : raw
-    aiShared.value = { granteeOrg: r.granteeOrg || '', rightType: r.rightType || '', scenario: r.scenario || '' }
-    // 共享字段回填清单头(批量级),并同步当前明细默认
-    if (r.granteeOrg) listForm.granteeOrg = r.granteeOrg
-    if (r.rightType) listForm.rightType = r.rightType
-    if (r.scenario) listForm.scenario = r.scenario
-    Object.assign(item, { granteeOrg: r.granteeOrg || item.granteeOrg, rightType: r.rightType || item.rightType, scenario: r.scenario || item.scenario })
-    const parsed = []
-    await loadCards()
-    for (const x of (r.items || [])) {
-      const asset = await resolveAssetByName(x.assetName)
-      const card = asset ? findUsableCard(asset.assetId) : ''
-      parsed.push({ assetName: x.assetName, assetId: asset ? asset.assetId : x.assetName, equityCardId: card })
-    }
-    aiItems.value = parsed
-    const matched = parsed.filter(x => x.equityCardId).length
-    ElMessage.success(`AI 解析 ${parsed.length} 条,已自动匹配生效卡片 ${matched} 条` + (matched < parsed.length ? ',其余请补卡片ID' : ',可直接一键加入'))
-  } catch (e) { ElMessage.warning('AI 解析失败:' + (e?.message || '')) }
-  finally { aiParsing.value = false }
-}
-// 未确权项去确权(一站式):带资产名/ID 跳转确权向导,完成确权生成生效卡片后回来重新解析即可加入
-function goConfirm(row) {
-  router.push({ path: '/dpr/confirm/wizard', query: { assetId: row.assetId || '', assetName: row.assetName || '' } })
-}
-// 部分加入(对齐"目录多选"):有生效卡的加入,未确权(无卡)的跳过并保留可见,不再"全有或全无"卡死
-async function addAiItems() {
-  const addable = aiItems.value.filter(x => x.equityCardId)
-  const skipped = aiItems.value.filter(x => !x.equityCardId)
-  if (!addable.length) {
-    ElMessage.warning('无可加入项:所选数据资产均未确权(无生效权益卡片)。请先完成确权(先确后授)')
-    return
-  }
-  aiAdding.value = true
-  try {
-    let ok = 0
-    const dups = []
-    const seen = new Set(items.value.map(dupKey))
-    for (const x of addable) {
-      const f = await deriveFacts(x.assetId || x.assetName)
-      const it = { ...emptyItem(), assetId: x.assetId || x.assetName, assetName: x.assetName, equityCardId: x.equityCardId,
-        granteeOrg: aiShared.value.granteeOrg || listForm.granteeOrg, rightType: aiShared.value.rightType || listForm.rightType,
-        scenario: aiShared.value.scenario || listForm.scenario, validDate: expiryOf(listForm.validTerm),
-        businessDomain: listForm.businessDomain, thirdPartySource: f.thirdPartySource, sensitiveType: f.sensitiveType }
-      const k = dupKey(it)
-      if (seen.has(k)) { dups.push(x.assetName); continue } // 同表+权益+场景已在清单,去重
-      seen.add(k)
-      const id = await saveAuthDraft({ authMode: '批量', batchListId: batchListId.value, ...it })
-      items.value.push({ ...it, applyId: id })
-      ok++
-    }
-    ElMessage[(skipped.length || dups.length) ? 'warning' : 'success'](
-      `已加入 ${ok} 项`
-      + (skipped.length ? `;跳过未确权 ${skipped.length} 项:${skipped.map(s => s.assetName).slice(0, 3).join('、')} — 请先完成确权再授权` : '')
-      + (dups.length ? `;跳过重复 ${dups.length} 项:${dups.slice(0, 3).join('、')}` : ''))
-    // 已加入的清掉,仅保留未确权项可见,引导用户去确权
-    aiItems.value = skipped
-  } finally { aiAdding.value = false }
 }
 
 // AI 清单预审(qwen3-max,stub 回退)
@@ -537,92 +428,54 @@ async function runListPreReview() {
   finally { listReviewing.value = false }
 }
 
-// 自动配卡引擎:台账搜索 + 按资产匹配生效权益卡片(先确后授),贯穿手填/目录多选/AI 三条录入通道
+// 自动配卡引擎:按资产匹配生效权益卡片(先确后授 + 权属可授:卡片权益==所选权益)。供一键示例配卡。
 const CARD_OK = ['正常', '生效']
-const assetOpts = ref([])
-const assetSearching = ref(false)
 const cardOpts = ref([])
 let cardsLoaded = false
 async function loadCards() {
   if (cardsLoaded) return
-  const r = await pageEquityCard({ current: 1, size: 200 })
+  const r = await pageEquityCard({ current: 1, size: 500 })
   cardOpts.value = r.records || []
   cardsLoaded = true
 }
-function findUsableCard(assetId) {
-  const c = cardOpts.value.find(x => x.assetId === assetId && CARD_OK.includes(x.cardStatus))
+// 权属可授:仅返回"卡片权益类型 == 指定权益类型"的生效卡片号(授权只授使用权/经营权)
+function findUsableCard(assetId, right) {
+  const c = cardOpts.value.find(x => x.assetId === assetId && CARD_OK.includes(x.cardStatus) && (!right || x.rightType === right))
   return c ? (c.cardNo || c.cardId) : ''
-}
-// 选择源=已确权资产(可用权益卡片),扣住先确后授;不再搜台账、不再手填
-async function searchAssets(kw) {
-  assetSearching.value = true
-  try {
-    await loadCards()
-    const k = (kw || '').trim()
-    const seen = new Set()
-    assetOpts.value = cardOpts.value
-      .filter(c => CARD_OK.includes(c.cardStatus))
-      .filter(c => !k || (c.assetName || '').includes(k) || (c.assetId || '').includes(k) || (c.cardNo || '').includes(k))
-      .filter(c => { if (seen.has(c.assetId)) return false; seen.add(c.assetId); return true })
-      .map(c => ({ assetId: c.assetId, assetName: c.assetName, cardNo: c.cardNo }))
-      .slice(0, 20)
-  } finally { assetSearching.value = false }
 }
 // 确权信息带出:按资产取最新已完成确权的第三方来源/隐私商密事实(只读,堵人工低报)
 async function deriveFacts(assetId) {
   try {
     const f = await getRightsFacts(assetId)
-    return { thirdPartySource: f?.thirdPartySource || '', sensitiveType: f?.sensitiveType || '无' }
-  } catch { return { thirdPartySource: '', sensitiveType: '无' } }
-}
-async function onItemAssetPicked(id) {
-  const hit = assetOpts.value.find(a => a.assetId === id)
-  if (hit) item.assetName = hit.assetName
-  if (!id) { item.systemName = ''; item.schemaName = ''; item.thirdPartySource = ''; item.sensitiveType = ''; return }
-  await loadCards()
-  const card = findUsableCard(id)
-  if (card) { item.equityCardId = card; ElMessage.success('已自动带出生效权益卡片 ' + card) }
-  else ElMessage.warning('该资产暂无生效权益卡片,请先完成确权(先确后授)')
-  // 确权带出:第三方来源/隐私商密(只读)
-  const f = await deriveFacts(id)
-  item.thirdPartySource = f.thirdPartySource
-  item.sensitiveType = f.sensitiveType
-  // 资产带出:所属系统/模式(只读,表5/表6 数据信息)
-  try {
-    const a = await getAsset(id)
-    item.systemName = a?.systemName || ''
-    item.schemaName = a?.schemaName || ''
-  } catch { item.systemName = ''; item.schemaName = '' }
-}
-async function resolveAssetByName(name) {
-  await loadCards()
-  const usable = cardOpts.value.filter(c => CARD_OK.includes(c.cardStatus))
-  const c = usable.find(x => x.assetName === name) || usable.find(x => (x.assetName || '').includes(name))
-  return c ? { assetId: c.assetId, assetName: c.assetName } : null
+    return { thirdPartySource: f?.thirdPartySource || '', sensitiveType: f?.sensitiveType || '无', businessDomain: f?.businessDomain || '' }
+  } catch { return { thirdPartySource: '', sensitiveType: '无', businessDomain: '' } }
 }
 
-// 一键示例:建清单+3条明细全自动(生效卡自动匹配,对齐 test/批量授权申请 手册)
+// 一键示例:建清单 + 自动加入可授明细(对齐资源池过滤:使用权下仅 AST-002 台区负荷数据有匹配生效卡片)
 const demoFilling = ref(false)
 async function fillDemo() {
   demoFilling.value = true
   try {
     listForm.listYear = '2026'
     listForm.granteeOrg = '南网综合能源股份有限公司'
+    listForm.contactPerson = '张三'
+    listForm.contactInfo = '020-31000000'
     listForm.rightType = '数据加工使用权'
     listForm.scenario = '综合能源服务'
     listForm.remark = '综能板块年度批量授权(示例)'
     await next0()
     await loadCards()
-    const demo = [['AST-001', '客户用电信息表'], ['AST-002', '台区负荷数据'], ['AST-006', '充电桩运营数据']]
+    const demo = [['AST-002', '台区负荷数据', '计量系统']]
     let ok = 0
     const seen = new Set(items.value.map(dupKey))
-    for (const [aid, name] of demo) {
-      const card = findUsableCard(aid)
+    for (const [aid, name, sys] of demo) {
+      const card = findUsableCard(aid, listForm.rightType) // 权属可授:卡片权益须==所选权益
       if (!card) continue
       const f = await deriveFacts(aid)
-      const it = { ...emptyItem(), assetId: aid, assetName: name, equityCardId: card,
+      const it = { ...emptyItem(), assetId: aid, assetName: name, systemName: sys, equityCardId: card,
         granteeOrg: listForm.granteeOrg, rightType: listForm.rightType, scenario: listForm.scenario, validDate: expiryOf(listForm.validTerm),
-        businessDomain: listForm.businessDomain, thirdPartySource: f.thirdPartySource, sensitiveType: f.sensitiveType }
+        businessDomain: listForm.businessDomain, thirdPartySource: f.thirdPartySource, sensitiveType: f.sensitiveType,
+        applicantManager: listForm.contactPerson, contactInfo: listForm.contactInfo }
       const k = dupKey(it)
       if (seen.has(k)) continue // 去重:同表+权益+场景已在清单
       seen.add(k)
@@ -630,24 +483,8 @@ async function fillDemo() {
       items.value.push({ ...it, applyId: id })
       ok++
     }
-    ElMessage.success(`示例完成:清单已建,自动加入 ${ok} 条明细(生效卡已配),可直接"提交清单审批"`)
+    ElMessage.success(`示例完成:清单已建,自动加入 ${ok} 条可授明细(生效卡已配),可直接"提交清单审批"`)
   } finally { demoFilling.value = false }
-}
-
-async function addItem() {
-  await itemRef.value.validate()
-  if (items.value.some(y => dupKey(y) === dupKey(item))) {
-    ElMessage.warning(`「${item.assetName}」(同权益+场景)已在清单中,未重复加入`)
-    return
-  }
-  adding.value = true
-  try {
-    item.validDate = expiryOf(item.validTerm) // 时长→预期到期日(映射存储)
-    const id = await saveAuthDraft({ authMode: '批量', batchListId: batchListId.value, ...item })
-    items.value.push({ ...item, applyId: id })
-    resetItem()
-    ElMessage.success('已加入清单')
-  } finally { adding.value = false }
 }
 
 // 删行:从清单移除一条授权项(草稿态,删后端 + 移本地);加错/重复项可撤掉
@@ -670,9 +507,8 @@ async function doSubmit() {
 
 function go(p) { router.push(p) }
 function reset() {
-  step.value = 0; batchListId.value = ''; listNo.value = ''; items.value = []
-  Object.assign(listForm, { listYear: '', granteeOrg: '', rightType: '', scenario: '', validTerm: '两年', businessDomain: '', remark: '' })
-  Object.assign(item, emptyItem())
+  step.value = 0; batchListId.value = ''; listNo.value = ''; items.value = []; pickedLeaves.value = []
+  Object.assign(listForm, { listYear: '', granteeOrg: '', contactPerson: '', contactInfo: '', rightType: '', scenario: '', validTerm: '两年', businessDomain: '', remark: '' })
 }
 </script>
 
@@ -681,5 +517,5 @@ function reset() {
 .wz-body { min-height: 340px; }
 .wz-flow { background: #f7f9ff; border-radius: 8px; padding: 10px 16px; color: #4a5160; font-size: 13px; display: inline-block; }
 .batch-primary { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 16px; margin-bottom: 14px; background: linear-gradient(180deg, #eef4ff, #f7faff); border: 1px solid #d6e4ff; border-radius: 8px; }
-.batch-primary-hint { color: #606266; font-size: 13px; line-height: 1.5; flex: 1; min-width: 240px; }
+.batch-primary-hint { color: var(--prm-color-text-secondary); font-size: 13px; line-height: 1.5; flex: 1; min-width: 240px; }
 </style>

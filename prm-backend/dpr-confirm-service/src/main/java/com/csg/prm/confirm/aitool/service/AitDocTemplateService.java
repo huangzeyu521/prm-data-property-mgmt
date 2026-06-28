@@ -3,7 +3,7 @@ package com.csg.prm.confirm.aitool.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.common.query.PageQuery;
 import com.csg.prm.confirm.aitool.entity.AitDocTemplate;
 import com.csg.prm.confirm.aitool.mapper.AitDocTemplateMapper;
@@ -121,7 +121,7 @@ public class AitDocTemplateService implements ApplicationRunner {
     public AitDocTemplate getById(String id) {
         AitDocTemplate t = mapper.selectById(id);
         if (t == null) {
-            throw new BizException("模板不存在");
+            throw new BusinessException("模板不存在");
         }
         return t;
     }
@@ -130,7 +130,7 @@ public class AitDocTemplateService implements ApplicationRunner {
     @Transactional
     public String create(AitDocTemplate t) {
         if (!StringUtils.hasText(t.getTemplateName())) {
-            throw new BizException("模板名称不能为空");
+            throw new BusinessException("模板名称不能为空");
         }
         t.setTemplateId(null);
         t.setVersion("v1");
@@ -143,7 +143,7 @@ public class AitDocTemplateService implements ApplicationRunner {
     @Transactional
     public void updateContent(AitDocTemplate t) {
         if (!StringUtils.hasText(t.getTemplateId())) {
-            throw new BizException("模板ID不能为空");
+            throw new BusinessException("模板ID不能为空");
         }
         AitDocTemplate db = getById(t.getTemplateId());
         db.setTemplateName(StringUtils.hasText(t.getTemplateName()) ? t.getTemplateName() : db.getTemplateName());
@@ -160,7 +160,7 @@ public class AitDocTemplateService implements ApplicationRunner {
     @Transactional
     public String newVersion(AitDocTemplate t) {
         if (!StringUtils.hasText(t.getTemplateName())) {
-            throw new BizException("模板名称不能为空");
+            throw new BusinessException("模板名称不能为空");
         }
         List<AitDocTemplate> history = mapper.selectList(new LambdaQueryWrapper<AitDocTemplate>()
                 .eq(AitDocTemplate::getTemplateName, t.getTemplateName()));

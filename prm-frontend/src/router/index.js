@@ -42,7 +42,9 @@ const routes = [
   // 指引中心(三合一:工作指引/流程表单/确权指引/授权指引,取代顶栏抽屉+两套分散管理页)
   { path: '/dpr/guidance', name: 'GuidanceCenter', component: () => import('@/views/guidance/GuidanceCenter.vue'), meta: { title: '指引中心', goal: '一处查阅工作指引/流程表单与确权·授权指引材料,管理员在此统一维护' } },
   // F-02 数据确权管理
-  { path: '/dpr/confirm/wizard', name: 'ConfirmWizard', component: () => import('@/views/confirm/ConfirmWizard.vue'), meta: { title: '确权申请(一站式)', goal: '一站式完成确权申请:填报→传材料→规则+AI校验→提交审批' } },
+  { path: '/dpr/confirm/wizard', name: 'ConfirmWizard', component: () => import('@/views/confirm/ConfirmWizard.vue'), meta: { title: '初始确权申请(一站式)', goal: '系统级初始确权:左树选系统/模块/库表 → 表1+A–J → 材料 → 校验 → 提交', mode: 'initial' } },
+  // 确权变更与初始确权分菜单(对齐附录F §3.3.2 重新确权):载入已确权系统、聚焦变更维度
+  { path: '/dpr/confirm/change', name: 'ConfirmChange', component: () => import('@/views/confirm/ConfirmWizard.vue'), meta: { title: '确权变更申请', goal: '对已确权系统的修订:选触发动因 → 基线对照 → 只改变动维度 → 提交', mode: 'change' } },
   // 确权指引管理已并入「指引中心」,旧路径重定向(保旧书签/深链)
   { path: '/dpr/confirm/guidance', redirect: '/dpr/guidance?tab=confirm' },
   { path: '/dpr/confirm/catalog', name: 'ConfirmCatalog', component: () => import('@/views/confirm/ConfirmCatalog.vue'), meta: { title: '数据资产确权目录管理', goal: '管理数据资产确权目录结构,明确应确权范围' } },

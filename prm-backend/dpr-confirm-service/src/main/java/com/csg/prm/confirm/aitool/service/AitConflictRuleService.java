@@ -1,7 +1,7 @@
 package com.csg.prm.confirm.aitool.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.confirm.aitool.entity.AitConflict;
 import com.csg.prm.confirm.aitool.entity.AitConflictRule;
 import com.csg.prm.confirm.aitool.mapper.AitConflictRuleMapper;
@@ -76,7 +76,7 @@ public class AitConflictRuleService implements ApplicationRunner {
 
     public String save(AitConflictRule rule) {
         if (!StringUtils.hasText(rule.getRuleType())) {
-            throw new BizException("规则类型不能为空");
+            throw new BusinessException("规则类型不能为空");
         }
         if (StringUtils.hasText(rule.getRuleId())) {
             mapper.updateById(rule);
@@ -95,7 +95,7 @@ public class AitConflictRuleService implements ApplicationRunner {
     public void toggle(String ruleId, boolean on) {
         AitConflictRule r = mapper.selectById(ruleId);
         if (r == null) {
-            throw new BizException("规则不存在");
+            throw new BusinessException("规则不存在");
         }
         r.setEnabled(on ? 1 : 0);
         mapper.updateById(r);

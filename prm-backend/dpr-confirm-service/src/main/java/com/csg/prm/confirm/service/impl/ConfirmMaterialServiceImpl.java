@@ -4,8 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.ResultCode;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.api.ResponseCode;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.confirm.dto.MaterialCheckReport;
 import com.csg.prm.confirm.dto.MaterialSyncReport;
 import com.csg.prm.confirm.entity.ConfirmApply;
@@ -40,6 +40,10 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
     private final ConfirmApplyService applyService;
     private final ConfirmMaterialRuleService ruleService;
     private final AssetTableMetaService tableMetaService;
+    // 系统级申请(assetId=SYS:系统名)的平台库表/附件源,与第一步「确权范围树」同源,保证第二步承接第一步
+    private final com.csg.prm.confirm.integration.DataCatalogService dataCatalogService;
+    // 表2 逐表清单(供系统自动生成的「表2」表单填充真实内容)
+    private final com.csg.prm.confirm.mapper.ConfirmTableItemMapper tableItemMapper;
     // 内生 AI 能力走 prm-common 共享网关(qwen3-max/Local 桩),不依赖独立工具的 aitool 包
     private final com.csg.prm.common.ai.DawatAiGateway aiGateway;
     private final com.csg.prm.common.aitrace.AiRunLogService aiRunLogService;
@@ -47,14 +51,27 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
     public ConfirmMaterialServiceImpl(ConfirmMaterialMapper mapper, ConfirmApplyService applyService,
                                       ConfirmMaterialRuleService ruleService,
                                       AssetTableMetaService tableMetaService,
+                                      com.csg.prm.confirm.integration.DataCatalogService dataCatalogService,
+                                      com.csg.prm.confirm.mapper.ConfirmTableItemMapper tableItemMapper,
                                       com.csg.prm.common.ai.DawatAiGateway aiGateway,
                                       com.csg.prm.common.aitrace.AiRunLogService aiRunLogService) {
         this.mapper = mapper;
         this.applyService = applyService;
         this.ruleService = ruleService;
         this.tableMetaService = tableMetaService;
+        this.dataCatalogService = dataCatalogService;
+        this.tableItemMapper = tableItemMapper;
         this.aiGateway = aiGateway;
         this.aiRunLogService = aiRunLogService;
+    }
+
+    /** 取该申请的平台库表元数据(含附件):系统级申请(SYS:系统名)走目录树同源 cardsBySystem;单卡走 listTableMeta。 */
+    private List<PlatformTableMeta> platformTablesOf(ConfirmApply apply) {
+        String assetId = apply.getAssetId();
+        if (assetId != null && assetId.startsWith("SYS:")) {
+            return dataCatalogService.cardsBySystem(assetId.substring(4), null, null);
+        }
+        return tableMetaService.listTableMeta(assetId, apply.getAssetName());
     }
 
     /** 抽取某份材料正文(供确权内生 AI 能力复用),按 ID 重取完整记录;无法抽取返回空串。 */
@@ -72,7 +89,7 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
         ConfirmApply apply = applyService.getById(applyId);
         List<ConfirmMaterial> mats = listByApply(applyId);
         if (mats.isEmpty()) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "尚未上传材料,无法 AI 校验");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "尚未上传材料,无法 AI 校验");
         }
         StringBuilder ctx = new StringBuilder("【申请要素】资产:").append(apply.getAssetName())
                 .append('(').append(apply.getAssetId()).append(");权属类型:").append(apply.getRightType())
@@ -96,7 +113,7 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
                 "资产:" + apply.getAssetName() + ";材料 " + mats.size() + " 份",
                 result, System.currentTimeMillis() - t0);
         if (!StringUtils.hasText(result)) {
-            throw new BizException(ResultCode.SYSTEM_ERROR.getCode(), "AI 校验暂不可用,请稍后重试或走规则校验");
+            throw new BusinessException(ResponseCode.SYSTEM_ERROR.getCode(), "AI 校验暂不可用,请稍后重试或走规则校验");
         }
         return result;
     }
@@ -138,18 +155,18 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
     @Transactional
     public String uploadFile(ConfirmMaterial meta, String fileName, byte[] data) {
         if (meta == null || !StringUtils.hasText(meta.getApplyId())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "关联申请ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "关联申请ID不能为空");
         }
         if (data == null || data.length == 0) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "上传文件为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "上传文件为空");
         }
         // 格式验证:扩展名 + 大小
         String ext = extOf(fileName);
         if (!ALLOWED_EXT.contains(ext)) {
-            throw new BizException("不支持的文件格式:" + ext + ",仅支持 PDF/Word/JPG/PNG");
+            throw new BusinessException("不支持的文件格式:" + ext + ",仅支持 PDF/Word/JPG/PNG");
         }
         if (data.length > MAX_BYTES) {
-            throw new BizException("文件过大(" + (data.length / 1024 / 1024) + "MB),单文件不超过 50MB");
+            throw new BusinessException("文件过大(" + (data.length / 1024 / 1024) + "MB),单文件不超过 50MB");
         }
         meta.setFileName(fileName);
         meta.setFileData(Base64.getEncoder().encodeToString(data));
@@ -169,10 +186,10 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
     public byte[] download(String materialId) {
         ConfirmMaterial m = mapper.selectById(materialId);
         if (m == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "材料不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "材料不存在");
         }
         if (!StringUtils.hasText(m.getFileData())) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "该材料无可预览/下载的原件");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "该材料无可预览/下载的原件");
         }
         return Base64.getDecoder().decode(m.getFileData());
     }
@@ -189,10 +206,10 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
     @Transactional
     public String upload(ConfirmMaterial m) {
         if (!StringUtils.hasText(m.getApplyId())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "关联申请ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "关联申请ID不能为空");
         }
         if (!StringUtils.hasText(m.getMaterialName())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "材料名称不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "材料名称不能为空");
         }
         m.setUploadTime(LocalDateTime.now());
         m.setCheckResult(ConfirmMaterial.CHECK_PENDING);
@@ -204,7 +221,7 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
     @Transactional
     public void delete(String materialId) {
         if (mapper.selectById(materialId) == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "材料不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "材料不存在");
         }
         mapper.deleteById(materialId);
     }
@@ -223,7 +240,7 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
     public void check(String materialId, boolean pass, String abnormalDesc) {
         ConfirmMaterial m = mapper.selectById(materialId);
         if (m == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "材料不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "材料不存在");
         }
         ConfirmMaterial upd = new ConfirmMaterial();
         upd.setMaterialId(materialId);
@@ -277,8 +294,9 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
     @Transactional
     public MaterialSyncReport syncFromPlatform(String applyId) {
         ConfirmApply apply = applyService.getById(applyId);
-        // 1) 拉该资产平台库表元数据(AU_TABLE_META_DATA),聚合各维度"平台已上传材料"附件名
-        List<PlatformTableMeta> tables = tableMetaService.listTableMeta(apply.getAssetId(), apply.getAssetName());
+        // 1) 拉该资产平台库表元数据(AU_TABLE_META_DATA),聚合各维度"平台已上传材料"附件名;
+        //    系统级申请(SYS:系统名)走与第一步同源的 cardsBySystem,确保第二步承接第一步带来的附件
+        List<PlatformTableMeta> tables = platformTablesOf(apply);
         String srcAtt = firstAttachment(tables, PlatformTableMeta::sourceAttachment, t -> true);
         String gAtt = firstAttachment(tables, PlatformTableMeta::checkAttachment, PlatformTableMeta::gFlag);
         String hAtt = firstAttachment(tables, PlatformTableMeta::privacyAttachment, PlatformTableMeta::hFlag);
@@ -303,6 +321,18 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
             present.add(r.getMaterialName());
             String code = StringUtils.hasText(r.getTriggerCode()) ? r.getTriggerCode() : "证明";
             synced.add(new MaterialSyncReport.SyncedItem(r.getMaterialName(), att, code));
+        }
+
+        // 3b) 表1/表2 是申报人在系统内已填表单(Step1),系统据申报内容自动生成 → 登记为"系统生成"
+        //     (有 fileName,材料校验直接通过,免用户重复上传;对齐 35 号文"申报人在系统填表1/表2")
+        for (ConfirmMaterialRule r : required) {
+            if (!isSystemForm(r) || present.contains(r.getMaterialName())) {
+                continue;
+            }
+            String fn = systemFormFileName(r);
+            insertSystemForm(applyId, r, fn, apply);
+            present.add(r.getMaterialName());
+            synced.add(new MaterialSyncReport.SyncedItem(r.getMaterialName(), fn, "系统生成"));
         }
 
         // 4) 仍待用户补全:命中应交项中,平台未覆盖且尚未登记的(必填优先)
@@ -388,12 +418,97 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
         }
     }
 
+    /** 表1(T_ALWAYS 且名含「表1」)/表2(T_TABLE2)= 申报人在系统填的表单,系统自动生成,非用户上传项。 */
+    private boolean isSystemForm(ConfirmMaterialRule r) {
+        if (ConfirmMaterialRule.T_TABLE2.equals(r.getTriggerType())) {
+            return true;
+        }
+        return ConfirmMaterialRule.T_ALWAYS.equals(r.getTriggerType())
+                && r.getMaterialName() != null && r.getMaterialName().contains("表1");
+    }
+
+    private String systemFormFileName(ConfirmMaterialRule r) {
+        String tag = ConfirmMaterialRule.T_TABLE2.equals(r.getTriggerType()) ? "表2_数据确权信息清单(涉及第三方权益)" : "表1_数据确权信息清单(系统级)";
+        return tag + "_系统据申报内容自动生成.pdf";
+    }
+
+    /** 登记系统自动生成的表单材料(表1/表2):据 Step1 申报内容生成真实文本内容 → 有 fileName+原件字节,
+     *  材料校验直接通过、可在线预览、免用户上传。 */
+    private void insertSystemForm(String applyId, ConfirmMaterialRule r, String fileName, ConfirmApply apply) {
+        boolean isT2 = ConfirmMaterialRule.T_TABLE2.equals(r.getTriggerType());
+        String content = isT2 ? buildTable2Text(apply) : buildTable1Text(apply);
+        ConfirmMaterial m = new ConfirmMaterial();
+        m.setApplyId(applyId);
+        m.setMaterialName(r.getMaterialName());
+        m.setMaterialType("表单");
+        m.setOwner(apply.getRightHolder());
+        m.setSource("系统生成");
+        m.setFileName(fileName);
+        m.setFileData(Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8)));
+        m.setUploadTime(LocalDateTime.now());
+        m.setCheckResult(ConfirmMaterial.CHECK_PASS);
+        m.setAbnormalDesc("系统据 Step1 申报内容自动生成的表单,无需用户上传");
+        mapper.insert(m);
+        ConfirmMaterial upd = new ConfirmMaterial();
+        upd.setMaterialId(m.getMaterialId());
+        upd.setFileUrl("/api/dpr/confirm/material/" + m.getMaterialId() + "/file");
+        mapper.updateById(upd);
+    }
+
+    /** 据申报内容生成「表1 数据确权信息清单(系统级)」文本(对齐 35 号文表1 八列)。 */
+    private String buildTable1Text(ConfirmApply apply) {
+        return "表1 数据确权信息清单(系统级)\n"
+                + "系统名称: " + nz(apply.getAssetName()) + "\n"
+                + "公司主体: " + nz(apply.getRightHolder()) + (StringUtils.hasText(apply.getSubjectLevel()) ? "(" + apply.getSubjectLevel() + ")" : "") + "\n"
+                + "登记类型: " + nz(apply.getRegisterType()) + "\n"
+                + "数据来源权益识别(A–F): " + nz(apply.getSourceIdentification()) + "\n"
+                + "信息关联权益识别(G–J): " + nz(apply.getRelationIdentification()) + "\n"
+                + "系统负责人: " + nz(apply.getSystemOwner()) + "  联系方式: " + nz(apply.getContactInfo()) + "\n"
+                + "(本表由系统据申报内容自动生成)\n";
+    }
+
+    /** 据逐表清单生成「表2 数据确权信息清单(涉及第三方权益)」文本(每张争议表一行)。 */
+    private String buildTable2Text(ConfirmApply apply) {
+        StringBuilder sb = new StringBuilder("表2 数据确权信息清单(涉及第三方权益)\n系统名称: ")
+                .append(nz(apply.getAssetName())).append('\n');
+        List<com.csg.prm.confirm.entity.ConfirmTableItem> items = tableItemMapper.selectList(
+                new LambdaQueryWrapper<com.csg.prm.confirm.entity.ConfirmTableItem>()
+                        .eq(com.csg.prm.confirm.entity.ConfirmTableItem::getApplyId, apply.getApplyId()));
+        int i = 0;
+        for (com.csg.prm.confirm.entity.ConfirmTableItem t : items) {
+            char c = StringUtils.hasText(t.getSourceType()) ? t.getSourceType().trim().charAt(0) : 'A';
+            boolean disputed = "BCDEF".indexOf(c) >= 0 || "是".equals(t.getGFlag()) || "是".equals(t.getHFlag())
+                    || "是".equals(t.getIFlag()) || "是".equals(t.getJFlag());
+            if (!disputed) {
+                continue;
+            }
+            StringBuilder rel = new StringBuilder();
+            if ("是".equals(t.getGFlag())) rel.append("G:").append(nz(t.getGSubject())).append(' ');
+            if ("是".equals(t.getHFlag())) rel.append("H:").append(nz(t.getHSubject())).append(' ');
+            if ("是".equals(t.getIFlag())) rel.append("I:").append(nz(t.getISubject())).append(' ');
+            if ("是".equals(t.getJFlag())) rel.append("J:").append(nz(t.getJSubject())).append(' ');
+            sb.append(++i).append(". ").append(nz(t.getSchemaName())).append('.').append(nz(t.getTableCode()))
+                    .append("(").append(nz(t.getTableName())).append(") 来源:").append(nz(t.getSourceType()))
+                    .append(" 主体:").append(nz(t.getSourceSubject())).append(" 关联:").append(rel.toString().trim())
+                    .append(" 风险:").append(nz(t.getRiskDesc())).append('\n');
+        }
+        if (i == 0) {
+            sb.append("(本系统无涉第三方/敏感库表)\n");
+        }
+        sb.append("(本表由系统据逐表申报内容自动生成)\n");
+        return sb.toString();
+    }
+
+    private static String nz(String s) {
+        return StringUtils.hasText(s) ? s : "—";
+    }
+
     @Override
     @Transactional
     public void pushReview(String applyId) {
         MaterialCheckReport rep = runCheck(applyId);
         if (!rep.isAllPass()) {
-            throw new BizException("材料校验未通过,无法推送审核。缺失:" + rep.getMissing()
+            throw new BusinessException("材料校验未通过,无法推送审核。缺失:" + rep.getMissing()
                     + ";不合规:" + rep.getNonCompliant());
         }
         applyService.submit(applyId);

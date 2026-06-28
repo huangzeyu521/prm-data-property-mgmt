@@ -4,7 +4,10 @@ import com.csg.prm.authorize.dto.AuthComplianceReport;
 import com.csg.prm.authorize.entity.AuthCompliance;
 import com.csg.prm.authorize.service.AuthComplianceService;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.R;
+import com.csg.prm.common.api.Result;
+import com.csg.prm.common.query.PageQuery;
+import jakarta.validation.Valid;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 
 /** 授权合规校验接口(IM-DAM-DPR-03-001-001-006):规则化三维自动校验 + 报告 + 导出。 */
 @RestController
+@Validated
 @RequestMapping("/api/dpr/auth/compliance")
 public class AuthComplianceController {
 
@@ -29,15 +33,15 @@ public class AuthComplianceController {
 
     /** 规则化自动校验,返回三维报告。 */
     @PostMapping("/check")
-    public R<AuthComplianceReport> check(@RequestParam String applyId) {
-        return R.ok(service.runCheck(applyId));
+    public Result<AuthComplianceReport> check(@RequestParam String applyId) {
+        return Result.success(service.runCheck(applyId));
     }
 
     /** 导出校验记录(CSV)。 */
     /** 合规 AI 预审意见(规则结果+上下文交大模型,非门禁) */
     @PostMapping("/pre-review")
-    public R<String> preReview(@RequestParam String applyId) {
-        return R.ok(service.preReview(applyId));
+    public Result<String> preReview(@RequestParam String applyId) {
+        return Result.success(service.preReview(applyId));
     }
 
     @GetMapping("/export")
@@ -52,10 +56,9 @@ public class AuthComplianceController {
     }
 
     @GetMapping("/page")
-    public R<PageResult<AuthCompliance>> page(@RequestParam(defaultValue = "1") long current,
-                                              @RequestParam(defaultValue = "10") long size,
+    public Result<PageResult<AuthCompliance>> page(@Valid PageQuery page,
                                               @RequestParam(required = false) String applyId,
                                               @RequestParam(required = false) String riskLevel) {
-        return R.ok(service.page(current, size, applyId, riskLevel));
+        return Result.success(service.page(page.getCurrent(), page.getSize(), applyId, riskLevel));
     }
 }

@@ -7,7 +7,7 @@ import com.csg.prm.authorize.mapper.AuthApplyMapper;
 import com.csg.prm.authorize.service.AuthAgreementService;
 import com.csg.prm.authorize.service.AuthCatalogService;
 import com.csg.prm.authorize.service.AuthComplianceService;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -66,11 +66,11 @@ class AuthExtrasTest {
         String id = agreementService.generate("AP-2", "TPL-1", "广州供电局");
         assertEquals(AuthAgreement.SEAL_PENDING, agreementService.getById(id).getSealStatus());
         // 未双签不可审核
-        assertThrows(BizException.class, () -> agreementService.review(id, true, null));
+        assertThrows(BusinessException.class, () -> agreementService.review(id, true, null));
         // 甲方签 -> 待对方签
         agreementService.signByGrantor(id, "oss://agreement/AP-2-grantor.pdf");
         assertEquals(AuthAgreement.SEAL_PARTIAL, agreementService.getById(id).getSealStatus());
-        assertThrows(BizException.class, () -> agreementService.review(id, true, null), "仅单方签署不可审核");
+        assertThrows(BusinessException.class, () -> agreementService.review(id, true, null), "仅单方签署不可审核");
         // 乙方签 -> 已双签
         agreementService.signByGrantee(id, "oss://agreement/AP-2-grantee.pdf");
         assertEquals(AuthAgreement.SEAL_SIGNED, agreementService.getById(id).getSealStatus());

@@ -99,6 +99,10 @@ public class ConfirmTableItem extends BaseEntity {
     @JsonProperty("jSubject")
     private String jSubject;
 
+    /** 表2·权益风险:该表是否存在未清晰约定的潜在侵权风险(逐表) */
+    @TableField("CEC_RISK")
+    private String riskDesc;
+
     public String getItemId() {
         return itemId;
     }
@@ -249,5 +253,13 @@ public class ConfirmTableItem extends BaseEntity {
 
     public void setJSubject(String jSubject) {
         this.jSubject = jSubject;
+    }
+
+    public String getRiskDesc() {
+        return riskDesc;
+    }
+
+    public void setRiskDesc(String riskDesc) {
+        this.riskDesc = riskDesc;
     }
 }

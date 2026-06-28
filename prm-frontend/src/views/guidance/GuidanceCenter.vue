@@ -191,24 +191,10 @@ onMounted(loadWg)
 .wg-hero-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .wg-arch { margin: 0 4px; }
 .wg-arch-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-size: 14px; font-weight: 600; color: #1f2329; }
-.wg-tip { margin-top: 8px; font-size: 12px; color: #909399; line-height: 1.6; }
-.gc-empty { padding: 28px 16px; text-align: center; color: #909399; font-size: 13px; background: #fafbfc; border: 1px dashed #e3e8ef; border-radius: 8px; }
+.wg-tip { margin-top: 8px; font-size: 12px; color: var(--prm-color-text-weak); line-height: 1.6; }
+.gc-empty { padding: 28px 16px; text-align: center; color: var(--prm-color-text-weak); font-size: 13px; background: #fafbfc; border: 1px dashed #e3e8ef; border-radius: 8px; }
 .wg-frame { width: 100%; height: 76vh; border: none; }
-/* 流程表单 */
-.gc-docbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 4px 4px 12px; border-bottom: 1px solid #eef0f3; flex-wrap: wrap; }
-.gc-meta { font-size: 12.5px; color: #8a93a6; }
 .gc-hint { padding: 4px 4px 12px; font-size: 12.5px; color: #6b7280; }
-.gc-forms { padding: 8px 4px 24px; }
-.gc-sec { margin-bottom: 18px; }
-.gc-h { color: #1f2329; }
-.gc-h.h1 { font-size: 17px; font-weight: 700; margin: 18px 0 10px; padding-bottom: 6px; border-bottom: 2px solid #eaf1ff; }
-.gc-nomatch { padding: 16px 12px; color: #aab; font-size: 13px; }
-.gc-tablewrap { overflow-x: auto; margin: 8px 0 4px; }
-.gc-table { border-collapse: collapse; font-size: 12px; min-width: 100%; }
-.gc-table th, .gc-table td { border: 1px solid #e3e8ef; padding: 6px 9px; text-align: left; vertical-align: top; white-space: nowrap; }
-.gc-table th { background: #eef3ff; color: #2f5fd0; font-weight: 600; }
-.gc-table tr:nth-child(even) td { background: #fafbfd; }
-.gc-forms :deep(mark) { background: #fff2a8; padding: 0 2px; border-radius: 2px; }
 </style>
 <style>
 .wg-pv .el-dialog__body { padding: 8px 16px 16px; }

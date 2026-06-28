@@ -1,0 +1,31 @@
+/*
+ * Copyright (C) 2026 China Southern Power Grid Co., Ltd. All Rights Reserved.
+ * prm-common 公共能力库:统一响应(Result/PageResult/ResponseCode)、全局异常
+ * (BusinessException/GlobalExceptionHandler)、用户上下文(ABAC)、基础实体。
+ * 作为普通 jar 供各服务依赖,不产出可执行 bootJar。
+ */
+apply plugin: 'java-library'
+
+dependencies {
+    // 以 api 暴露:PageResult 暴露 MyBatis-Plus IPage、GlobalExceptionHandler 暴露 spring-web 类型
+    api 'org.springframework.boot:spring-boot-starter-web'
+    api 'org.springframework.boot:spring-boot-starter-validation'
+    api 'com.baomidou:mybatis-plus-spring-boot3-starter'
+    // 健康检查端点(/actuator/health):缺失则 404 被兜底处理器包成 200,健康门假通过
+    api 'org.springframework.boot:spring-boot-starter-actuator'
+    // 接口文档(Swagger/OpenAPI 3):springdoc 2.3.x 适配 Spring Boot 3.2;以 api 暴露,各服务自动装配。
+    // /swagger-ui.html 在线预览调试、/v3/api-docs 机读;自动 introspect 统一返回体 Result/PageResult 与 PageQuery 分页实体。
+    api 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
+}
+
+// 南网 data_pod 归档约定:公司 manifest 信息(不引内网制品)
+jar {
+    manifest {
+        attributes(
+            'Built-company': 'dgri',
+            'Implementation-Title': project.name,
+            'Implementation-Version': project.version,
+            'Build-Jdk': 17
+        )
+    }
+}

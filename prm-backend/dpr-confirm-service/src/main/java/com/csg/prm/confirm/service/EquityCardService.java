@@ -38,7 +38,10 @@ public interface EquityCardService {
      */
     EquityCard findCurrentValid(String assetId, String rightType);
 
-    PageResult<EquityCard> page(PageQuery query);
+    PageResult<EquityCard> page(com.csg.prm.confirm.dto.EquityCardQuery query);
+
+    /** 权益卡片概览统计(总/正常/冻结/失效/即将到期),按过滤聚合忽略 status。 */
+    com.csg.prm.confirm.dto.EquityCardStats stats(com.csg.prm.confirm.dto.EquityCardQuery query);
 
     /**
      * 待重确权清单(F指导书"按季度定期重新确权"/权益到期):

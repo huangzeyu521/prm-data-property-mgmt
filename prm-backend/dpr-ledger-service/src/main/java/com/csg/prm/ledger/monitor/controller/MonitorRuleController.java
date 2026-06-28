@@ -1,10 +1,12 @@
 package com.csg.prm.ledger.monitor.controller;
 
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.R;
+import com.csg.prm.common.api.Result;
 import com.csg.prm.ledger.monitor.dto.MonitorRuleQuery;
 import com.csg.prm.ledger.monitor.entity.MonitorRule;
 import com.csg.prm.ledger.monitor.service.MonitorRuleService;
+import jakarta.validation.Valid;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 监测规则配置接口(IM-DAM-DPR-01-001-002-004)。
  */
 @RestController
+@Validated
 @RequestMapping("/api/dpr/monitor/rule")
 public class MonitorRuleController {
 
@@ -28,42 +31,42 @@ public class MonitorRuleController {
     }
 
     @PostMapping
-    public R<String> create(@RequestBody MonitorRule rule) {
-        return R.ok(service.create(rule));
+    public Result<String> create(@Valid @RequestBody MonitorRule rule) {
+        return Result.success(service.create(rule));
     }
 
     @PutMapping
-    public R<Void> update(@RequestBody MonitorRule rule) {
+    public Result<Void> update(@Valid @RequestBody MonitorRule rule) {
         service.update(rule);
-        return R.ok();
+        return Result.success();
     }
 
     @PostMapping("/{ruleId}/enable")
-    public R<Void> enable(@PathVariable String ruleId) {
+    public Result<Void> enable(@PathVariable String ruleId) {
         service.enable(ruleId);
-        return R.ok();
+        return Result.success();
     }
 
     @PostMapping("/{ruleId}/disable")
-    public R<Void> disable(@PathVariable String ruleId) {
+    public Result<Void> disable(@PathVariable String ruleId) {
         service.disable(ruleId);
-        return R.ok();
+        return Result.success();
     }
 
     /** 物理删除(仅草稿规则);生效中/历史规则会被拒绝,请改用停用。 */
     @DeleteMapping("/{ruleId}")
-    public R<Void> delete(@PathVariable String ruleId) {
+    public Result<Void> delete(@PathVariable String ruleId) {
         service.delete(ruleId);
-        return R.ok();
+        return Result.success();
     }
 
     @GetMapping("/{ruleId}")
-    public R<MonitorRule> detail(@PathVariable String ruleId) {
-        return R.ok(service.getById(ruleId));
+    public Result<MonitorRule> detail(@PathVariable String ruleId) {
+        return Result.success(service.getById(ruleId));
     }
 
     @PostMapping("/page")
-    public R<PageResult<MonitorRule>> page(@RequestBody MonitorRuleQuery query) {
-        return R.ok(service.page(query));
+    public Result<PageResult<MonitorRule>> page(@Valid @RequestBody MonitorRuleQuery query) {
+        return Result.success(service.page(query));
     }
 }

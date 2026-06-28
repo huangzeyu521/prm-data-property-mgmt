@@ -35,6 +35,14 @@ public class EquityCard extends BaseEntity {
     @TableField("CEC_ASSET_NAME")
     private String assetName;
 
+    /** 库表代码(权益卡片下沉库表级:卡片粒度=系统×库表×权属;系统级回退卡为 null,对齐表4 逐库表) */
+    @TableField("CEC_TABLE_CODE")
+    private String tableCode;
+
+    /** 模式名称(表4 模式名称;一个系统可对应多个模式) */
+    @TableField("CEC_SCHEMA_NAME")
+    private String schemaName;
+
     /** 权益类型(三权分置) */
     @TableField("CEC_RIGHT_TYPE")
     private String rightType;
@@ -46,6 +54,26 @@ public class EquityCard extends BaseEntity {
     /** 权益来源 */
     @TableField("CEC_RIGHT_SOURCE")
     private String rightSource;
+
+    /** 权益内容摘要(表4 权益内容摘要:该权属在该库表的权益内容/约束) */
+    @TableField("CEC_RIGHTS_CONTENT")
+    private String rightsContent;
+
+    /** 权益凭证附件或说明(表4 权益凭证附件或说明) */
+    @TableField("CEC_RIGHTS_CREDENTIAL")
+    private String rightsCredential;
+
+    /** 权益取得方式(表4:A 认定 / B 授权;确权制卡为「认定」) */
+    @TableField("CEC_ACQUIRE_MODE")
+    private String acquireMode;
+
+    /** 授权单位(表4:若授权取得,填最直接上一级授权单位;认定则为空) */
+    @TableField("CEC_AUTH_UNIT")
+    private String authorizingUnit;
+
+    /** 确权时间(表4 确权时间) */
+    @TableField("CEC_CONFIRM_TIME")
+    private LocalDateTime confirmTime;
 
     /** 确权范围(授权边界依据):全字段 / 约定字段(确权列了表级清单时);先确后授时授权范围不得超此边界 */
     @TableField("CEC_SCOPE")
@@ -110,6 +138,14 @@ public class EquityCard extends BaseEntity {
         this.assetName = assetName;
     }
 
+    public String getTableCode() {
+        return tableCode;
+    }
+
+    public void setTableCode(String tableCode) {
+        this.tableCode = tableCode;
+    }
+
     public String getRightType() {
         return rightType;
     }
@@ -132,6 +168,54 @@ public class EquityCard extends BaseEntity {
 
     public void setRightSource(String rightSource) {
         this.rightSource = rightSource;
+    }
+
+    public String getSchemaName() {
+        return schemaName;
+    }
+
+    public void setSchemaName(String schemaName) {
+        this.schemaName = schemaName;
+    }
+
+    public String getRightsContent() {
+        return rightsContent;
+    }
+
+    public void setRightsContent(String rightsContent) {
+        this.rightsContent = rightsContent;
+    }
+
+    public String getRightsCredential() {
+        return rightsCredential;
+    }
+
+    public void setRightsCredential(String rightsCredential) {
+        this.rightsCredential = rightsCredential;
+    }
+
+    public String getAcquireMode() {
+        return acquireMode;
+    }
+
+    public void setAcquireMode(String acquireMode) {
+        this.acquireMode = acquireMode;
+    }
+
+    public String getAuthorizingUnit() {
+        return authorizingUnit;
+    }
+
+    public void setAuthorizingUnit(String authorizingUnit) {
+        this.authorizingUnit = authorizingUnit;
+    }
+
+    public java.time.LocalDateTime getConfirmTime() {
+        return confirmTime;
+    }
+
+    public void setConfirmTime(java.time.LocalDateTime confirmTime) {
+        this.confirmTime = confirmTime;
     }
 
     public String getScope() {

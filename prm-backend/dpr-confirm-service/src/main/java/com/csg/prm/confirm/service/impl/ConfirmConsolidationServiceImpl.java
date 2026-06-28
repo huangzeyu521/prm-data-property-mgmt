@@ -1,8 +1,8 @@
 package com.csg.prm.confirm.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.csg.prm.common.api.ResultCode;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.api.ResponseCode;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.confirm.entity.ConfirmApply;
 import com.csg.prm.confirm.entity.ConfirmTableItem;
 import com.csg.prm.confirm.mapper.ConfirmApplyMapper;
@@ -78,26 +78,36 @@ public class ConfirmConsolidationServiceImpl implements ConfirmConsolidationServ
         boolean regulated = REGULATED.equals(apply.getRegulated());
         boolean involvesThird = involvesThird(apply, items);
         boolean hasOperateClaim = apply.getRightType() != null && apply.getRightType().contains("经营");
+        boolean otherRestriction = items.stream().anyMatch(i -> "是".equals(i.getIFlag()) || "是".equals(i.getJFlag()));
+        return decide(regulated, involvesThird, hasOperateClaim, otherRestriction, apply.getRegulated());
+    }
 
-        // 《权益内部管理汇总表》说明页 5 条权属判定规则(确权时直接判定网公司权益,无转让/转移动作)
+    @Override
+    public ConsolidationResult previewConsolidation(boolean regulated, boolean involvesThird,
+                                                    boolean hasOperateClaim, boolean otherRestriction) {
+        return decide(regulated, involvesThird, hasOperateClaim, otherRestriction, regulated ? REGULATED : "非管制");
+    }
+
+    /** 《权益内部管理汇总表》说明页 5 条权属判定规则(确权时直接判定网公司权益,无转让/转移动作);DB 判定与试算共用。 */
+    private ConsolidationResult decide(boolean regulated, boolean involvesThird,
+                                       boolean hasOperateClaim, boolean otherRestriction, String regulatedLabel) {
         if (!involvesThird) {
             if (regulated) {
-                return new ConsolidationResult("1.1", "有", "有", "有", false, apply.getRegulated(),
+                return new ConsolidationResult("1.1", "有", "有", "有", false, regulatedLabel,
                         REASON_BASE + "自行生产且全部不涉及第三方,管制单位经营权调整为有,确权时直接归属网公司(不涉及第三方)。");
             }
-            return new ConsolidationResult("1.2", "有", "有", hasOperateClaim ? "有" : "无", false, apply.getRegulated(),
+            return new ConsolidationResult("1.2", "有", "有", hasOperateClaim ? "有" : "无", false, regulatedLabel,
                     REASON_BASE + "自行生产且全部不涉及第三方,非管制单位,相应权利确权时直接归属网公司(不涉及第三方)。");
         }
         if (!regulated) {
             if (hasOperateClaim) {
-                return new ConsolidationResult("2.1", "有", "有", "依权益判定", true, apply.getRegulated(),
+                return new ConsolidationResult("2.1", "有", "有", "依权益判定", true, regulatedLabel,
                         REASON_BASE + "涉及第三方权益,非管制单位且有经营权,经营权依权益判定确权时直接归属网公司(涉第三方须合规处置)。");
             }
-            return new ConsolidationResult("2.2", "有", "有", "无", true, apply.getRegulated(),
+            return new ConsolidationResult("2.2", "有", "有", "无", true, regulatedLabel,
                     REASON_BASE + "涉及第三方权益,非管制单位且无经营权,网公司无经营权。");
         }
-        boolean otherRestriction = items.stream().anyMatch(i -> "是".equals(i.getIFlag()) || "是".equals(i.getJFlag()));
-        return new ConsolidationResult("3.1", "有", "有", otherRestriction ? "无" : "依权益判定", true, apply.getRegulated(),
+        return new ConsolidationResult("3.1", "有", "有", otherRestriction ? "无" : "依权益判定", true, regulatedLabel,
                 REASON_BASE + "涉及第三方权益,管制单位先恢复经营权(去掉管制因素)再判定:"
                         + (otherRestriction ? "存在其他无经营权约束,网公司无经营权。" : "有经营权,确权时直接归属网公司。"));
     }
@@ -230,7 +240,7 @@ public class ConfirmConsolidationServiceImpl implements ConfirmConsolidationServ
     private ConfirmApply requireApply(String applyId) {
         ConfirmApply apply = applyMapper.selectById(applyId);
         if (apply == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "确权申请不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "确权申请不存在");
         }
         return apply;
     }

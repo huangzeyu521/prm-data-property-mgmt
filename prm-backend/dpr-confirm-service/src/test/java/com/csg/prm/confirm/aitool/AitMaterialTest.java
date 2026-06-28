@@ -6,7 +6,7 @@ import com.csg.prm.confirm.aitool.entity.AitMaterial;
 import com.csg.prm.confirm.aitool.entity.AitParseResult;
 import com.csg.prm.confirm.aitool.service.AitMaterialService;
 import com.csg.prm.confirm.aitool.term.AitTermLibrary;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.confirm.entity.ConfirmApply;
 import com.csg.prm.confirm.service.ConfirmApplyService;
 import org.junit.jupiter.api.Test;
@@ -151,16 +151,16 @@ class AitMaterialTest {
         assertEquals(ok.length, aitService.loadFile(id).length, "原件字节应可完整回读");
 
         // 非法格式拒绝(仅 pdf/doc/docx/jpg/jpeg/png)
-        assertThrows(BizException.class, () -> aitService.uploadBinary("木马.exe", ok, null, null, null),
+        assertThrows(BusinessException.class, () -> aitService.uploadBinary("木马.exe", ok, null, null, null),
                 "非法格式应拒绝");
         // 小文件合法(下限仅 1KB,防空文件;质量交解析分类判定)
         String smallId = aitService.uploadBinary("授权函-简短版.pdf", new byte[50 * 1024], null, null, null);
         assertNotNull(smallId, "50KB 合法材料不应被体积下限误拦");
         // 过小拒绝(< 1KB)
-        assertThrows(BizException.class, () -> aitService.uploadBinary("tiny.pdf", new byte[512], null, null, null),
+        assertThrows(BusinessException.class, () -> aitService.uploadBinary("tiny.pdf", new byte[512], null, null, null),
                 "低于 1KB 应拒绝(防空文件)");
         // 空内容拒绝
-        assertThrows(BizException.class, () -> aitService.uploadBinary("empty.pdf", new byte[0], null, null, null),
+        assertThrows(BusinessException.class, () -> aitService.uploadBinary("empty.pdf", new byte[0], null, null, null),
                 "空文件应拒绝");
     }
 
@@ -169,14 +169,14 @@ class AitMaterialTest {
     void parse_missing_material_rejected_synchronously() {
         // @Async 解析派发前必须同步校验材料存在,否则异常被异步线程吞掉、前端误得"成功"
         AitMaterialController controller = new AitMaterialController(aitService, null);
-        assertThrows(BizException.class, () -> controller.parse("NO-SUCH-MATERIAL"));
+        assertThrows(BusinessException.class, () -> controller.parse("NO-SUCH-MATERIAL"));
     }
 
     @Test
     void uploadBatch_rejects_more_than_50() {
         MultipartFile[] tooMany = new MultipartFile[51];
         AitMaterialController controller = new AitMaterialController(aitService, null);
-        assertThrows(BizException.class, () -> controller.uploadBatch(tooMany, null, null),
+        assertThrows(BusinessException.class, () -> controller.uploadBatch(tooMany, null, null),
                 "单次批量超过 50 个应拒绝");
     }
 
@@ -232,7 +232,7 @@ class AitMaterialTest {
         byte[] garbage = new byte[120 * 1024]; // 非有效 PDF,上传时抽取不到正文 → content 为空
         String id = aitService.uploadBinary("损坏的确权证明.pdf", garbage, null, null, null);
 
-        assertThrows(BizException.class, () -> aitService.parse(id), "无法解析的文件应抛出失败");
+        assertThrows(BusinessException.class, () -> aitService.parse(id), "无法解析的文件应抛出失败");
         AitMaterial m = aitService.getMaterial(id);
         assertEquals(AitMaterial.PARSE_FAILED, m.getParseStatus());
         assertEquals(100, m.getProgress());

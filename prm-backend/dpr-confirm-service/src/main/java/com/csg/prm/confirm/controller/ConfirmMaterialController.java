@@ -1,9 +1,10 @@
 package com.csg.prm.confirm.controller;
 
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.R;
+import com.csg.prm.common.api.Result;
+import com.csg.prm.common.query.PageQuery;
 import com.csg.prm.confirm.entity.ConfirmMaterial;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.confirm.dto.MaterialCheckReport;
 import com.csg.prm.confirm.dto.MaterialSyncReport;
 import com.csg.prm.confirm.entity.ConfirmMaterialRule;
@@ -21,6 +22,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.validation.annotation.Validated;
+import jakarta.validation.Valid;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -28,6 +31,7 @@ import java.util.List;
 
 /** 确权申请材料 + 材料校验接口(IM-DAM-DPR-02-001-001-004/005)。 */
 @RestController
+@Validated
 @RequestMapping("/api/dpr/confirm/material")
 public class ConfirmMaterialController {
 
@@ -41,25 +45,25 @@ public class ConfirmMaterialController {
 
     /** 应交材料清单规则(单一真源):前端据此构建 A–J 应交清单,不再前端硬编码。 */
     @GetMapping("/rule")
-    public R<List<ConfirmMaterialRule>> rules(
+    public Result<List<ConfirmMaterialRule>> rules(
             @RequestParam(defaultValue = "确权") String scene) {
-        return R.ok(ruleService.listEnabled(scene));
+        return Result.success(ruleService.listEnabled(scene));
     }
 
     @PostMapping
-    public R<String> upload(@RequestBody ConfirmMaterial m) {
-        return R.ok(service.upload(m));
+    public Result<String> upload(@Valid @RequestBody ConfirmMaterial m) {
+        return Result.success(service.upload(m));
     }
 
     /** 真实文件上传(multipart:file + applyId/材料名称/类型/所有者),含格式验证。 */
     @PostMapping("/upload-file")
-    public R<String> uploadFile(@RequestParam("file") MultipartFile file,
+    public Result<String> uploadFile(@RequestParam("file") MultipartFile file,
                                 @RequestParam String applyId,
                                 @RequestParam(required = false) String materialName,
                                 @RequestParam(required = false) String materialType,
                                 @RequestParam(required = false) String owner) {
         if (file == null || file.isEmpty()) {
-            throw new BizException("未选择文件");
+            throw new BusinessException("未选择文件");
         }
         ConfirmMaterial meta = new ConfirmMaterial();
         meta.setApplyId(applyId);
@@ -67,9 +71,9 @@ public class ConfirmMaterialController {
         meta.setMaterialType(materialType);
         meta.setOwner(owner);
         try {
-            return R.ok(service.uploadFile(meta, file.getOriginalFilename(), file.getBytes()));
+            return Result.success(service.uploadFile(meta, file.getOriginalFilename(), file.getBytes()));
         } catch (IOException e) {
-            throw new BizException("读取上传文件失败:" + e.getMessage());
+            throw new BusinessException("读取上传文件失败:" + e.getMessage());
         }
     }
 
@@ -84,28 +88,28 @@ public class ConfirmMaterialController {
     }
 
     @DeleteMapping("/{materialId}")
-    public R<Void> delete(@PathVariable String materialId) {
+    public Result<Void> delete(@PathVariable String materialId) {
         service.delete(materialId);
-        return R.ok();
+        return Result.success();
     }
 
     @GetMapping("/by-apply/{applyId}")
-    public R<List<ConfirmMaterial>> listByApply(@PathVariable String applyId) {
-        return R.ok(service.listByApply(applyId));
+    public Result<List<ConfirmMaterial>> listByApply(@PathVariable String applyId) {
+        return Result.success(service.listByApply(applyId));
     }
 
     @PostMapping("/{materialId}/check")
-    public R<Void> check(@PathVariable String materialId,
+    public Result<Void> check(@PathVariable String materialId,
                          @RequestParam boolean pass,
                          @RequestParam(required = false) String abnormalDesc) {
         service.check(materialId, pass, abnormalDesc);
-        return R.ok();
+        return Result.success();
     }
 
     /** 规则化材料校验:自动识别缺失项/不合规项,返回校验报告。 */
     @PostMapping("/check-run")
-    public R<MaterialCheckReport> checkRun(@RequestParam String applyId) {
-        return R.ok(service.runCheck(applyId));
+    public Result<MaterialCheckReport> checkRun(@RequestParam String applyId) {
+        return Result.success(service.runCheck(applyId));
     }
 
     /**
@@ -113,21 +117,21 @@ public class ConfirmMaterialController {
      * 自动登记为"平台同步"免上传,返回同步明细 + 仍待用户补全清单。幂等,可重复调用。
      */
     @PostMapping("/sync-platform")
-    public R<MaterialSyncReport> syncPlatform(@RequestParam String applyId) {
-        return R.ok(service.syncFromPlatform(applyId));
+    public Result<MaterialSyncReport> syncPlatform(@RequestParam String applyId) {
+        return Result.success(service.syncFromPlatform(applyId));
     }
 
     /** 材料 AI 校验:qwen3-max 逐份校验完整性/合规性/与表单一致性(stub 回退),返回严格 JSON */
     @PostMapping("/ai-check")
-    public R<String> aiCheck(@RequestParam String applyId) {
-        return R.ok(service.aiCheck(applyId));
+    public Result<String> aiCheck(@RequestParam String applyId) {
+        return Result.success(service.aiCheck(applyId));
     }
 
     /** 推送审核(后端门禁):校验全通过才提交审核。 */
     @PostMapping("/push-review")
-    public R<Void> pushReview(@RequestParam String applyId) {
+    public Result<Void> pushReview(@RequestParam String applyId) {
         service.pushReview(applyId);
-        return R.ok();
+        return Result.success();
     }
 
     /** 导出材料校验结果(CSV)。 */
@@ -142,10 +146,9 @@ public class ConfirmMaterialController {
     }
 
     @GetMapping("/page")
-    public R<PageResult<ConfirmMaterial>> page(@RequestParam(defaultValue = "1") long current,
-                                               @RequestParam(defaultValue = "10") long size,
+    public Result<PageResult<ConfirmMaterial>> page(@Valid PageQuery page,
                                                @RequestParam(required = false) String applyId,
                                                @RequestParam(required = false) String checkResult) {
-        return R.ok(service.page(current, size, applyId, checkResult));
+        return Result.success(service.page(page.getCurrent(), page.getSize(), applyId, checkResult));
     }
 }

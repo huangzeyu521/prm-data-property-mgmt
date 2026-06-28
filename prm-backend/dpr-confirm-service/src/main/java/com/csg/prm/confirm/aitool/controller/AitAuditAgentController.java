@@ -1,12 +1,13 @@
 package com.csg.prm.confirm.aitool.controller;
 
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.R;
+import com.csg.prm.common.api.Result;
 import com.csg.prm.common.query.PageQuery;
 import com.csg.prm.confirm.aitool.entity.AitAuditBase;
 import com.csg.prm.confirm.aitool.entity.AitAuditResult;
 import com.csg.prm.confirm.aitool.entity.AitEvidence;
 import com.csg.prm.confirm.aitool.service.AitAuditAgentService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -27,6 +29,7 @@ import java.util.Map;
  * 智能确权 Agent 审核与推理决策接口(可研 3.1)。
  */
 @RestController
+@Validated
 @RequestMapping("/api/dpr/confirm/aitool/agent")
 public class AitAuditAgentController {
 
@@ -38,49 +41,49 @@ public class AitAuditAgentController {
 
     /** 发起 Agent 多阶段审核(规则预筛→快速/深度通道→结构化结论)。 */
     @PostMapping("/audit")
-    public R<AitAuditResult> audit(@RequestParam String applyId) {
-        return R.ok(service.audit(applyId));
+    public Result<AitAuditResult> audit(@RequestParam String applyId) {
+        return Result.success(service.audit(applyId));
     }
 
     /** 取某申请的最新 Agent 审核结果。 */
     @GetMapping("/{applyId}")
-    public R<AitAuditResult> get(@PathVariable String applyId) {
-        return R.ok(service.getByApply(applyId));
+    public Result<AitAuditResult> get(@PathVariable String applyId) {
+        return Result.success(service.getByApply(applyId));
     }
 
     /** 3.2#1 批量审核(传 applyIds 数组),形成台账。 */
     @PostMapping("/batch-audit")
-    public R<List<AitAuditResult>> batchAudit(@RequestBody List<String> applyIds) {
-        return R.ok(service.batchAudit(applyIds));
+    public Result<List<AitAuditResult>> batchAudit(@RequestBody List<String> applyIds) {
+        return Result.success(service.batchAudit(applyIds));
     }
 
     /** 3.2#1 字段级结论(该申请各材料的清洗审核底表)。 */
     @GetMapping("/{applyId}/field-level")
-    public R<List<AitAuditBase>> fieldLevel(@PathVariable String applyId) {
-        return R.ok(service.fieldLevel(applyId));
+    public Result<List<AitAuditBase>> fieldLevel(@PathVariable String applyId) {
+        return Result.success(service.fieldLevel(applyId));
     }
 
     /** 3.2#4 审核证据链档案。 */
     @GetMapping("/{applyId}/evidence")
-    public R<AitEvidence> evidence(@PathVariable String applyId) {
-        return R.ok(service.getEvidence(applyId));
+    public Result<AitEvidence> evidence(@PathVariable String applyId) {
+        return Result.success(service.getEvidence(applyId));
     }
 
     /** 3.2#5 审核台账分页(多维筛选)。 */
     @GetMapping("/ledger/page")
-    public R<PageResult<AitAuditResult>> ledgerPage(PageQuery query,
+    public Result<PageResult<AitAuditResult>> ledgerPage(@Valid PageQuery query,
                                                     @RequestParam(required = false) String assetId,
                                                     @RequestParam(required = false) String dataClass,
                                                     @RequestParam(required = false) String riskLevel,
                                                     @RequestParam(required = false) String channel,
                                                     @RequestParam(required = false) String authAdvice) {
-        return R.ok(service.ledgerPage(query, assetId, dataClass, riskLevel, channel, authAdvice));
+        return Result.success(service.ledgerPage(query, assetId, dataClass, riskLevel, channel, authAdvice));
     }
 
     /** 3.2#5 台账汇总统计(按风险/级别/建议/通道/业务域)。 */
     @GetMapping("/ledger/stats")
-    public R<Map<String, Object>> ledgerStats() {
-        return R.ok(service.ledgerStats());
+    public Result<Map<String, Object>> ledgerStats() {
+        return Result.success(service.ledgerStats());
     }
 
     /** 3.2#5 审核台账导出 Excel。 */

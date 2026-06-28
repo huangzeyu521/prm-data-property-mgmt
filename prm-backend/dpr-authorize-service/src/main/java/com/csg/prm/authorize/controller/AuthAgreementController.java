@@ -4,8 +4,11 @@ import com.csg.prm.authorize.entity.AuthAgreement;
 import com.csg.prm.authorize.entity.AuthSealUploadLog;
 import com.csg.prm.authorize.service.AuthAgreementService;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.R;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.api.Result;
+import com.csg.prm.common.exception.BusinessException;
+import com.csg.prm.common.query.PageQuery;
+import jakarta.validation.Valid;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +26,7 @@ import java.util.List;
 
 /** 授权协议接口:生成/签章上传/审核/存档/下载(IM-DAM-DPR-03-001-003)。 */
 @RestController
+@Validated
 @RequestMapping("/api/dpr/auth/agreement")
 public class AuthAgreementController {
 
@@ -33,36 +37,36 @@ public class AuthAgreementController {
     }
 
     @PostMapping("/generate")
-    public R<String> generate(@RequestParam String applyId,
+    public Result<String> generate(@RequestParam String applyId,
                               @RequestParam(required = false) String templateId,
                               @RequestParam(required = false) String granteeOrg) {
-        return R.ok(service.generate(applyId, templateId, granteeOrg));
+        return Result.success(service.generate(applyId, templateId, granteeOrg));
     }
 
     @PostMapping("/{agreementId}/sign-grantor")
-    public R<Void> signByGrantor(@PathVariable String agreementId, @RequestParam(required = false) String fileUrl) {
+    public Result<Void> signByGrantor(@PathVariable String agreementId, @RequestParam(required = false) String fileUrl) {
         service.signByGrantor(agreementId, fileUrl);
-        return R.ok();
+        return Result.success();
     }
 
     @PostMapping("/{agreementId}/sign-grantee")
-    public R<Void> signByGrantee(@PathVariable String agreementId, @RequestParam(required = false) String fileUrl) {
+    public Result<Void> signByGrantee(@PathVariable String agreementId, @RequestParam(required = false) String fileUrl) {
         service.signByGrantee(agreementId, fileUrl);
-        return R.ok();
+        return Result.success();
     }
 
     /** 上传签章文件(multipart:file + role=授权方/被授权方):格式校验 + 签章有效性 + 记录。 */
     @PostMapping("/{agreementId}/upload-seal")
-    public R<AuthSealUploadLog> uploadSeal(@PathVariable String agreementId,
+    public Result<AuthSealUploadLog> uploadSeal(@PathVariable String agreementId,
                                            @RequestParam("file") MultipartFile file,
                                            @RequestParam String role) {
         if (file == null || file.isEmpty()) {
-            throw new BizException("未选择签章文件");
+            throw new BusinessException("未选择签章文件");
         }
         try {
-            return R.ok(service.uploadSeal(agreementId, role, file.getOriginalFilename(), file.getBytes()));
+            return Result.success(service.uploadSeal(agreementId, role, file.getOriginalFilename(), file.getBytes()));
         } catch (IOException e) {
-            throw new BizException("读取签章文件失败:" + e.getMessage());
+            throw new BusinessException("读取签章文件失败:" + e.getMessage());
         }
     }
 
@@ -80,58 +84,57 @@ public class AuthAgreementController {
 
     /** 某协议的签章上传记录。 */
     @GetMapping("/{agreementId}/upload-logs")
-    public R<List<AuthSealUploadLog>> uploadLogs(@PathVariable String agreementId) {
-        return R.ok(service.listUploadLogs(agreementId));
+    public Result<List<AuthSealUploadLog>> uploadLogs(@PathVariable String agreementId) {
+        return Result.success(service.listUploadLogs(agreementId));
     }
 
     @PostMapping("/{agreementId}/review")
-    public R<Void> review(@PathVariable String agreementId, @RequestParam boolean pass,
+    public Result<Void> review(@PathVariable String agreementId, @RequestParam boolean pass,
                           @RequestParam(required = false) String opinion) {
         service.review(agreementId, pass, opinion);
-        return R.ok();
+        return Result.success();
     }
 
     /** 协议审核处理记录(审核人/结论/意见/时间)。 */
     @GetMapping("/{agreementId}/review-logs")
-    public R<java.util.List<com.csg.prm.authorize.entity.AgreementReviewLog>> reviewLogs(@PathVariable String agreementId) {
-        return R.ok(service.listReviewLogs(agreementId));
+    public Result<java.util.List<com.csg.prm.authorize.entity.AgreementReviewLog>> reviewLogs(@PathVariable String agreementId) {
+        return Result.success(service.listReviewLogs(agreementId));
     }
 
     @PostMapping("/{agreementId}/archive")
-    public R<Void> archive(@PathVariable String agreementId) {
+    public Result<Void> archive(@PathVariable String agreementId) {
         service.archive(agreementId);
-        return R.ok();
+        return Result.success();
     }
 
     @GetMapping("/{agreementId}")
-    public R<AuthAgreement> detail(@PathVariable String agreementId) {
-        return R.ok(service.getById(agreementId));
+    public Result<AuthAgreement> detail(@PathVariable String agreementId) {
+        return Result.success(service.getById(agreementId));
     }
 
     @GetMapping("/page")
-    public R<PageResult<AuthAgreement>> page(@RequestParam(defaultValue = "1") long current,
-                                             @RequestParam(defaultValue = "10") long size,
+    public Result<PageResult<AuthAgreement>> page(@Valid PageQuery page,
                                              @RequestParam(required = false) String reviewStatus,
                                              @RequestParam(required = false) String archiveStatus,
                                              @RequestParam(required = false) String agreementType,
                                              @RequestParam(required = false) String deptName,
                                              @RequestParam(required = false) String archiveStart,
                                              @RequestParam(required = false) String archiveEnd) {
-        return R.ok(service.page(current, size, reviewStatus, archiveStatus, agreementType, deptName, archiveStart, archiveEnd));
+        return Result.success(service.page(page.getCurrent(), page.getSize(), reviewStatus, archiveStatus, agreementType, deptName, archiveStart, archiveEnd));
     }
 
     /** 记录存档访问审计(查看/下载)。 */
     @PostMapping("/{agreementId}/access")
-    public R<Void> access(@PathVariable String agreementId,
+    public Result<Void> access(@PathVariable String agreementId,
                           @RequestParam(required = false) String action,
                           @RequestParam(required = false) String operator) {
         service.recordAccess(agreementId, action, operator);
-        return R.ok();
+        return Result.success();
     }
 
     /** 协议存档审计日志(归档/查看/下载)。 */
     @GetMapping("/{agreementId}/archive-logs")
-    public R<java.util.List<com.csg.prm.authorize.entity.AgreementArchiveLog>> archiveLogs(@PathVariable String agreementId) {
-        return R.ok(service.listArchiveLogs(agreementId));
+    public Result<java.util.List<com.csg.prm.authorize.entity.AgreementArchiveLog>> archiveLogs(@PathVariable String agreementId) {
+        return Result.success(service.listArchiveLogs(agreementId));
     }
 }

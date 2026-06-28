@@ -1,6 +1,6 @@
 package com.csg.prm.confirm;
 
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.confirm.entity.ConfirmApply;
 import com.csg.prm.confirm.entity.EquityCard;
 import com.csg.prm.confirm.service.ConfirmApplyService;
@@ -100,13 +100,13 @@ class ConfirmFlowTest {
         ConfirmApply bad = new ConfirmApply();
         bad.setAssetId("DA-CFM-003");
         bad.setAssetName("缺权属类型表");
-        assertThrows(BizException.class, () -> applyService.saveDraft(bad));
+        assertThrows(BusinessException.class, () -> applyService.saveDraft(bad));
     }
 
     @Test
     void cannot_approve_draft_directly() {
         String id = applyService.saveDraft(draft("DA-CFM-004", "未提交表"));
-        assertThrows(BizException.class, () -> applyService.approve(id));
+        assertThrows(BusinessException.class, () -> applyService.approve(id));
     }
 
     /** 确权变更(附录F §3.3.2 重新确权)须填变更触发类型,否则提交被拦。 */
@@ -115,7 +115,7 @@ class ConfirmFlowTest {
         ConfirmApply a = draft("DA-CFM-CHG", "确权变更校验");
         a.setRegisterType("确权变更"); // 未填 changeTrigger
         String id = applyService.saveDraft(a);
-        BizException ex = assertThrows(BizException.class, () -> applyService.submit(id));
+        BusinessException ex = assertThrows(BusinessException.class, () -> applyService.submit(id));
         assertTrue(ex.getMessage().contains("变更触发类型"), "确权变更未填触发类型应被拦:" + ex.getMessage());
     }
 }

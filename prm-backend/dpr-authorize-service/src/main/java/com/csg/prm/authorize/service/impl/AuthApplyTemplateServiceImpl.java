@@ -7,8 +7,8 @@ import com.csg.prm.authorize.entity.AuthApplyTemplate;
 import com.csg.prm.authorize.mapper.AuthApplyTemplateMapper;
 import com.csg.prm.authorize.service.AuthApplyTemplateService;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.ResultCode;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.api.ResponseCode;
+import com.csg.prm.common.exception.BusinessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -26,10 +26,10 @@ public class AuthApplyTemplateServiceImpl implements AuthApplyTemplateService {
     @Transactional
     public String create(AuthApplyTemplate t) {
         if (!StringUtils.hasText(t.getTemplateName())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "模板名称不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "模板名称不能为空");
         }
         if (!StringUtils.hasText(t.getAuthType())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "授权类型不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "授权类型不能为空");
         }
         t.setTemplateVersion("v1");
         t.setTemplateStatus(AuthApplyTemplate.STATUS_ACTIVE);
@@ -90,11 +90,11 @@ public class AuthApplyTemplateServiceImpl implements AuthApplyTemplateService {
 
     private AuthApplyTemplate require(String id) {
         if (!StringUtils.hasText(id)) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "模板ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "模板ID不能为空");
         }
         AuthApplyTemplate t = mapper.selectById(id);
         if (t == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "申请模板不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "申请模板不存在");
         }
         return t;
     }

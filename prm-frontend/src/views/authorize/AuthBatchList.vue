@@ -46,18 +46,44 @@
       <template #footer><el-button type="primary" @click="onSave">确定</el-button><el-button @click="dlg=false">取消</el-button></template>
     </el-dialog>
 
-    <el-drawer v-model="detailDrawer" :title="`批量授权清单明细(表6) · ${curList.listNo||''}`" size="72%">
-      <div class="prm-table-note" style="margin-bottom:10px">表6 明细行:本清单(batchListId)下的所有批量授权项。每项=一个数据表的授权,含第三方/隐私/跨域/权益。</div>
+    <el-drawer v-model="detailDrawer" :title="`批量授权清单明细(表6) · ${curList.listNo||''}`" size="80%">
+      <div class="prm-table-note" style="margin-bottom:8px">表6 明细行:本清单(batchListId)下的所有批量授权项。每项=一个库表的授权,逐项含 系统/模式/权益/场景 + 确权带出的第三方·隐私 + 先确后授生效卡片。</div>
+      <!-- 清单级「是否跨系统域」判定(表6 专设;批量可跨多系统聚合),与一站式向导同口径 -->
+      <el-alert v-if="detailRows.length" :type="crossSystemInfo.isCross ? 'warning' : 'info'" :closable="false" style="margin-bottom:10px">
+        <template #title>
+          <span>是否跨系统域:</span>
+          <el-tag :type="crossSystemInfo.isCross ? 'warning' : 'info'" size="small" effect="dark" style="margin:0 6px">{{ crossSystemInfo.isCross ? '是(跨系统域)' : '否(单系统)' }}</el-tag>
+          本清单覆盖 {{ crossSystemInfo.systems.length }} 个系统{{ crossSystemInfo.systems.length ? '(' + crossSystemInfo.systems.join('、') + ')' : '' }}。
+        </template>
+      </el-alert>
       <el-table :data="detailRows" v-loading="detailLoading" border stripe>
-        <el-table-column type="index" label="序号" width="56" align="center" />
-        <el-table-column prop="granteeOrg" label="申请单位/被授权方" min-width="150" show-overflow-tooltip />
-        <el-table-column prop="assetName" label="数据表" min-width="140" show-overflow-tooltip />
+        <el-table-column type="expand">
+          <template #default="{ row }">
+            <div style="padding:6px 18px;line-height:1.9;color:var(--prm-color-text)">
+              <div><b>业务域:</b>{{ row.businessDomain || '—' }}　<b>授权范围:</b>{{ row.scope || '—' }}　<b>授权时效:</b>{{ (row.validDate||'').slice(0,10) || '—' }}</div>
+              <div><b>利益分配约定(附录D §3.4.4):</b>{{ row.benefitAllocation || '— 未填(协议签订前须补充)' }}</div>
+              <div><b>安全保障要求(附录D §3.4.4):</b>{{ row.securityReq || '— 未填(协议签订前须补充)' }}</div>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column type="index" label="序号" width="52" align="center" />
+        <el-table-column prop="granteeOrg" label="被授权方" min-width="140" show-overflow-tooltip />
+        <el-table-column label="所属系统" min-width="120" show-overflow-tooltip><template #default="{ row }">{{ sysName(row) }}</template></el-table-column>
+        <el-table-column prop="schemaName" label="模式名称" width="100" show-overflow-tooltip><template #default="{ row }">{{ row.schemaName || '—' }}</template></el-table-column>
+        <el-table-column prop="assetName" label="数据表" min-width="130" show-overflow-tooltip />
         <el-table-column prop="rightType" label="权益类型" width="130" />
-        <el-table-column prop="scenario" label="使用场景" min-width="120" show-overflow-tooltip />
-        <el-table-column prop="thirdPartySource" label="第三方来源" width="120" show-overflow-tooltip />
-        <el-table-column prop="sensitiveType" label="隐私/商密" width="110" />
-        <el-table-column label="跨域" width="80" align="center"><template #default="{ row }">{{ row.crossRegion ? '是' : '否' }}</template></el-table-column>
-        <el-table-column prop="status" label="状态" width="120" align="center">
+        <el-table-column prop="scenario" label="使用场景" min-width="110" show-overflow-tooltip><template #default="{ row }">{{ row.scenario || '—' }}</template></el-table-column>
+        <el-table-column label="涉第三方" width="88" align="center">
+          <template #default="{ row }"><el-tag :type="involvesThird(row) ? 'warning' : 'info'" size="small" effect="plain">{{ involvesThird(row) ? '涉' : '否' }}</el-tag></template>
+        </el-table-column>
+        <el-table-column label="涉隐私/商密" width="104" align="center">
+          <template #default="{ row }"><el-tag :type="involvesSensitive(row) ? 'danger' : 'info'" size="small" effect="plain">{{ involvesSensitive(row) ? row.sensitiveType : '否' }}</el-tag></template>
+        </el-table-column>
+        <el-table-column label="跨域" width="68" align="center">
+          <template #default><el-tag :type="crossSystemInfo.isCross ? 'warning' : 'info'" size="small" effect="plain">{{ crossSystemInfo.isCross ? '是' : '否' }}</el-tag></template>
+        </el-table-column>
+        <el-table-column prop="equityCardId" label="生效卡片" width="120" show-overflow-tooltip><template #default="{ row }">{{ row.equityCardId || '—' }}</template></el-table-column>
+        <el-table-column prop="status" label="状态" width="110" align="center">
           <template #default="{ row }"><el-tag :type="tag(row.status)">{{ row.status }}</el-tag></template>
         </el-table-column>
       </el-table>
@@ -66,7 +92,7 @@
   </div>
 </template>
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { pageBatchList, createBatchList, submitBatchList, approveBatchList, listAuthByBatch } from '@/api/authorize'
 const statuses = ['草案', '申报稿', '批准']
@@ -75,6 +101,17 @@ const rows = ref([]); const total = ref(0); const loading = ref(false)
 const dlg = ref(false); const form = reactive({ listYear: '', remark: '' })
 const detailDrawer = ref(false); const detailRows = ref([]); const detailLoading = ref(false); const curList = ref({})
 function tag(s) { return { 批准: 'success', 申报稿: 'warning', 草案: 'info', 已生效: 'success', 已驳回: 'danger' }[s] || 'warning' }
+// 库表级:assetId=SYS:系统名 → 系统名;数据表名=assetName(库表名)。与向导/确权目录同一派生。
+function sysName(row) { const a = row.assetId || ''; return a.startsWith('SYS:') ? a.slice(4) : (a || '—') }
+// 合规判定(与向导逐项表一致):第三方/隐私商密 由确权事实带出,空/「无」视为不涉。
+function involvesThird(row) { return !!(row.thirdPartySource && String(row.thirdPartySource).trim()) }
+function involvesSensitive(row) { return !!(row.sensitiveType && String(row.sensitiveType).trim() && row.sensitiveType !== '无') }
+// 表6「是否跨系统域」是清单级属性(全清单系统并集>1),与向导 crossSystemInfo 同源,避免逐行 crossRegion 陈旧不一致。
+const crossSystemInfo = computed(() => {
+  const systems = [...new Set(detailRows.value.map(sysName).filter(s => s && s !== '—'))]
+  const domains = [...new Set(detailRows.value.map(r => r.businessDomain).filter(Boolean))]
+  return { systems, domains, isCross: systems.length > 1 || domains.length > 1 }
+})
 async function onDetail(row) {
   curList.value = row; detailDrawer.value = true; detailLoading.value = true
   try { detailRows.value = await listAuthByBatch(row.batchListId) || [] } finally { detailLoading.value = false }

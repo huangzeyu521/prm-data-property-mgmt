@@ -7,8 +7,8 @@ import com.csg.prm.authorize.entity.AuthAgreementTemplate;
 import com.csg.prm.authorize.mapper.AuthAgreementTemplateMapper;
 import com.csg.prm.authorize.service.AuthAgreementTemplateService;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.ResultCode;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.api.ResponseCode;
+import com.csg.prm.common.exception.BusinessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -32,7 +32,7 @@ public class AuthAgreementTemplateServiceImpl implements AuthAgreementTemplateSe
     @Transactional
     public String create(AuthAgreementTemplate t) {
         if (!StringUtils.hasText(t.getTemplateName())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "模板名称不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "模板名称不能为空");
         }
         t.setTemplateVersion("v1");
         t.setTemplateStatus(AuthAgreementTemplate.STATUS_ACTIVE);
@@ -80,13 +80,13 @@ public class AuthAgreementTemplateServiceImpl implements AuthAgreementTemplateSe
     public void uploadFile(String templateId, String fileName, byte[] data) {
         require(templateId);
         if (!StringUtils.hasText(fileName) || data == null || data.length == 0) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "套版文件为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "套版文件为空");
         }
         if (data.length > MAX_BYTES) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "文件超过 20MB 上限");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "文件超过 20MB 上限");
         }
         if (!ALLOWED_EXT.contains(extOf(fileName))) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "仅支持 PDF/Word/图片 套版文件");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "仅支持 PDF/Word/图片 套版文件");
         }
         AuthAgreementTemplate upd = new AuthAgreementTemplate();
         upd.setTemplateId(templateId);
@@ -99,7 +99,7 @@ public class AuthAgreementTemplateServiceImpl implements AuthAgreementTemplateSe
     public byte[] download(String templateId) {
         AuthAgreementTemplate t = require(templateId);
         if (!StringUtils.hasText(t.getFileData())) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "该模板未上传套版文件");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "该模板未上传套版文件");
         }
         return Base64.getDecoder().decode(t.getFileData());
     }
@@ -125,11 +125,11 @@ public class AuthAgreementTemplateServiceImpl implements AuthAgreementTemplateSe
 
     private AuthAgreementTemplate require(String id) {
         if (!StringUtils.hasText(id)) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "模板ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "模板ID不能为空");
         }
         AuthAgreementTemplate t = mapper.selectById(id);
         if (t == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "协议模板不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "协议模板不存在");
         }
         return t;
     }

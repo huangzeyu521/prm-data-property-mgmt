@@ -49,26 +49,27 @@ class PlatformMaterialSyncTest {
         String id = draftAst001();
         MaterialSyncReport rep = materialService.syncFromPlatform(id);
 
-        // AST-001 平台覆盖 4 项:证明材料 + A 来源说明 + G 行政监管 + H 个人隐私
-        assertEquals(4, rep.getSyncedCount(), "应从平台同步 4 项已上传材料,实际 " + rep.getSyncedCount());
+        // AST-001 平台覆盖 4 项(证明材料 + A 来源说明 + G 行政监管 + H 个人隐私)+ 系统据申报自动生成 表1/表2 = 6
+        assertEquals(6, rep.getSyncedCount(), "应同步 4 平台项 + 自动生成 表1/表2,实际 " + rep.getSyncedCount());
         assertTrue(rep.getSynced().stream().anyMatch(s -> s.getMaterialName().contains("证明材料")), "应同步 证明材料");
         assertTrue(rep.getSynced().stream().anyMatch(s -> "A".equals(s.getCode())), "应同步 A 来源说明");
         assertTrue(rep.getSynced().stream().anyMatch(s -> "G".equals(s.getCode())), "应同步 G 行政监管");
         assertTrue(rep.getSynced().stream().anyMatch(s -> "H".equals(s.getCode())), "应同步 H 个人隐私");
+        assertTrue(rep.getSynced().stream().anyMatch(s -> "系统生成".equals(s.getCode())), "应自动生成 表1/表2");
 
-        // 登记的材料带平台来源 + 平台附件名 + 校验通过(免上传)
+        // 登记的材料:平台覆盖项=平台同步,表1/表2=系统生成;均带文件名 + 校验通过(免上传)
         List<ConfirmMaterial> mats = materialService.listByApply(id);
-        assertTrue(mats.stream().allMatch(m -> ConfirmMaterial.SOURCE_PLATFORM.equals(m.getSource())),
-                "本次登记材料均应为 平台同步");
+        assertTrue(mats.stream().allMatch(m -> ConfirmMaterial.SOURCE_PLATFORM.equals(m.getSource()) || "系统生成".equals(m.getSource())),
+                "本次登记材料应为 平台同步 或 系统生成");
         assertTrue(mats.stream().allMatch(m -> m.getFileName() != null && !m.getFileName().isBlank()),
-                "平台同步材料应带平台附件名");
+                "材料应带文件名");
         assertTrue(mats.stream().allMatch(m -> ConfirmMaterial.CHECK_PASS.equals(m.getCheckResult())),
-                "平台同步材料校验应直接通过");
+                "平台同步/系统生成材料校验应直接通过");
 
-        // 表1/表2(系统自生成表单)平台无附件 → 仍待用户补全
-        assertTrue(rep.getStillMissing().stream().anyMatch(n -> n.contains("表1")), "表1 应待补全");
-        assertTrue(rep.getStillMissing().stream().anyMatch(n -> n.contains("表2")), "表2 应待补全");
-        assertFalse(rep.getStillMissing().stream().anyMatch(n -> n.contains("个人/家庭隐私")), "H 已平台同步,不应待补全");
+        // 表1/表2 由系统据申报内容自动生成,不再待用户补全;全部应交项已齐
+        assertFalse(rep.getStillMissing().stream().anyMatch(n -> n.contains("表1")), "表1 应系统生成,不待补全");
+        assertFalse(rep.getStillMissing().stream().anyMatch(n -> n.contains("表2")), "表2 应系统生成,不待补全");
+        assertTrue(rep.getStillMissing().isEmpty(), "AST-001 应交项应已全齐(平台覆盖+系统生成)");
     }
 
     @Test

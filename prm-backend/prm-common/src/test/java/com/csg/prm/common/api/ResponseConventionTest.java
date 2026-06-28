@@ -16,35 +16,35 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 响应约定对齐南网规范的单元测试:
- * 信封 {@link R} 含 timestamp/message 规范字段;方法级参数校验失败由全局处理器转 400(而非误判 999)。
+ * 响应约定对齐 data_pod / cn.csg.datapod 规范的单元测试:
+ * 信封 {@link Result} 为 {@code {code, message, data, timestamp}},成功码 200;
+ * 方法级参数校验失败由全局处理器统一转 400(而非误判系统异常)。
  */
 class ResponseConventionTest {
 
     private final GlobalExceptionHandler handler = new GlobalExceptionHandler();
 
     @Test
-    void result_envelope_carriesTimestampAndMessageAlias() {
-        R<String> ok = R.ok("payload");
-        assertEquals(0, ok.getCode());
-        assertEquals("成功", ok.getMsg());
-        // 南网规范字段名 message:与 msg 同值别名
-        assertEquals(ok.getMsg(), ok.getMessage());
+    void result_envelope_successCode200AndTimestamp() {
+        Result<String> ok = Result.success("payload");
+        assertEquals(200, ok.getCode(), "datapod 规范成功码为 200");
+        assertEquals("操作成功", ok.getMessage());
         // 规范信封 timestamp 字段:构造即赋值
         assertTrue(ok.getTimestamp() > 0, "信封应携带 timestamp");
         assertEquals("payload", ok.getData());
+        assertTrue(ok.isSuccess(), "code==200 应判成功");
     }
 
     @Test
     void fail_envelope_keepsCustomCodeAndMessage() {
-        R<Void> r = R.fail(400, "组织标识不能为空");
+        Result<Void> r = Result.fail(400, "组织标识不能为空");
         assertEquals(400, r.getCode());
-        assertEquals("组织标识不能为空", r.getMsg());
         assertEquals("组织标识不能为空", r.getMessage());
+        assertFalse(r.isSuccess());
     }
 
     @Test
-    void constraintViolation_mapsToParamError400_notSystemError() {
+    void constraintViolation_mapsToBadRequest400_notSystemError() {
         // PageQuery 的 jakarta 约束:current 最小为 1
         Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
         PageQuery q = new PageQuery();
@@ -52,9 +52,9 @@ class ResponseConventionTest {
         Set<ConstraintViolation<PageQuery>> violations = validator.validate(q);
         assertFalse(violations.isEmpty(), "current=0 应触发 @Min 校验");
 
-        R<Void> r = handler.handleConstraintViolation(new ConstraintViolationException(violations));
+        Result<Void> r = handler.handleConstraintViolation(new ConstraintViolationException(violations));
         assertNotNull(r);
-        assertEquals(ResultCode.PARAM_ERROR.getCode(), r.getCode(), "方法级校验失败应为 400 而非 999");
-        assertTrue(r.getMsg().contains("页码"), "应回传具体校验提示");
+        assertEquals(ResponseCode.BAD_REQUEST.getCode(), r.getCode(), "方法级校验失败应为 400 而非系统异常");
+        assertTrue(r.getMessage().contains("页码"), "应回传具体校验提示");
     }
 }

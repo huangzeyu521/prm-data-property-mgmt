@@ -10,7 +10,7 @@ import com.csg.prm.common.ai.DawatAiGateway;
 import com.csg.prm.common.aitrace.AiRunLog;
 import com.csg.prm.common.aitrace.AiRunLogService;
 import com.csg.prm.common.aitrace.AiSnapshotService;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
@@ -151,7 +151,7 @@ public class AuthAiService {
     private AuthApply mustApply(String applyId) {
         AuthApply a = applyMapper.selectById(applyId);
         if (a == null) {
-            throw new BizException("授权申请不存在");
+            throw new BusinessException("授权申请不存在");
         }
         return a;
     }

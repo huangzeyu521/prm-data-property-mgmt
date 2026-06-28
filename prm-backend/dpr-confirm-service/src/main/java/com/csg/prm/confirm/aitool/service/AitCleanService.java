@@ -1,7 +1,7 @@
 package com.csg.prm.confirm.aitool.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.confirm.aitool.dto.AitCleanRequest;
 import com.csg.prm.confirm.aitool.entity.AitAuditBase;
 import com.csg.prm.confirm.aitool.entity.AitCleanLog;
@@ -122,7 +122,7 @@ public class AitCleanService {
     public CleanResult clean(String materialId, AitCleanRequest req) {
         AitMaterial m = materialMapper.selectById(materialId);
         if (m == null) {
-            throw new BizException("材料不存在");
+            throw new BusinessException("材料不存在");
         }
         boolean useModel = req == null || req.isUseModel();
         List<Map<String, String>> rows = (req == null || req.getRows() == null || req.getRows().isEmpty())
@@ -507,14 +507,14 @@ public class AitCleanService {
     public TplCompareResult templateCompare(String materialId, String templateName, byte[] data) {
         AitMaterial m = materialMapper.selectById(materialId);
         if (m == null) {
-            throw new BizException("材料不存在");
+            throw new BusinessException("材料不存在");
         }
         if (data == null || data.length == 0) {
-            throw new BizException("模板文件为空");
+            throw new BusinessException("模板文件为空");
         }
         Map<String, String> tpl = parseTemplate(templateName, data);
         if (tpl.isEmpty()) {
-            throw new BizException("未能从模板解析出“字段:值”,请检查模板格式(Excel两列/Word或文本“字段:值”)");
+            throw new BusinessException("未能从模板解析出“字段:值”,请检查模板格式(Excel两列/Word或文本“字段:值”)");
         }
         Map<String, String> matVals = materialFieldValues(materialId, m);
         String content = m.getContent() == null ? "" : m.getContent();

@@ -1,6 +1,6 @@
 package com.csg.prm.confirm.aitool.storage;
 
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,7 +41,7 @@ public class LocalFileStorageGateway implements FileStorageGateway {
             Files.write(baseDir.resolve(key), data);
             return key;
         } catch (IOException e) {
-            throw new BizException("文件存储失败:" + e.getMessage());
+            throw new BusinessException("文件存储失败:" + e.getMessage());
         }
     }
 
@@ -50,7 +50,7 @@ public class LocalFileStorageGateway implements FileStorageGateway {
         try {
             return Files.readAllBytes(baseDir.resolve(storagePath));
         } catch (IOException e) {
-            throw new BizException("文件读取失败:" + e.getMessage());
+            throw new BusinessException("文件读取失败:" + e.getMessage());
         }
     }
 

@@ -3,7 +3,7 @@ package com.csg.prm.confirm.auth;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.csg.prm.common.auth.JwtUtil;
 import com.csg.prm.common.crypto.Sm3Util;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.confirm.system.SysOpLogService;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -45,6 +45,9 @@ public class AuthService implements ApplicationRunner {
         seed("review", "李天天", "review", "GD");
         seed("manager", "黄主管", "manager", "GD");
         seed("director", "郑经理", "director", "");
+        seed("business", "刘业务", "business", "GD");
+        seed("gm", "高总经理", "gm", "");
+        seed("leadership", "领导小组", "leadership", "");
         seed("admin", "陈明亮", "admin", "");
         seed("viewer", "黄文静", "view", "");
         seed("super", "吴海涛", "all", "");
@@ -67,18 +70,18 @@ public class AuthService implements ApplicationRunner {
     /** 登录:校验用户名+SM3密码,返回 token + 用户信息 */
     public Map<String, Object> login(String username, String password) {
         if (!StringUtils.hasText(username) || !StringUtils.hasText(password)) {
-            throw new BizException("用户名与密码不能为空");
+            throw new BusinessException("用户名与密码不能为空");
         }
         SysUser u = mapper.selectOne(new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getUsername, username).last("LIMIT 1"));
         if (u == null || !Sm3Util.hashHex(password).equals(u.getPasswordHash())) {
             opLog.record(u == null ? null : u.getUserId(), u == null ? username : u.getRealName(),
                     "登录", username, "用户名或密码错误", "失败", null);
-            throw new BizException("用户名或密码错误");
+            throw new BusinessException("用户名或密码错误");
         }
         if (u.getStatus() != null && !"启用".equals(u.getStatus())) {
             opLog.record(u.getUserId(), u.getRealName(), "登录", username, "账号已停用", "失败", null);
-            throw new BizException("账号已停用");
+            throw new BusinessException("账号已停用");
         }
         String token = JwtUtil.issue(u.getUserId(), u.getRealName(), u.getRole(), u.getProvinceCode(), TTL);
         opLog.record(u.getUserId(), u.getRealName(), "登录", username, "登录成功", "成功", null);

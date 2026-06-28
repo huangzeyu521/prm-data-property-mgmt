@@ -4,7 +4,7 @@ import com.csg.prm.authorize.entity.AuthApply;
 import com.csg.prm.authorize.entity.AuthCert;
 import com.csg.prm.authorize.service.AuthApplyService;
 import com.csg.prm.authorize.service.AuthCertService;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -94,7 +94,7 @@ class AuthFlowTest {
         AuthApply a = draft("DA-AUTH-006", "约定字段资产", "EC-NARROW-1");
         a.setScope("全字段");
         String id = applyService.saveDraft(a);
-        BizException ex = assertThrows(BizException.class, () -> applyService.submit(id));
+        BusinessException ex = assertThrows(BusinessException.class, () -> applyService.submit(id));
         assertTrue(ex.getMessage().contains("确权边界"), "授权范围超确权边界应被拦截:" + ex.getMessage());
     }
 
@@ -102,14 +102,14 @@ class AuthFlowTest {
     void submit_should_block_when_card_frozen_or_unconfirmed() {
         // 引用冻结卡片(FROZEN 前缀)模拟"未确权/冻结"
         String id = applyService.saveDraft(draft("DA-AUTH-002", "冻结资产表", "FROZEN-CARD-1"));
-        BizException ex = assertThrows(BizException.class, () -> applyService.submit(id));
+        BusinessException ex = assertThrows(BusinessException.class, () -> applyService.submit(id));
         assertTrue(ex.getMessage().contains("先确后授"), "应被先确后授规则拦截");
     }
 
     @Test
     void draft_should_require_equity_card() {
         AuthApply bad = draft("DA-AUTH-003", "缺卡片表", null);
-        assertThrows(BizException.class, () -> applyService.saveDraft(bad));
+        assertThrows(BusinessException.class, () -> applyService.saveDraft(bad));
     }
 
     @Test
@@ -118,7 +118,7 @@ class AuthFlowTest {
         AuthApply bad = draft("NONOPEN-OP-1", "未开放经营资产", "EC-OK-OP");
         bad.setRightType("数据产品经营权");
         String id = applyService.saveDraft(bad);
-        BizException ex = assertThrows(BizException.class, () -> applyService.submit(id));
+        BusinessException ex = assertThrows(BusinessException.class, () -> applyService.submit(id));
         assertTrue(ex.getMessage().contains("对外开放目录"), "经营权应受对外开放目录约束");
 
         // 经营权 + 资产在对外开放目录 -> 正常进入合规审核

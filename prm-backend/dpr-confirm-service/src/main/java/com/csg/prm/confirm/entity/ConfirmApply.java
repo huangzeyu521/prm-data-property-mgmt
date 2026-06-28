@@ -63,6 +63,10 @@ public class ConfirmApply extends BaseEntity {
     @TableField("CEC_RESP_DEPT")
     private String respDept;
 
+    /** 主体层级(表1 公司主体口径:公司总部/分省公司/专业子公司),来自 SYS_ORGANIZATION.ORG_TYPE */
+    @TableField("CEC_SUBJECT_LEVEL")
+    private String subjectLevel;
+
     @TableField("CEC_VALID_DATE")
     private LocalDateTime validDate;
 
@@ -126,6 +130,16 @@ public class ConfirmApply extends BaseEntity {
     @TableField("CEC_CHANGE_TRIGGER")
     private String changeTrigger;
 
+    /** P2 确权变更可追溯:基线引用(系统名/版本)、变更后版本号、变更摘要(前后 diff),供版本化留痕 */
+    @TableField("CEC_BASELINE_REF")
+    private String baselineRef;
+
+    @TableField("CEC_CHANGE_VERSION")
+    private Integer changeVersion;
+
+    @TableField("CEC_CHANGE_SUMMARY")
+    private String changeSummary;
+
     /** 申请模式:常规 / 一事一议(特殊事项单独审议) */
     @TableField("CEC_APPLY_MODE")
     private String applyMode;
@@ -180,6 +194,30 @@ public class ConfirmApply extends BaseEntity {
 
     public void setChangeTrigger(String changeTrigger) {
         this.changeTrigger = changeTrigger;
+    }
+
+    public String getBaselineRef() {
+        return baselineRef;
+    }
+
+    public void setBaselineRef(String baselineRef) {
+        this.baselineRef = baselineRef;
+    }
+
+    public Integer getChangeVersion() {
+        return changeVersion;
+    }
+
+    public void setChangeVersion(Integer changeVersion) {
+        this.changeVersion = changeVersion;
+    }
+
+    public String getChangeSummary() {
+        return changeSummary;
+    }
+
+    public void setChangeSummary(String changeSummary) {
+        this.changeSummary = changeSummary;
     }
 
     public String getApplyMode() {
@@ -372,6 +410,14 @@ public class ConfirmApply extends BaseEntity {
 
     public void setRespDept(String respDept) {
         this.respDept = respDept;
+    }
+
+    public String getSubjectLevel() {
+        return subjectLevel;
+    }
+
+    public void setSubjectLevel(String subjectLevel) {
+        this.subjectLevel = subjectLevel;
     }
 
     public LocalDateTime getValidDate() {

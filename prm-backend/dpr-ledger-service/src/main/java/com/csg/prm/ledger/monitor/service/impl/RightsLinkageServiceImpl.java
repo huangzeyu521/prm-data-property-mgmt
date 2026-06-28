@@ -1,7 +1,7 @@
 package com.csg.prm.ledger.monitor.service.impl;
 
-import com.csg.prm.common.api.ResultCode;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.api.ResponseCode;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.ledger.monitor.dto.LinkageResult;
 import com.csg.prm.ledger.monitor.entity.AlertRecord;
 import com.csg.prm.ledger.monitor.entity.MonitorRule;
@@ -37,7 +37,7 @@ public class RightsLinkageServiceImpl implements RightsLinkageService {
     @Transactional
     public LinkageResult onViolation(String assetId, String ruleId, String violationType, String desc) {
         if (!StringUtils.hasText(assetId)) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "资产ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "资产ID不能为空");
         }
         String vt = StringUtils.hasText(violationType) ? violationType : "违规使用";
         // 1) 违规即生成紧急预警(留痕)
@@ -64,7 +64,7 @@ public class RightsLinkageServiceImpl implements RightsLinkageService {
     public LinkageResult triggerReConfirm(String assetId, String assetName, String rightType,
                                           String triggerType, String desc) {
         if (!StringUtils.hasText(assetId)) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "资产ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "资产ID不能为空");
         }
         String tt = StringUtils.hasText(triggerType) ? triggerType : "来源变更";
         // 1) 权属变动生成重要级预警(留痕)

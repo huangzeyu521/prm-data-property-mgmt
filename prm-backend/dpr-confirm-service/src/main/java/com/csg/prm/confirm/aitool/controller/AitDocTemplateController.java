@@ -1,10 +1,11 @@
 package com.csg.prm.confirm.aitool.controller;
 
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.R;
+import com.csg.prm.common.api.Result;
 import com.csg.prm.common.query.PageQuery;
 import com.csg.prm.confirm.aitool.entity.AitDocTemplate;
 import com.csg.prm.confirm.aitool.service.AitDocTemplateService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -25,6 +27,7 @@ import java.util.List;
  * 智能确权辅助工具-资料模板库接口(1.4#3):模板 CRUD + 在线编辑 + 版本管理 + 下载。
  */
 @RestController
+@Validated
 @RequestMapping("/api/dpr/confirm/aitool/template")
 public class AitDocTemplateController {
 
@@ -35,45 +38,45 @@ public class AitDocTemplateController {
     }
 
     @GetMapping("/page")
-    public R<PageResult<AitDocTemplate>> page(PageQuery query,
+    public Result<PageResult<AitDocTemplate>> page(@Valid PageQuery query,
                                               @RequestParam(required = false) String type,
                                               @RequestParam(required = false) String name,
                                               @RequestParam(defaultValue = "true") boolean onlyLatest) {
-        return R.ok(service.page(query, type, name, onlyLatest));
+        return Result.success(service.page(query, type, name, onlyLatest));
     }
 
     @GetMapping("/{id}")
-    public R<AitDocTemplate> get(@PathVariable String id) {
-        return R.ok(service.getById(id));
+    public Result<AitDocTemplate> get(@PathVariable String id) {
+        return Result.success(service.getById(id));
     }
 
     @PostMapping
-    public R<String> create(@RequestBody AitDocTemplate t) {
-        return R.ok(service.create(t));
+    public Result<String> create(@Valid @RequestBody AitDocTemplate t) {
+        return Result.success(service.create(t));
     }
 
     /** 在线编辑当前版本。 */
     @PutMapping
-    public R<Void> update(@RequestBody AitDocTemplate t) {
+    public Result<Void> update(@Valid @RequestBody AitDocTemplate t) {
         service.updateContent(t);
-        return R.ok();
+        return Result.success();
     }
 
     /** 发布新版本(版本号自增)。 */
     @PostMapping("/new-version")
-    public R<String> newVersion(@RequestBody AitDocTemplate t) {
-        return R.ok(service.newVersion(t));
+    public Result<String> newVersion(@Valid @RequestBody AitDocTemplate t) {
+        return Result.success(service.newVersion(t));
     }
 
     @PostMapping("/{id}/set-latest")
-    public R<Void> setLatest(@PathVariable String id) {
+    public Result<Void> setLatest(@PathVariable String id) {
         service.setLatest(id);
-        return R.ok();
+        return Result.success();
     }
 
     @GetMapping("/versions")
-    public R<List<AitDocTemplate>> versions(@RequestParam String templateName) {
-        return R.ok(service.versions(templateName));
+    public Result<List<AitDocTemplate>> versions(@RequestParam String templateName) {
+        return Result.success(service.versions(templateName));
     }
 
     @GetMapping("/{id}/download")

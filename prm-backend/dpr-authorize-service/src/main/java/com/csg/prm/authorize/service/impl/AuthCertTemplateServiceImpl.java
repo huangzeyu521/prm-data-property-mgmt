@@ -7,8 +7,8 @@ import com.csg.prm.authorize.entity.AuthCertTemplate;
 import com.csg.prm.authorize.mapper.AuthCertTemplateMapper;
 import com.csg.prm.authorize.service.AuthCertTemplateService;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.ResultCode;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.api.ResponseCode;
+import com.csg.prm.common.exception.BusinessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -37,13 +37,13 @@ public class AuthCertTemplateServiceImpl implements AuthCertTemplateService {
     public void uploadFile(String templateId, String fileName, byte[] data) {
         require(templateId);
         if (!StringUtils.hasText(fileName) || data == null || data.length == 0) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "套版文件为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "套版文件为空");
         }
         if (data.length > MAX_BYTES) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "文件超过 20MB 上限");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "文件超过 20MB 上限");
         }
         if (!ALLOWED_EXT.contains(extOf(fileName))) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "仅支持 PDF/Word/图片 套版文件");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "仅支持 PDF/Word/图片 套版文件");
         }
         AuthCertTemplate upd = new AuthCertTemplate();
         upd.setTemplateId(templateId);
@@ -56,7 +56,7 @@ public class AuthCertTemplateServiceImpl implements AuthCertTemplateService {
     public byte[] download(String templateId) {
         AuthCertTemplate t = require(templateId);
         if (!StringUtils.hasText(t.getFileData())) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "该模板未上传套版文件");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "该模板未上传套版文件");
         }
         return java.util.Base64.getDecoder().decode(t.getFileData());
     }
@@ -75,7 +75,7 @@ public class AuthCertTemplateServiceImpl implements AuthCertTemplateService {
     @Transactional
     public String create(AuthCertTemplate t) {
         if (!StringUtils.hasText(t.getTemplateName())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "模板名称不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "模板名称不能为空");
         }
         if (!StringUtils.hasText(t.getCertType())) {
             t.setCertType(AuthCertTemplate.TYPE_SPECIAL);
@@ -130,11 +130,11 @@ public class AuthCertTemplateServiceImpl implements AuthCertTemplateService {
 
     private AuthCertTemplate require(String id) {
         if (!StringUtils.hasText(id)) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "模板ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "模板ID不能为空");
         }
         AuthCertTemplate t = mapper.selectById(id);
         if (t == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "授权证书模板不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "授权证书模板不存在");
         }
         return t;
     }

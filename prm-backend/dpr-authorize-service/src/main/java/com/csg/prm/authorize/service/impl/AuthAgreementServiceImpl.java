@@ -7,9 +7,9 @@ import com.csg.prm.authorize.entity.AuthAgreement;
 import com.csg.prm.authorize.mapper.AuthAgreementMapper;
 import com.csg.prm.authorize.service.AuthAgreementService;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.ResultCode;
+import com.csg.prm.common.api.ResponseCode;
 import com.csg.prm.common.evidence.ChainEvidenceService;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -62,18 +62,18 @@ public class AuthAgreementServiceImpl implements AuthAgreementService {
                                                                      String fileName, byte[] data) {
         AuthAgreement a = require(agreementId);
         if (!StringUtils.hasText(role)) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "上传角色不能为空(授权方/被授权方)");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "上传角色不能为空(授权方/被授权方)");
         }
         if (!StringUtils.hasText(fileName) || data == null || data.length == 0) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "签章文件为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "签章文件为空");
         }
         if (data.length > SEAL_MAX_BYTES) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "文件超过 20MB 上限");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "文件超过 20MB 上限");
         }
         // ① 自动校验文件格式
         boolean formatOk = SEAL_EXT.contains(extOf(fileName));
         if (!formatOk) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "签章文件格式不支持,仅支持 PDF/Word/图片");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "签章文件格式不支持,仅支持 PDF/Word/图片");
         }
         // ② 检查签章有效性(模拟 CA/CV 核验:文件非空且达最小尺寸视为签章清晰可核验)
         boolean sealValid = data.length >= 64;
@@ -118,7 +118,7 @@ public class AuthAgreementServiceImpl implements AuthAgreementService {
     public byte[] downloadSeal(String logId) {
         com.csg.prm.authorize.entity.AuthSealUploadLog log = getUploadLog(logId);
         if (!StringUtils.hasText(log.getFileData())) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "该记录无签章文件");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "该记录无签章文件");
         }
         return java.util.Base64.getDecoder().decode(log.getFileData());
     }
@@ -127,7 +127,7 @@ public class AuthAgreementServiceImpl implements AuthAgreementService {
     public com.csg.prm.authorize.entity.AuthSealUploadLog getUploadLog(String logId) {
         com.csg.prm.authorize.entity.AuthSealUploadLog log = sealLogMapper.selectById(logId);
         if (log == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "上传记录不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "上传记录不存在");
         }
         return log;
     }
@@ -151,7 +151,7 @@ public class AuthAgreementServiceImpl implements AuthAgreementService {
     @Transactional
     public String generate(String applyId, String templateId, String granteeOrg) {
         if (!StringUtils.hasText(applyId)) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "申请ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "申请ID不能为空");
         }
         AuthAgreement a = new AuthAgreement();
         a.setAgreementNo("XY-" + UUID.randomUUID().toString().replace("-", "").substring(0, 14).toUpperCase());
@@ -220,7 +220,7 @@ public class AuthAgreementServiceImpl implements AuthAgreementService {
     public void review(String agreementId, boolean pass, String opinion) {
         AuthAgreement a = require(agreementId);
         if (!AuthAgreement.SEAL_SIGNED.equals(a.getSealStatus())) {
-            throw new BizException("协议尚未完成双方签章,不可审核");
+            throw new BusinessException("协议尚未完成双方签章,不可审核");
         }
         String result = pass ? AuthAgreement.REVIEW_PASS : AuthAgreement.REVIEW_REJECT;
         AuthAgreement upd = new AuthAgreement();
@@ -256,7 +256,7 @@ public class AuthAgreementServiceImpl implements AuthAgreementService {
     public void archive(String agreementId) {
         AuthAgreement a = require(agreementId);
         if (!AuthAgreement.REVIEW_PASS.equals(a.getReviewStatus())) {
-            throw new BizException("仅审核通过的协议可归档");
+            throw new BusinessException("仅审核通过的协议可归档");
         }
         AuthAgreement upd = new AuthAgreement();
         upd.setAgreementId(agreementId);
@@ -309,11 +309,11 @@ public class AuthAgreementServiceImpl implements AuthAgreementService {
 
     private AuthAgreement require(String agreementId) {
         if (!StringUtils.hasText(agreementId)) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "协议ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "协议ID不能为空");
         }
         AuthAgreement a = mapper.selectById(agreementId);
         if (a == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "协议不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "协议不存在");
         }
         return a;
     }

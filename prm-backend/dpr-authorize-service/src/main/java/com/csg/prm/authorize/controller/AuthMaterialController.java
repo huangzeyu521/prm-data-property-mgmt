@@ -4,8 +4,8 @@ import com.csg.prm.authorize.entity.AuthMaterial;
 import com.csg.prm.authorize.entity.AuthMaterialRule;
 import com.csg.prm.authorize.service.AuthMaterialRuleService;
 import com.csg.prm.authorize.service.AuthMaterialService;
-import com.csg.prm.common.api.R;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.api.Result;
+import com.csg.prm.common.exception.BusinessException;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.validation.annotation.Validated;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -24,6 +25,7 @@ import java.util.List;
 
 /** 授权申请材料接口(可研 3.2.2.1.1.3.1.4):上传/下载/查询/删除。 */
 @RestController
+@Validated
 @RequestMapping("/api/dpr/auth/material")
 public class AuthMaterialController {
 
@@ -37,25 +39,25 @@ public class AuthMaterialController {
 
     /** 应交材料清单规则(单一真源):前端据此构建应交清单,不再前端硬编码。scene=批量/一事一议。 */
     @GetMapping("/rule")
-    public R<List<AuthMaterialRule>> rules(@RequestParam(defaultValue = "批量") String scene) {
-        return R.ok(ruleService.listEnabled(scene));
+    public Result<List<AuthMaterialRule>> rules(@RequestParam(defaultValue = "批量") String scene) {
+        return Result.success(ruleService.listEnabled(scene));
     }
 
     /** 上传申请材料(multipart:file + applyId/材料名/类型/上传人)。 */
     /** 授权材料 AI 校验:qwen3-max 逐份校验(stub 回退),返回严格 JSON */
     @PostMapping("/ai-check")
-    public R<String> aiCheck(@RequestParam String applyId) {
-        return R.ok(service.aiCheck(applyId));
+    public Result<String> aiCheck(@RequestParam String applyId) {
+        return Result.success(service.aiCheck(applyId));
     }
 
     @PostMapping("/upload-file")
-    public R<String> uploadFile(@RequestParam("file") MultipartFile file,
+    public Result<String> uploadFile(@RequestParam("file") MultipartFile file,
                                 @RequestParam String applyId,
                                 @RequestParam(required = false) String materialName,
                                 @RequestParam(required = false) String materialType,
                                 @RequestParam(required = false) String owner) {
         if (file == null || file.isEmpty()) {
-            throw new BizException("未选择文件");
+            throw new BusinessException("未选择文件");
         }
         AuthMaterial meta = new AuthMaterial();
         meta.setApplyId(applyId);
@@ -63,9 +65,9 @@ public class AuthMaterialController {
         meta.setMaterialType(materialType);
         meta.setOwner(owner);
         try {
-            return R.ok(service.uploadFile(meta, file.getOriginalFilename(), file.getBytes()));
+            return Result.success(service.uploadFile(meta, file.getOriginalFilename(), file.getBytes()));
         } catch (IOException e) {
-            throw new BizException("读取上传文件失败:" + e.getMessage());
+            throw new BusinessException("读取上传文件失败:" + e.getMessage());
         }
     }
 
@@ -82,13 +84,13 @@ public class AuthMaterialController {
     }
 
     @DeleteMapping("/{materialId}")
-    public R<Void> delete(@PathVariable String materialId) {
+    public Result<Void> delete(@PathVariable String materialId) {
         service.delete(materialId);
-        return R.ok();
+        return Result.success();
     }
 
     @GetMapping("/by-apply/{applyId}")
-    public R<List<AuthMaterial>> byApply(@PathVariable String applyId) {
-        return R.ok(service.listByApply(applyId));
+    public Result<List<AuthMaterial>> byApply(@PathVariable String applyId) {
+        return Result.success(service.listByApply(applyId));
     }
 }

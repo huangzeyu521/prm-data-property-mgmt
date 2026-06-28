@@ -4,8 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.csg.prm.authorize.entity.AuthMaterial;
 import com.csg.prm.authorize.mapper.AuthMaterialMapper;
 import com.csg.prm.authorize.service.AuthMaterialService;
-import com.csg.prm.common.api.ResultCode;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.api.ResponseCode;
+import com.csg.prm.common.exception.BusinessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -44,11 +44,11 @@ public class AuthMaterialServiceImpl implements AuthMaterialService {
     public String aiCheck(String applyId) {
         com.csg.prm.authorize.entity.AuthApply apply = applyMapper.selectById(applyId);
         if (apply == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "授权申请不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "授权申请不存在");
         }
         List<AuthMaterial> mats = listByApply(applyId);
         if (mats.isEmpty()) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "尚未上传材料,无法 AI 校验");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "尚未上传材料,无法 AI 校验");
         }
         StringBuilder ctx = new StringBuilder("【申请要素】资产:").append(apply.getAssetName())
                 .append('(').append(apply.getAssetId()).append(");被授权方:").append(apply.getGranteeOrg())
@@ -71,7 +71,7 @@ public class AuthMaterialServiceImpl implements AuthMaterialService {
                 "资产:" + apply.getAssetName() + ";被授权方:" + apply.getGranteeOrg() + ";材料 " + mats.size() + " 份",
                 result, System.currentTimeMillis() - t0);
         if (!StringUtils.hasText(result)) {
-            throw new BizException(ResultCode.SYSTEM_ERROR.getCode(), "AI 校验暂不可用,请稍后重试");
+            throw new BusinessException(ResponseCode.SYSTEM_ERROR.getCode(), "AI 校验暂不可用,请稍后重试");
         }
         return result;
     }
@@ -106,16 +106,16 @@ public class AuthMaterialServiceImpl implements AuthMaterialService {
     @Transactional
     public String uploadFile(AuthMaterial meta, String fileName, byte[] data) {
         if (meta == null || !StringUtils.hasText(meta.getApplyId())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "缺少关联申请ID");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "缺少关联申请ID");
         }
         if (!StringUtils.hasText(fileName) || data == null || data.length == 0) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "上传文件为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "上传文件为空");
         }
         if (data.length > MAX_BYTES) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "文件超过 50MB 上限");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "文件超过 50MB 上限");
         }
         if (!ALLOWED_EXT.contains(extOf(fileName))) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "仅支持 PDF/Word/图片 材料");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "仅支持 PDF/Word/图片 材料");
         }
         meta.setFileName(fileName);
         meta.setFileData(Base64.getEncoder().encodeToString(data));
@@ -131,7 +131,7 @@ public class AuthMaterialServiceImpl implements AuthMaterialService {
     public byte[] download(String materialId) {
         AuthMaterial m = getById(materialId);
         if (!StringUtils.hasText(m.getFileData())) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "该材料无原件");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "该材料无原件");
         }
         return Base64.getDecoder().decode(m.getFileData());
     }
@@ -140,7 +140,7 @@ public class AuthMaterialServiceImpl implements AuthMaterialService {
     public AuthMaterial getById(String materialId) {
         AuthMaterial m = mapper.selectById(materialId);
         if (m == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "材料不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "材料不存在");
         }
         return m;
     }
@@ -149,7 +149,7 @@ public class AuthMaterialServiceImpl implements AuthMaterialService {
     @Transactional
     public void delete(String materialId) {
         if (mapper.selectById(materialId) == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "材料不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "材料不存在");
         }
         mapper.deleteById(materialId);
     }

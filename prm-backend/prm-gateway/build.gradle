@@ -1,0 +1,20 @@
+/*
+ * Copyright (C) 2026 China Southern Power Grid Co., Ltd. All Rights Reserved.
+ * prm-gateway 统一服务网关(Spring Cloud Gateway + Sentinel + Nacos)。reactive 栈,不依赖 prm-common。
+ */
+apply plugin: 'org.springframework.boot'
+
+dependencies {
+    implementation 'org.springframework.cloud:spring-cloud-starter-gateway'
+    implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery'
+    implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-sentinel'
+    implementation 'com.alibaba.cloud:spring-cloud-alibaba-sentinel-gateway'
+}
+
+// 仅产出可执行 bootJar,落到 target/ 以保持与原 Maven 部署一致(容器 bind-mount target→/app)
+tasks.named('jar') { enabled = false }
+tasks.named('bootJar') {
+    archiveFileName = "${project.name}-${project.version}.jar"
+    destinationDirectory = file("${projectDir}/target")
+    manifest { attributes('Built-company': 'dgri', 'Implementation-Title': project.name, 'Implementation-Version': project.version, 'Build-Jdk': 17) }
+}

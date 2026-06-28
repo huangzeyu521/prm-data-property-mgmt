@@ -1,0 +1,13 @@
+/*
+ * Copyright (C) 2026 China Southern Power Grid Co., Ltd. All Rights Reserved.
+ * 数据产权管理 - 后端 Gradle 多工程聚合(由 Maven 迁移而来)。
+ * 贴合 data_pod(cn.csg.datapod)Gradle 工程约定;依赖走公共仓库 + PRM 真实技术栈,
+ * 不引内网 dap-gradle-plugin 与内网 Nexus(外网不可达)。
+ */
+rootProject.name = 'prm-backend'
+
+include 'prm-common'
+include 'prm-gateway'
+include 'dpr-ledger-service'
+include 'dpr-confirm-service'
+include 'dpr-authorize-service'

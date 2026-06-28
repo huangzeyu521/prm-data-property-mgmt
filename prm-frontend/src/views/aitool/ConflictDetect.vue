@@ -47,7 +47,7 @@
       </div>
       <el-alert v-if="kbAnswer" type="success" :closable="false" style="margin-bottom:10px"
         title="RAG 知识增强结论(基于检索依据)" :description="kbAnswer" show-icon />
-      <div v-if="kbCitations.length" style="margin-bottom:8px;font-size:12px;color:#606266">引用依据:{{ kbCitations.join('；') }}</div>
+      <div v-if="kbCitations.length" style="margin-bottom:8px;font-size:12px;color:var(--prm-color-text-secondary)">引用依据:{{ kbCitations.join('；') }}</div>
       <el-table :data="kbHits" border size="small" max-height="340">
         <el-table-column prop="docType" label="类型" width="90" />
         <el-table-column prop="domain" label="知识域" width="110" />

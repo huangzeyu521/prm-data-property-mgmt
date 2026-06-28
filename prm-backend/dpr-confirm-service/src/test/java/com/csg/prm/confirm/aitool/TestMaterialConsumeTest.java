@@ -65,7 +65,7 @@ class TestMaterialConsumeTest {
             try {
                 materialService.parse(id);
             } catch (RuntimeException ignore) {
-                // parse 同步路径对损坏材料会抛 BizException,状态已落"失败"
+                // parse 同步路径对损坏材料会抛 BusinessException,状态已落"失败"
             }
             AitMaterial m = materialService.getMaterial(id);
             status = m.getParseStatus();

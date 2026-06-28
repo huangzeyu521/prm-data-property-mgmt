@@ -4,7 +4,7 @@ import com.csg.prm.authorize.entity.AuthApply;
 import com.csg.prm.authorize.entity.BatchAuthList;
 import com.csg.prm.authorize.service.AuthApplyService;
 import com.csg.prm.authorize.service.BatchAuthListService;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -72,7 +72,7 @@ class BatchAuthListTest {
         BatchAuthList l = new BatchAuthList();
         l.setListYear("2026");
         String id = service.create(l);
-        BizException ex = assertThrows(BizException.class, () -> service.submit(id));
+        BusinessException ex = assertThrows(BusinessException.class, () -> service.submit(id));
         assertTrue(ex.getMessage().contains("清单为空"), "空清单不可提交");
     }
 
@@ -93,7 +93,7 @@ class BatchAuthListTest {
         a.setScope("全字段");
         a.setThirdPartySource("公开采集");
         applyService.saveDraft(a);
-        BizException ex = assertThrows(BizException.class, () -> service.submit(id));
+        BusinessException ex = assertThrows(BusinessException.class, () -> service.submit(id));
         assertTrue(ex.getMessage().contains("第三方"), "涉第三方未提凭证应拦截:" + ex.getMessage());
     }
 
@@ -119,7 +119,7 @@ class BatchAuthListTest {
         String id = service.create(l);
         String a1 = addItem(id, "DA-DEL-3", "已提交资产");
         service.submit(id); // 明细进合规审核中(非草稿)
-        BizException ex = assertThrows(BizException.class, () -> applyService.deleteApply(a1));
+        BusinessException ex = assertThrows(BusinessException.class, () -> applyService.deleteApply(a1));
         assertTrue(ex.getMessage().contains("草稿"), "非草稿不可删:" + ex.getMessage());
     }
 
@@ -129,6 +129,6 @@ class BatchAuthListTest {
         l.setListYear("2026");
         String id = service.create(l);
         // 草案不可直接批准(须先提交为申报稿)
-        assertThrows(BizException.class, () -> service.approve(id));
+        assertThrows(BusinessException.class, () -> service.approve(id));
     }
 }

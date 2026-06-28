@@ -1,6 +1,6 @@
 package com.csg.prm.confirm;
 
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.confirm.entity.ConfirmApply;
 import com.csg.prm.confirm.entity.ConfirmFlowLog;
 import com.csg.prm.confirm.service.ConfirmApplyService;
@@ -64,7 +64,7 @@ class ConfirmWithdrawTest {
     @Test
     void cannot_withdraw_draft() {
         String id = applyService.saveDraft(draft("DA-WD-003", "撤回测试-草稿"));
-        BizException ex = assertThrows(BizException.class, () -> applyService.withdraw(id, "x"));
+        BusinessException ex = assertThrows(BusinessException.class, () -> applyService.withdraw(id, "x"));
         assertTrue(ex.getMessage().contains("不可撤回"), "草稿不可撤回(应删除):" + ex.getMessage());
     }
 
@@ -78,13 +78,13 @@ class ConfirmWithdrawTest {
         applyService.approve(id); // 主管->经理
         applyService.approve(id); // 经理->已完成(制卡)
         assertEquals(ConfirmApply.STATUS_DONE, applyService.getById(id).getStatus());
-        assertThrows(BizException.class, () -> applyService.withdraw(id, "x"), "已完成不可撤回");
+        assertThrows(BusinessException.class, () -> applyService.withdraw(id, "x"), "已完成不可撤回");
 
         // 已驳回不可撤回
         String id2 = applyService.saveDraft(draft("DA-WD-005", "撤回测试-已驳回"));
         applyService.submit(id2);
         applyService.reject(id2, "材料不全");
         assertEquals(ConfirmApply.STATUS_REJECTED, applyService.getById(id2).getStatus());
-        assertThrows(BizException.class, () -> applyService.withdraw(id2, "x"), "已驳回不可撤回");
+        assertThrows(BusinessException.class, () -> applyService.withdraw(id2, "x"), "已驳回不可撤回");
     }
 }

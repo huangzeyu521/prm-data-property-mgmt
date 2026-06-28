@@ -1,8 +1,8 @@
 package com.csg.prm.confirm.aitool.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.csg.prm.common.api.ResultCode;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.api.ResponseCode;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.confirm.aitool.dto.KgGraphVO;
 import com.csg.prm.confirm.aitool.entity.AitConflict;
 import com.csg.prm.confirm.aitool.entity.AitKgClaim;
@@ -63,7 +63,7 @@ public class AitConflictServiceImpl implements AitConflictService {
     public Map<String, Object> resolutionAdvice(String conflictId) {
         AitConflict c = conflictMapper.selectById(conflictId);
         if (c == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "冲突不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "冲突不存在");
         }
         String basis = regulationBasis(c.getConflictType());
         String context = "冲突类型:" + c.getConflictType() + "\n冲突描述:" + nz(c.getConflictDesc())
@@ -106,10 +106,10 @@ public class AitConflictServiceImpl implements AitConflictService {
     @Transactional
     public void updateClaim(AitKgClaim claim) {
         if (claim == null || !StringUtils.hasText(claim.getClaimId())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "主张ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "主张ID不能为空");
         }
         if (claimMapper.selectById(claim.getClaimId()) == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "权属主张不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "权属主张不存在");
         }
         claimMapper.updateById(claim);
     }
@@ -118,7 +118,7 @@ public class AitConflictServiceImpl implements AitConflictService {
     @Transactional
     public void deleteClaim(String claimId) {
         if (!StringUtils.hasText(claimId)) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "主张ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "主张ID不能为空");
         }
         claimMapper.deleteById(claimId);
     }
@@ -127,7 +127,7 @@ public class AitConflictServiceImpl implements AitConflictService {
     @Transactional
     public int syncHistoryClaims(String assetId) {
         if (!StringUtils.hasText(assetId)) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "资产ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "资产ID不能为空");
         }
         List<EquityCard> cards = cardMapper.selectList(
                 new LambdaQueryWrapper<EquityCard>().eq(EquityCard::getAssetId, assetId));
@@ -165,7 +165,7 @@ public class AitConflictServiceImpl implements AitConflictService {
     @Transactional
     public String addClaim(AitKgClaim claim) {
         if (claim == null || !StringUtils.hasText(claim.getAssetId()) || !StringUtils.hasText(claim.getSubject())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "资产ID与权利主体不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "资产ID与权利主体不能为空");
         }
         if (!StringUtils.hasText(claim.getSourceType())) {
             claim.setSourceType(AitKgClaim.SRC_CURRENT);
@@ -491,7 +491,7 @@ public class AitConflictServiceImpl implements AitConflictService {
             wb.write(bos);
             return bos.toByteArray();
         } catch (Exception ex) {
-            throw new BizException("导出冲突记录失败:" + ex.getMessage());
+            throw new BusinessException("导出冲突记录失败:" + ex.getMessage());
         }
     }
 
@@ -500,7 +500,7 @@ public class AitConflictServiceImpl implements AitConflictService {
     public void resolve(String conflictId, String feedback) {
         AitConflict c = conflictMapper.selectById(conflictId);
         if (c == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "冲突记录不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "冲突记录不存在");
         }
         AitConflict upd = new AitConflict();
         upd.setConflictId(conflictId);
@@ -641,7 +641,7 @@ public class AitConflictServiceImpl implements AitConflictService {
             doc.write(bos);
             return bos.toByteArray();
         } catch (Exception ex) {
-            throw new BizException("导出冲突报告失败:" + ex.getMessage());
+            throw new BusinessException("导出冲突报告失败:" + ex.getMessage());
         }
     }
 

@@ -1,7 +1,7 @@
 package com.csg.prm.confirm.ai;
 
 import com.csg.prm.common.ai.DawatAiGateway;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.confirm.entity.ConfirmApply;
 import com.csg.prm.confirm.entity.ConfirmMaterial;
 import com.csg.prm.confirm.mapper.ConfirmApplyMapper;
@@ -62,7 +62,7 @@ class ConfirmAiServiceTest {
     @Test
     void parse_without_material_throws() {
         String applyId = seedApply(0);
-        assertThrows(BizException.class, () -> aiService.parse(applyId));
+        assertThrows(BusinessException.class, () -> aiService.parse(applyId));
     }
 
     /** 权属冲突识别:返回结构化冲突结果(Local 桩确定性)。 */
@@ -98,6 +98,6 @@ class ConfirmAiServiceTest {
     /** 确权申请不存在 → 抛异常。 */
     @Test
     void missing_apply_throws() {
-        assertThrows(BizException.class, () -> aiService.decision("NO-SUCH-APPLY"));
+        assertThrows(BusinessException.class, () -> aiService.decision("NO-SUCH-APPLY"));
     }
 }

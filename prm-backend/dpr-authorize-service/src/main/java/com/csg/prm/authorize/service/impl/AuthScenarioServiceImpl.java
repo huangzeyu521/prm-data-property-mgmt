@@ -7,8 +7,8 @@ import com.csg.prm.authorize.entity.AuthScenario;
 import com.csg.prm.authorize.mapper.AuthScenarioMapper;
 import com.csg.prm.authorize.service.AuthScenarioService;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.ResultCode;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.api.ResponseCode;
+import com.csg.prm.common.exception.BusinessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -26,7 +26,7 @@ public class AuthScenarioServiceImpl implements AuthScenarioService {
     @Transactional
     public String create(AuthScenario s) {
         if (!StringUtils.hasText(s.getScenarioName())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "场景名称不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "场景名称不能为空");
         }
         s.setScenarioStatus(AuthScenario.STATUS_ACTIVE);
         mapper.insert(s);
@@ -87,11 +87,11 @@ public class AuthScenarioServiceImpl implements AuthScenarioService {
 
     private AuthScenario require(String id) {
         if (!StringUtils.hasText(id)) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "场景ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "场景ID不能为空");
         }
         AuthScenario s = mapper.selectById(id);
         if (s == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "应用场景不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "应用场景不存在");
         }
         return s;
     }

@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 
-// 统一请求封装:对接后端统一响应信封 {code, msg, data}
+// 统一请求封装:对接后端统一响应信封(data_pod 规范){code, message, data, timestamp};code=200 表示成功
 const request = axios.create({
   baseURL: '/api',
   timeout: 60000 // 真调大模型接口耗时数十秒,普通接口本就秒回不受影响
@@ -25,11 +25,11 @@ request.interceptors.response.use(
   (response) => {
     const res = response.data
     if (res && typeof res.code !== 'undefined') {
-      if (res.code === 0) {
+      if (res.code === 200) {
         return res.data
       }
-      ElMessage({ type: 'error', message: res.msg || '请求处理失败', grouping: true })
-      return Promise.reject(new Error(res.msg || 'error'))
+      ElMessage({ type: 'error', message: res.message || '请求处理失败', grouping: true })
+      return Promise.reject(new Error(res.message || 'error'))
     }
     return res
   },
@@ -43,7 +43,7 @@ request.interceptors.response.use(
       return Promise.reject(error)
     }
     if (code === 403) {
-      ElMessage({ type: 'error', message: error?.response?.data?.msg || '无访问权限', grouping: true })
+      ElMessage({ type: 'error', message: error?.response?.data?.message || '无访问权限', grouping: true })
       return Promise.reject(error)
     }
     ElMessage({ type: 'error', message: '网络异常,请稍后重试', grouping: true })

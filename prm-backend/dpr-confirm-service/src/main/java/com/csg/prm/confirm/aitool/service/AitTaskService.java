@@ -3,7 +3,7 @@ package com.csg.prm.confirm.aitool.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.common.query.PageQuery;
 import com.csg.prm.confirm.aitool.entity.AitTask;
 import com.csg.prm.confirm.aitool.mapper.AitTaskMapper;
@@ -47,7 +47,7 @@ public class AitTaskService {
 
     public String create(String taskType, List<String> items, Integer concurrency, Integer retryMax, String name) {
         if (!StringUtils.hasText(taskType) || items == null || items.isEmpty()) {
-            throw new BizException("任务类型与处理项不能为空");
+            throw new BusinessException("任务类型与处理项不能为空");
         }
         AitTask t = new AitTask();
         t.setTaskType(taskType);
@@ -142,7 +142,7 @@ public class AitTaskService {
         switch (taskType) {
             case AitTask.TYPE_PARSE -> materialService.parse(id);
             case AitTask.TYPE_AUDIT -> agentService.audit(id);
-            default -> throw new BizException("不支持的任务类型:" + taskType);
+            default -> throw new BusinessException("不支持的任务类型:" + taskType);
         }
     }
 
@@ -169,7 +169,7 @@ public class AitTaskService {
     private AitTask require(String taskId) {
         AitTask t = taskMapper.selectById(taskId);
         if (t == null) {
-            throw new BizException("任务不存在");
+            throw new BusinessException("任务不存在");
         }
         return t;
     }

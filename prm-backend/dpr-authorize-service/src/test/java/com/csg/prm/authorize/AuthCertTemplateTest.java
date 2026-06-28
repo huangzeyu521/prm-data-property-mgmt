@@ -3,7 +3,7 @@ package com.csg.prm.authorize;
 import com.csg.prm.authorize.entity.AuthCertTemplate;
 import com.csg.prm.authorize.service.AuthCertTemplateService;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -88,6 +88,6 @@ class AuthCertTemplateTest {
     void update_missing_template_throws() {
         AuthCertTemplate t = new AuthCertTemplate();
         t.setTemplateId("NOT-EXIST");
-        assertThrows(BizException.class, () -> service.update(t));
+        assertThrows(BusinessException.class, () -> service.update(t));
     }
 }

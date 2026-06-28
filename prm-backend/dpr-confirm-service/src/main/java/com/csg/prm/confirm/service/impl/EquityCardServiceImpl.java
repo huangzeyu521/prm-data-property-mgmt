@@ -3,9 +3,9 @@ package com.csg.prm.confirm.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.ResultCode;
+import com.csg.prm.common.api.ResponseCode;
 import com.csg.prm.common.evidence.ChainEvidenceService;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.common.org.Jurisdiction;
 import com.csg.prm.common.org.OrgService;
 import com.csg.prm.common.query.PageQuery;
@@ -86,19 +86,115 @@ public class EquityCardServiceImpl implements EquityCardService {
     @Override
     @Transactional
     public String generateFromApply(ConfirmApply apply) {
-        // 确权变更:取代该资产+权利的前序"正常"卡片,保证"当前有效权益"唯一并形成版本链
+        // 制卡颗粒(对齐附录F 表4《数据权益内部管理汇总表》逐"库表×权属"一行):
+        //   ① 有表级清单(系统级确权)→ 逐(库表 × 单一权属)制卡,权益卡片打在每一张数据资产卡片(库表)上;
+        //   ② 无表级清单(单卡/旧数据/测试)→ 退回系统级一卡一权(tableCode=null),保持向后兼容。
+        // 多权拼接串(如"持有、使用、经营")按「、,，」拆分,每权一卡,与授权侧 rightType 精确匹配一致。
         boolean isChange = Boolean.TRUE.equals(apply.getReConfirm())
                 || "确权变更".equals(apply.getRegisterType());
+        Jurisdiction jur = jurisdictionOf(apply);
+        List<String> rights = parseRights(apply.getRightType());
+        List<com.csg.prm.confirm.entity.ConfirmTableItem> items = tableItemMapper.selectList(
+                new LambdaQueryWrapper<com.csg.prm.confirm.entity.ConfirmTableItem>()
+                        .eq(com.csg.prm.confirm.entity.ConfirmTableItem::getApplyId, apply.getApplyId()));
+        String sysName = apply.getAssetName();
+        String firstCardId = null;
+        if (items.isEmpty()) {
+            // 系统级回退:tableCode=null,scope 由表项数派生(此处为 0 → 全量)
+            String scope = deriveScope(apply.getApplyId());
+            for (String right : rights) {
+                String id = issueCardForRight(apply, null, null, sysName, scope, right, jur, isChange);
+                if (firstCardId == null) {
+                    firstCardId = id;
+                }
+            }
+        } else {
+            for (com.csg.prm.confirm.entity.ConfirmTableItem it : items) {
+                String tname = StringUtils.hasText(it.getTableName()) ? it.getTableName() : it.getTableCode();
+                String scope = sysName + " / " + tname;  // 库表级确权范围
+                for (String right : rights) {
+                    String id = issueCardForRight(apply, it, it.getTableCode(), tname, scope, right, jur, isChange);
+                    if (firstCardId == null) {
+                        firstCardId = id;
+                    }
+                }
+            }
+        }
+        return firstCardId;
+    }
+
+    /** 权属类型拆分为逐权列表(「、,，」分隔,去空去重保序);无权属类型则不制卡。 */
+    private List<String> parseRights(String rightType) {
+        java.util.LinkedHashSet<String> rights = new java.util.LinkedHashSet<>();
+        if (StringUtils.hasText(rightType)) {
+            for (String r : rightType.split("[、,，]")) {
+                String t = r.trim();
+                if (!t.isEmpty()) {
+                    rights.add(t);
+                }
+            }
+        }
+        return new java.util.ArrayList<>(rights);
+    }
+
+    /** 权益内容摘要(表4):按权属类型 + 该库表来源约束派生。 */
+    private String rightsContentOf(String rightType, String assetName, com.csg.prm.confirm.entity.ConfirmTableItem item) {
+        String base;
+        if (rightType.contains("持有")) {
+            base = "对「" + assetName + "」享有数据资源持有权(系统建设投入形成,依法持有、管理、处置)";
+        } else if (rightType.contains("使用") || rightType.contains("加工")) {
+            base = "对「" + assetName + "」享有数据加工使用权(在确权约束与授权范围内加工使用)";
+        } else if (rightType.contains("经营") || rightType.contains("产品")) {
+            base = "对「" + assetName + "」享有数据产品经营权(对外经营依公司对外开放目录与授权)";
+        } else {
+            base = rightType;
+        }
+        if (item != null && StringUtils.hasText(item.getSourceDesc())) {
+            base += ";来源/约束:" + item.getSourceDesc();
+        }
+        return base;
+    }
+
+    /** 权益凭证附件或说明(表4):确权认定资料,涉第三方/非自行生产时附第三方权益证明说明。 */
+    private String rightsCredentialOf(ConfirmApply apply, com.csg.prm.confirm.entity.ConfirmTableItem item) {
+        StringBuilder sb = new StringBuilder("确权认定资料(确权单 ")
+                .append(StringUtils.hasText(apply.getApplyNo()) ? apply.getApplyNo() : apply.getApplyId()).append(")");
+        boolean thirdParty = false;
+        if (item != null) {
+            String st = item.getSourceType();
+            boolean nonSelfSource = StringUtils.hasText(st) && "BCDEF".indexOf(st.trim().charAt(0)) >= 0;
+            thirdParty = nonSelfSource || "是".equals(item.getHFlag()) || "是".equals(item.getIFlag()) || "是".equals(item.getJFlag());
+        }
+        if (thirdParty) {
+            sb.append(";含第三方权益证明/授权说明");
+        }
+        return sb.toString();
+    }
+
+    /**
+     * 单一权益制卡(库表级):卡片粒度=(系统 assetId × 库表 tableCode × 权属 rightType);
+     * 版本链按"该资产+该库表+该权利"独立递增/取代;tableCode=null 为系统级回退卡。一卡一权,授权侧精确命中。
+     */
+    private String issueCardForRight(ConfirmApply apply, com.csg.prm.confirm.entity.ConfirmTableItem item,
+                                     String tableCode, String assetName,
+                                     String scope, String rightType, Jurisdiction jur, boolean isChange) {
         int newVersion = 1;
         String supersededNo = null;
         if (isChange) {
-            // 前序卡含"正常"与"冻结"两态:冻结也是该资产+权利的现存卡,变更生效须一并取代并参与版本递增,
+            // 前序卡含"正常"与"冻结"两态:冻结也是该(资产+库表+权利)的现存卡,变更生效须一并取代并参与版本递增,
             // 否则冻结卡被漏算→新卡版本号与冻结卡撞号、且冻结卡未失效,出现两张同号当前卡(唯一性破坏)
-            List<EquityCard> priors = mapper.selectList(new LambdaQueryWrapper<EquityCard>()
+            LambdaQueryWrapper<EquityCard> pw = new LambdaQueryWrapper<EquityCard>()
                     .eq(EquityCard::getAssetId, apply.getAssetId())
-                    .eq(EquityCard::getRightType, apply.getRightType())
+                    .eq(EquityCard::getRightType, rightType)
                     .in(EquityCard::getCardStatus, EquityCard.STATUS_NORMAL, EquityCard.STATUS_FROZEN)
-                    .orderByDesc(EquityCard::getVersion));
+                    .orderByDesc(EquityCard::getVersion);
+            // 库表维度精确取代:同库表(含系统级回退卡 tableCode IS NULL)的前序卡才参与版本链
+            if (tableCode == null) {
+                pw.isNull(EquityCard::getTableCode);
+            } else {
+                pw.eq(EquityCard::getTableCode, tableCode);
+            }
+            List<EquityCard> priors = mapper.selectList(pw);
             for (EquityCard prior : priors) {
                 int pv = prior.getVersion() == null ? 1 : prior.getVersion();
                 if (pv + 1 > newVersion) newVersion = pv + 1;
@@ -108,16 +204,23 @@ public class EquityCardServiceImpl implements EquityCardService {
             }
         }
         // 归口网级回填:按申报组织(权属人/责任部门)解析省/地市码,落到卡片与制卡存证(补此前的 null)
-        Jurisdiction jur = jurisdictionOf(apply);
         EquityCard card = new EquityCard();
         card.setCardNo(generateCardNo());
         card.setApplyId(apply.getApplyId());
         card.setAssetId(apply.getAssetId());
-        card.setAssetName(apply.getAssetName());
-        card.setRightType(apply.getRightType());
+        card.setAssetName(assetName);      // 库表名(库表级)/系统名(系统级回退)
+        card.setTableCode(tableCode);
+        card.setRightType(rightType);
         card.setRightOwner(apply.getRightHolder());
         card.setRightSource("确权认定");
-        card.setScope(deriveScope(apply.getApplyId()));
+        // 表4《数据权益内部管理汇总表》权益要素逐(库表×权属)填充
+        card.setSchemaName(item != null ? item.getSchemaName() : null);     // 模式名称
+        card.setRightsContent(rightsContentOf(rightType, assetName, item));  // 权益内容摘要
+        card.setRightsCredential(rightsCredentialOf(apply, item));           // 权益凭证附件或说明
+        card.setAcquireMode("认定");                                          // 权益取得方式:确权认定(表4 A 认定)
+        card.setAuthorizingUnit(null);                                       // 认定取得不填授权单位(授权取得才填)
+        card.setConfirmTime(java.time.LocalDateTime.now());                  // 确权时间(= 制卡时间)
+        card.setScope(scope);
         card.setValidDate(apply.getValidDate());
         card.setCardStatus(EquityCard.STATUS_NORMAL);
         card.setVersion(newVersion);
@@ -151,7 +254,7 @@ public class EquityCardServiceImpl implements EquityCardService {
     public EquityCard getById(String cardId) {
         EquityCard card = mapper.selectById(cardId);
         if (card == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "权益卡片不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "权益卡片不存在");
         }
         return card;
     }
@@ -161,7 +264,7 @@ public class EquityCardServiceImpl implements EquityCardService {
     public void freeze(String cardId) {
         EquityCard cur = getById(cardId);
         if (EquityCard.STATUS_INVALID.equals(cur.getCardStatus())) {
-            throw new BizException("已注销卡片不可冻结");
+            throw new BusinessException("已注销卡片不可冻结");
         }
         transition(cardId, cur.getCardStatus(), EquityCard.STATUS_FROZEN, "冻结", "风险/争议冻结");
     }
@@ -171,7 +274,7 @@ public class EquityCardServiceImpl implements EquityCardService {
     public void unfreeze(String cardId) {
         EquityCard cur = getById(cardId);
         if (!EquityCard.STATUS_FROZEN.equals(cur.getCardStatus())) {
-            throw new BizException("仅冻结状态可解冻");
+            throw new BusinessException("仅冻结状态可解冻");
         }
         transition(cardId, cur.getCardStatus(), EquityCard.STATUS_NORMAL, "解冻", "风险解除恢复");
     }
@@ -181,7 +284,7 @@ public class EquityCardServiceImpl implements EquityCardService {
     public void revoke(String cardId, String reason) {
         EquityCard cur = getById(cardId);
         if (EquityCard.STATUS_INVALID.equals(cur.getCardStatus())) {
-            throw new BizException("卡片已注销");
+            throw new BusinessException("卡片已注销");
         }
         transition(cardId, cur.getCardStatus(), EquityCard.STATUS_INVALID, "注销",
                 reason == null ? "权属灭失/确权撤销" : reason);
@@ -226,11 +329,48 @@ public class EquityCardServiceImpl implements EquityCardService {
     }
 
     @Override
-    public PageResult<EquityCard> page(PageQuery query) {
-        LambdaQueryWrapper<EquityCard> wrapper = new LambdaQueryWrapper<>();
-        wrapper.orderByDesc(EquityCard::getCreateTime);
-        IPage<EquityCard> page = mapper.selectPage(query.toPage(), wrapper);
+    public PageResult<EquityCard> page(com.csg.prm.confirm.dto.EquityCardQuery query) {
+        IPage<EquityCard> page = mapper.selectPage(query.toPage(), cardWrapper(query));
         return PageResult.of(page);
+    }
+
+    /** 权益卡片多维过滤(库表级):系统名(assetId like SYS:系统名)/库表名(assetName like)/状态(eq)/权属类型(like 短名命中全名)。 */
+    private LambdaQueryWrapper<EquityCard> cardWrapper(com.csg.prm.confirm.dto.EquityCardQuery q) {
+        LambdaQueryWrapper<EquityCard> w = new LambdaQueryWrapper<>();
+        w.like(org.springframework.util.StringUtils.hasText(q.getSysName()), EquityCard::getAssetId, q.getSysName())
+                .like(org.springframework.util.StringUtils.hasText(q.getTableName()), EquityCard::getAssetName, q.getTableName())
+                .eq(org.springframework.util.StringUtils.hasText(q.getCardStatus()), EquityCard::getCardStatus, q.getCardStatus())
+                .like(org.springframework.util.StringUtils.hasText(q.getRightType()), EquityCard::getRightType, q.getRightType())
+                .orderByDesc(EquityCard::getCreateTime);
+        return w;
+    }
+
+    @Override
+    public com.csg.prm.confirm.dto.EquityCardStats stats(com.csg.prm.confirm.dto.EquityCardQuery query) {
+        // 概览忽略 status 过滤(否则分布退化):克隆查询清空 status,按系统名/权属类型聚合
+        com.csg.prm.confirm.dto.EquityCardQuery q = new com.csg.prm.confirm.dto.EquityCardQuery();
+        q.setSysName(query.getSysName());
+        q.setTableName(query.getTableName());
+        q.setRightType(query.getRightType());
+        List<EquityCard> all = mapper.selectList(cardWrapper(q));
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.time.LocalDateTime due = now.plusDays(90);
+        com.csg.prm.confirm.dto.EquityCardStats s = new com.csg.prm.confirm.dto.EquityCardStats();
+        s.setTotal(all.size());
+        for (EquityCard c : all) {
+            String st = c.getCardStatus();
+            if (EquityCard.STATUS_NORMAL.equals(st)) {
+                s.setNormal(s.getNormal() + 1);
+                if (c.getValidDate() != null && !c.getValidDate().isAfter(due) && c.getValidDate().isAfter(now)) {
+                    s.setDueSoon(s.getDueSoon() + 1);
+                }
+            } else if (EquityCard.STATUS_FROZEN.equals(st)) {
+                s.setFrozen(s.getFrozen() + 1);
+            } else if (EquityCard.STATUS_INVALID.equals(st)) {
+                s.setExpired(s.getExpired() + 1);
+            }
+        }
+        return s;
     }
 
     @Override

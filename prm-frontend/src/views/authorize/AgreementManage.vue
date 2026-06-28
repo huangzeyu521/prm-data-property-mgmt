@@ -85,7 +85,7 @@
       <el-timeline v-if="reviewLogs.length" style="padding:6px">
         <el-timeline-item v-for="l in reviewLogs" :key="l.logId" :timestamp="(l.reviewTime||'').replace('T',' ').slice(0,19)" placement="top"
           :type="l.result==='审核通过' ? 'success' : 'danger'">
-          <div style="font-weight:600">{{ l.result }}　<span style="font-weight:400;color:#909399">审核人：{{ l.reviewer }}</span></div>
+          <div style="font-weight:600">{{ l.result }}　<span style="font-weight:400;color:var(--prm-color-text-weak)">审核人：{{ l.reviewer }}</span></div>
           <div style="font-size:12px;color:#71717a;margin-top:2px">意见：{{ l.opinion || '—' }}</div>
         </el-timeline-item>
       </el-timeline>

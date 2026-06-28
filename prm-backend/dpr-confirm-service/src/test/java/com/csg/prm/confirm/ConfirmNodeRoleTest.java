@@ -2,7 +2,7 @@ package com.csg.prm.confirm;
 
 import com.csg.prm.common.context.UserContext;
 import com.csg.prm.common.context.UserContextHolder;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.confirm.entity.ConfirmApply;
 import com.csg.prm.confirm.service.ConfirmApplyService;
 import org.junit.jupiter.api.AfterEach;
@@ -59,7 +59,7 @@ class ConfirmNodeRoleTest {
 
         // 合规角色 越权预审 -> 拒绝
         actAs("review");
-        assertThrows(BizException.class, () -> applyService.approve(id), "review 不应能处理人工预审节点");
+        assertThrows(BusinessException.class, () -> applyService.approve(id), "review 不应能处理人工预审节点");
 
         // 人工预审员 -> 放行,推进到合规审核中
         actAs("precheck");
@@ -68,7 +68,7 @@ class ConfirmNodeRoleTest {
 
         // 合规节点:人工预审员越权 -> 拒绝;合规角色 -> 放行
         actAs("precheck");
-        assertThrows(BizException.class, () -> applyService.approve(id), "precheck 不应能处理合规节点");
+        assertThrows(BusinessException.class, () -> applyService.approve(id), "precheck 不应能处理合规节点");
         actAs("review");
         applyService.approve(id);
         assertEquals(ConfirmApply.STATUS_MANAGER, applyService.getById(id).getStatus());
@@ -94,13 +94,13 @@ class ConfirmNodeRoleTest {
         assertEquals(ConfirmApply.STATUS_MANAGER, applyService.getById(id).getStatus());
 
         actAs("director");
-        assertThrows(BizException.class, () -> applyService.approve(id), "director 不应能处理主管节点");
+        assertThrows(BusinessException.class, () -> applyService.approve(id), "director 不应能处理主管节点");
         actAs("manager");
         applyService.approve(id); // -> 经理终审中
         assertEquals(ConfirmApply.STATUS_DIRECTOR, applyService.getById(id).getStatus());
 
         actAs("manager");
-        assertThrows(BizException.class, () -> applyService.approve(id), "manager 不应能处理经理节点");
+        assertThrows(BusinessException.class, () -> applyService.approve(id), "manager 不应能处理经理节点");
         actAs("director");
         String cardId = applyService.approve(id); // 终审 -> 制卡
         assertEquals(ConfirmApply.STATUS_DONE, applyService.getById(id).getStatus());

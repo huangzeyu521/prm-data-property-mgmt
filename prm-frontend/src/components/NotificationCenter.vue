@@ -152,7 +152,7 @@ onUnmounted(() => timer && clearInterval(timer))
 .nc-panel { display: flex; flex-direction: column; }
 .nc-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 4px; }
 .nc-title { font-weight: 700; font-size: 15px; color: var(--prm-color-text, #1f2329); }
-.nc-refresh { color: #909399; }
+.nc-refresh { color: var(--prm-color-text-weak); }
 .nc-tabs { padding: 0 6px; }
 .nc-tabs .el-tabs__header { margin-bottom: 4px; }
 .nc-tabs .el-tabs__nav-wrap::after { height: 1px; }

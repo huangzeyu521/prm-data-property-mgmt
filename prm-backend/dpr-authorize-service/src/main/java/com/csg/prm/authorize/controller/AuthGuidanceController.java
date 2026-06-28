@@ -3,8 +3,11 @@ package com.csg.prm.authorize.controller;
 import com.csg.prm.authorize.entity.AuthGuidance;
 import com.csg.prm.authorize.service.AuthGuidanceService;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.R;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.api.Result;
+import com.csg.prm.common.exception.BusinessException;
+import com.csg.prm.common.query.PageQuery;
+import jakarta.validation.Valid;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +27,7 @@ import java.util.List;
 
 /** 授权指引管理接口(可研 3.2.2.1.1.3.1.1):增改删查 + 上传/下载 + 历史版本。 */
 @RestController
+@Validated
 @RequestMapping("/api/dpr/auth/guidance")
 public class AuthGuidanceController {
 
@@ -35,19 +39,19 @@ public class AuthGuidanceController {
 
     /** 新增(无id)/修改(带id)。 */
     @PostMapping
-    public R<String> save(@RequestBody AuthGuidance g) {
-        return R.ok(service.save(g));
+    public Result<String> save(@Valid @RequestBody AuthGuidance g) {
+        return Result.success(service.save(g));
     }
 
     /** 上传文件作为新版本(multipart:file + 标题/类型/发布人/内容)。 */
     @PostMapping("/upload-file")
-    public R<String> uploadFile(@RequestParam("file") MultipartFile file,
+    public Result<String> uploadFile(@RequestParam("file") MultipartFile file,
                                 @RequestParam String title,
                                 @RequestParam(required = false) String guidanceType,
                                 @RequestParam(required = false) String publisher,
                                 @RequestParam(required = false) String content) {
         if (file == null || file.isEmpty()) {
-            throw new BizException("未选择文件");
+            throw new BusinessException("未选择文件");
         }
         AuthGuidance meta = new AuthGuidance();
         meta.setTitle(title);
@@ -55,9 +59,9 @@ public class AuthGuidanceController {
         meta.setPublisher(publisher);
         meta.setContent(content);
         try {
-            return R.ok(service.uploadFile(meta, file.getOriginalFilename(), file.getBytes()));
+            return Result.success(service.uploadFile(meta, file.getOriginalFilename(), file.getBytes()));
         } catch (IOException e) {
-            throw new BizException("读取上传文件失败:" + e.getMessage());
+            throw new BusinessException("读取上传文件失败:" + e.getMessage());
         }
     }
 
@@ -90,35 +94,34 @@ public class AuthGuidanceController {
     }
 
     @DeleteMapping("/{guidanceId}")
-    public R<Void> delete(@PathVariable String guidanceId) {
+    public Result<Void> delete(@PathVariable String guidanceId) {
         service.delete(guidanceId);
-        return R.ok();
+        return Result.success();
     }
 
     @GetMapping("/{guidanceId}")
-    public R<AuthGuidance> detail(@PathVariable String guidanceId) {
-        return R.ok(service.getById(guidanceId));
+    public Result<AuthGuidance> detail(@PathVariable String guidanceId) {
+        return Result.success(service.getById(guidanceId));
     }
 
     /** 同标题历史版本。 */
     @GetMapping("/versions")
-    public R<List<AuthGuidance>> versions(@RequestParam String title) {
-        return R.ok(service.versions(title));
+    public Result<List<AuthGuidance>> versions(@RequestParam String title) {
+        return Result.success(service.versions(title));
     }
 
     /** 将某版本设为最新。 */
     @PostMapping("/{guidanceId}/set-latest")
-    public R<Void> setLatest(@PathVariable String guidanceId) {
+    public Result<Void> setLatest(@PathVariable String guidanceId) {
         service.setLatest(guidanceId);
-        return R.ok();
+        return Result.success();
     }
 
     @GetMapping("/page")
-    public R<PageResult<AuthGuidance>> page(@RequestParam(defaultValue = "1") long current,
-                                            @RequestParam(defaultValue = "10") long size,
+    public Result<PageResult<AuthGuidance>> page(@Valid PageQuery page,
                                             @RequestParam(required = false) String title,
                                             @RequestParam(required = false) String guidanceType,
                                             @RequestParam(defaultValue = "true") boolean latestOnly) {
-        return R.ok(service.page(current, size, title, guidanceType, latestOnly));
+        return Result.success(service.page(page.getCurrent(), page.getSize(), title, guidanceType, latestOnly));
     }
 }

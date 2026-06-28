@@ -1,9 +1,11 @@
 package com.csg.prm.confirm.aitool.controller;
 
-import com.csg.prm.common.api.R;
+import com.csg.prm.common.api.Result;
 import com.csg.prm.common.auth.RequiresRole;
 import com.csg.prm.confirm.aitool.entity.AitConflictRule;
 import com.csg.prm.confirm.aitool.service.AitConflictRuleService;
+import jakarta.validation.Valid;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,6 +20,7 @@ import java.util.List;
  * 权属冲突识别规则配置接口(#1,管理员):启停/优先级/阈值。
  */
 @RestController
+@Validated
 @RequestMapping("/api/dpr/confirm/aitool/conflict-rule")
 @RequiresRole({"admin"})
 public class AitConflictRuleController {
@@ -29,18 +32,18 @@ public class AitConflictRuleController {
     }
 
     @GetMapping
-    public R<List<AitConflictRule>> list() {
-        return R.ok(service.list());
+    public Result<List<AitConflictRule>> list() {
+        return Result.success(service.list());
     }
 
     @PostMapping
-    public R<String> save(@RequestBody AitConflictRule rule) {
-        return R.ok(service.save(rule));
+    public Result<String> save(@Valid @RequestBody AitConflictRule rule) {
+        return Result.success(service.save(rule));
     }
 
     @PostMapping("/{ruleId}/toggle")
-    public R<Void> toggle(@PathVariable String ruleId, @RequestParam boolean on) {
+    public Result<Void> toggle(@PathVariable String ruleId, @RequestParam boolean on) {
         service.toggle(ruleId, on);
-        return R.ok();
+        return Result.success();
     }
 }

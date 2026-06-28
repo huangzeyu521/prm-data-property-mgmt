@@ -120,6 +120,8 @@ export const deleteAuthMaterial = (id) => request.delete(`/dpr/auth/material/${i
 export const listAuthMaterialRules = (scene = '批量') => request.get('/dpr/auth/material/rule', { params: { scene } })
 // 批量清单只读合规校验(试跑):整单是否可提交+逐项被拦原因(与提交门禁同源),支撑"通过才放行"闭环
 export const checkBatchCompliance = (batchListId) => request.post(`/dpr/auth/batch-list/${batchListId}/compliance-check`)
+// 可授权资源池-对外开放目录批量过滤(经营权资源池前置裁剪):入参 assetId[] → 返回在对外开放目录中的子集
+export const grantableOpenFilter = (assetIds) => request.post('/dpr/auth/grantable/open-filter', assetIds)
 export const authMaterialFileUrl = (id) => `/api/dpr/auth/material/${id}/file`
 
 // 授权协议模板库(可研 3.2.2.1.1.3.3.1)

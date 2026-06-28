@@ -1,7 +1,7 @@
 package com.csg.prm.confirm;
 
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.confirm.auth.AuthService;
 import com.csg.prm.confirm.auth.SysUser;
 import com.csg.prm.confirm.system.SysOpLog;
@@ -64,7 +64,7 @@ class SystemMgmtTest {
         u2.setUsername("dupuser");
         u2.setRealName("重复乙");
         u2.setRole("view");
-        assertThrows(BizException.class, () -> userService.create(u2), "重复登录名应被拒绝");
+        assertThrows(BusinessException.class, () -> userService.create(u2), "重复登录名应被拒绝");
     }
 
     @Test
@@ -73,7 +73,7 @@ class SystemMgmtTest {
         u.setUsername("badrole");
         u.setRealName("非法角色");
         u.setRole("superman");
-        assertThrows(BizException.class, () -> userService.create(u), "非法角色应被拒绝");
+        assertThrows(BusinessException.class, () -> userService.create(u), "非法角色应被拒绝");
     }
 
     @Test
@@ -99,7 +99,7 @@ class SystemMgmtTest {
 
         String next = userService.toggleStatus(id);
         assertEquals("停用", next);
-        assertThrows(BizException.class,
+        assertThrows(BusinessException.class,
                 () -> authService.login("toggleme", SysUserAdminService.DEFAULT_PWD),
                 "停用后不应能登录");
 

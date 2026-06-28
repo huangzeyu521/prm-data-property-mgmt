@@ -58,7 +58,14 @@ public class AssetTableMetaService {
                     "敏感信息", "A 自行生产数据", "广东电网有限责任公司",
                     true, true, false, false, true,
                     "客户用电信息_数据来源与系统建设投入说明.docx", "营销数据行政监管要求补充说明.docx",
-                    "用户入网协议(个人信息授权).docx", null, null));
+                    "用户入网协议(个人信息授权).docx", null, null,
+                    "自行生产数据,系统建设投入形成;涉个人信息字段对外提供须脱敏并经客户授权",
+                    "国家能源局南方监管局(电力市场监管要求)",
+                    "用电客户个人信息,依据用户入网协议第X条已取得对外提供授权,范围限定于结算与征信场景",
+                    null, null, null,
+                    "张工", "020-88886666",
+                    "广东电网有限责任公司", "数字化部", "分省公司",
+                    false, null, null, null));
         }
         // 通用合成:一个系统下多张库表(体现"确权粒度到库表"),来源判定留空待用户/AI补全;平台附件均未采集(null)
         String base = id.replaceAll("[^A-Za-z0-9]", "").toUpperCase();
@@ -71,9 +78,13 @@ public class AssetTableMetaService {
         return List.of(
                 new PlatformTableMeta(inst, schema, base + "_MAIN", name + "主表", name + "主数据",
                         "普通商密", null, null, false, false, false, false, true,
-                        null, null, null, null, null),
+                        null, null, null, null, null,
+                        null, null, null, null, null, null, null, null, null, null, null,
+                        false, null, null, null),
                 new PlatformTableMeta(inst, schema, base + "_DIM", name + "维表", name + "维度数据",
                         "不涉密", null, null, false, false, false, false, true,
-                        null, null, null, null, null));
+                        null, null, null, null, null,
+                        null, null, null, null, null, null, null, null, null, null, null,
+                        false, null, null, null));
     }
 }

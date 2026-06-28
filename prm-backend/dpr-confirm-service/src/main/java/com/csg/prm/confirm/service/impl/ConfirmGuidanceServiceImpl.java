@@ -4,8 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.ResultCode;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.api.ResponseCode;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.confirm.entity.ConfirmGuidance;
 import com.csg.prm.confirm.mapper.ConfirmGuidanceMapper;
 import com.csg.prm.confirm.service.ConfirmGuidanceService;
@@ -30,7 +30,7 @@ public class ConfirmGuidanceServiceImpl implements ConfirmGuidanceService {
     @Transactional
     public String save(ConfirmGuidance g) {
         if (!StringUtils.hasText(g.getTitle())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "标题不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "标题不能为空");
         }
         // 带 ID:就地修改(不产生新版本)
         if (StringUtils.hasText(g.getGuidanceId())) {
@@ -44,10 +44,10 @@ public class ConfirmGuidanceServiceImpl implements ConfirmGuidanceService {
     @Transactional
     public String uploadFile(ConfirmGuidance meta, String fileName, byte[] data) {
         if (meta == null || !StringUtils.hasText(meta.getTitle())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "标题不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "标题不能为空");
         }
         if (data == null || data.length == 0) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "上传文件为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "上传文件为空");
         }
         meta.setFileName(fileName);
         meta.setFileData(Base64.getEncoder().encodeToString(data));
@@ -100,7 +100,7 @@ public class ConfirmGuidanceServiceImpl implements ConfirmGuidanceService {
     public byte[] download(String guidanceId) {
         ConfirmGuidance g = getById(guidanceId);
         if (!StringUtils.hasText(g.getFileData())) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "该指引无可下载的原件(纯文本指引)");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "该指引无可下载的原件(纯文本指引)");
         }
         return Base64.getDecoder().decode(g.getFileData());
     }
@@ -109,7 +109,7 @@ public class ConfirmGuidanceServiceImpl implements ConfirmGuidanceService {
     @Transactional
     public void delete(String guidanceId) {
         if (mapper.selectById(guidanceId) == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "指引材料不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "指引材料不存在");
         }
         mapper.deleteById(guidanceId);
     }
@@ -118,7 +118,7 @@ public class ConfirmGuidanceServiceImpl implements ConfirmGuidanceService {
     public ConfirmGuidance getById(String guidanceId) {
         ConfirmGuidance g = mapper.selectById(guidanceId);
         if (g == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "指引材料不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "指引材料不存在");
         }
         return g;
     }

@@ -31,7 +31,7 @@
             <div style="width:100%">
               <el-input v-model="aiText" type="textarea" maxlength="500" show-word-limit :rows="2" placeholder="用自然语言描述授权诉求,如:拟向广州供电局开放数据用于电力金融征信,全字段" />
               <el-button type="primary" plain size="small" :loading="aiLoading" style="margin-top:6px" @click="onAiFill">大瓦特 AI 识别意图并填单</el-button>
-              <span v-if="aiTip" style="margin-left:10px;color:#909399;font-size:12px">{{ aiTip }}</span>
+              <span v-if="aiTip" style="margin-left:10px;color:var(--prm-color-text-weak);font-size:12px">{{ aiTip }}</span>
               <AiThinking v-bind="aiThink.state" />
             </div>
           </el-form-item>
@@ -55,19 +55,19 @@
             已引用外部资产信息 — 系统:{{ assetRef.systemName || '-' }} / 模式:{{ assetRef.schemaName || '-' }} / 安全等级:{{ assetRef.securityLevel || '-' }} / 责任部门:{{ assetRef.respDept || '-' }}
           </el-alert>
           <el-form-item label="生效权益卡片" prop="equityCardId"><el-input v-model="form.equityCardId" readonly placeholder="选取资产后自动匹配生效卡片(先确后授)" /></el-form-item>
-          <el-divider content-position="left" style="margin:8px 0"><span style="font-size:12px;color:#909399">数据信息(第三方/隐私 由确权带出)</span></el-divider>
+          <el-divider content-position="left" style="margin:8px 0"><span style="font-size:12px;color:var(--prm-color-text-weak)">数据信息(第三方/隐私 由确权带出)</span></el-divider>
           <el-form-item label="第三方来源方式"><el-input v-model="form.thirdPartySource" readonly placeholder="选取资产后由确权记录自动带出(不涉及则空)" /></el-form-item>
           <el-form-item label="涉个人隐私/商密"><el-input v-model="form.sensitiveType" readonly placeholder="选取资产后由确权记录自动带出" /></el-form-item>
           <el-form-item v-if="form.thirdPartySource" label="第三方许可凭证">
             <el-input v-model="form.thirdPartyLicense" type="textarea" maxlength="500" show-word-limit :rows="2" placeholder="填写许可凭证/说明,或在下方应交清单上传《第三方许可凭证或说明》" />
-            <div style="font-size:12px;color:#e6a23c;line-height:1.5;margin-top:2px">确权识别涉第三方,二选一即可:① 此处填说明　② 应交清单上传同名材料(上传后自动回填引用)</div>
+            <div style="font-size:12px;color:var(--prm-color-link);line-height:1.5;margin-top:2px">确权识别涉第三方,二选一即可:① 此处填说明　② 应交清单上传同名材料(上传后自动回填引用)</div>
           </el-form-item>
           <el-form-item label="信息授权协议">
             <el-input v-model="form.infoAuthAgreement" placeholder="填写协议名称/地址,或在下方应交清单上传《信息授权协议》" />
-            <div v-if="form.sensitiveType && form.sensitiveType.trim() && form.sensitiveType !== '无'" style="font-size:12px;color:#e6a23c;line-height:1.5;margin-top:2px">涉个人隐私/商密,二选一即可:① 此处填名称/地址　② 应交清单上传同名材料(上传后自动回填引用)</div>
+            <div v-if="form.sensitiveType && form.sensitiveType.trim() && form.sensitiveType !== '无'" style="font-size:12px;color:var(--prm-color-link);line-height:1.5;margin-top:2px">涉个人隐私/商密,二选一即可:① 此处填名称/地址　② 应交清单上传同名材料(上传后自动回填引用)</div>
           </el-form-item>
           <el-form-item label="所属业务域"><el-input v-model="form.businessDomain" placeholder="营销/生产/调度/财务..." /></el-form-item>
-          <el-divider content-position="left" style="margin:8px 0"><span style="font-size:12px;color:#909399">授权内容</span></el-divider>
+          <el-divider content-position="left" style="margin:8px 0"><span style="font-size:12px;color:var(--prm-color-text-weak)">授权内容</span></el-divider>
           <el-form-item label="申请主体(被授权方)" prop="granteeOrg">
             <el-autocomplete v-model="form.granteeOrg" :fetch-suggestions="queryOrg" placeholder="表5 申请主体:输入并从真实组织树中选取(可自定义外部主体)" clearable style="width:100%" />
           </el-form-item>
@@ -93,15 +93,24 @@
             <el-select v-model="form.validTerm" style="width:100%" placeholder="默认两年(时长)">
               <el-option v-for="t in validTerms" :key="t" :label="t" :value="t" />
             </el-select>
-            <div style="font-size:12px;color:#909399;line-height:1.5;margin-top:2px">
+            <div style="font-size:12px;color:var(--prm-color-text-weak);line-height:1.5;margin-top:2px">
               映射到期日(预期):{{ expiryOf(form.validTerm) ? expiryOf(form.validTerm).slice(0,10) : '—' }};协议签订时按附录D最终落定
             </div>
           </el-form-item>
-          <el-divider content-position="left" style="margin:8px 0"><span style="font-size:12px;color:#909399">范围与联系</span></el-divider>
+          <el-divider content-position="left" style="margin:8px 0"><span style="font-size:12px;color:var(--prm-color-text-weak)">授权协议要素(附录D §3.4.4)</span></el-divider>
+          <el-form-item label="利益分配约定">
+            <el-input v-model="form.benefitAllocation" type="textarea" :rows="2" maxlength="500" show-word-limit
+              placeholder="附录D 须约定:如 免费内部共享 / 按调用次数计费 / 收益按比例分成 等" />
+          </el-form-item>
+          <el-form-item label="安全保障要求">
+            <el-input v-model="form.securityReq" type="textarea" :rows="2" maxlength="500" show-word-limit
+              placeholder="附录D 须约定:如 加密传输、最小授权访问控制、操作留痕审计、数据脱敏、不得转授第三方 等" />
+          </el-form-item>
+          <el-divider content-position="left" style="margin:8px 0"><span style="font-size:12px;color:var(--prm-color-text-weak)">范围与联系</span></el-divider>
           <el-form-item label="是否跨区域/跨域"><el-switch v-model="form.crossRegion" /></el-form-item>
           <el-form-item label="申请单位主管"><el-input v-model="form.applicantManager" /></el-form-item>
           <el-form-item label="联系方式"><el-input v-model="form.contactInfo" placeholder="电话 / 邮箱" /></el-form-item>
-          <el-form-item label="需保密承诺函"><el-switch v-model="form.needConfidentiality" /><span style="margin-left:8px;color:#909399;font-size:12px">附录E</span></el-form-item>
+          <el-form-item label="需保密承诺函"><el-switch v-model="form.needConfidentiality" /><span style="margin-left:8px;color:var(--prm-color-text-weak);font-size:12px">附录E</span></el-form-item>
           <el-form-item v-if="form.needConfidentiality" label="保密承诺函"><el-input v-model="form.confidentialityFile" placeholder="保密承诺函文件地址" /></el-form-item>
         </el-form>
         <el-divider />
@@ -128,7 +137,7 @@
               </template>
             </el-table-column>
           </el-table>
-          <div style="margin-top:6px;color:#909399;font-size:12px">必填项须上传;"视情况"项按是否涉第三方/隐私商密上传。也可在下方上传其他补充材料。</div>
+          <div style="margin-top:6px;color:var(--prm-color-text-weak);font-size:12px">必填项须上传;"视情况"项按是否涉第三方/隐私商密上传。也可在下方上传其他补充材料。</div>
         </div>
         <div style="font-weight:600;margin-bottom:8px">其他补充材料（可选，先暂存草稿后上传）</div>
         <el-upload :show-file-list="false" :http-request="(o)=>doUploadMaterial(o.file)" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
@@ -159,14 +168,14 @@
           {{ (checkResult || aiMatResult) ? '重新一键校验' : '一键校验(合规 + AI材料)' }}
         </el-button>
         <!-- 次要:AI 辅助(可选,不影响提交门禁) -->
-        <div style="margin:2px 0 12px;color:#909399;font-size:12px">
+        <div style="margin:2px 0 12px;color:var(--prm-color-text-weak);font-size:12px">
           AI 辅助(可选,不影响提交):
           <el-button link type="primary" :loading="preReviewing" @click="runPreReview">AI 合规预审</el-button>
         </div>
         <AiThinking v-bind="aiThink.state" />
         <!-- 统一待处理清单(单一闭环):合规不符/AI 存疑·不通过 → 去修正(回填报含应交材料)或复核确认 -->
         <el-card v-if="pendingItems.length" shadow="never" style="margin-bottom:12px;border:1px solid #fde2e2;background:#fff8f8">
-          <div style="font-weight:600;color:#f56c6c;margin-bottom:8px">需处理以下 {{ pendingItems.length }} 项后方可提交(处理完点上方「重新一键校验」)</div>
+          <div style="font-weight:600;color:var(--prm-color-danger);margin-bottom:8px">需处理以下 {{ pendingItems.length }} 项后方可提交(处理完点上方「重新一键校验」)</div>
           <el-table :data="pendingItems" border size="small">
             <el-table-column label="来源" width="76" align="center">
               <template #default="{ row }"><el-tag :type="row.source === 'ai' ? 'warning' : 'danger'" size="small">{{ row.source === 'ai' ? 'AI' : '合规' }}</el-tag></template>
@@ -334,7 +343,7 @@ function ackAi(name) { if (!aiAck.value.includes(name)) aiAck.value.push(name); 
 const aiText = ref(''); const aiLoading = ref(false); const aiTip = ref('')
 
 function empty() {
-  return { assetId: '', assetName: '', equityCardId: '', granteeOrg: '', rightType: '', scenario: '', scope: '', validTerm: '两年', validDate: '', businessDomain: '', applicantManager: '', contactInfo: '', crossRegion: false, sensitiveType: '', thirdPartySource: '', thirdPartyLicense: '', infoAuthAgreement: '', needConfidentiality: false, confidentialityFile: '' }
+  return { assetId: '', assetName: '', schemaName: '', equityCardId: '', granteeOrg: '', rightType: '', scenario: '', scope: '', validTerm: '两年', validDate: '', businessDomain: '', applicantManager: '', contactInfo: '', crossRegion: false, sensitiveType: '', thirdPartySource: '', thirdPartyLicense: '', infoAuthAgreement: '', benefitAllocation: '', securityReq: '', needConfidentiality: false, confidentialityFile: '' }
 }
 // 确权带出(B-1):按资产取最新已完成确权的第三方来源/隐私商密事实(只读),堵人工低报击穿合规
 async function deriveFacts(assetId) {
@@ -511,9 +520,11 @@ function onCardPicked(no) {
 // 一键填充示例(测试/演示):对齐 test/一事一议授权申请 手册
 async function fillDemo() {
   Object.assign(form, {
-    assetId: 'AST-001', assetName: '客户用电信息表', equityCardId: 'EC-PRA-0001',
+    assetId: 'AST-001', assetName: '客户用电信息表', schemaName: 'MKT', equityCardId: 'EC-PRA-0001',
     granteeOrg: '广州供电局', rightType: '数据产品经营权', scenario: '电力金融征信',
     scope: '全字段', validTerm: '三年', businessDomain: '营销域',
+    benefitAllocation: '按数据产品调用次数计费,收益由授权方与被授权方按 7:3 分成',
+    securityReq: '加密传输 + 最小授权访问控制 + 操作留痕审计;不得转授第三方,到期数据销毁',
     applicantManager: '李主管', contactInfo: '020-66668888', crossRegion: false,
     needConfidentiality: true,
     confidentialityFile: '04-保密承诺函(附录E)-广州供电局.docx',
@@ -532,6 +543,7 @@ async function onAssetBlur() {
     if (a) {
       assetRef.value = a
       if (!form.assetName) form.assetName = a.assetName || ''
+      if (!form.schemaName) form.schemaName = a.schemaName || '' // 表5 模式名称:由数据资产卡片带出
       if (!form.businessDomain) form.businessDomain = a.subsidiaryName || a.systemName || ''
       ElMessage.success('已引用资产信息')
     }

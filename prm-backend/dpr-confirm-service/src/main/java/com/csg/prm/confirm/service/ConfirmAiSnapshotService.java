@@ -1,7 +1,7 @@
 package com.csg.prm.confirm.service;
 
 import com.csg.prm.common.aitrace.AiSnapshotService;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.confirm.entity.ConfirmApply;
 import com.csg.prm.confirm.mapper.ConfirmApplyMapper;
 import org.springframework.stereotype.Service;
@@ -31,7 +31,7 @@ public class ConfirmAiSnapshotService {
     public void save(String applyId, String clientJson) {
         ConfirmApply apply = applyMapper.selectById(applyId);
         if (apply == null) {
-            throw new BizException("确权申请不存在");
+            throw new BusinessException("确权申请不存在");
         }
         String sealed = aiSnapshotService.seal(EVIDENCE_TYPE, applyId, apply.getAssetName(), clientJson);
         ConfirmApply upd = new ConfirmApply();

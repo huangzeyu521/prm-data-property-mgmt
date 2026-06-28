@@ -4,8 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.ResultCode;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.api.ResponseCode;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.confirm.dto.CertRenderVO;
 import com.csg.prm.confirm.entity.EquityCard;
 import com.csg.prm.confirm.entity.EquityCert;
@@ -91,7 +91,7 @@ public class EquityCertServiceImpl implements EquityCertService {
     @Transactional
     public String issue(String cardId, String issueUnit, String templateId, String templateName) {
         if (!StringUtils.hasText(cardId)) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "权益卡片ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "权益卡片ID不能为空");
         }
         EquityCert cert = new EquityCert();
         cert.setCertNo("ZQ-" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase());
@@ -109,7 +109,7 @@ public class EquityCertServiceImpl implements EquityCertService {
     public EquityCert getById(String certId) {
         EquityCert c = mapper.selectById(certId);
         if (c == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "证书不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "证书不存在");
         }
         return c;
     }

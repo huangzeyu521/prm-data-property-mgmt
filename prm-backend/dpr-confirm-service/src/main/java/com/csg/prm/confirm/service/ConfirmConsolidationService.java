@@ -24,6 +24,10 @@ public interface ConfirmConsolidationService {
     /** 权益归集判定:输出网公司三权与共享判定原因 */
     ConsolidationResult judgeConsolidation(String applyId);
 
+    /** 不落库试算:按原始输入直接跑 5 规则,供 step1 选项变更时内联预览经营权判定。 */
+    ConsolidationResult previewConsolidation(boolean regulated, boolean involvesThird,
+                                             boolean hasOperateClaim, boolean otherRestriction);
+
     /** 导出《数据确权信息汇总表》(32列官方格式) */
     byte[] exportConfirmSummary();
 

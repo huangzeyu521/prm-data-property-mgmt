@@ -1,7 +1,7 @@
 package com.csg.prm.confirm.aitool.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.confirm.aitool.entity.AitParseConfig;
 import com.csg.prm.confirm.aitool.mapper.AitParseConfigMapper;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -129,11 +129,11 @@ public class AitParseConfigService implements ApplicationRunner {
 
     public String save(AitParseConfig c) {
         if (!StringUtils.hasText(c.getScene())) {
-            throw new BizException("场景不能为空");
+            throw new BusinessException("场景不能为空");
         }
         if (c.getConfidenceThreshold() != null
                 && (c.getConfidenceThreshold() < 0 || c.getConfidenceThreshold() > 1)) {
-            throw new BizException("置信度阈值应在 0~1 之间");
+            throw new BusinessException("置信度阈值应在 0~1 之间");
         }
         if (StringUtils.hasText(c.getConfigId())) {
             mapper.updateById(c);
@@ -149,10 +149,10 @@ public class AitParseConfigService implements ApplicationRunner {
     public void delete(String configId) {
         AitParseConfig c = mapper.selectById(configId);
         if (c == null) {
-            throw new BizException("配置不存在");
+            throw new BusinessException("配置不存在");
         }
         if (AitParseConfig.DEFAULT_SCENE.equals(c.getScene())) {
-            throw new BizException("默认配置不可删除");
+            throw new BusinessException("默认配置不可删除");
         }
         mapper.deleteById(configId);
     }

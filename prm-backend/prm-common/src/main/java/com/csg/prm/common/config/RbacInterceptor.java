@@ -1,10 +1,10 @@
 package com.csg.prm.common.config;
 
-import com.csg.prm.common.api.ResultCode;
+import com.csg.prm.common.api.ResponseCode;
 import com.csg.prm.common.auth.RequiresRole;
 import com.csg.prm.common.context.UserContext;
 import com.csg.prm.common.context.UserContextHolder;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.method.HandlerMethod;
@@ -40,7 +40,7 @@ public class RbacInterceptor implements HandlerInterceptor {
         UserContext ctx = UserContextHolder.get();
         Set<String> roles = ctx == null ? null : ctx.getRoles();
         if (roles == null || roles.isEmpty()) {
-            throw new BizException(ResultCode.UNAUTHORIZED.getCode(), "未登录或登录失效,无法访问受控操作");
+            throw new BusinessException(ResponseCode.UNAUTHORIZED.getCode(), "未登录或登录失效,无法访问受控操作");
         }
         if (roles.contains("all")) {
             return true;
@@ -50,7 +50,7 @@ public class RbacInterceptor implements HandlerInterceptor {
                 return true;
             }
         }
-        throw new BizException(ResultCode.FORBIDDEN.getCode(),
+        throw new BusinessException(ResponseCode.FORBIDDEN.getCode(),
                 "无权限:该操作需要角色 " + String.join("/", rr.value()));
     }
 }

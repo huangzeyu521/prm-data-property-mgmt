@@ -14,10 +14,33 @@
       <el-table :row-class-name="rowHl" :data="reviewing" v-loading="loading" border stripe @selection-change="s => sel = s">
         <el-table-column type="selection" width="46" :selectable="row => canAct(row.status)" />
         <el-table-column type="index" label="序号" width="56" align="center" />
-        <el-table-column prop="applyNo" label="申请编号" width="160" show-overflow-tooltip />
-        <el-table-column prop="assetName" label="资产名称" min-width="160" show-overflow-tooltip />
-        <el-table-column prop="rightType" label="权属类型" width="130" />
-        <el-table-column prop="status" label="当前环节" width="130" align="center">
+        <el-table-column prop="applyNo" label="申请编号" width="150" show-overflow-tooltip />
+        <el-table-column label="系统名称" min-width="150" show-overflow-tooltip>
+          <template #default="{ row }">{{ sysName(row) }}</template>
+        </el-table-column>
+        <el-table-column label="登记类型" width="98" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.registerType === '确权变更' ? 'warning' : 'primary'" size="small" effect="plain">{{ row.registerType === '确权变更' ? '确权变更' : '初始确权' }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="变更要素" min-width="170">
+          <template #default="{ row }">
+            <template v-if="row.registerType === '确权变更'">
+              <el-tag v-for="t in triggerTags(row)" :key="t" :type="t === '数据新增' ? 'success' : 'warning'" size="small" effect="plain" style="margin:1px">{{ t }}</el-tag>
+              <el-tag v-if="row.changeVersion" type="info" size="small" effect="plain" style="margin:1px">v{{ row.changeVersion }}</el-tag>
+            </template>
+            <span v-else style="color:var(--prm-color-text-disabled)">—（初始）</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="权属类型" width="160">
+          <template #default="{ row }">
+            <el-tooltip v-for="r in rightTags(row.rightType)" :key="r.full" :content="r.full" placement="top">
+              <el-tag :type="r.type" size="small" effect="plain" style="margin:1px">{{ r.short }}</el-tag>
+            </el-tooltip>
+            <span v-if="!rightTags(row.rightType).length" style="color:var(--prm-color-text-disabled)">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="status" label="当前环节" width="120" align="center">
           <template #default="{ row }"><el-tag type="warning">{{ row.status }}</el-tag></template>
         </el-table-column>
         <el-table-column label="操作" width="240" fixed="right">
@@ -37,33 +60,60 @@
 
     <el-drawer v-model="drawer" :title="`审核详情 — ${cur.applyNo || ''}`" size="48%">
       <el-descriptions :column="2" border size="small">
-        <el-descriptions-item label="资产名称" :span="2">{{ cur.assetName }}（{{ cur.assetId }}）</el-descriptions-item>
-        <el-descriptions-item label="权属类型">{{ cur.rightType || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="权属人">{{ cur.rightHolder || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="系统名称">{{ sysName(cur) }}</el-descriptions-item>
+        <el-descriptions-item label="登记类型">
+          <el-tag :type="isChangeApply ? 'warning' : 'primary'" size="small" effect="plain">{{ isChangeApply ? '确权变更' : '初始确权' }}</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item v-if="isChangeApply" label="变更要素" :span="2">
+          <el-tag v-for="t in triggerTags(cur)" :key="t" :type="t === '数据新增' ? 'success' : 'warning'" size="small" effect="plain" style="margin:1px">{{ t }}</el-tag>
+          <el-tag v-if="cur.changeVersion" type="info" size="small" effect="plain" style="margin:1px">v{{ cur.changeVersion }}</el-tag>
+          <span v-if="cur.baselineRef" style="color:var(--prm-color-text-weak);font-size:12px;margin-left:6px">基线 {{ cur.baselineRef }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="权属类型">
+          <el-tooltip v-for="r in rightTags(cur.rightType)" :key="r.full" :content="r.full" placement="top">
+            <el-tag :type="r.type" size="small" effect="plain" style="margin:1px">{{ r.short }}</el-tag>
+          </el-tooltip>
+          <span v-if="!rightTags(cur.rightType).length" style="color:var(--prm-color-text-disabled)">—</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="权属主体">{{ cur.rightHolder || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="主体层级">{{ cur.subjectLevel || '-' }}</el-descriptions-item>
         <el-descriptions-item label="责任部门">{{ cur.respDept || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="来源识别(A–F)">
+          <el-tag v-for="c in codeList(cur.sourceIdentification)" :key="c" size="small" type="primary" effect="plain" style="margin:1px">{{ c }}</el-tag>
+          <span v-if="!codeList(cur.sourceIdentification).length" style="color:var(--prm-color-text-disabled)">—</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="信息关联(G–J)">
+          <el-tag v-for="c in codeList(cur.relationIdentification)" :key="c" size="small" :type="c === 'H' ? 'danger' : 'warning'" effect="plain" style="margin:1px">{{ c }}</el-tag>
+          <span v-if="!codeList(cur.relationIdentification).length" style="color:var(--prm-color-text-disabled)">—</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="涉第三方/敏感">{{ cur.involvesThirdParty ? '是' : '否' }}</el-descriptions-item>
         <el-descriptions-item label="当前环节">{{ cur.status }}</el-descriptions-item>
-        <el-descriptions-item label="用途" :span="2">{{ cur.purpose || '-' }}</el-descriptions-item>
       </el-descriptions>
 
-      <!-- P2 审批侧变更对照:确权变更单展示「上一版确权结论 → 本次申报」差异,审核聚焦变动项 -->
+      <!-- P2 审批侧变更对照(系统级):确权变更单展示「上一版确权结论 → 本次申报」差异,审核聚焦变动项 -->
       <template v-if="isChangeApply">
         <div class="rv-h">
           确权变更对照
-          <el-tag type="warning" size="small" effect="plain" style="margin-left:8px">登记类型:确权变更{{ cur.changeTrigger ? ' · 触发:' + cur.changeTrigger : '' }}</el-tag>
+          <el-tag type="warning" size="small" effect="plain" style="margin-left:8px">触发:{{ cur.changeTrigger || '—' }}{{ cur.changeVersion ? ' · v' + cur.changeVersion : '' }}{{ cur.baselineRef ? ' · 基线 ' + cur.baselineRef : '' }}</el-tag>
         </div>
-        <el-alert v-if="!changeBaseline" type="info" :closable="false" title="未取到上一版已确权结论作基线(可能为首次确权后直接变更或平台未接入),仅按本次申报内容审核。" />
+        <!-- 数据新增:insert 模式,既有不动、无基线 diff -->
+        <el-alert v-if="isDataAddApply" type="success" :closable="false"
+          :title="cur.changeSummary || '数据新增:新表首次确权登记(系统内既有已确权库表不动,不联动授权),按本次申报内容审核。'" />
         <template v-else>
-          <el-alert :type="changeDiff.length ? 'warning' : 'info'" :closable="false"
-            :title="changeDiff.length ? `本次确权变更共修改 ${changeDiff.length} 项,请重点核对下列变动维度` : '本次确权变更与上一版结论无字段差异,请核对是否确需变更'" />
-          <el-table v-if="changeDiff.length" :data="changeDiff" border size="small" style="margin-top:8px">
-            <el-table-column prop="key" label="变更维度" width="150" />
-            <el-table-column label="原值(上一版确权)" min-width="170">
-              <template #default="{ row }"><span style="color:#909399;text-decoration:line-through">{{ row.before || '空' }}</span></template>
-            </el-table-column>
-            <el-table-column label="新值(本次申报)" min-width="170">
-              <template #default="{ row }"><span style="color:#ffc417;font-weight:600">{{ row.after || '空' }}</span></template>
-            </el-table-column>
-          </el-table>
+          <el-alert v-if="cur.changeSummary" type="warning" :closable="false" :title="cur.changeSummary" style="margin-bottom:8px" />
+          <el-alert v-if="!changeBaseline" type="info" :closable="false" title="未取到该系统上一版已确权基线(可能首次确权后直接变更或平台未接入),仅按本次申报内容审核。" />
+          <template v-else>
+            <el-table v-if="changeDiff.length" :data="changeDiff" border size="small" style="margin-top:8px">
+              <el-table-column prop="key" label="变更维度" width="150" />
+              <el-table-column label="原值(上一版确权)" min-width="170">
+                <template #default="{ row }"><span style="color:var(--prm-color-text-weak);text-decoration:line-through">{{ row.before || '空' }}</span></template>
+              </el-table-column>
+              <el-table-column label="新值(本次申报)" min-width="170">
+                <template #default="{ row }"><span style="color:#ffc417;font-weight:600">{{ row.after || '空' }}</span></template>
+              </el-table-column>
+            </el-table>
+            <el-alert v-else type="info" :closable="false" title="本次确权变更在勾选的变更簇上与上一版结论无字段差异,请核对是否确需变更。" />
+          </template>
         </template>
       </template>
 
@@ -139,7 +189,7 @@
         <el-timeline-item v-for="(l, i) in aiRunlog" :key="i" :timestamp="fmt(l.createTime)" placement="top" type="primary">
           <div style="font-size:13px">
             <el-tag size="small" effect="dark" style="margin-right:6px">{{ l.capability }}</el-tag>
-            <span style="color:#606266">模型 {{ l.model }} · 耗时 {{ l.durationMs }}ms · 触发 {{ l.triggerUser }}</span>
+            <span style="color:var(--prm-color-text-secondary)">模型 {{ l.model }} · 耗时 {{ l.durationMs }}ms · 触发 {{ l.triggerUser }}</span>
             <div style="font-size:12px;color:#9ca3af">输入:{{ l.inputSummary || '—' }}</div>
             <div style="font-size:12px;color:#9ca3af">SM3 {{ (l.sm3Hash || '').slice(0, 16) }}…(输出防篡改指纹)</div>
           </div>
@@ -192,7 +242,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { pageConfirmApply, approveConfirm, rejectConfirm, batchApproveConfirm, batchRejectConfirm, listMaterialByApply, getConfirmFlowLog, materialFileUrl, getAiCheckLogic, getAiRunlog, verifyAiSnapshot } from '@/api/confirm'
-import { getAssetProperty } from '@/api/assetCard'
+import { fetchChangeBaseline } from '@/api/assetCard'
 import { openFilePreview } from '@/composables/useFilePreview'
 import { currentRole } from '@/lib/roles'
 
@@ -211,26 +261,56 @@ const rows = ref([]); const loading = ref(false); const sel = ref([])
 const drawer = ref(false); const cur = ref({}); const materials = ref([]); const logs = ref([])
 // 大模型校验机制完善:校验逻辑可视化 / 校验过程回放 / 快照防篡改验真
 const checkLogic = ref(null); const aiRunlog = ref([]); const snapVerify = ref(null)
-// 审批侧变更对照(P2):确权变更单 —— 以该资产「上一版已确权结论」为基线,审核人一眼看清本次改了哪些维度
+// ===== 与升级后申请/查询页同步:系统名称 / 三权多选 / 多触发 / 系统级变更对照 =====
+// 一份确权申请 = 一个系统:系统名称权威源 = assetId「SYS:<系统名>」;assetName 仅旧单卡兜底
+function sysName(row) {
+  const id = (row && row.assetId) || ''
+  return id.startsWith('SYS:') ? id.slice(4) : ((row && row.assetName) || '-')
+}
+// 权属类型=三权多选(持有/使用/经营)→ 标签;变更触发多触发拼接 → 标签;A–F/G–J 码列
+const RIGHT_MAP = {
+  数据资源持有权: { short: '持有权', type: 'primary' },
+  数据加工使用权: { short: '使用权', type: 'success' },
+  数据产品经营权: { short: '经营权', type: 'warning' }
+}
+function rightTags(rt) {
+  return String(rt || '').split(/[、,，]/).map(s => s.trim()).filter(Boolean)
+    .map(f => RIGHT_MAP[f] ? { ...RIGHT_MAP[f], full: f } : { short: f, type: 'info', full: f })
+}
+function triggerTags(row) { return String((row && row.changeTrigger) || '').split(/[、,，]/).map(s => s.trim()).filter(Boolean) }
+function codeList(s) { return String(s || '').split(/[、,，]/).map(x => x.trim()).filter(Boolean) }
+
+// 审批侧变更对照(P2,系统级):以该系统「上一版已确权结论」为基线,审核人一眼看清本次改了哪些维度
 const changeBaseline = ref(null)
 const isChangeApply = computed(() => cur.value && cur.value.registerType === '确权变更')
+// 数据新增=insert(新表首次确权),不做基线 diff
+const isDataAddApply = computed(() => isChangeApply.value && triggerTags(cur.value).includes('数据新增'))
 // 权属类型分隔符可能为 ,/，/、:统一规范化比对,避免分隔符差异误报"已修改"
 const canonTypes = (v) => String(v == null ? '' : v).split(/[、,，]/).map(s => s.trim()).filter(Boolean).join('、')
+// 分簇门控(对齐申请页):勾选来源→比 A–F;勾选管理→比 G–J
+const keepSrc = computed(() => triggerTags(cur.value).some(t => t.includes('来源')) || triggerTags(cur.value).includes('其他'))
+const keepRel = computed(() => triggerTags(cur.value).some(t => t.includes('管理') || t.includes('监管')) || triggerTags(cur.value).includes('其他'))
+// A–F/G–J 系统级"新值" = 基线该簇 ∪ 本次申报(只增不删,杜绝子集幻象删减)
+function unionAfter(baseStr, curStr) {
+  return [...new Set([...codeList(baseStr), ...codeList(curStr)])].sort().join('、')
+}
+// 系统级 7 维(对齐确权变更申请页):5 申报维 + 2 元素簇维(门控)
 const CHANGE_DIMS = [
   { key: '权属主体', cur: () => cur.value.rightHolder, base: b => b.rightHolder },
+  { key: '主体层级', cur: () => cur.value.subjectLevel, base: b => b.subjectLevel },
   { key: '权属类型', cur: () => canonTypes(cur.value.rightType), base: b => canonTypes(b.rightType) },
   { key: '责任部门', cur: () => cur.value.respDept, base: b => b.respDept },
-  { key: '来源主体', cur: () => cur.value.sourceSubject, base: b => b.sourceSubject },
-  { key: '来源说明/约束', cur: () => cur.value.sourceLimit, base: b => b.sourceLimit },
-  { key: '隐私关联说明(H)', cur: () => cur.value.privacyInfo, base: b => b.privacyInfo },
-  { key: '第三方信息(I)', cur: () => cur.value.thirdPartyInfo, base: b => b.thirdPartyInfo },
-  { key: '关联主体说明(J)', cur: () => cur.value.relationSubject, base: b => b.relationSubject }
+  { key: '管制属性', cur: () => cur.value.regulated, base: b => b.regulated },
+  { key: '来源识别(A–F)', cluster: 'src', cur: () => unionAfter(changeBaseline.value && changeBaseline.value.sourceIdent, cur.value.sourceIdentification), base: b => canonTypes(b.sourceIdent) },
+  { key: '信息关联(G–J)', cluster: 'rel', cur: () => unionAfter(changeBaseline.value && changeBaseline.value.relationIdent, cur.value.relationIdentification), base: b => canonTypes(b.relationIdent) }
 ]
+const activeDims = computed(() => CHANGE_DIMS.filter(d =>
+  !d.cluster || (d.cluster === 'src' && keepSrc.value) || (d.cluster === 'rel' && keepRel.value)))
 const rvNorm = (v) => (v == null ? '' : String(v).trim())
 const changeDiff = computed(() => {
-  if (!isChangeApply.value || !changeBaseline.value) return []
+  if (!isChangeApply.value || !changeBaseline.value || isDataAddApply.value) return []
   const b = changeBaseline.value
-  return CHANGE_DIMS
+  return activeDims.value
     .map(d => ({ key: d.key, before: rvNorm(d.base(b)), after: rvNorm(d.cur()) }))
     .filter(x => x.before !== x.after)
 })
@@ -276,9 +356,9 @@ async function onDetail(row) {
   const [m, l] = await Promise.all([listMaterialByApply(row.applyId), getConfirmFlowLog(row.applyId)])
   materials.value = m || []; logs.value = l || []
   drawer.value = true
-  // 确权变更:取上一版已确权结论作基线(在途变更单非 DONE,/property 返回的即上一版),供审批侧 diff
-  if (row.registerType === '确权变更' && row.assetId) {
-    getAssetProperty(row.assetId).then(p => { changeBaseline.value = p }).catch(() => { changeBaseline.value = null })
+  // 确权变更(非数据新增):取该系统现有确权基线(系统级,与确权变更申请页同源),供审批侧 diff
+  if (row.registerType === '确权变更' && !triggerTags(row).includes('数据新增')) {
+    fetchChangeBaseline(sysName(row)).then(p => { changeBaseline.value = p }).catch(() => { changeBaseline.value = null })
   }
   // 大模型校验机制(规则可视化 / 回放 / 快照验真):best-effort,任一失败不影响详情
   getAiCheckLogic(row.applyId).then(r => { checkLogic.value = r }).catch(() => {})

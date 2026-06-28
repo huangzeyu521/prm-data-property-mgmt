@@ -3,64 +3,79 @@
   中国南方电网 · 数据资产管理平台 V3.6 · 数据产权管理模块(IM-DAM-DPR)。
   本软件版权归中国南方电网所有,未经书面授权不得复制、修改或发布。
 -->
+<!--
+  数据资产确权目录管理:只看用户权限下「系统 → 功能模块 → 库表」的各级确权状态。
+  确权状态口径对齐初始确权/确权变更申请页(ConfirmCatalogTree):库表 已确权/未确权/申请中 + 已授权;
+  系统/功能模块 展示确权进度(已确权 N/M)。不展示数据资产卡片内容(平台数据资产管理已支持)。
+-->
 <template>
   <div class="prm-page">
     <div class="prm-query-bar">
-      <el-input v-model="keyword" placeholder="检索数据集/系统定位" clearable style="width:240px" />
-      <el-switch v-model="onlyPending" active-text="仅看未确权/申请中" style="margin-left:14px" />
+      <el-input v-model="keyword" placeholder="检索系统/功能模块/库表" clearable style="width:240px" />
+      <el-select v-model="statusFilter" style="width:140px;margin-left:14px" placeholder="确权状态">
+        <el-option label="全部状态" value="" />
+        <el-option label="未确权" value="未确权" />
+        <el-option label="申请中" value="申请中" />
+        <el-option label="已确权" value="已确权" />
+      </el-select>
       <el-button style="margin-left:14px" @click="expandAll(true)">展开全部</el-button>
       <el-button @click="expandAll(false)">折叠全部</el-button>
       <el-button type="primary" :loading="loading" @click="load">刷新</el-button>
       <span class="cat-legend">
-        <el-tag size="small" type="warning" effect="plain">待确权 {{ counts.pending }}</el-tag>
+        <el-tag size="small" effect="plain">库表 {{ counts.card }}</el-tag>
+        <el-tag size="small" type="warning" effect="plain">未确权 {{ counts.pending }}</el-tag>
         <el-tag size="small" effect="plain">申请中 {{ counts.applying }}</el-tag>
         <el-tag size="small" type="success" effect="plain">已确权 {{ counts.confirmed }}</el-tag>
       </span>
     </div>
+
     <div class="prm-table-card">
-      <div class="prm-table-note" style="margin:0 0 12px 0">注:树形展示"子公司—系统—模式—数据集"全量资产及确权状态;待确权可一键发起确权,申请中/已确权可查看申请信息。</div>
+      <div class="prm-table-note" style="margin:0 0 12px 0">
+        树形展示用户权限下"业务域—系统—功能模块—库表"全量确权范围及各级确权状态(口径对齐初始确权/确权变更申请)。
+        库表:<el-tag size="small" type="warning" effect="plain">未确权</el-tag> 可发起确权,
+        <el-tag size="small" effect="plain">申请中</el-tag> /
+        <el-tag size="small" type="success" effect="plain">已确权</el-tag> 可查看确权申请;
+        <el-tag size="small" type="danger" effect="plain">已授权</el-tag> 表示该库表已对外授权。
+      </div>
       <el-tree
         ref="treeRef" :data="tree" :props="treeProps" node-key="id"
-        :filter-node-method="filterNode" default-expand-all v-loading="loading">
+        :filter-node-method="filterNode" default-expand-all highlight-current v-loading="loading">
         <template #default="{ data }">
           <span class="cat-node">
-            <span class="cat-label">{{ data.label }}</span>
-            <template v-if="data.type === 'DATASET'">
-              <el-tag size="small" :type="statusTag(data.status)" effect="plain" style="margin-left:8px">{{ data.status }}</el-tag>
-              <span class="cat-aid">{{ data.assetId }}</span>
-              <el-button v-if="data.status === '待确权'" link type="primary" size="small" @click.stop="onConfirm(data)">发起确权</el-button>
-              <el-button v-else link type="primary" size="small" @click.stop="onView(data)">查看申请</el-button>
+            <el-icon v-if="data.type === 'domain'" class="cat-ic"><Grid /></el-icon>
+            <el-icon v-else-if="data.type === 'system'" class="cat-ic"><Monitor /></el-icon>
+            <el-icon v-else-if="data.type === 'module'" class="cat-ic"><Folder /></el-icon>
+            <el-icon v-else class="cat-ic" style="color:var(--prm-color-link)"><Document /></el-icon>
+            <span :class="{ 'cat-label': true, 'is-card': data.type === 'card' }">{{ data.label }}</span>
+
+            <!-- 库表:确权状态 + 已授权 + 表代码 + 操作 -->
+            <template v-if="data.type === 'card'">
+              <el-tag size="small" :type="statusTag(cardStatus(data))" effect="plain" class="cat-badge">{{ cardStatus(data) }}</el-tag>
+              <el-tag v-if="data.authorized" size="small" type="danger" effect="plain" class="cat-badge">已授权</el-tag>
+              <span class="cat-code">{{ data.tableCode }}</span>
+              <el-button v-if="cardStatus(data) === '未确权'" link type="primary" size="small" @click.stop="onConfirm(data)">发起确权</el-button>
+              <el-button v-else link type="primary" size="small" @click.stop="goHistory">查看申请</el-button>
             </template>
+
+            <!-- 系统/功能模块:确权进度(已确权 N/M)-->
+            <template v-else-if="data.type === 'system' || data.type === 'module'">
+              <el-tag size="small" :type="progBadge(data).type" effect="plain" class="cat-badge">{{ progBadge(data).text }}</el-tag>
+            </template>
+            <span v-else class="cat-cnt">{{ progress(data).total }} 张库表</span>
           </span>
         </template>
       </el-tree>
     </div>
-
-    <el-dialog v-model="viewDlg" title="确权申请信息" width="520px" align-center>
-      <el-descriptions v-if="curApply" :column="2" border size="small">
-        <el-descriptions-item label="数据集" :span="2">{{ curApply.assetName }}（{{ curApply.assetId }}）</el-descriptions-item>
-        <el-descriptions-item label="申请编号">{{ curApply.applyNo }}</el-descriptions-item>
-        <el-descriptions-item label="状态"><el-tag :type="applyTag(curApply.status)">{{ curApply.status }}</el-tag></el-descriptions-item>
-        <el-descriptions-item label="权属类型">{{ curApply.rightType || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="权利人">{{ curApply.rightHolder || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="申请时间" :span="2">{{ fmt(curApply.createTime) }}</el-descriptions-item>
-        <el-descriptions-item v-if="curApply.rejectReason" label="驳回原因" :span="2">{{ curApply.rejectReason }}</el-descriptions-item>
-      </el-descriptions>
-      <el-empty v-else :image-size="60" description="该数据集已确权,暂无在途确权申请" />
-      <template #footer>
-        <el-button v-if="curApply" type="primary" @click="goHistory">去申请查询</el-button>
-        <el-button @click="viewDlg = false">关闭</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { onMounted, reactive, ref, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { getPropertyTree } from '@/api/ledger'
-import { pageConfirmApply, saveConfirmDraft, submitConfirm } from '@/api/confirm'
+import { ElMessageBox } from 'element-plus'
+import { Grid, Monitor, Folder, Document } from '@element-plus/icons-vue'
+import { fullCatalogTree } from '@/api/assetCard'
+import { pageConfirmApply } from '@/api/confirm'
 
 const router = useRouter()
 const IN_PROGRESS = ['草稿', '人工预审中', '合规审核中', '主管复核中', '经理终审中']
@@ -69,57 +84,75 @@ const treeRef = ref()
 const tree = ref([])
 const loading = ref(false)
 const keyword = ref('')
-const onlyPending = ref(false)
-const counts = reactive({ pending: 0, applying: 0, confirmed: 0 })
-const viewDlg = ref(false)
-const curApply = ref(null)
+const statusFilter = ref('')
+const counts = reactive({ card: 0, pending: 0, applying: 0, confirmed: 0 })
+// 确权为系统级(assetId=SYS:<系统名>):系统在途→该系统下库表均"申请中"
+const applyingSys = ref(new Set())
 
-function statusTag(s) { return { 待确权: 'warning', 申请中: '', 已确权: 'success' }[s] || 'info' }
-function applyTag(s) { return { 已完成: 'success', 已驳回: 'danger', 已撤回: 'info', 草稿: 'info' }[s] || 'warning' }
-function fmt(t) { return t ? String(t).replace('T', ' ').slice(0, 19) : '-' }
-
-function transform(nodes, applyMap) {
-  return (nodes || []).map((n) => {
-    const node = { id: n.id, label: n.label, type: n.type, assetId: n.assetId, children: transform(n.children, applyMap) }
-    if (n.type === 'DATASET') {
-      const apply = applyMap[n.assetId]
-      if (apply && IN_PROGRESS.includes(apply.status)) { node.status = '申请中'; node.apply = apply }
-      else node.status = n.confirmStatus === '已确权' ? '已确权' : '待确权'
-      node.apply = node.apply || apply || null
-      if (node.status === '待确权') counts.pending++
-      else if (node.status === '申请中') counts.applying++
-      else counts.confirmed++
-    }
-    return node
+function statusTag(s) { return { 未确权: 'warning', 申请中: '', 已确权: 'success' }[s] || 'info' }
+// 库表确权状态(口径对齐申请页):系统在途→申请中;否则按库表 confirmed
+function cardStatus(data) {
+  if (applyingSys.value.has(data.sysName)) return '申请中'
+  return data.confirmed ? '已确权' : '未确权'
+}
+// 节点确权进度:其下库表 已确权数 / 总数
+function progress(node) {
+  let total = 0, confirmed = 0
+  const walk = (nodes) => (nodes || []).forEach(x => {
+    if (x.type === 'card') { total++; if (cardStatus(x) === '已确权') confirmed++ }
+    else walk(x.children)
   })
+  walk(node.children)
+  return { total, confirmed }
+}
+function progBadge(node) {
+  const { total, confirmed } = progress(node)
+  const type = confirmed >= total && total > 0 ? 'success' : (confirmed > 0 ? 'warning' : 'info')
+  const label = confirmed >= total && total > 0 ? '已确权' : (confirmed > 0 ? '部分确权' : '未确权')
+  return { type, text: `${label} ${confirmed}/${total}` }
 }
 
 async function load() {
   loading.value = true
-  counts.pending = counts.applying = counts.confirmed = 0
+  counts.card = counts.pending = counts.applying = counts.confirmed = 0
   try {
     const [treeData, applyPage] = await Promise.all([
-      getPropertyTree(),
+      fullCatalogTree(),
       pageConfirmApply({ current: 1, size: 500 })
     ])
-    const applyMap = {}
+    const set = new Set()
     for (const a of (applyPage.records || [])) {
-      if (a.assetId && !applyMap[a.assetId]) applyMap[a.assetId] = a // 列表按时间倒序,取最新
+      const id = a.assetId || ''
+      if (id.startsWith('SYS:') && IN_PROGRESS.includes(a.status)) set.add(id.slice(4))
     }
-    tree.value = transform(treeData || [], applyMap)
+    applyingSys.value = set
+    tree.value = treeData || []
+    countCards(tree.value)
     await nextTick()
     applyFilter()
   } finally { loading.value = false }
 }
 
+function countCards(nodes) {
+  for (const n of (nodes || [])) {
+    if (n.type === 'card') {
+      counts.card++
+      const st = cardStatus(n)
+      if (st === '申请中') counts.applying++
+      else if (st === '已确权') counts.confirmed++
+      else counts.pending++
+    } else countCards(n.children)
+  }
+}
+
 function filterNode(value, data) {
-  if (data.type !== 'DATASET') return false // 非叶:由是否有可见子节点决定
-  const kwOk = !keyword.value || (data.label || '').includes(keyword.value) || (data.assetId || '').includes(keyword.value)
-  const stOk = !onlyPending.value || data.status === '待确权' || data.status === '申请中'
+  if (data.type !== 'card') return false // 非叶:由是否有可见库表决定
+  const kwOk = !keyword.value || (data.label || '').includes(keyword.value) || (data.tableCode || '').includes(keyword.value)
+  const stOk = !statusFilter.value || cardStatus(data) === statusFilter.value
   return kwOk && stOk
 }
 function applyFilter() { treeRef.value && treeRef.value.filter('') }
-watch([keyword, onlyPending], applyFilter)
+watch([keyword, statusFilter], applyFilter)
 
 function expandAll(on) {
   const nodes = treeRef.value?.store?.nodesMap || {}
@@ -127,15 +160,9 @@ function expandAll(on) {
 }
 
 function onConfirm(data) {
-  ElMessageBox.confirm(`对数据集"${data.label}"(${data.assetId})发起数据确权申请?`, '一键发起确权', { type: 'info' })
-    .then(async () => {
-      const id = await saveConfirmDraft({ assetId: data.assetId, assetName: data.label, rightType: '数据资源持有权' })
-      await submitConfirm(id)
-      ElMessage.success('已发起确权申请')
-      load()
-    }).catch(() => {})
+  ElMessageBox.confirm(`数据确权以「系统」为单元(一份确权申请 = 一个系统)。是否前往「初始确权申请」,在确权范围树中选择「${data.sysName}」及库表发起确权?`, '发起确权', { type: 'info', confirmButtonText: '前往初始确权' })
+    .then(() => router.push({ path: '/dpr/confirm/wizard' })).catch(() => {})
 }
-function onView(data) { curApply.value = data.apply || null; viewDlg.value = true }
 function goHistory() { router.push({ path: '/dpr/confirm/history' }) }
 
 onMounted(load)
@@ -143,7 +170,11 @@ onMounted(load)
 
 <style scoped>
 .cat-legend { margin-left: 16px; display: inline-flex; gap: 6px; }
-.cat-node { display: inline-flex; align-items: center; gap: 6px; }
+.cat-node { display: inline-flex; align-items: center; gap: 5px; }
+.cat-ic { font-size: 14px; color: var(--prm-color-text-weak); }
 .cat-label { font-size: 13px; }
-.cat-aid { color: #aab; font-size: 11px; }
+.cat-label.is-card { color: var(--prm-color-link); }
+.cat-badge { transform: scale(0.86); }
+.cat-code { color: var(--prm-color-text-disabled); font-size: 11px; margin-left: 4px; }
+.cat-cnt { color: var(--prm-color-text-weak); font-size: 12px; margin-left: 6px; }
 </style>

@@ -2,7 +2,7 @@ package com.csg.prm.authorize;
 
 import com.csg.prm.authorize.entity.AuthApply;
 import com.csg.prm.authorize.service.AuthApplyService;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -42,7 +42,7 @@ class AuthBoundaryTest {
         // 卡片号含 NARROW -> 确权范围"约定字段";授权申请"全字段"超出 -> 拦截
         AuthApply a = draft("DA-BND-1", "EC-NARROW-1");
         String id = applyService.saveDraft(a);
-        BizException ex = assertThrows(BizException.class, () -> applyService.submit(id));
+        BusinessException ex = assertThrows(BusinessException.class, () -> applyService.submit(id));
         assertTrue(ex.getMessage().contains("授权范围超出确权边界"));
     }
 
@@ -52,7 +52,7 @@ class AuthBoundaryTest {
         AuthApply a = draft("DA-BND-2", "EC-SHORT-1");
         a.setValidDate(LocalDateTime.now().plusYears(1));
         String id = applyService.saveDraft(a);
-        BizException ex = assertThrows(BizException.class, () -> applyService.submit(id));
+        BusinessException ex = assertThrows(BusinessException.class, () -> applyService.submit(id));
         assertTrue(ex.getMessage().contains("授权期限超出确权有效期"));
     }
 

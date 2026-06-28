@@ -21,7 +21,7 @@
       </el-form>
     </div>
     <div class="prm-table-card">
-      <div class="prm-table-note" style="margin:0 0 12px 0">注:依据规则自动校验【材料完整性 / 权限合理性(先确后授·权益类型·授权范围) / 合规性(第三方许可·敏感数据·跨域)】，输出红/黄/绿报告，记录可查询导出。</div>
+      <div class="prm-table-note" style="margin:0 0 12px 0">注:依据规则自动校验【材料完整性 / 权限合理性(先确后授·权益类型·授权范围) / 合规性(第三方许可·敏感数据·跨域) / 授权协议要素(使用场景·目的·利益分配·安全保障 附录D §3.4.4)】，输出红/黄/绿报告，记录可查询导出。</div>
       <el-table :data="rows" v-loading="loading" border stripe>
         <el-table-column type="index" label="序号" width="60" align="center" />
         <el-table-column prop="applyId" label="申请ID" width="190" show-overflow-tooltip />
@@ -39,7 +39,7 @@
         :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" @size-change="s=>{q.size=s;q.current=1;load()}" />
     </div>
 
-    <el-dialog v-model="reportDlg" title="合规校验报告（三维）" width="640px" align-center>
+    <el-dialog v-model="reportDlg" title="合规校验报告（四维）" width="640px" align-center>
       <el-alert v-if="report" :type="report.riskLevel==='红'?'error':(report.riskLevel==='黄'?'warning':'success')" :closable="false" style="margin-bottom:12px">
         风险等级：{{ report.riskLevel }}　校验结果：{{ report.checkResult }}
       </el-alert>

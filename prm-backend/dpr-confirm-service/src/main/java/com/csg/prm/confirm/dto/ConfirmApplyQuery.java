@@ -10,6 +10,24 @@ public class ConfirmApplyQuery extends PageQuery {
     private String rightHolder;
     private String createTimeStart;
     private String createTimeEnd;
+    private String registerType;   // 登记类型:初始确权 / 确权变更
+    private String changeTrigger;  // 变更触发(确权变更):like 命中多触发拼接串(如"数据来源变更、管理要求变更")
+
+    public String getRegisterType() {
+        return registerType;
+    }
+
+    public void setRegisterType(String registerType) {
+        this.registerType = registerType;
+    }
+
+    public String getChangeTrigger() {
+        return changeTrigger;
+    }
+
+    public void setChangeTrigger(String changeTrigger) {
+        this.changeTrigger = changeTrigger;
+    }
 
     public String getRightHolder() {
         return rightHolder;

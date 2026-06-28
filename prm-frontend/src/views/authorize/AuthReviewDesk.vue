@@ -15,9 +15,13 @@
         <el-table-column type="selection" width="46" />
         <el-table-column type="index" label="序号" width="56" align="center" />
         <el-table-column prop="applyNo" label="申请编号" width="150" show-overflow-tooltip />
-        <el-table-column prop="authMode" label="模式" width="100" align="center" />
-        <el-table-column prop="assetName" label="资产名称" min-width="150" show-overflow-tooltip />
-        <el-table-column prop="granteeOrg" label="被授权方" min-width="130" show-overflow-tooltip />
+        <el-table-column prop="authMode" label="模式" width="90" align="center" />
+        <el-table-column label="所属系统" min-width="120" show-overflow-tooltip><template #default="{ row }">{{ sysName(row) }}</template></el-table-column>
+        <el-table-column prop="assetName" label="数据表" min-width="130" show-overflow-tooltip />
+        <el-table-column prop="rightType" label="权益类型" width="130" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.rightType || '—' }}</template>
+        </el-table-column>
+        <el-table-column prop="granteeOrg" label="被授权方" min-width="120" show-overflow-tooltip />
         <el-table-column prop="status" label="当前环节" width="130" align="center">
           <template #default="{ row }"><el-tag type="warning">{{ row.status }}</el-tag></template>
         </el-table-column>
@@ -33,13 +37,25 @@
 
     <el-drawer v-model="drawer" :title="`审核详情 — ${cur.applyNo || ''}`" size="46%">
       <el-descriptions :column="2" border size="small">
-        <el-descriptions-item label="资产名称" :span="2">{{ cur.assetName }}（{{ cur.assetId }}）</el-descriptions-item>
-        <el-descriptions-item label="模式">{{ cur.authMode }}</el-descriptions-item>
+        <el-descriptions-item label="所属系统">{{ sysName(cur) }}</el-descriptions-item>
+        <el-descriptions-item label="模式名称">{{ cur.schemaName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="数据表">{{ cur.assetName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="业务域">{{ cur.businessDomain || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="授权方式">{{ cur.authMode }}</el-descriptions-item>
         <el-descriptions-item label="权益类型">{{ cur.rightType || '-' }}</el-descriptions-item>
         <el-descriptions-item label="被授权方">{{ cur.granteeOrg || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="生效卡片">{{ cur.equityCardId || '-' }}</el-descriptions-item>
         <el-descriptions-item label="当前环节">{{ cur.status }}</el-descriptions-item>
+        <el-descriptions-item label="授权时效">{{ (cur.validDate||'').slice(0,10) || '-' }}</el-descriptions-item>
         <el-descriptions-item label="使用场景" :span="2">{{ cur.scenario || '-' }}</el-descriptions-item>
         <el-descriptions-item label="授权范围" :span="2">{{ cur.scope || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="涉第三方来源">{{ cur.thirdPartySource && String(cur.thirdPartySource).trim() ? cur.thirdPartySource : '不涉及' }}</el-descriptions-item>
+        <el-descriptions-item label="涉隐私/商密">{{ cur.sensitiveType && String(cur.sensitiveType).trim() && cur.sensitiveType !== '无' ? cur.sensitiveType : '不涉及' }}</el-descriptions-item>
+        <el-descriptions-item label="是否跨域">{{ cur.crossRegion ? '是' : '否' }}</el-descriptions-item>
+        <el-descriptions-item label="—">　</el-descriptions-item>
+        <!-- 授权协议要素(附录D §3.4.4):审核人据此核对协议须约定的利益分配与安全保障 -->
+        <el-descriptions-item label="利益分配约定" :span="2">{{ cur.benefitAllocation || (cur.authMode === '批量' ? '批量:在《运营授权协议》(清单级)统一约定' : '— 未填(协议签订前须补充)') }}</el-descriptions-item>
+        <el-descriptions-item label="安全保障要求" :span="2">{{ cur.securityReq || (cur.authMode === '批量' ? '批量:在《运营授权协议》(清单级)统一约定' : '— 未填(协议签订前须补充)') }}</el-descriptions-item>
       </el-descriptions>
 
       <!-- 大模型校验机制完善(南网):快照验真 + 校验规则可视化 + 校验过程回放 -->
@@ -71,7 +87,7 @@
         <el-timeline-item v-for="(l, i) in aiRunlog" :key="i" :timestamp="fmt(l.createTime)" placement="top" type="primary">
           <div style="font-size:13px">
             <el-tag size="small" effect="dark" style="margin-right:6px">{{ l.capability }}</el-tag>
-            <span style="color:#606266">模型 {{ l.model }} · 耗时 {{ l.durationMs }}ms · 触发 {{ l.triggerUser }}</span>
+            <span style="color:var(--prm-color-text-secondary)">模型 {{ l.model }} · 耗时 {{ l.durationMs }}ms · 触发 {{ l.triggerUser }}</span>
             <div style="font-size:12px;color:#9ca3af">SM3 {{ (l.sm3Hash || '').slice(0,16) }}…(输出防篡改指纹)</div>
           </div>
         </el-timeline-item>
@@ -110,6 +126,8 @@ const checkLogic = ref(null); const aiRunlog = ref([]); const snapVerify = ref(n
 const PENDING = ['合规审核中', '业务审核中', '主管审核中', '经理审核中', '副总审批中', '领导小组审批中']
 const reviewing = computed(() => rows.value.filter(r => PENDING.includes(r.status)))
 function fmt(t) { return t ? String(t).replace('T', ' ').slice(0, 19) : '-' }
+// 库表级:assetId=SYS:系统名 → 系统名;数据表名=assetName(库表名)。与向导/历史页/确权目录同一派生。
+function sysName(row) { const a = row.assetId || ''; return a.startsWith('SYS:') ? a.slice(4) : (a || '—') }
 
 async function load() {
   loading.value = true

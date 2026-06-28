@@ -116,6 +116,18 @@ public class AuthApply extends BaseEntity {
     @TableField("CEC_SENSITIVE_TYPE")
     private String sensitiveType;
 
+    /** 模式名称(附录F 表5/表6;来源数据资产卡片) */
+    @TableField("CEC_SCHEMA_NAME")
+    private String schemaName;
+
+    /** 利益分配约定(授权协议附录D §3.4.4;如:免费内部共享/按次计费/收益分成) */
+    @TableField("CEC_BENEFIT_ALLOC")
+    private String benefitAllocation;
+
+    /** 安全保障要求(授权协议附录D §3.4.4;如:加密传输/最小授权访问控制/操作留痕审计) */
+    @TableField("CEC_SECURITY_REQ")
+    private String securityReq;
+
     /** 信息授权协议(附录F 表5) */
     @TableField("CEC_INFO_AUTH_AGREEMENT")
     private String infoAuthAgreement;
@@ -186,6 +198,30 @@ public class AuthApply extends BaseEntity {
 
     public void setSensitiveType(String sensitiveType) {
         this.sensitiveType = sensitiveType;
+    }
+
+    public String getSchemaName() {
+        return schemaName;
+    }
+
+    public void setSchemaName(String schemaName) {
+        this.schemaName = schemaName;
+    }
+
+    public String getBenefitAllocation() {
+        return benefitAllocation;
+    }
+
+    public void setBenefitAllocation(String benefitAllocation) {
+        this.benefitAllocation = benefitAllocation;
+    }
+
+    public String getSecurityReq() {
+        return securityReq;
+    }
+
+    public void setSecurityReq(String securityReq) {
+        this.securityReq = securityReq;
     }
 
     public String getInfoAuthAgreement() {

@@ -7,8 +7,8 @@ import com.csg.prm.authorize.entity.AuthCatalogItem;
 import com.csg.prm.authorize.mapper.AuthCatalogItemMapper;
 import com.csg.prm.authorize.service.AuthCatalogService;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.ResultCode;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.api.ResponseCode;
+import com.csg.prm.common.exception.BusinessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -26,10 +26,10 @@ public class AuthCatalogServiceImpl implements AuthCatalogService {
     @Transactional
     public String save(AuthCatalogItem item) {
         if (!StringUtils.hasText(item.getCategory())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "目录类别不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "目录类别不能为空");
         }
         if (!StringUtils.hasText(item.getName())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "名称不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "名称不能为空");
         }
         if (StringUtils.hasText(item.getItemId())) {
             mapper.updateById(item);
@@ -57,7 +57,7 @@ public class AuthCatalogServiceImpl implements AuthCatalogService {
 
     private void update(String itemId, String status) {
         if (mapper.selectById(itemId) == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "目录项不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "目录项不存在");
         }
         AuthCatalogItem upd = new AuthCatalogItem();
         upd.setItemId(itemId);

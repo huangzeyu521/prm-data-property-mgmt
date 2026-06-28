@@ -56,7 +56,9 @@ export function applyChartBase(option) {
   return o
 }
 
-/** 初始化图表并套用统一基座(看板图表统一入口)。 */
+/** 初始化图表并套用统一基座(看板图表统一入口)。返回 ECharts 实例(非 setOption 的 undefined),供 .on()/.setOption() 下钻联动。 */
 export function initChart(dom, option) {
-  return echarts.init(dom).setOption(applyChartBase(option))
+  const chart = echarts.init(dom)
+  chart.setOption(applyChartBase(option))
+  return chart
 }

@@ -7,8 +7,8 @@ import com.csg.prm.authorize.entity.AuthFiling;
 import com.csg.prm.authorize.mapper.AuthFilingMapper;
 import com.csg.prm.authorize.service.AuthFilingService;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.ResultCode;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.api.ResponseCode;
+import com.csg.prm.common.exception.BusinessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -29,11 +29,11 @@ public class AuthFilingServiceImpl implements AuthFilingService {
     @Transactional
     public String create(AuthFiling filing) {
         if (!StringUtils.hasText(filing.getGranteeOrg())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "被授权方不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "被授权方不能为空");
         }
         // 附录F §3.4.6:仅数据产品经营权对外授权需备案
         if (!"数据产品经营权".equals(filing.getRightType())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "仅数据产品经营权对外授权需备案(附录G)");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "仅数据产品经营权对外授权需备案(附录G)");
         }
         if (!StringUtils.hasText(filing.getFilingNo())) {
             filing.setFilingNo("BA-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase());
@@ -48,7 +48,7 @@ public class AuthFilingServiceImpl implements AuthFilingService {
     public void file(String filingId) {
         AuthFiling f = require(filingId);
         if (!AuthFiling.STATUS_PENDING.equals(f.getFilingStatus())) {
-            throw new BizException("仅待备案记录可完成备案");
+            throw new BusinessException("仅待备案记录可完成备案");
         }
         AuthFiling upd = new AuthFiling();
         upd.setFilingId(filingId);
@@ -68,11 +68,11 @@ public class AuthFilingServiceImpl implements AuthFilingService {
 
     private AuthFiling require(String id) {
         if (!StringUtils.hasText(id)) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "备案ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "备案ID不能为空");
         }
         AuthFiling f = mapper.selectById(id);
         if (f == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "备案记录不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "备案记录不存在");
         }
         return f;
     }

@@ -3,8 +3,10 @@ package com.csg.prm.authorize.controller;
 import com.csg.prm.authorize.entity.AuthCert;
 import com.csg.prm.authorize.service.AuthCertService;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.R;
+import com.csg.prm.common.api.Result;
 import com.csg.prm.common.query.PageQuery;
+import jakarta.validation.Valid;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,6 +23,7 @@ import java.util.List;
  * 授权权益证书接口(IM-DAM-DPR-03-001-004 授权权益管理)。
  */
 @RestController
+@Validated
 @RequestMapping("/api/dpr/auth/cert")
 public class AuthCertController {
 
@@ -31,20 +34,20 @@ public class AuthCertController {
     }
 
     @GetMapping("/{certId}")
-    public R<AuthCert> detail(@PathVariable String certId) {
-        return R.ok(service.getById(certId));
+    public Result<AuthCert> detail(@PathVariable String certId) {
+        return Result.success(service.getById(certId));
     }
 
     /** 在线预览:渲染证书内容(证书+模板+合规校验)。 */
     @GetMapping("/{certId}/render")
-    public R<com.csg.prm.authorize.dto.AuthCertRenderVO> render(@PathVariable String certId) {
-        return R.ok(service.render(certId));
+    public Result<com.csg.prm.authorize.dto.AuthCertRenderVO> render(@PathVariable String certId) {
+        return Result.success(service.render(certId));
     }
 
     @PostMapping("/{certId}/revoke")
-    public R<Void> revoke(@PathVariable String certId) {
+    public Result<Void> revoke(@PathVariable String certId) {
         service.revoke(certId);
-        return R.ok();
+        return Result.success();
     }
 
     /**
@@ -52,29 +55,29 @@ public class AuthCertController {
      * 供权益动态监测(F-01)在识别违规/越权时联动调用(本地桩 / 生产 Feign)。
      */
     @PostMapping("/suspend-by-asset")
-    public R<Integer> suspendByAsset(@RequestParam String assetId,
+    public Result<Integer> suspendByAsset(@RequestParam String assetId,
                                      @RequestParam(required = false) String reason,
                                      @RequestParam(required = false) String sourceAlertId,
                                      @RequestParam(required = false) String violationType) {
-        return R.ok(service.suspendByAsset(assetId, reason, sourceAlertId, violationType));
+        return Result.success(service.suspendByAsset(assetId, reason, sourceAlertId, violationType));
     }
 
     /** 到期续签:延长有效期(整改后亦可恢复已暂停证书) */
     @PostMapping("/{certId}/renew")
-    public R<Void> renew(@PathVariable String certId,
+    public Result<Void> renew(@PathVariable String certId,
                          @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime validDate) {
         service.renew(certId, validDate);
-        return R.ok();
+        return Result.success();
     }
 
     /** 到期预警:days 天内到期(或已过期)的生效证书 */
     @GetMapping("/expiring")
-    public R<List<AuthCert>> expiring(@RequestParam(defaultValue = "30") int days) {
-        return R.ok(service.findExpiring(days));
+    public Result<List<AuthCert>> expiring(@RequestParam(defaultValue = "30") int days) {
+        return Result.success(service.findExpiring(days));
     }
 
     @PostMapping("/page")
-    public R<PageResult<AuthCert>> page(@RequestBody PageQuery query) {
-        return R.ok(service.page(query));
+    public Result<PageResult<AuthCert>> page(@Valid @RequestBody PageQuery query) {
+        return Result.success(service.page(query));
     }
 }

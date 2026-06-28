@@ -1,13 +1,31 @@
 // 轻量角色模型(无登录;由顶栏切换器或生产 4A 角色映射写入 localStorage 'prm-role')。
 // 第一性:业务有7类用户,系统原本只有1类无差别超级用户 → 按角色裁剪菜单+个性化首屏,补"相关性过滤"。
 
+// 角色一一对齐架构(AA-10 角色功能矩阵 / BA-05 业务角色清单 / 工作指引流程节点)。
 export const ROLES = [
   { key: 'all', label: '全部 · 管理员视图' },
-  { key: 'apply', label: '申报人' },
-  { key: 'review', label: '审核 / 审批' },
+  { key: 'apply', label: '申报人 · 数字化部团队' },
+  { key: 'business', label: '业务管理部门团队' },
+  { key: 'precheck', label: '归集预审 · 数字化部团队' },
+  { key: 'review', label: '合规管控小组' },
+  { key: 'manager', label: '数字化部主管' },
+  { key: 'director', label: '经理 / 高级经理' },
+  { key: 'gm', label: '副总经理 / 总经理' },
+  { key: 'leadership', label: '领导小组办公室' },
   { key: 'admin', label: '配置管理员' },
   { key: 'view', label: '管理层 · 只读' },
 ]
+
+// 菜单可见性分组:细粒度审批角色继承 review 级页面访问(审批/待办/合规);主管/业务额外继承 apply 级(制卡/确权目录)。
+// 精细的"谁能审批哪个节点"由后端 assertNodeRole/@RequiresRole 强制,菜单仅控页面入口。
+const MENU_GROUP = {
+  precheck: ['review'],
+  director: ['review'],
+  gm: ['review'],
+  leadership: ['review'],
+  manager: ['review', 'apply'],
+  business: ['review', 'apply'],
+}
 
 // 菜单配置:数据驱动侧栏。每项 roles=[] 表示对所有角色可见;否则仅列出的角色(+all)可见。
 export const MENU = [
@@ -33,7 +51,8 @@ export const MENU = [
   },
   {
     group: '数据确权管理', icon: 'Stamp', index: '03', items: [
-      { path: '/dpr/confirm/wizard', title: '⭐ 确权申请', roles: ['apply'] },
+      { path: '/dpr/confirm/wizard', title: '⭐ 初始确权申请', roles: ['apply'] },
+      { path: '/dpr/confirm/change', title: '确权变更申请', roles: ['apply'] },
       { path: '/dpr/confirm/catalog', title: '确权目录管理', roles: ['apply', 'admin'] },
       { path: '/dpr/confirm/history', title: '申请查询', roles: ['apply', 'review', 'view'] },
       { path: '/dpr/confirm/review', title: '审核申请提交', roles: ['review'] },
@@ -95,7 +114,9 @@ export function currentRole() {
 }
 
 function itemVisible(item, role) {
-  return role === 'all' || !item.roles || item.roles.length === 0 || item.roles.includes(role)
+  if (role === 'all' || !item.roles || item.roles.length === 0) return true
+  const eff = [role, ...(MENU_GROUP[role] || [])]
+  return item.roles.some((r) => eff.includes(r))
 }
 
 /** 按角色裁剪菜单:保留可见顶层项与非空分组 */

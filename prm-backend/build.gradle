@@ -1,0 +1,63 @@
+/*
+ * Copyright (C) 2026 China Southern Power Grid Co., Ltd. All Rights Reserved.
+ * 数据产权管理 - 后端根构建脚本(Maven→Gradle 迁移)。
+ *
+ * 约定贴合 data_pod(cn.csg.datapod):Java 17 toolchain、UTF-8、company manifest;
+ * 但依赖经公共仓库解析、采用 PRM 真实技术栈(Spring Cloud / Spring Cloud Alibaba /
+ * MyBatis-Plus / H2 / 达梦),不引内网 DAP 运行时与专有 gradle 插件。
+ */
+plugins {
+    id 'org.springframework.boot' version '3.2.5' apply false
+    id 'io.spring.dependency-management' version '1.1.4'
+}
+
+allprojects {
+    group = 'com.csg.prm'
+    version = '0.1.0-SNAPSHOT'
+
+    repositories {
+        mavenLocal()
+        maven { url 'https://maven.aliyun.com/repository/public' }
+        mavenCentral()
+    }
+}
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'io.spring.dependency-management'
+
+    java {
+        toolchain { languageVersion = JavaLanguageVersion.of(17) }
+    }
+
+    tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+    tasks.withType(Test).configureEach { useJUnitPlatform() }
+    tasks.withType(Javadoc).configureEach { options.encoding = 'UTF-8' }
+
+    // 统一依赖版本(BOM)：Spring Boot / Spring Cloud / Spring Cloud Alibaba + MyBatis-Plus
+    dependencyManagement {
+        imports {
+            mavenBom 'org.springframework.boot:spring-boot-dependencies:3.2.5'
+            mavenBom 'org.springframework.cloud:spring-cloud-dependencies:2023.0.1'
+            mavenBom 'com.alibaba.cloud:spring-cloud-alibaba-dependencies:2023.0.1.0'
+        }
+        dependencies {
+            dependency 'com.baomidou:mybatis-plus-spring-boot3-starter:3.5.5'
+        }
+    }
+
+    // 全模块共享：Lombok(编译期)+ 测试栈
+    dependencies {
+        compileOnly 'org.projectlombok:lombok'
+        annotationProcessor 'org.projectlombok:lombok'
+        testCompileOnly 'org.projectlombok:lombok'
+        testAnnotationProcessor 'org.projectlombok:lombok'
+        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    }
+
+    // 可选数据库驱动(对齐 Maven profile)：-Pmysql / -Pdm 激活,打入可执行 jar
+    dependencies {
+        if (project.hasProperty('mysql')) { runtimeOnly 'com.mysql:mysql-connector-j:8.3.0' }
+        if (project.hasProperty('dm')) { runtimeOnly 'com.dameng:DmJdbcDriver18:8.1.3.62' }
+    }
+}

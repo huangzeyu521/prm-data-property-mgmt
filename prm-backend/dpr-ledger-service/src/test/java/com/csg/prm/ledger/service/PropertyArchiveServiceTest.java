@@ -1,7 +1,7 @@
 package com.csg.prm.ledger.service;
 
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.ledger.dto.PropertyArchiveQuery;
 import com.csg.prm.ledger.entity.PropertyArchive;
 import org.junit.jupiter.api.Test;
@@ -50,7 +50,7 @@ class PropertyArchiveServiceTest {
     void create_should_reject_blank_required_fields() {
         PropertyArchive bad = new PropertyArchive();
         bad.setAssetName("缺少资产ID");
-        assertThrows(BizException.class, () -> service.create(bad));
+        assertThrows(BusinessException.class, () -> service.create(bad));
     }
 
     @Test
@@ -83,7 +83,7 @@ class PropertyArchiveServiceTest {
     void delete_should_logically_remove() {
         String id = service.create(newArchive("待删除表"));
         service.delete(id);
-        assertThrows(BizException.class, () -> service.getById(id), "逻辑删除后应查询不到");
+        assertThrows(BusinessException.class, () -> service.getById(id), "逻辑删除后应查询不到");
     }
 
     @Test
@@ -91,7 +91,7 @@ class PropertyArchiveServiceTest {
         PropertyArchive a = newArchive("已关联权益卡片表");
         a.setEquityCardId("EC-PRA-2026-00211");
         String id = service.create(a);
-        BizException ex = assertThrows(BizException.class, () -> service.delete(id));
+        BusinessException ex = assertThrows(BusinessException.class, () -> service.delete(id));
         assertTrue(ex.getMessage().contains("解除关联"), "应触发关联约束拦截");
     }
 }

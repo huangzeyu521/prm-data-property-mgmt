@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 跨域只读查询网关 HTTP 基类:POST 目标域的分页接口(返回 R<PageResult<T>>),
+ * 跨域只读查询网关 HTTP 基类:POST 目标域的分页接口(返回 Result<PageResult<T>>),
  * 取 data.records 数组并交由子类映射为 {@link DomainRecord}。
  * 读取失败仅告警并返回空列表,绝不抛出——保证资产360/待办中心永远可用(降级为仅台账本地数据)。
  */

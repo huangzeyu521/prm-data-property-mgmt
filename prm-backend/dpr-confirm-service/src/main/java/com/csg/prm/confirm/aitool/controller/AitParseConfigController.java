@@ -1,9 +1,11 @@
 package com.csg.prm.confirm.aitool.controller;
 
-import com.csg.prm.common.api.R;
+import com.csg.prm.common.api.Result;
 import com.csg.prm.common.auth.RequiresRole;
 import com.csg.prm.confirm.aitool.entity.AitParseConfig;
 import com.csg.prm.confirm.aitool.service.AitParseConfigService;
+import jakarta.validation.Valid;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,6 +20,7 @@ import java.util.List;
  * 智能确权辅助工具-解析元数据配置接口(1.4#4,管理员):字段映射/提取逻辑/置信度阈值。
  */
 @RestController
+@Validated
 @RequestMapping("/api/dpr/confirm/aitool/parse-config")
 @RequiresRole({"admin"})
 public class AitParseConfigController {
@@ -29,18 +32,18 @@ public class AitParseConfigController {
     }
 
     @GetMapping
-    public R<List<AitParseConfig>> list() {
-        return R.ok(service.list());
+    public Result<List<AitParseConfig>> list() {
+        return Result.success(service.list());
     }
 
     @PostMapping
-    public R<String> save(@RequestBody AitParseConfig config) {
-        return R.ok(service.save(config));
+    public Result<String> save(@Valid @RequestBody AitParseConfig config) {
+        return Result.success(service.save(config));
     }
 
     @DeleteMapping("/{configId}")
-    public R<Void> delete(@PathVariable String configId) {
+    public Result<Void> delete(@PathVariable String configId) {
         service.delete(configId);
-        return R.ok();
+        return Result.success();
     }
 }

@@ -3,8 +3,8 @@ package com.csg.prm.ledger.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.ResultCode;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.api.ResponseCode;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.common.writeback.RightsEvent;
 import com.csg.prm.ledger.dto.PropertyArchiveQuery;
 import com.csg.prm.ledger.entity.PropertyArchive;
@@ -116,7 +116,7 @@ public class PropertyArchiveServiceImpl implements PropertyArchiveService {
     @Transactional
     public void applyRightsEvent(RightsEvent e) {
         if (e == null || !StringUtils.hasText(e.getAssetId())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "资产ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "资产ID不能为空");
         }
         String src = RightsEvent.TYPE_AUTHORIZED.equals(e.getEventType()) ? "授权流程" : "确权流程";
         PropertyArchive cur = mapper.selectOne(new LambdaQueryWrapper<PropertyArchive>()
@@ -183,11 +183,11 @@ public class PropertyArchiveServiceImpl implements PropertyArchiveService {
     @Transactional
     public void update(PropertyArchive archive) {
         if (!StringUtils.hasText(archive.getArchiveId())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "档案ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "档案ID不能为空");
         }
         PropertyArchive exist = mapper.selectById(archive.getArchiveId());
         if (exist == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "产权档案不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "产权档案不存在");
         }
         validate(archive);
         mapper.updateById(archive);
@@ -209,11 +209,11 @@ public class PropertyArchiveServiceImpl implements PropertyArchiveService {
     public void delete(String archiveId) {
         PropertyArchive exist = mapper.selectById(archiveId);
         if (exist == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "产权档案不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "产权档案不存在");
         }
         // 业务约束:已关联权益卡片/授权的档案不可直接删除(对应界面"请先解除关联"提示)
         if (StringUtils.hasText(exist.getEquityCardId())) {
-            throw new BizException("该档案已关联权益卡片或授权协议,请先解除关联");
+            throw new BusinessException("该档案已关联权益卡片或授权协议,请先解除关联");
         }
         mapper.deleteById(archiveId);
     }
@@ -222,7 +222,7 @@ public class PropertyArchiveServiceImpl implements PropertyArchiveService {
     public PropertyArchive getById(String archiveId) {
         PropertyArchive archive = mapper.selectById(archiveId);
         if (archive == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "产权档案不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "产权档案不存在");
         }
         return archive;
     }
@@ -242,13 +242,13 @@ public class PropertyArchiveServiceImpl implements PropertyArchiveService {
 
     private void validate(PropertyArchive archive) {
         if (Objects.isNull(archive)) {
-            throw new BizException(ResultCode.PARAM_ERROR);
+            throw new BusinessException(ResponseCode.PARAM_ERROR);
         }
         if (!StringUtils.hasText(archive.getAssetId())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "关联资产ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "关联资产ID不能为空");
         }
         if (!StringUtils.hasText(archive.getAssetName())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "资产名称不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "资产名称不能为空");
         }
     }
 }

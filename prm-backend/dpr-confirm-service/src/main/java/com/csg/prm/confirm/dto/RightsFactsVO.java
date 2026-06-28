@@ -18,6 +18,8 @@ public class RightsFactsVO implements Serializable {
     private String thirdPartySource;
     /** 隐私/商密:个人隐私 / 商业秘密 / 个人隐私、商业秘密 / 无 */
     private String sensitiveType;
+    /** 所属业务域(表5/表6,按系统所属业务域带出;系统级确权可解析,资产级由前端目录树系统名解析) */
+    private String businessDomain;
 
     public RightsFactsVO() {
     }
@@ -26,6 +28,15 @@ public class RightsFactsVO implements Serializable {
         this.assetId = assetId;
         this.thirdPartySource = "";
         this.sensitiveType = "无";
+        this.businessDomain = "";
+    }
+
+    public String getBusinessDomain() {
+        return businessDomain;
+    }
+
+    public void setBusinessDomain(String businessDomain) {
+        this.businessDomain = businessDomain;
     }
 
     public String getAssetId() {

@@ -3,10 +3,10 @@ package com.csg.prm.confirm.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.ResultCode;
+import com.csg.prm.common.api.ResponseCode;
 import com.csg.prm.common.context.UserContext;
 import com.csg.prm.common.context.UserContextHolder;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.common.workflow.FlowDefinitions;
 import com.csg.prm.common.workflow.FlowTransition;
 import com.csg.prm.common.workflow.ProcessFlowEngine;
@@ -52,12 +52,18 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
     private final ConfirmFlowLogService flowLogService;
     private final com.csg.prm.confirm.integration.AssetCardWritebackService cardWriteback;
     private final com.csg.prm.confirm.integration.AssetCardArchiveService cardArchive;
+    // 表2 逐表明细(来源主体/H隐私关联/J协议关联),提交校验改逐表(对齐表2 per-table 重构)
+    private final com.csg.prm.confirm.mapper.ConfirmTableItemMapper tableItemMapper;
+    // 业务域解析(系统→业务域),供 rightsFacts 带出表5/表6「所属业务域」
+    private final com.csg.prm.confirm.integration.DataCatalogService dataCatalogService;
 
     public ConfirmApplyServiceImpl(ConfirmApplyMapper mapper, EquityCardService equityCardService,
                                    ConfirmSummaryService summaryService, MetadataGateway metadataGateway,
                                    ProcessFlowEngine flowEngine, ConfirmFlowLogService flowLogService,
                                    com.csg.prm.confirm.integration.AssetCardWritebackService cardWriteback,
-                                   com.csg.prm.confirm.integration.AssetCardArchiveService cardArchive) {
+                                   com.csg.prm.confirm.integration.AssetCardArchiveService cardArchive,
+                                   com.csg.prm.confirm.mapper.ConfirmTableItemMapper tableItemMapper,
+                                   com.csg.prm.confirm.integration.DataCatalogService dataCatalogService) {
         this.mapper = mapper;
         this.equityCardService = equityCardService;
         this.summaryService = summaryService;
@@ -66,6 +72,8 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
         this.flowLogService = flowLogService;
         this.cardWriteback = cardWriteback;
         this.cardArchive = cardArchive;
+        this.tableItemMapper = tableItemMapper;
+        this.dataCatalogService = dataCatalogService;
     }
 
     /** 各审批状态对应的责任人(节点处理人/角色)。 */
@@ -81,7 +89,7 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
         }
         String need = NODE_ROLE.get(status);
         if (need != null && !roles.contains(need)) {
-            throw new BizException(ResultCode.FORBIDDEN.getCode(),
+            throw new BusinessException(ResponseCode.FORBIDDEN.getCode(),
                     "无权限:【" + status + "】节点须由「" + ROLE_LABEL.getOrDefault(need, need) + "」角色处理");
         }
     }
@@ -112,6 +120,10 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
         com.csg.prm.confirm.dto.RightsFactsVO vo = new com.csg.prm.confirm.dto.RightsFactsVO(assetId);
         if (!StringUtils.hasText(assetId)) {
             return vo;
+        }
+        // 所属业务域(表5/表6):系统级确权(assetId=SYS:系统名)可直接解析;资产级由前端目录树系统名解析兜底
+        if (assetId.startsWith("SYS:")) {
+            vo.setBusinessDomain(dataCatalogService.domainOfSystem(assetId.substring(4)));
         }
         // 取该资产最新「已完成」确权(制卡归集态),作为权益事实真源
         List<ConfirmApply> list = mapper.selectList(new LambdaQueryWrapper<ConfirmApply>()
@@ -163,7 +175,7 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
         if (StringUtils.hasText(apply.getApplyId())) {
             ConfirmApply exist = require(apply.getApplyId());
             if (!ConfirmApply.STATUS_DRAFT.equals(exist.getStatus())) {
-                throw new BizException("仅草稿状态可编辑");
+                throw new BusinessException("仅草稿状态可编辑");
             }
             mapper.updateById(apply);
             return apply.getApplyId();
@@ -181,7 +193,7 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
     public void delete(String applyId) {
         ConfirmApply apply = require(applyId);
         if (!ConfirmApply.STATUS_DRAFT.equals(apply.getStatus())) {
-            throw new BizException("仅草稿状态的确权申请可删除;已提交/审批中请走撤回或驳回");
+            throw new BusinessException("仅草稿状态的确权申请可删除;已提交/审批中请走撤回或驳回");
         }
         mapper.deleteById(applyId);
     }
@@ -191,7 +203,7 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
     public String createReConfirm(String assetId, String assetName, String rightType,
                                   String reason, String sourceRef, String changeTrigger) {
         if (!StringUtils.hasText(assetId)) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "关联资产ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "关联资产ID不能为空");
         }
         ConfirmApply apply = new ConfirmApply();
         apply.setAssetId(assetId);
@@ -232,12 +244,12 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
     public void submit(String applyId) {
         ConfirmApply apply = require(applyId);
         if (!ConfirmApply.STATUS_DRAFT.equals(apply.getStatus())) {
-            throw new BizException("仅草稿状态可提交");
+            throw new BusinessException("仅草稿状态可提交");
         }
         validate(apply);
         // 引用完整性:关联资产ID 必须能解析到平台真实数据资产卡片(平台未接入则不阻断)。杜绝幽灵资产。
         if (!cardArchive.assetCardResolvable(apply.getAssetId())) {
-            throw new BizException("关联的数据资产卡片在平台不存在,请重新搜索并选择有效卡片");
+            throw new BusinessException("关联的数据资产卡片在平台不存在,请重新搜索并选择有效卡片");
         }
         // 资料完整性归集审查(节点40,对齐南网补录工单 M01/M02 填报口径:来源方式/来源主体/G–J 逐维说明)
         validateRegistration(apply);
@@ -268,7 +280,7 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
         String from = apply.getStatus();
         assertNodeRole(from);
         if (!flowEngine.canAdvance(FlowDefinitions.DPR_CONFIRM, from)) {
-            throw new BizException("当前状态不可审批:" + from);
+            throw new BusinessException("当前状态不可审批:" + from);
         }
         // 节点50合规审核通过的随状态副作用:生成表3/表4与认定意见
         String opinion = null;
@@ -322,7 +334,7 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
         assertNodeRole(apply.getStatus());
         // 仅审批链中(可推进)的状态可驳回——与引擎判定一致
         if (!flowEngine.canAdvance(FlowDefinitions.DPR_CONFIRM, apply.getStatus())) {
-            throw new BizException("当前状态不可驳回:" + apply.getStatus());
+            throw new BusinessException("当前状态不可驳回:" + apply.getStatus());
         }
         String from = apply.getStatus();
         updateNode(applyId, ConfirmApply.STATUS_REJECTED, null, reason, null);
@@ -335,7 +347,7 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
         ConfirmApply apply = require(applyId);
         // 仅审批链活动态(可推进)可撤回;已完成(已制卡)/已驳回/草稿 均不可撤回
         if (!flowEngine.canAdvance(FlowDefinitions.DPR_CONFIRM, apply.getStatus())) {
-            throw new BizException("当前状态不可撤回:" + apply.getStatus() + ";草稿请删除,已完成/已驳回不可撤回");
+            throw new BusinessException("当前状态不可撤回:" + apply.getStatus() + ";草稿请删除,已完成/已驳回不可撤回");
         }
         // 撤回是申请人本人的动作(非节点审批角色门禁):校验调用者为原申请人
         assertApplicant(apply);
@@ -360,7 +372,7 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
         }
         String creator = apply.getCreatorId();
         if (StringUtils.hasText(creator) && !creator.equals(ctx.getUserId())) {
-            throw new BizException(ResultCode.FORBIDDEN.getCode(), "仅申请人本人可撤回该确权申请");
+            throw new BusinessException(ResponseCode.FORBIDDEN.getCode(), "仅申请人本人可撤回该确权申请");
         }
     }
 
@@ -375,12 +387,51 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
         return PageResult.of(page);
     }
 
+    @Override
+    public com.csg.prm.confirm.dto.ConfirmApplyStats stats(ConfirmApplyQuery query) {
+        // 概览统计忽略 status 过滤(否则状态分布退化为单一桶):克隆查询并清空 status,按其余条件聚合
+        ConfirmApplyQuery q = new ConfirmApplyQuery();
+        q.setAssetName(query.getAssetName());
+        q.setRightType(query.getRightType());
+        q.setRightHolder(query.getRightHolder());
+        q.setCreateTimeStart(query.getCreateTimeStart());
+        q.setCreateTimeEnd(query.getCreateTimeEnd());
+        q.setRegisterType(query.getRegisterType());
+        q.setChangeTrigger(query.getChangeTrigger());
+        List<ConfirmApply> all = mapper.selectList(historyWrapper(q));
+        com.csg.prm.confirm.dto.ConfirmApplyStats s = new com.csg.prm.confirm.dto.ConfirmApplyStats();
+        s.setTotal(all.size());
+        for (ConfirmApply a : all) {
+            String st = a.getStatus();
+            if (ConfirmApply.STATUS_DRAFT.equals(st)) {
+                s.setDraft(s.getDraft() + 1);
+            } else if (ConfirmApply.STATUS_DONE.equals(st)) {
+                s.setDone(s.getDone() + 1);
+            } else if (ConfirmApply.STATUS_REJECTED.equals(st)) {
+                s.setRejected(s.getRejected() + 1);
+            } else if (ConfirmApply.STATUS_WITHDRAWN.equals(st)) {
+                s.setWithdrawn(s.getWithdrawn() + 1);
+            } else if (ConfirmApply.STATUS_PRECHECK.equals(st) || ConfirmApply.STATUS_COMPLIANCE.equals(st)
+                    || ConfirmApply.STATUS_MANAGER.equals(st) || ConfirmApply.STATUS_DIRECTOR.equals(st)) {
+                s.setInReview(s.getInReview() + 1);
+            }
+            if ("确权变更".equals(a.getRegisterType())) {
+                s.setChangeCount(s.getChangeCount() + 1);
+            } else {
+                s.setInitialCount(s.getInitialCount() + 1);
+            }
+        }
+        return s;
+    }
+
     /** 历史记录多维过滤:数据集(资产名)/权属类型/状态/人员(权属人)/申请时间范围。 */
     private LambdaQueryWrapper<ConfirmApply> historyWrapper(ConfirmApplyQuery query) {
         LambdaQueryWrapper<ConfirmApply> w = new LambdaQueryWrapper<>();
         w.like(StringUtils.hasText(query.getAssetName()), ConfirmApply::getAssetName, query.getAssetName())
                 .eq(StringUtils.hasText(query.getRightType()), ConfirmApply::getRightType, query.getRightType())
                 .eq(StringUtils.hasText(query.getStatus()), ConfirmApply::getStatus, query.getStatus())
+                .eq(StringUtils.hasText(query.getRegisterType()), ConfirmApply::getRegisterType, query.getRegisterType())
+                .like(StringUtils.hasText(query.getChangeTrigger()), ConfirmApply::getChangeTrigger, query.getChangeTrigger())
                 .like(StringUtils.hasText(query.getRightHolder()), ConfirmApply::getRightHolder, query.getRightHolder())
                 .ge(StringUtils.hasText(query.getCreateTimeStart()), ConfirmApply::getCreateTime, query.getCreateTimeStart())
                 .le(StringUtils.hasText(query.getCreateTimeEnd()), ConfirmApply::getCreateTime, query.getCreateTimeEnd())
@@ -498,11 +549,11 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
 
     private ConfirmApply require(String applyId) {
         if (!StringUtils.hasText(applyId)) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "申请ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "申请ID不能为空");
         }
         ConfirmApply apply = mapper.selectById(applyId);
         if (apply == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "确权申请不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "确权申请不存在");
         }
         return apply;
     }
@@ -516,28 +567,42 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
     private void validateRegistration(ConfirmApply apply) {
         // 确权变更(附录F §3.3.2 重新确权):须填写变更触发类型(数据新增/来源变更/管理要求变更/权益到期/其他)
         if ("确权变更".equals(apply.getRegisterType()) && !StringUtils.hasText(apply.getChangeTrigger())) {
-            throw new BizException("确权变更须选择变更触发类型(数据新增/数据来源变更/管理要求变更/权益到期/其他)");
+            throw new BusinessException("确权变更须选择变更触发类型(数据新增/数据来源变更/管理要求变更/权益到期/其他)");
         }
         String src = apply.getSourceIdentification() == null ? "" : apply.getSourceIdentification().toUpperCase();
         String rel = apply.getRelationIdentification() == null ? "" : apply.getRelationIdentification().toUpperCase();
         if (!containsAny(src, "A", "B", "C", "D", "E", "F")) {
-            throw new BizException("请至少选择一种数据来源方式(A自行生产/B公开采集/C公共授权/D公共生产/E交易采购/F其他)");
+            throw new BusinessException("请至少选择一种数据来源方式(A自行生产/B公开采集/C公共授权/D公共生产/E交易采购/F其他)");
         }
-        if (containsAny(src, "B", "C", "D", "E", "F") && !StringUtils.hasText(apply.getSourceSubject())) {
-            throw new BizException("数据来源涉及公开采集/受让/委托/交易等(B–F),须填写来源主体名称");
-        }
-        if (rel.contains("G") && !StringUtils.hasText(apply.getRegulated())) {
-            throw new BizException("涉及行政监管要求(G),须填写监管要求/关联主体说明");
-        }
-        if (rel.contains("H") && !StringUtils.hasText(apply.getPrivacyInfo())) {
-            throw new BizException("涉及用户个人/家庭隐私(H),须填写隐私关联主体说明");
-        }
-        if ((rel.contains("I") || Boolean.TRUE.equals(apply.getInvolvesThirdParty()))
-                && !StringUtils.hasText(apply.getThirdPartyInfo())) {
-            throw new BizException("涉及第三方商业机密(I),须填写第三方权益信息");
-        }
-        if (rel.contains("J") && !StringUtils.hasText(apply.getRelationSubject())) {
-            throw new BizException("存在其他数据权益约束协议(J),须填写关联主体说明");
+        // 表2 校验:有逐表清单(系统级 per-table 重构)→ 逐表校验每张"争议表"(来源 B–F 或 H/J)必填项;
+        //   无逐表清单(单卡/历史数据)→ 回退旧 apply 级 sourceSubject/privacyInfo/relationSubject。
+        java.util.List<com.csg.prm.confirm.entity.ConfirmTableItem> items = tableItemMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.csg.prm.confirm.entity.ConfirmTableItem>()
+                        .eq(com.csg.prm.confirm.entity.ConfirmTableItem::getApplyId, apply.getApplyId()));
+        if (!items.isEmpty()) {
+            for (com.csg.prm.confirm.entity.ConfirmTableItem t : items) {
+                String name = StringUtils.hasText(t.getTableName()) ? t.getTableName() : t.getTableCode();
+                char c = StringUtils.hasText(t.getSourceType()) ? t.getSourceType().trim().charAt(0) : 'A';
+                if ("BCDEF".indexOf(c) >= 0 && !StringUtils.hasText(t.getSourceSubject())) {
+                    throw new BusinessException("库表「" + name + "」来源涉 B–F,须在「编辑表2」填写来源主体名称");
+                }
+                if ("是".equals(t.getHFlag()) && !StringUtils.hasText(t.getHSubject())) {
+                    throw new BusinessException("库表「" + name + "」涉用户个人/家庭隐私(H),须在「编辑表2」填写隐私关联主体说明");
+                }
+                if ("是".equals(t.getJFlag()) && !StringUtils.hasText(t.getJSubject())) {
+                    throw new BusinessException("库表「" + name + "」存在其他第三方协议(J),须在「编辑表2」填写关联主体说明");
+                }
+            }
+        } else {
+            if (containsAny(src, "B", "C", "D", "E", "F") && !StringUtils.hasText(apply.getSourceSubject())) {
+                throw new BusinessException("数据来源涉及公开采集/受让/委托/交易等(B–F),须填写来源主体名称");
+            }
+            if (rel.contains("H") && !StringUtils.hasText(apply.getPrivacyInfo())) {
+                throw new BusinessException("涉及用户个人/家庭隐私(H),须填写隐私关联主体说明");
+            }
+            if (rel.contains("J") && !StringUtils.hasText(apply.getRelationSubject())) {
+                throw new BusinessException("存在其他数据权益约束协议(J),须填写关联主体说明");
+            }
         }
     }
 
@@ -552,16 +617,16 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
 
     private void validate(ConfirmApply apply) {
         if (apply == null) {
-            throw new BizException(ResultCode.PARAM_ERROR);
+            throw new BusinessException(ResponseCode.PARAM_ERROR);
         }
         if (!StringUtils.hasText(apply.getAssetId())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "关联资产ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "关联资产ID不能为空");
         }
         if (!StringUtils.hasText(apply.getAssetName())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "资产名称不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "资产名称不能为空");
         }
         if (!StringUtils.hasText(apply.getRightType())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "权属类型不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "权属类型不能为空");
         }
     }
 

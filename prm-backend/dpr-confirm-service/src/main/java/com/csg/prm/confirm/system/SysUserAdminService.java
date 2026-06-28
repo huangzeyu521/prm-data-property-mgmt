@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.context.UserContextHolder;
 import com.csg.prm.common.crypto.Sm3Util;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.confirm.auth.SysUser;
 import com.csg.prm.confirm.auth.SysUserMapper;
 import org.springframework.stereotype.Service;
@@ -25,8 +25,15 @@ public class SysUserAdminService {
 
     /** 重置后默认密码(与演示账号初始密码一致)。 */
     public static final String DEFAULT_PWD = "Prm@1234";
-    /** 合法角色集合,与 @RequiresRole / 前端 roles.js 对齐。 */
-    private static final List<String> VALID_ROLES = Arrays.asList("apply", "review", "admin", "view", "all");
+    /**
+     * 合法角色集合(一一对齐架构 AA-10 角色功能矩阵 / BA-05 业务角色清单 / 工作指引流程节点),与 @RequiresRole / 前端 roles.js 对齐:
+     *   apply=数字化部门团队(申报/收集/归集)、business=业务管理部门团队(确权配合/授权业务审核)、precheck=数字化部归集预审(确权节点40)、
+     *   review=数据产权合规管控小组(确权节点50/风险处置/授权合规)、manager=数字化部主管(确权节点60/制卡节点80/授权主管)、
+     *   director=经理/高级经理(确权节点70终审/授权经理)、gm=副总经理/总经理(授权终审)、leadership=领导小组办公室(批量授权末节点)、
+     *   admin=配置管理员、view=管理层只读(分管领导)、all=超级。
+     */
+    private static final List<String> VALID_ROLES = Arrays.asList(
+            "apply", "business", "precheck", "review", "manager", "director", "gm", "leadership", "admin", "view", "all");
     private static final String STATUS_ON = "启用";
     private static final String STATUS_OFF = "停用";
 
@@ -62,7 +69,7 @@ public class SysUserAdminService {
     public String create(SysUser in) {
         validate(in, true);
         if (existsUsername(in.getUsername(), null)) {
-            throw new BizException("登录名已存在:" + in.getUsername());
+            throw new BusinessException("登录名已存在:" + in.getUsername());
         }
         SysUser u = new SysUser();
         u.setUserId(UUID.randomUUID().toString().replace("-", ""));
@@ -80,11 +87,11 @@ public class SysUserAdminService {
     @Transactional
     public void update(SysUser in) {
         if (!StringUtils.hasText(in.getUserId())) {
-            throw new BizException("用户ID不能为空");
+            throw new BusinessException("用户ID不能为空");
         }
         SysUser db = mapper.selectById(in.getUserId());
         if (db == null) {
-            throw new BizException("用户不存在");
+            throw new BusinessException("用户不存在");
         }
         validate(in, false);
         // 登录名不可改(避免唯一键漂移与登录态错配);仅改姓名/角色/省份/状态
@@ -103,10 +110,10 @@ public class SysUserAdminService {
     public void delete(String userId) {
         SysUser db = mapper.selectById(userId);
         if (db == null) {
-            throw new BizException("用户不存在");
+            throw new BusinessException("用户不存在");
         }
         if (userId.equals(currentUserId())) {
-            throw new BizException("不能删除当前登录账号");
+            throw new BusinessException("不能删除当前登录账号");
         }
         mapper.deleteById(userId);
         opLog.record("删除用户", db.getUsername(), null, "成功");
@@ -116,7 +123,7 @@ public class SysUserAdminService {
     public void resetPassword(String userId) {
         SysUser db = mapper.selectById(userId);
         if (db == null) {
-            throw new BizException("用户不存在");
+            throw new BusinessException("用户不存在");
         }
         db.setPasswordHash(Sm3Util.hashHex(DEFAULT_PWD));
         mapper.updateById(db);
@@ -127,10 +134,10 @@ public class SysUserAdminService {
     public String toggleStatus(String userId) {
         SysUser db = mapper.selectById(userId);
         if (db == null) {
-            throw new BizException("用户不存在");
+            throw new BusinessException("用户不存在");
         }
         if (userId.equals(currentUserId())) {
-            throw new BizException("不能停用当前登录账号");
+            throw new BusinessException("不能停用当前登录账号");
         }
         String next = STATUS_ON.equals(db.getStatus()) ? STATUS_OFF : STATUS_ON;
         db.setPasswordHash(null);
@@ -142,16 +149,16 @@ public class SysUserAdminService {
 
     private void validate(SysUser in, boolean isCreate) {
         if (in == null) {
-            throw new BizException("参数不能为空");
+            throw new BusinessException("参数不能为空");
         }
         if (isCreate && !StringUtils.hasText(in.getUsername())) {
-            throw new BizException("登录名不能为空");
+            throw new BusinessException("登录名不能为空");
         }
         if (!StringUtils.hasText(in.getRealName())) {
-            throw new BizException("姓名不能为空");
+            throw new BusinessException("姓名不能为空");
         }
         if (!StringUtils.hasText(in.getRole()) || !VALID_ROLES.contains(in.getRole())) {
-            throw new BizException("角色不合法,应为:" + VALID_ROLES);
+            throw new BusinessException("角色不合法,应为:" + VALID_ROLES);
         }
     }
 

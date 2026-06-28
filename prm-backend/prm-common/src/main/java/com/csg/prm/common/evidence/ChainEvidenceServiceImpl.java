@@ -4,10 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.ResultCode;
+import com.csg.prm.common.api.ResponseCode;
 import com.csg.prm.common.crypto.Sm3Util;
 import com.csg.prm.common.evidence.mapper.ChainEvidenceMapper;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -37,7 +37,7 @@ public class ChainEvidenceServiceImpl implements ChainEvidenceService {
     public String anchor(String bizType, String bizId, String summary, String payload,
                          String provinceCode, String bureauCode) {
         if (!StringUtils.hasText(bizType) || !StringUtils.hasText(bizId)) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "存证业务类型与主键不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "存证业务类型与主键不能为空");
         }
         String sm3 = Sm3Util.hashHex(payload == null ? "" : payload);
         ChainReceipt receipt = blockchainGateway.anchor(sm3);
@@ -72,11 +72,11 @@ public class ChainEvidenceServiceImpl implements ChainEvidenceService {
     @Override
     public ChainEvidence getById(String evidenceId) {
         if (!StringUtils.hasText(evidenceId)) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "存证ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "存证ID不能为空");
         }
         ChainEvidence e = mapper.selectById(evidenceId);
         if (e == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "存证记录不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "存证记录不存在");
         }
         return e;
     }

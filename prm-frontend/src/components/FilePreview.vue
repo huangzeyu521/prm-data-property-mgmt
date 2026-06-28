@@ -24,7 +24,7 @@
       </el-empty>
     </div>
     <template #footer>
-      <span style="float:left;color:#909399;font-size:12px;line-height:32px">{{ state.fileName }}</span>
+      <span style="float:left;color:var(--prm-color-text-weak);font-size:12px;line-height:32px">{{ state.fileName }}</span>
       <el-button @click="state.visible = false">关闭</el-button>
       <el-button type="primary" :disabled="!objectUrl && kind !== 'docx'" @click="download">下载</el-button>
     </template>

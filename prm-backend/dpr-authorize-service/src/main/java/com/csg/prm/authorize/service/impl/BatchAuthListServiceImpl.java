@@ -10,8 +10,8 @@ import com.csg.prm.authorize.mapper.BatchAuthListMapper;
 import com.csg.prm.authorize.service.AuthApplyService;
 import com.csg.prm.authorize.service.BatchAuthListService;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.ResultCode;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.api.ResponseCode;
+import com.csg.prm.common.exception.BusinessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -35,7 +35,7 @@ public class BatchAuthListServiceImpl implements BatchAuthListService {
     @Transactional
     public String create(BatchAuthList list) {
         if (!StringUtils.hasText(list.getListYear())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "授权年度不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "授权年度不能为空");
         }
         if (!StringUtils.hasText(list.getListNo())) {
             list.setListNo("PLQD-" + UUID.randomUUID().toString().replace("-", "").substring(0, 10).toUpperCase());
@@ -53,13 +53,13 @@ public class BatchAuthListServiceImpl implements BatchAuthListService {
     public void submit(String batchListId) {
         BatchAuthList l = require(batchListId);
         if (!BatchAuthList.STATUS_DRAFT.equals(l.getListStatus())) {
-            throw new BizException("仅草案可提交为申报稿");
+            throw new BusinessException("仅草案可提交为申报稿");
         }
         // 逐项合规门禁(与一事一议对齐):先拦第三方凭证红线,再逐条提交进批量审批链
         // ——之前 submit 只改清单状态、明细停在草稿从未进链;此处补齐"提交即逐项校验+入链"。
         List<AuthApply> items = applyService.byBatch(batchListId);
         if (items.isEmpty()) {
-            throw new BizException("清单为空,不可提交申报稿(请先添加授权项)");
+            throw new BusinessException("清单为空,不可提交申报稿(请先添加授权项)");
         }
         List<String> blocked = new ArrayList<>();
         for (AuthApply a : items) {
@@ -71,7 +71,7 @@ public class BatchAuthListServiceImpl implements BatchAuthListService {
             }
         }
         if (!blocked.isEmpty()) {
-            throw new BizException("以下明细未通过合规校验,清单不可提交:" + String.join("、", blocked));
+            throw new BusinessException("以下明细未通过合规校验,清单不可提交:" + String.join("、", blocked));
         }
         // 逐条提交:复用一事一议同一套硬校验(先确后授+授权⊆确权边界+经营权仅限开放目录+默认2年)
         for (AuthApply a : items) {
@@ -112,7 +112,7 @@ public class BatchAuthListServiceImpl implements BatchAuthListService {
     public void approve(String batchListId) {
         BatchAuthList l = require(batchListId);
         if (!BatchAuthList.STATUS_SUBMITTED.equals(l.getListStatus())) {
-            throw new BizException("仅申报稿可由领导小组办公室批准");
+            throw new BusinessException("仅申报稿可由领导小组办公室批准");
         }
         update(batchListId, BatchAuthList.STATUS_APPROVED);
     }
@@ -141,11 +141,11 @@ public class BatchAuthListServiceImpl implements BatchAuthListService {
 
     private BatchAuthList require(String id) {
         if (!StringUtils.hasText(id)) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "清单ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "清单ID不能为空");
         }
         BatchAuthList l = mapper.selectById(id);
         if (l == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "批量授权清单不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "批量授权清单不存在");
         }
         return l;
     }

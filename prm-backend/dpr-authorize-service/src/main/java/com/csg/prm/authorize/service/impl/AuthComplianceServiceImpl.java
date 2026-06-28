@@ -12,8 +12,8 @@ import com.csg.prm.authorize.mapper.AuthComplianceMapper;
 import com.csg.prm.authorize.mapper.AuthMaterialMapper;
 import com.csg.prm.authorize.service.AuthComplianceService;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.ResultCode;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.api.ResponseCode;
+import com.csg.prm.common.exception.BusinessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -76,11 +76,11 @@ public class AuthComplianceServiceImpl implements AuthComplianceService {
     @Transactional
     public AuthComplianceReport runCheck(String applyId) {
         if (!StringUtils.hasText(applyId)) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "申请ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "申请ID不能为空");
         }
         AuthApply apply = applyMapper.selectById(applyId);
         if (apply == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "授权申请不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "授权申请不存在");
         }
         long matCount = materialMapper.selectCount(new LambdaQueryWrapper<AuthMaterial>()
                 .eq(AuthMaterial::getApplyId, applyId));
@@ -143,6 +143,27 @@ public class AuthComplianceServiceImpl implements AuthComplianceService {
             hasWarn = true;
         } else {
             report.add("合规性", "跨区域授权", true, "非跨域");
+        }
+
+        // ④ 授权协议要素(附录D §3.4.4):协议须约定 数据范围(=scope,已在权限合理性)/使用场景/授权目的/利益分配/安全保障。
+        //    申报阶段缺失 → 警告(黄),提示协议签订前补齐,不硬拦;批量授权的利益分配/安全保障在《运营授权协议》(清单级)统一约定。
+        boolean scenarioOk = StringUtils.hasText(apply.getScenario());
+        report.add("授权协议要素", "使用场景及目的", scenarioOk,
+                scenarioOk ? "已填写" : "使用场景及目的未填写(附录D 协议须约定)");
+        hasWarn |= !scenarioOk;
+
+        if (AuthApply.MODE_SPECIAL.equals(apply.getAuthMode())) {
+            boolean benefitOk = StringUtils.hasText(apply.getBenefitAllocation());
+            report.add("授权协议要素", "利益分配约定", benefitOk,
+                    benefitOk ? "已约定" : "利益分配未约定(附录D §3.4.4),协议签订前须补充");
+            hasWarn |= !benefitOk;
+            boolean secOk = StringUtils.hasText(apply.getSecurityReq());
+            report.add("授权协议要素", "安全保障要求", secOk,
+                    secOk ? "已约定" : "安全保障要求未约定(附录D §3.4.4),协议签订前须补充");
+            hasWarn |= !secOk;
+        } else {
+            report.add("授权协议要素", "利益分配约定", true, "批量授权:在《运营授权协议》(清单级)统一约定");
+            report.add("授权协议要素", "安全保障要求", true, "批量授权:在《运营授权协议》(清单级)统一约定");
         }
 
         String level = hasFail ? AuthCompliance.LEVEL_RED : hasWarn ? AuthCompliance.LEVEL_YELLOW : AuthCompliance.LEVEL_GREEN;

@@ -1,10 +1,11 @@
 package com.csg.prm.confirm.ai;
 
 import com.csg.prm.common.ai.DawatAiGateway;
-import com.csg.prm.common.api.R;
+import com.csg.prm.common.api.Result;
 import com.csg.prm.common.aitrace.AiRunLog;
 import com.csg.prm.common.aitrace.AiRunLogService;
 import java.util.List;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 命名空间在 PRM 自有 /dpr/confirm/ai/*(非独立工具 /aitool),前端在确权向导内嵌调用,不跳转独立工具。
  */
 @RestController
+@Validated
 @RequestMapping("/api/dpr/confirm/ai")
 public class ConfirmAiController {
 
@@ -29,31 +31,31 @@ public class ConfirmAiController {
 
     /** 智能解析材料:要素抽取 + 敏感判定 + 内容指纹查重 */
     @PostMapping("/parse")
-    public R<ConfirmAiService.ParseResult> parse(@RequestParam String applyId) {
-        return R.ok(service.parse(applyId));
+    public Result<ConfirmAiService.ParseResult> parse(@RequestParam String applyId) {
+        return Result.success(service.parse(applyId));
     }
 
     /** AI 决策研判:预测/需补材料/待处理冲突/评分 */
     @PostMapping("/decision")
-    public R<ConfirmAiService.DecisionResult> decision(@RequestParam String applyId) {
-        return R.ok(service.decision(applyId));
+    public Result<ConfirmAiService.DecisionResult> decision(@RequestParam String applyId) {
+        return Result.success(service.decision(applyId));
     }
 
     /** 权属冲突识别 */
     @PostMapping("/conflict")
-    public R<DawatAiGateway.ConflictResult> conflict(@RequestParam String applyId) {
-        return R.ok(service.conflict(applyId));
+    public Result<DawatAiGateway.ConflictResult> conflict(@RequestParam String applyId) {
+        return Result.success(service.conflict(applyId));
     }
 
     /** 校验规则可视化(§1):逐应交项的校验逻辑 + 规则明细 + AI 判定依据,供人工预审透明复核。 */
     @GetMapping("/check-logic")
-    public R<ConfirmAiService.CheckLogic> checkLogic(@RequestParam String applyId) {
-        return R.ok(service.checkLogic(applyId));
+    public Result<ConfirmAiService.CheckLogic> checkLogic(@RequestParam String applyId) {
+        return Result.success(service.checkLogic(applyId));
     }
 
     /** 校验过程回放(§2):该申请全部大模型操作留痕时间线(能力/模型/耗时/SM3/触发人),供复盘审计。 */
     @GetMapping("/runlog")
-    public R<List<AiRunLog>> runlog(@RequestParam String applyId) {
-        return R.ok(runLogService.listByBiz(applyId));
+    public Result<List<AiRunLog>> runlog(@RequestParam String applyId) {
+        return Result.success(runLogService.listByBiz(applyId));
     }
 }

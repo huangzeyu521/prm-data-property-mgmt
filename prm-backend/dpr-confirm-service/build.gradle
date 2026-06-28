@@ -1,0 +1,35 @@
+/*
+ * Copyright (C) 2026 China Southern Power Grid Co., Ltd. All Rights Reserved.
+ * dpr-confirm-service 数据确权管理服务(F-02)。含材料解析(POI/PDFBox)与可选 Camunda 流程编排。
+ */
+apply plugin: 'org.springframework.boot'
+
+dependencies {
+    implementation project(':prm-common')
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'com.baomidou:mybatis-plus-spring-boot3-starter'
+    implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-discovery'
+    implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-nacos-config'
+    implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-sentinel'
+    implementation 'com.alibaba.cloud:spring-cloud-starter-alibaba-seata'
+    runtimeOnly 'com.h2database:h2'
+    // 智能确权辅助工具:解析结果导出 Excel / 冲突报告导出 Word(POI)、PDF 正文抽取(PDFBox)
+    implementation 'org.apache.poi:poi-ooxml:5.2.5'
+    implementation 'org.apache.pdfbox:pdfbox:2.0.31'
+}
+
+// P2 Camunda BPMN 流程编排:默认关闭,-Pcamunda 激活(对齐 Maven camunda profile 的 add-source)
+if (project.hasProperty('camunda')) {
+    sourceSets.main.java.srcDirs += 'src/camunda/java'
+    sourceSets.main.resources.srcDirs += 'src/camunda/resources'
+    dependencies {
+        implementation 'org.camunda.bpm.springboot:camunda-bpm-spring-boot-starter:7.22.0'
+    }
+}
+
+tasks.named('jar') { enabled = false }
+tasks.named('bootJar') {
+    archiveFileName = "${project.name}-${project.version}.jar"
+    destinationDirectory = file("${projectDir}/target")
+    manifest { attributes('Built-company': 'dgri', 'Implementation-Title': project.name, 'Implementation-Version': project.version, 'Build-Jdk': 17) }
+}

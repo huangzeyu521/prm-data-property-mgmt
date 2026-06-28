@@ -1,9 +1,10 @@
 package com.csg.prm.confirm.aitool.controller;
 
-import com.csg.prm.common.api.R;
+import com.csg.prm.common.api.Result;
 import com.csg.prm.confirm.aitool.entity.AitConflict;
 import com.csg.prm.confirm.aitool.entity.AitKgClaim;
 import com.csg.prm.confirm.aitool.service.AitConflictService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -24,6 +26,7 @@ import java.util.Map;
  * 智能确权辅助工具-权属冲突识别接口(M2 / SW-005~006)。
  */
 @RestController
+@Validated
 @RequestMapping("/api/dpr/confirm/aitool/conflict")
 public class AitConflictController {
 
@@ -35,64 +38,64 @@ public class AitConflictController {
 
     /** 登记权属主张(构建知识图谱) */
     @PostMapping("/claim")
-    public R<String> addClaim(@RequestBody AitKgClaim claim) {
-        return R.ok(service.addClaim(claim));
+    public Result<String> addClaim(@Valid @RequestBody AitKgClaim claim) {
+        return Result.success(service.addClaim(claim));
     }
 
     /** 条款语义分析自动建主张(#9):由材料解析要素自动生成"证明材料"权属主张。 */
     @PostMapping("/claim-from-material")
-    public R<String> claimFromMaterial(@RequestParam String materialId) {
-        return R.ok(service.buildClaimFromMaterial(materialId));
+    public Result<String> claimFromMaterial(@RequestParam String materialId) {
+        return Result.success(service.buildClaimFromMaterial(materialId));
     }
 
     /** 人工修改节点与关系(#10):更新一条权属主张。 */
     @org.springframework.web.bind.annotation.PutMapping("/claim")
-    public R<Void> updateClaim(@RequestBody AitKgClaim claim) {
+    public Result<Void> updateClaim(@Valid @RequestBody AitKgClaim claim) {
         service.updateClaim(claim);
-        return R.ok();
+        return Result.success();
     }
 
     /** 人工删除节点与关系(#10):删除一条权属主张。 */
     @org.springframework.web.bind.annotation.DeleteMapping("/claim/{claimId}")
-    public R<Void> deleteClaim(@org.springframework.web.bind.annotation.PathVariable String claimId) {
+    public Result<Void> deleteClaim(@org.springframework.web.bind.annotation.PathVariable String claimId) {
         service.deleteClaim(claimId);
-        return R.ok();
+        return Result.success();
     }
 
     /** 历史案例自动同步(#10):从权益卡片自动建"历史确权"主张,返回新增条数。 */
     @PostMapping("/sync-history")
-    public R<Integer> syncHistory(@RequestParam String assetId) {
-        return R.ok(service.syncHistoryClaims(assetId));
+    public Result<Integer> syncHistory(@RequestParam String assetId) {
+        return Result.success(service.syncHistoryClaims(assetId));
     }
 
     /** 冲突解决方案建议(#16):规则建议 + 法规依据 + AI 生成建议。 */
     @GetMapping("/{conflictId}/advice")
-    public R<java.util.Map<String, Object>> advice(@PathVariable String conflictId) {
-        return R.ok(service.resolutionAdvice(conflictId));
+    public Result<java.util.Map<String, Object>> advice(@PathVariable String conflictId) {
+        return Result.success(service.resolutionAdvice(conflictId));
     }
 
     /** 知识图谱结构化输出(#9):节点(主体/客体/授权事项/有效期) + 关系(授权/归属/有效期/冲突)。 */
     @GetMapping("/graph")
-    public R<com.csg.prm.confirm.aitool.dto.KgGraphVO> graph(@RequestParam String assetId) {
-        return R.ok(service.graph(assetId));
+    public Result<com.csg.prm.confirm.aitool.dto.KgGraphVO> graph(@RequestParam String assetId) {
+        return Result.success(service.graph(assetId));
     }
 
     /** 提交当前申请主张并做四类冲突检测 */
     @PostMapping("/detect")
-    public R<List<AitConflict>> detect(@RequestBody AitKgClaim current) {
+    public Result<List<AitConflict>> detect(@Valid @RequestBody AitKgClaim current) {
         current.setSourceType(AitKgClaim.SRC_CURRENT);
         service.addClaim(current);
-        return R.ok(service.detect(current));
+        return Result.success(service.detect(current));
     }
 
     @GetMapping("/claims")
-    public R<List<AitKgClaim>> claims(@RequestParam String assetId) {
-        return R.ok(service.claims(assetId));
+    public Result<List<AitKgClaim>> claims(@RequestParam String assetId) {
+        return Result.success(service.claims(assetId));
     }
 
     /** 冲突列表(支持 资产/冲突类型/风险等级/起止时间/主体/状态/系统部门 多维筛选)(#6) */
     @GetMapping("/list")
-    public R<List<AitConflict>> list(@RequestParam(required = false) String assetId,
+    public Result<List<AitConflict>> list(@RequestParam(required = false) String assetId,
                                      @RequestParam(required = false) String conflictType,
                                      @RequestParam(required = false) String riskLevel,
                                      @RequestParam(required = false) String startTime,
@@ -100,7 +103,7 @@ public class AitConflictController {
                                      @RequestParam(required = false) String subject,
                                      @RequestParam(required = false) String status,
                                      @RequestParam(required = false) String dept) {
-        return R.ok(service.conflicts(assetId, conflictType, riskLevel, startTime, endTime, subject, status, dept));
+        return Result.success(service.conflicts(assetId, conflictType, riskLevel, startTime, endTime, subject, status, dept));
     }
 
     /** 冲突记录导出 Excel(#6,满足审计/管理查询) */
@@ -123,20 +126,20 @@ public class AitConflictController {
     }
 
     @PostMapping("/{conflictId}/resolve")
-    public R<Void> resolve(@PathVariable String conflictId, @RequestParam(required = false) String feedback) {
+    public Result<Void> resolve(@PathVariable String conflictId, @RequestParam(required = false) String feedback) {
         service.resolve(conflictId, feedback);
-        return R.ok();
+        return Result.success();
     }
 
     /** 冲突分析报告(支持多维筛选)(#17) */
     @GetMapping("/report")
-    public R<Map<String, Object>> report(@RequestParam String assetId,
+    public Result<Map<String, Object>> report(@RequestParam String assetId,
                                          @RequestParam(required = false) String conflictType,
                                          @RequestParam(required = false) String riskLevel,
                                          @RequestParam(required = false) String startTime,
                                          @RequestParam(required = false) String endTime,
                                          @RequestParam(required = false) String subject) {
-        return R.ok(service.report(assetId, conflictType, riskLevel, startTime, endTime, subject));
+        return Result.success(service.report(assetId, conflictType, riskLevel, startTime, endTime, subject));
     }
 
     /** 导出冲突分析报告为 Word(.docx)(#17;PDF 由前端打印导出) */

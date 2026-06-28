@@ -4,8 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.ResultCode;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.api.ResponseCode;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.confirm.entity.EquityCertTemplate;
 import com.csg.prm.confirm.mapper.EquityCertTemplateMapper;
 import com.csg.prm.confirm.service.EquityCertTemplateService;
@@ -32,7 +32,7 @@ public class EquityCertTemplateServiceImpl implements EquityCertTemplateService 
     @Transactional
     public String create(EquityCertTemplate t) {
         if (!StringUtils.hasText(t.getTemplateName())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "模板名称不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "模板名称不能为空");
         }
         t.setTemplateVersion("v1");
         t.setTemplateStatus(EquityCertTemplate.STATUS_ACTIVE);
@@ -73,13 +73,13 @@ public class EquityCertTemplateServiceImpl implements EquityCertTemplateService 
     public void uploadFile(String templateId, String fileName, byte[] data) {
         require(templateId);
         if (!StringUtils.hasText(fileName) || data == null || data.length == 0) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "套版文件为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "套版文件为空");
         }
         if (data.length > MAX_BYTES) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "文件超过 20MB 上限");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "文件超过 20MB 上限");
         }
         if (!ALLOWED_EXT.contains(extOf(fileName))) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "仅支持 PDF/Word/图片 套版文件");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "仅支持 PDF/Word/图片 套版文件");
         }
         EquityCertTemplate upd = new EquityCertTemplate();
         upd.setTemplateId(templateId);
@@ -92,7 +92,7 @@ public class EquityCertTemplateServiceImpl implements EquityCertTemplateService 
     public byte[] download(String templateId) {
         EquityCertTemplate t = require(templateId);
         if (!StringUtils.hasText(t.getFileData())) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "该模板未上传套版文件");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "该模板未上传套版文件");
         }
         return Base64.getDecoder().decode(t.getFileData());
     }
@@ -120,11 +120,11 @@ public class EquityCertTemplateServiceImpl implements EquityCertTemplateService 
 
     private EquityCertTemplate require(String id) {
         if (!StringUtils.hasText(id)) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "模板ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "模板ID不能为空");
         }
         EquityCertTemplate t = mapper.selectById(id);
         if (t == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "模板不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "模板不存在");
         }
         return t;
     }

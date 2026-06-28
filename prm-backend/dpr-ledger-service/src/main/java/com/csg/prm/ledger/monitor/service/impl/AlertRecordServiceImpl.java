@@ -3,9 +3,9 @@ package com.csg.prm.ledger.monitor.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.ResultCode;
+import com.csg.prm.common.api.ResponseCode;
 import com.csg.prm.common.context.UserContextHolder;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.ledger.monitor.dto.AlertRecordQuery;
 import com.csg.prm.ledger.monitor.dto.AlertStatsVO;
 import com.csg.prm.ledger.monitor.entity.AlertRecord;
@@ -68,7 +68,7 @@ public class AlertRecordServiceImpl implements AlertRecordService {
     public void dispose(String alertId, String feedback) {
         AlertRecord r = require(alertId);
         if (AlertRecord.STATUS_CLOSED.equals(r.getDisposeStatus())) {
-            throw new BizException("预警已关闭,不能再处置");
+            throw new BusinessException("预警已关闭,不能再处置");
         }
         AlertRecord upd = new AlertRecord();
         upd.setAlertId(alertId);
@@ -128,7 +128,7 @@ public class AlertRecordServiceImpl implements AlertRecordService {
     private AlertRecord require(String alertId) {
         AlertRecord r = mapper.selectById(alertId);
         if (r == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "预警记录不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "预警记录不存在");
         }
         return r;
     }

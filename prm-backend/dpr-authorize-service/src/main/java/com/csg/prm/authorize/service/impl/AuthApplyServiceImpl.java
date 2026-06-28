@@ -10,8 +10,10 @@ import com.csg.prm.authorize.mapper.AuthApplyMapper;
 import com.csg.prm.authorize.service.AuthApplyService;
 import com.csg.prm.authorize.service.AuthCertService;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.ResultCode;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.api.ResponseCode;
+import com.csg.prm.common.context.UserContext;
+import com.csg.prm.common.context.UserContextHolder;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.common.workflow.FlowDefinitions;
 import com.csg.prm.common.workflow.FlowTransition;
 import com.csg.prm.common.workflow.ProcessFlowEngine;
@@ -53,6 +55,32 @@ public class AuthApplyServiceImpl implements AuthApplyService {
         this.cardWriteback = cardWriteback;
     }
 
+    // 授权审批逐节点角色门禁(对齐架构 AA-10/BA-05 与工作指引授权流程):各节点仅对应角色(及 all/admin)可审批/驳回。
+    private static final java.util.Map<String, String> NODE_ROLE = java.util.Map.of(
+            AuthApply.STATUS_COMPLIANCE, "review",      // 合规审核 -> 数据产权合规管控小组
+            AuthApply.STATUS_BUSINESS, "business",      // 业务审核 -> 业务管理部门团队
+            AuthApply.STATUS_MANAGER, "manager",        // 主管审核 -> 数字化部主管
+            AuthApply.STATUS_DIRECTOR, "director",      // 经理审核 -> 经理/高级经理
+            AuthApply.STATUS_VP, "gm",                  // 副总审批 -> 副总经理/总经理
+            AuthApply.STATUS_LEADERSHIP, "leadership"); // 领导小组审批 -> 领导小组办公室
+
+    /**
+     * 逐节点角色门禁:校验当前登录用户是否有权处理该节点(审批/驳回)。
+     * 无用户上下文(内部调用/未启用认证/单测)或 all/admin 角色:放行;否则节点角色须匹配。
+     */
+    private void assertNodeRole(String status) {
+        UserContext ctx = UserContextHolder.get();
+        java.util.Set<String> roles = ctx == null ? null : ctx.getRoles();
+        if (roles == null || roles.isEmpty() || roles.contains("all") || roles.contains("admin")) {
+            return;
+        }
+        String need = NODE_ROLE.get(status);
+        if (need != null && !roles.contains(need)) {
+            throw new BusinessException(ResponseCode.FORBIDDEN.getCode(),
+                    "无权限:【" + status + "】节点须由「" + responderOf(status) + "」角色处理");
+        }
+    }
+
     /** 各审批状态对应的责任人(节点处理人/角色)。 */
     private String responderOf(String status) {
         if (AuthApply.STATUS_COMPLIANCE.equals(status)) {
@@ -83,7 +111,7 @@ public class AuthApplyServiceImpl implements AuthApplyService {
         if (StringUtils.hasText(apply.getApplyId())) {
             AuthApply exist = require(apply.getApplyId());
             if (!AuthApply.STATUS_DRAFT.equals(exist.getStatus())) {
-                throw new BizException("仅草稿状态可编辑");
+                throw new BusinessException("仅草稿状态可编辑");
             }
             mapper.updateById(apply);
             return apply.getApplyId();
@@ -104,7 +132,7 @@ public class AuthApplyServiceImpl implements AuthApplyService {
     public void deleteApply(String applyId) {
         AuthApply apply = require(applyId);
         if (!AuthApply.STATUS_DRAFT.equals(apply.getStatus())) {
-            throw new BizException("仅草稿状态可删除,当前状态:" + apply.getStatus());
+            throw new BusinessException("仅草稿状态可删除,当前状态:" + apply.getStatus());
         }
         mapper.deleteById(applyId); // 逻辑删除(@TableLogic delFlag)
     }
@@ -114,16 +142,16 @@ public class AuthApplyServiceImpl implements AuthApplyService {
     public void submit(String applyId) {
         AuthApply apply = require(applyId);
         if (!AuthApply.STATUS_DRAFT.equals(apply.getStatus())) {
-            throw new BizException("仅草稿状态可提交");
+            throw new BusinessException("仅草稿状态可提交");
         }
         validate(apply);
         // 先确后授:必须引用有效权益卡片(冻结/失效/未确权则拦截)
         if (!equityCardGateway.isUsable(apply.getEquityCardId())) {
-            throw new BizException("该数据未确权或权益卡片已冻结/失效,不可发起授权(先确后授)");
+            throw new BusinessException("该数据未确权或权益卡片已冻结/失效,不可发起授权(先确后授)");
         }
         // 附录F 3.4.3:数据产品经营权授权范围仅限对外开放目录中的数据资源
         if (RIGHT_OPERATION.equals(apply.getRightType()) && !openCatalogGateway.isInOpenCatalog(apply.getAssetId())) {
-            throw new BizException("数据产品经营权授权范围仅限对外开放目录中的数据资源");
+            throw new BusinessException("数据产品经营权授权范围仅限对外开放目录中的数据资源");
         }
         // 授权时效:无特殊说明默认两年(表5/表6)
         if (apply.getValidDate() == null) {
@@ -137,10 +165,10 @@ public class AuthApplyServiceImpl implements AuthApplyService {
         EquityCardGateway.CardBoundary b = equityCardGateway.boundary(apply.getEquityCardId());
         if (b.scope() != null && !"全字段".equals(b.scope())
                 && StringUtils.hasText(apply.getScope()) && !b.scope().equals(apply.getScope())) {
-            throw new BizException("授权范围超出确权边界(确权范围:" + b.scope() + ")");
+            throw new BusinessException("授权范围超出确权边界(确权范围:" + b.scope() + ")");
         }
         if (apply.getValidDate() != null && b.validDate() != null && apply.getValidDate().isAfter(b.validDate())) {
-            throw new BizException("授权期限超出确权有效期,不得超过确权边界");
+            throw new BusinessException("授权期限超出确权有效期,不得超过确权边界");
         }
         // 由流程引擎启动对应模式的审批链(首环节:合规审核)
         String first = flowEngine.start(flowKeyOf(apply.getAuthMode()), applyId);
@@ -183,9 +211,11 @@ public class AuthApplyServiceImpl implements AuthApplyService {
     @Transactional
     public String approve(String applyId, String opinion) {
         AuthApply apply = require(applyId);
+        // 逐节点角色门禁:仅本节点对应角色(及 all/admin)可审批
+        assertNodeRole(apply.getStatus());
         String flowKey = flowKeyOf(apply.getAuthMode());
         if (!flowEngine.canAdvance(flowKey, apply.getStatus())) {
-            throw new BizException("当前状态不可审批:" + apply.getStatus());
+            throw new BusinessException("当前状态不可审批:" + apply.getStatus());
         }
         String from = apply.getStatus();
         String op = StringUtils.hasText(opinion) ? opinion : "同意,符合授权要求";
@@ -194,7 +224,7 @@ public class AuthApplyServiceImpl implements AuthApplyService {
         if (t.terminal()) {
             // 终审通过(已生效):二次校验先确后授(防审批期间卡片被冻结)
             if (!equityCardGateway.isUsable(apply.getEquityCardId())) {
-                throw new BizException("权益卡片已冻结/失效,授权熔断");
+                throw new BusinessException("权益卡片已冻结/失效,授权熔断");
             }
             updateStatus(applyId, t.nextState(), t.stepIndex(), null);
             flowLogService.record(apply, from, t.nextState(), responderOf(from), op);
@@ -215,9 +245,11 @@ public class AuthApplyServiceImpl implements AuthApplyService {
     @Transactional
     public void reject(String applyId, String reason) {
         AuthApply apply = require(applyId);
+        // 逐节点角色门禁:仅本节点对应角色(及 all/admin)可驳回
+        assertNodeRole(apply.getStatus());
         // 仅审批链中(可推进)的状态可驳回——与引擎判定一致
         if (!flowEngine.canAdvance(flowKeyOf(apply.getAuthMode()), apply.getStatus())) {
-            throw new BizException("当前状态不可驳回:" + apply.getStatus());
+            throw new BusinessException("当前状态不可驳回:" + apply.getStatus());
         }
         String from = apply.getStatus();
         updateStatus(applyId, AuthApply.STATUS_REJECTED, null, reason);
@@ -303,33 +335,33 @@ public class AuthApplyServiceImpl implements AuthApplyService {
 
     private AuthApply require(String applyId) {
         if (!StringUtils.hasText(applyId)) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "申请ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "申请ID不能为空");
         }
         AuthApply apply = mapper.selectById(applyId);
         if (apply == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "授权申请不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "授权申请不存在");
         }
         return apply;
     }
 
     private void validate(AuthApply apply) {
         if (apply == null) {
-            throw new BizException(ResultCode.PARAM_ERROR);
+            throw new BusinessException(ResponseCode.PARAM_ERROR);
         }
         if (!StringUtils.hasText(apply.getAssetId())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "关联资产ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "关联资产ID不能为空");
         }
         if (!StringUtils.hasText(apply.getAssetName())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "资产名称不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "资产名称不能为空");
         }
         if (!StringUtils.hasText(apply.getGranteeOrg())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "被授权方不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "被授权方不能为空");
         }
         if (!StringUtils.hasText(apply.getRightType())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "授权权益类型不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "授权权益类型不能为空");
         }
         if (!StringUtils.hasText(apply.getEquityCardId())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "必须引用权益卡片(先确后授)");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "必须引用权益卡片(先确后授)");
         }
     }
 

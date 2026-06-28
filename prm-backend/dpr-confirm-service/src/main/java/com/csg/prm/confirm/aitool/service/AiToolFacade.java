@@ -1,7 +1,7 @@
 package com.csg.prm.confirm.aitool.service;
 
 import com.csg.prm.common.ai.DawatAiGateway;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.confirm.aitool.gateway.AiToolParseGateway;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -129,7 +129,7 @@ public class AiToolFacade {
             case "ocr" -> {
                 return Map.of("note", "OCR 需图片字节,请经 /material/upload-file 上传后调用 /material/{id}/parse");
             }
-            default -> throw new BizException("不支持的工具:" + tool + ",可用工具见 /tools/capabilities");
+            default -> throw new BusinessException("不支持的工具:" + tool + ",可用工具见 /tools/capabilities");
         }
     }
 

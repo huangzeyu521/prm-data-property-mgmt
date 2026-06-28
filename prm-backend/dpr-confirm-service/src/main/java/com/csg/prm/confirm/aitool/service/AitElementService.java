@@ -1,7 +1,7 @@
 package com.csg.prm.confirm.aitool.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.confirm.aitool.entity.AitConstraint;
 import com.csg.prm.confirm.aitool.entity.AitDocSegment;
 import com.csg.prm.confirm.aitool.entity.AitMaterial;
@@ -119,7 +119,7 @@ public class AitElementService {
     public ProfileDTO extract(String materialId, boolean useModel) {
         AitMaterial m = materialMapper.selectById(materialId);
         if (m == null) {
-            throw new BizException("材料不存在");
+            throw new BusinessException("材料不存在");
         }
         AitParseResult parse = parseMapper.selectOne(
                 new LambdaQueryWrapper<AitParseResult>().eq(AitParseResult::getMaterialId, materialId));
@@ -229,7 +229,7 @@ public class AitElementService {
                 new LambdaQueryWrapper<AitProfile>().eq(AitProfile::getMaterialId, materialId)
                         .orderByDesc(AitProfile::getCreateTime).last("LIMIT 1"));
         if (p == null) {
-            throw new BizException("尚未生成确权画像,请先抽取");
+            throw new BusinessException("尚未生成确权画像,请先抽取");
         }
         List<AitProfileSubject> subjects = subjectMapper.selectList(
                 new LambdaQueryWrapper<AitProfileSubject>().eq(AitProfileSubject::getProfileId, p.getProfileId()));

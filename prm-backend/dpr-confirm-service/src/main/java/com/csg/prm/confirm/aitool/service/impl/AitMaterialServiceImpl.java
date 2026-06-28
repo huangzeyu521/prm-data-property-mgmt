@@ -3,10 +3,10 @@ package com.csg.prm.confirm.aitool.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.ResultCode;
+import com.csg.prm.common.api.ResponseCode;
 import com.csg.prm.common.context.UserContextHolder;
 import com.csg.prm.common.crypto.Sm3Util;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.common.query.PageQuery;
 import com.csg.prm.confirm.aitool.service.AitParseConfigService;
 import com.csg.prm.confirm.aitool.service.AitParseRecordService;
@@ -109,7 +109,7 @@ public class AitMaterialServiceImpl implements AitMaterialService {
     @Transactional
     public String upload(AitMaterial m) {
         if (m == null || !StringUtils.hasText(m.getFileName())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "文件名不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "文件名不能为空");
         }
         m.setFileType(inferType(m.getFileName()));
         m.setFileHash(Sm3Util.hashHex((m.getFileName() + "|" + (m.getContent() == null ? "" : m.getContent()))));
@@ -126,20 +126,20 @@ public class AitMaterialServiceImpl implements AitMaterialService {
     @Transactional
     public String uploadBinary(String fileName, byte[] data, String applyId, String assetId, String batchNo) {
         if (!StringUtils.hasText(fileName)) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "文件名不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "文件名不能为空");
         }
         if (data == null || data.length == 0) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "文件内容为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "文件内容为空");
         }
         String ext = extOf(fileName);
         if (!ALLOWED_EXT.contains(ext)) {
-            throw new BizException("不支持的文件格式:" + ext + ",仅支持 Excel/Word/PDF/JPG/PNG");
+            throw new BusinessException("不支持的文件格式:" + ext + ",仅支持 Excel/Word/PDF/JPG/PNG");
         }
         if (data.length < MIN_BYTES) {
-            throw new BizException("文件过小(" + data.length + "B),单文件不低于 1KB");
+            throw new BusinessException("文件过小(" + data.length + "B),单文件不低于 1KB");
         }
         if (data.length > MAX_BYTES) {
-            throw new BizException("文件过大(" + (data.length / 1024 / 1024) + "MB),单文件不超过 50MB");
+            throw new BusinessException("文件过大(" + (data.length / 1024 / 1024) + "MB),单文件不超过 50MB");
         }
         // #6 内容指纹(SHA-256 over 原始字节):路径无关、可判真重复
         String contentHash = sha256(data);
@@ -223,7 +223,7 @@ public class AitMaterialServiceImpl implements AitMaterialService {
     public byte[] loadFile(String materialId) {
         AitMaterial m = require(materialId);
         if (!StringUtils.hasText(m.getStoragePath())) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "该材料无可下载的原件(非真实文件上传)");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "该材料无可下载的原件(非真实文件上传)");
         }
         return storage.load(m.getStoragePath());
     }
@@ -344,7 +344,7 @@ public class AitMaterialServiceImpl implements AitMaterialService {
             String reason = classifyFailure(m, ex);
             updateStatus(materialId, AitMaterial.PARSE_FAILED, 100, reason);
             if (!async) {
-                throw new BizException("材料解析失败:" + reason);
+                throw new BusinessException("材料解析失败:" + reason);
             }
         }
     }
@@ -899,7 +899,7 @@ public class AitMaterialServiceImpl implements AitMaterialService {
             wb.write(bos);
             return bos.toByteArray();
         } catch (Exception ex) {
-            throw new BizException("导出解析结果失败:" + ex.getMessage());
+            throw new BusinessException("导出解析结果失败:" + ex.getMessage());
         }
     }
 
@@ -1053,7 +1053,7 @@ public class AitMaterialServiceImpl implements AitMaterialService {
     @Override
     public void confirmTerm(String materialId, String field, String standardTerm) {
         if (!StringUtils.hasText(field) || !StringUtils.hasText(standardTerm)) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "字段与标准术语不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "字段与标准术语不能为空");
         }
         AitParseResult r = getParse(materialId);
         AitParseResult upd = new AitParseResult();
@@ -1063,7 +1063,7 @@ public class AitMaterialServiceImpl implements AitMaterialService {
             case AitTermLibrary.F_AUTH_SCOPE -> upd.setAuthScope(standardTerm);
             case AitTermLibrary.F_DATA_SOURCE -> upd.setDataSource(standardTerm);
             case AitTermLibrary.F_SENSITIVE -> upd.setSensitiveType(standardTerm);
-            default -> throw new BizException("不支持的术语字段:" + field);
+            default -> throw new BusinessException("不支持的术语字段:" + field);
         }
         parseMapper.updateById(upd);
     }
@@ -1073,7 +1073,7 @@ public class AitMaterialServiceImpl implements AitMaterialService {
         AitParseResult r = parseMapper.selectOne(
                 new LambdaQueryWrapper<AitParseResult>().eq(AitParseResult::getMaterialId, materialId));
         if (r == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "材料尚未解析或无解析结果");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "材料尚未解析或无解析结果");
         }
         return r;
     }
@@ -1122,7 +1122,7 @@ public class AitMaterialServiceImpl implements AitMaterialService {
     @Override
     public int batchParse(String batchNo) {
         if (!StringUtils.hasText(batchNo)) {
-            throw new BizException("批次号不能为空");
+            throw new BusinessException("批次号不能为空");
         }
         List<AitMaterial> list = materialMapper.selectList(new LambdaQueryWrapper<AitMaterial>()
                 .eq(AitMaterial::getBatchNo, batchNo)
@@ -1187,11 +1187,11 @@ public class AitMaterialServiceImpl implements AitMaterialService {
 
     private AitMaterial require(String id) {
         if (!StringUtils.hasText(id)) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "材料ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "材料ID不能为空");
         }
         AitMaterial m = materialMapper.selectById(id);
         if (m == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "材料不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "材料不存在");
         }
         return m;
     }

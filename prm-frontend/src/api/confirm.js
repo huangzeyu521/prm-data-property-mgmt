@@ -2,6 +2,8 @@ import request from './request'
 
 // 数据确权申请与审批
 export const pageConfirmApply = (query) => request.post('/dpr/confirm/apply/page', query)
+// 确权申请概览统计(总/在途/已完成/已驳回/初始/变更),按过滤条件聚合(忽略 status)
+export const statsConfirmApply = (query) => request.post('/dpr/confirm/apply/stats', query)
 export const saveConfirmDraft = (data) => request.post('/dpr/confirm/apply/draft', data)
 export const submitConfirm = (applyId) => request.post(`/dpr/confirm/apply/${applyId}/submit`)
 // 固化提交前 AI 校验结果快照(JSON 字符串),供人工预审完整复核
@@ -30,6 +32,8 @@ export const getRightsFacts = (assetId) => request.get('/dpr/confirm/apply/right
 
 // 权益卡片(P4 生命周期:冻结/解冻/注销/变更历史)
 export const pageEquityCard = (query) => request.post('/dpr/confirm/card/page', query)
+// 权益卡片概览统计(总/正常/冻结/失效/即将到期),按过滤聚合忽略 status
+export const statsEquityCard = (query) => request.post('/dpr/confirm/card/stats', query)
 export const freezeEquityCard = (cardId) => request.post(`/dpr/confirm/card/${cardId}/freeze`)
 export const unfreezeEquityCard = (cardId) => request.post(`/dpr/confirm/card/${cardId}/unfreeze`)
 export const revokeEquityCard = (cardId, reason) => request.post(`/dpr/confirm/card/${cardId}/revoke`, null, { params: { reason } })
@@ -101,6 +105,8 @@ export const certTemplateFileUrl = (id) => `/api/dpr/confirm/cert-template/${id}
 export const saveTableItems = (applyId, items) => request.post(`/dpr/confirm/apply/${applyId}/table-items`, items)
 export const listTableItems = (applyId) => request.get(`/dpr/confirm/apply/${applyId}/table-items`)
 export const getConsolidation = (applyId) => request.get(`/dpr/confirm/apply/${applyId}/consolidation`)
+// 不落库试算:step1 内联预览经营权归集判定
+export const previewConsolidation = (params) => request.get('/dpr/confirm/consolidation/preview', { params })
 export const confirmSummaryExportUrl = () => '/api/dpr/confirm/summary/confirm-export'
 export const equityConsolidationExportUrl = () => '/api/dpr/confirm/summary/equity-export'
 // 材料 AI 校验(qwen3-max 逐份校验,stub 回退)

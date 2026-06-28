@@ -60,6 +60,9 @@ public interface ConfirmApplyService {
 
     PageResult<ConfirmApply> page(ConfirmApplyQuery query);
 
+    /** 确权申请概览统计(按过滤条件聚合,忽略 status,供查询页概览条点选下钻)。 */
+    com.csg.prm.confirm.dto.ConfirmApplyStats stats(ConfirmApplyQuery query);
+
     /** 导出确权申请历史记录(CSV,含处理时效),按当前过滤条件。 */
     byte[] exportHistory(ConfirmApplyQuery query);
 

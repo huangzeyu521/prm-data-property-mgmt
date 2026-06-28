@@ -3,6 +3,12 @@
   中国南方电网 · 数据资产管理平台 V3.6 · 数据产权管理模块(IM-DAM-DPR)。
   本软件版权归中国南方电网所有,未经书面授权不得复制、修改或发布。
 -->
+<!--
+  授权申请查询(数据授权管理域内)。按 authMode 分类型呈现各自的审批流转:
+    一事一议(专项):合规→业务→主管→经理→副总→已生效
+    批量:          合规→主管→经理→副总→领导小组→已生效
+  二者流程不同,流转进度列按行 authMode 渲染对应链(不混用一套步骤)。
+-->
 <template>
   <div class="prm-page">
     <div class="prm-query-bar">
@@ -24,42 +30,128 @@
     </div>
     <div class="prm-table-card">
       <el-table :data="rows" v-loading="loading" border stripe>
-        <el-table-column type="index" label="序号" width="64" align="center" />
+        <el-table-column type="index" label="序号" width="56" align="center" />
         <el-table-column prop="applyNo" label="申请编号" width="150" show-overflow-tooltip />
-        <el-table-column prop="authMode" label="模式" width="100" align="center" />
-        <el-table-column prop="assetName" label="资产名称" min-width="150" show-overflow-tooltip />
-        <el-table-column prop="granteeOrg" label="被授权方" min-width="130" show-overflow-tooltip />
-        <el-table-column prop="applicantManager" label="申请人" width="120" show-overflow-tooltip />
-        <el-table-column label="审核结果" width="100" align="center">
+        <el-table-column prop="authMode" label="模式" width="90" align="center">
+          <template #default="{ row }"><el-tag :type="row.authMode === '批量' ? 'warning' : 'primary'" effect="plain" size="small">{{ row.authMode || '一事一议' }}</el-tag></template>
+        </el-table-column>
+        <el-table-column label="所属系统" min-width="120" show-overflow-tooltip><template #default="{ row }">{{ sysName(row) }}</template></el-table-column>
+        <el-table-column prop="assetName" label="数据表" min-width="130" show-overflow-tooltip />
+        <el-table-column prop="rightType" label="权益类型" width="130" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.rightType || '—' }}</template>
+        </el-table-column>
+        <el-table-column prop="granteeOrg" label="被授权方" min-width="120" show-overflow-tooltip />
+        <el-table-column prop="applicantManager" label="申请人" width="110" show-overflow-tooltip />
+        <el-table-column label="审核结果" width="92" align="center">
           <template #default="{ row }"><el-tag :type="reviewTag(row.status)">{{ reviewResult(row.status) }}</el-tag></template>
         </el-table-column>
-        <el-table-column label="授权状态" width="100" align="center">
+        <el-table-column label="授权状态" width="92" align="center">
           <template #default="{ row }"><el-tag :type="authTag(row.status)" effect="plain">{{ authStatus(row.status) }}</el-tag></template>
         </el-table-column>
-        <el-table-column prop="rejectReason" label="处理意见" min-width="160" show-overflow-tooltip>
+        <!-- 分类型流转进度:按行 authMode 渲染对应审批链 -->
+        <el-table-column label="流转进度" min-width="330">
+          <template #default="{ row }">
+            <el-steps :active="stepOf(row)" align-center finish-status="success" simple style="margin:0" class="flow-mini">
+              <el-step v-for="s in stepsOf(row)" :key="s" :title="s" />
+            </el-steps>
+          </template>
+        </el-table-column>
+        <el-table-column prop="rejectReason" label="处理意见" min-width="130" show-overflow-tooltip>
           <template #default="{ row }">{{ row.rejectReason || '—' }}</template>
         </el-table-column>
-        <el-table-column prop="createTime" label="申请时间" width="160" />
+        <el-table-column prop="createTime" label="申请时间" width="155" />
+        <el-table-column label="操作" width="100" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" @click="onProgress(row)">进度详情</el-button>
+          </template>
+        </el-table-column>
       </el-table>
       <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
         :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" @size-change="s=>{q.size=s;q.current=1;load()}" />
     </div>
+
+    <!-- 进度详情:申请要素(表5/表6 + 附录D §3.4.4)+ 流转进度 两段 -->
+    <el-drawer v-model="drawer" :title="`申请要素 + 进度跟踪 — ${curNo}`" size="52%">
+      <div class="rv-h">申请要素(表5/表6 + 附录D §3.4.4)</div>
+      <el-descriptions :column="2" border size="small" style="margin-bottom:16px">
+        <el-descriptions-item label="授权模式">{{ curRow.authMode || '一事一议' }}</el-descriptions-item>
+        <el-descriptions-item label="权益类型">{{ curRow.rightType || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="所属系统">{{ sysName(curRow) }}</el-descriptions-item>
+        <el-descriptions-item label="模式名称">{{ curRow.schemaName || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="数据表">{{ curRow.assetName || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="业务域">{{ curRow.businessDomain || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="被授权方">{{ curRow.granteeOrg || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="生效卡片">{{ curRow.equityCardId || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="使用场景及目的" :span="2">{{ curRow.scenario || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="授权范围">{{ curRow.scope || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="授权时效">{{ (curRow.validDate||'').slice(0,10) || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="涉第三方来源">{{ involvesThird(curRow) ? curRow.thirdPartySource : '不涉及' }}</el-descriptions-item>
+        <el-descriptions-item label="涉隐私/商密">{{ involvesSensitive(curRow) ? curRow.sensitiveType : '不涉及' }}</el-descriptions-item>
+        <el-descriptions-item label="是否跨域">{{ curRow.crossRegion ? '是' : '否' }}</el-descriptions-item>
+        <el-descriptions-item label="—">　</el-descriptions-item>
+        <el-descriptions-item label="利益分配约定(§3.4.4)" :span="2">{{ curRow.benefitAllocation || (curRow.authMode === '批量' ? '批量:在《运营授权协议》(清单级)统一约定' : '— 未填(协议签订前须补充)') }}</el-descriptions-item>
+        <el-descriptions-item label="安全保障要求(§3.4.4)" :span="2">{{ curRow.securityReq || (curRow.authMode === '批量' ? '批量:在《运营授权协议》(清单级)统一约定' : '— 未填(协议签订前须补充)') }}</el-descriptions-item>
+      </el-descriptions>
+      <div class="rv-h">流转进度</div>
+      <div v-if="!logs.length" style="color:#999;padding:12px">暂无流转记录(草稿尚未提交)。</div>
+      <el-timeline v-else style="padding:8px 6px">
+        <el-timeline-item v-for="(l, i) in logs" :key="l.logId || i" :timestamp="fmt(l.createTime)" placement="top"
+          :type="l.toStatus === '已驳回' ? 'danger' : (l.toStatus === '已生效' ? 'success' : 'primary')">
+          <div style="font-weight:600">{{ l.nodeName || l.node || '流转' }}：{{ l.fromStatus }} → {{ l.toStatus }}</div>
+          <div v-if="l.responder" style="font-size:12px;color:#71717a;margin-top:2px">责任人：{{ l.responder }}</div>
+          <div v-if="l.opinion" style="font-size:12px;color:#71717a;margin-top:2px">意见：{{ l.opinion }}</div>
+          <div v-if="l.notifyContent" style="font-size:12px;color:#1e87f0;margin-top:4px">{{ l.pushChannel }}：{{ l.notifyContent }}</div>
+        </el-timeline-item>
+      </el-timeline>
+    </el-drawer>
   </div>
 </template>
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
-import { pageAuthApply } from '@/api/authorize'
+import { pageAuthApply, getAuthFlowLog } from '@/api/authorize'
+
 const statuses = ['草稿', '合规审核中', '业务审核中', '主管审核中', '经理审核中', '副总审批中', '领导小组审批中', '已生效', '已驳回']
 const q = reactive({ current: 1, size: 10, assetName: '', applicant: '', authMode: '', status: '' })
 const rows = ref([]); const total = ref(0); const loading = ref(false)
+
+// 分类型审批链(与后端 flowKeyOf(authMode) 一致):一事一议有"业务审核"无"领导小组";批量反之
+const STEPS_BY_MODE = {
+  一事一议: { labels: ['提交', '合规', '业务', '主管', '经理', '副总', '生效'], idx: { 草稿: 0, 合规审核中: 1, 业务审核中: 2, 主管审核中: 3, 经理审核中: 4, 副总审批中: 5, 已生效: 7, 已驳回: 1 } },
+  批量: { labels: ['提交', '合规', '主管', '经理', '副总', '领导小组', '生效'], idx: { 草稿: 0, 合规审核中: 1, 主管审核中: 2, 经理审核中: 3, 副总审批中: 4, 领导小组审批中: 5, 已生效: 7, 已驳回: 1 } }
+}
+function chainOf(row) { return STEPS_BY_MODE[row.authMode === '批量' ? '批量' : '一事一议'] }
+function stepsOf(row) { return chainOf(row).labels }
+function stepOf(row) { return chainOf(row).idx[row.status] ?? 0 }
+
 // 审核结果:未提交/审核中/通过/驳回
 function reviewResult(s) { return s === '草稿' ? '未提交' : s === '已生效' ? '通过' : s === '已驳回' ? '驳回' : '审核中' }
 function reviewTag(s) { return s === '已生效' ? 'success' : s === '已驳回' ? 'danger' : s === '草稿' ? 'info' : 'warning' }
 // 授权状态:已生效/未授权/待生效
 function authStatus(s) { return s === '已生效' ? '已生效' : s === '已驳回' ? '未授权' : s === '草稿' ? '—' : '待生效' }
 function authTag(s) { return s === '已生效' ? 'success' : s === '已驳回' ? 'danger' : 'info' }
+
+function fmt(t) { return t ? String(t).replace('T', ' ').slice(0, 19) : '-' }
+// 库表级:assetId=SYS:系统名 → 系统名;数据表名=assetName(库表名)。与向导/确权目录/审核台同一派生。
+function sysName(row) { const a = row.assetId || ''; return a.startsWith('SYS:') ? a.slice(4) : (a || '—') }
+// 合规要素判定(与向导/审核台一致):空/「无」视为不涉。
+function involvesThird(row) { return !!(row.thirdPartySource && String(row.thirdPartySource).trim()) }
+function involvesSensitive(row) { return !!(row.sensitiveType && String(row.sensitiveType).trim() && row.sensitiveType !== '无') }
+const drawer = ref(false); const logs = ref([]); const curNo = ref(''); const curRow = ref({})
+async function onProgress(row) {
+  curNo.value = row.applyNo || row.applyId
+  curRow.value = row
+  logs.value = await getAuthFlowLog(row.applyId) || []
+  drawer.value = true
+}
+
 async function load() { loading.value = true; try { const r = await pageAuthApply({ ...q }); rows.value = r.records || []; total.value = r.total || 0 } finally { loading.value = false } }
 function onSearch() { q.current = 1; load() }
 function onReset() { Object.assign(q, { assetName: '', applicant: '', authMode: '', status: '' }); onSearch() }
 onMounted(load)
 </script>
+
+<style scoped>
+.flow-mini :deep(.el-step__title) { font-size: 12px; line-height: 1.2; }
+.flow-mini :deep(.el-step__arrow) { display: none; }
+.rv-h { font-weight: 600; font-size: 13px; color: var(--prm-color-text); margin: 4px 0 8px; padding-left: 8px; border-left: 3px solid var(--prm-color-primary); }
+</style>

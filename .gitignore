@@ -37,3 +37,9 @@ Thumbs.db
 *.zip
 .ai.env
 .ui-review/
+
+# ===== Gradle 构建产物(迁移后)=====
+**/build/
+.gradle/
+**/.gradle/
+hs_err_pid*.log

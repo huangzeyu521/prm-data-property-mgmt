@@ -3,8 +3,8 @@ package com.csg.prm.ledger.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.ResultCode;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.api.ResponseCode;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.ledger.dto.DataAssetInfoQuery;
 import com.csg.prm.ledger.entity.DataAssetInfo;
 import com.csg.prm.ledger.mapper.DataAssetInfoMapper;
@@ -30,10 +30,10 @@ public class DataAssetInfoServiceImpl implements DataAssetInfoService {
     @Transactional
     public String saveOrUpdateAsset(DataAssetInfo asset) {
         if (!StringUtils.hasText(asset.getAssetId())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "资产ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "资产ID不能为空");
         }
         if (!StringUtils.hasText(asset.getAssetName())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "资产名称不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "资产名称不能为空");
         }
         DataAssetInfo exist = mapper.selectById(asset.getAssetId());
         if (exist == null) {
@@ -62,7 +62,7 @@ public class DataAssetInfoServiceImpl implements DataAssetInfoService {
     public DataAssetInfo getById(String assetId) {
         DataAssetInfo asset = mapper.selectById(assetId);
         if (asset == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "数据资产不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "数据资产不存在");
         }
         return asset;
     }

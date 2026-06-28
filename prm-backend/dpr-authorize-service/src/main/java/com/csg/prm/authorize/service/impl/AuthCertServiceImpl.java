@@ -9,9 +9,9 @@ import com.csg.prm.authorize.mapper.AuthCertMapper;
 import com.csg.prm.authorize.service.AccountabilityService;
 import com.csg.prm.authorize.service.AuthCertService;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.ResultCode;
+import com.csg.prm.common.api.ResponseCode;
 import com.csg.prm.common.evidence.ChainEvidenceService;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.common.org.Jurisdiction;
 import com.csg.prm.common.org.OrgService;
 import com.csg.prm.common.query.PageQuery;
@@ -73,7 +73,7 @@ public class AuthCertServiceImpl implements AuthCertService {
         com.csg.prm.authorize.gateway.EquityCardGateway.CardBoundary b = equityCardGateway.boundary(apply.getEquityCardId());
         if (b != null && StringUtils.hasText(b.scope()) && !"全字段".equals(b.scope())
                 && StringUtils.hasText(apply.getScope()) && !b.scope().equals(apply.getScope())) {
-            throw new BizException("授权范围超出确权边界,出证拦截(确权范围:" + b.scope() + ")");
+            throw new BusinessException("授权范围超出确权边界,出证拦截(确权范围:" + b.scope() + ")");
         }
         // 归口网级回填:按被授权方组织解析省/地市码,落到证书与发证存证(补此前的 null)
         Jurisdiction jur = orgService.resolve(apply.getGranteeOrg());
@@ -114,7 +114,7 @@ public class AuthCertServiceImpl implements AuthCertService {
     public AuthCert getById(String certId) {
         AuthCert cert = mapper.selectById(certId);
         if (cert == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "授权证书不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "授权证书不存在");
         }
         return cert;
     }
@@ -179,7 +179,7 @@ public class AuthCertServiceImpl implements AuthCertService {
     @Transactional
     public int suspendByAsset(String assetId, String reason, String sourceAlertId, String violationType) {
         if (!StringUtils.hasText(assetId)) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "资产ID不能为空");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "资产ID不能为空");
         }
         LambdaQueryWrapper<AuthCert> w = new LambdaQueryWrapper<>();
         w.eq(AuthCert::getAssetId, assetId).eq(AuthCert::getCertStatus, AuthCert.STATUS_EFFECTIVE);
@@ -216,10 +216,10 @@ public class AuthCertServiceImpl implements AuthCertService {
     public void renew(String certId, LocalDateTime newValidDate) {
         AuthCert cert = getById(certId);
         if (AuthCert.STATUS_REVOKED.equals(cert.getCertStatus())) {
-            throw new BizException("已撤销证书不可续签");
+            throw new BusinessException("已撤销证书不可续签");
         }
         if (newValidDate == null || newValidDate.isBefore(LocalDateTime.now())) {
-            throw new BizException(ResultCode.PARAM_ERROR.getCode(), "续签有效期必须晚于当前时间");
+            throw new BusinessException(ResponseCode.PARAM_ERROR.getCode(), "续签有效期必须晚于当前时间");
         }
         AuthCert upd = new AuthCert();
         upd.setCertId(certId);

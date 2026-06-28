@@ -298,7 +298,7 @@ function renderGauge(score) {
 
 <style scoped>
 .kv { margin-top: 8px; font-size: 13px; }
-.ai-lbl { font-size: 13px; color: #606266; margin-right: 6px; }
-.plan-desc { font-size: 12px; color: #909399; margin-bottom: 6px; }
+.ai-lbl { font-size: 13px; color: var(--prm-color-text-secondary); margin-right: 6px; }
+.plan-desc { font-size: 12px; color: var(--prm-color-text-weak); margin-bottom: 6px; }
 .hash { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: #1e87f0; word-break: break-all; }
 </style>

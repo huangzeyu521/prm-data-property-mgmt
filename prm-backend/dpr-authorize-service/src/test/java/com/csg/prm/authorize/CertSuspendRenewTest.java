@@ -5,7 +5,7 @@ import com.csg.prm.authorize.entity.AuthApply;
 import com.csg.prm.authorize.entity.AuthCert;
 import com.csg.prm.authorize.service.AccountabilityService;
 import com.csg.prm.authorize.service.AuthCertService;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.common.query.PageQuery;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -89,10 +89,10 @@ class CertSuspendRenewTest {
     void renew_should_reject_revoked_or_past_date() {
         String certId = genCert("DA-RENEW-2", LocalDateTime.now().plusDays(5));
         // 过去日期被拒
-        assertThrows(BizException.class, () -> certService.renew(certId, LocalDateTime.now().minusDays(1)));
+        assertThrows(BusinessException.class, () -> certService.renew(certId, LocalDateTime.now().minusDays(1)));
         // 已撤销不可续签
         certService.revoke(certId);
-        assertThrows(BizException.class, () -> certService.renew(certId, LocalDateTime.now().plusDays(30)));
+        assertThrows(BusinessException.class, () -> certService.renew(certId, LocalDateTime.now().plusDays(30)));
     }
 
     @Test

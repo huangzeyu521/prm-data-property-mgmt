@@ -4,9 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.csg.prm.common.ai.DawatAiGateway;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.ResultCode;
+import com.csg.prm.common.api.ResponseCode;
 import com.csg.prm.common.crypto.Sm3Util;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.common.query.PageQuery;
 import com.csg.prm.confirm.aitool.entity.AitConflict;
 import com.csg.prm.confirm.aitool.entity.AitDecision;
@@ -74,7 +74,7 @@ public class AitDecisionServiceImpl implements AitDecisionService {
     public AitDecision analyze(String applyId) {
         ConfirmApply apply = applyMapper.selectById(applyId);
         if (apply == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "确权申请不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "确权申请不存在");
         }
         String assetId = apply.getAssetId();
 
@@ -433,7 +433,7 @@ public class AitDecisionServiceImpl implements AitDecisionService {
         AitDecision d = decisionMapper.selectOne(
                 new LambdaQueryWrapper<AitDecision>().eq(AitDecision::getApplyId, applyId));
         if (d == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "尚未生成决策建议");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "尚未生成决策建议");
         }
         return d;
     }

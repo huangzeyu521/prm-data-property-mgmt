@@ -31,11 +31,6 @@
         <template #prefix><el-icon><Search /></el-icon></template>
         <el-option v-for="p in pages" :key="p.value" :label="p.label" :value="p.value" />
       </el-select>
-      <el-tooltip content="独立智能工具,新标签打开(业务流程亦可带上下文调用)" placement="bottom">
-        <el-button text class="prm-ait-btn" @click="openAitool">
-          <el-icon :size="16"><MagicStick /></el-icon><span>智能确权辅助工具</span>
-        </el-button>
-      </el-tooltip>
       <el-tooltip content="切换视角(演示):按角色裁剪菜单与首屏;真实角色由登录身份决定" placement="bottom">
         <el-select v-model="role" class="prm-role" size="small" @change="onRoleChange">
           <template #prefix><el-icon><UserFilled /></el-icon></template>
@@ -125,17 +120,13 @@ function onUserCmd(cmd) {
   }
 }
 
-// 智能确权辅助工具走独立外壳(AitoolShell),不渲染主平台布局
+// 智能确权辅助工具为独立部署工具,走独立外壳(AitoolShell),不渲染主平台布局;
+// 顶栏入口已移除,仅保留 /aitool 直链时的外壳渲染,不影响数据产权管理模块
 const isAitool = computed(() => route.path.startsWith('/aitool'))
 
-// 顶栏调用入口:新标签打开独立工具
-function openAitool() {
-  window.open('/aitool/material', '_blank')
-}
-
-// 全部可跳转页面(供顶部搜索),取自路由表 meta.title
+// 全部可跳转页面(供顶部搜索),取自路由表 meta.title;排除独立 aitool 页面(顶栏不再暴露其入口)
 const pages = router.getRoutes()
-  .filter((r) => r.meta && r.meta.title)
+  .filter((r) => r.meta && r.meta.title && !r.path.startsWith('/aitool'))
   .map((r) => ({ value: r.path, label: r.meta.title }))
 
 function onJump(path) {
@@ -233,8 +224,6 @@ const openeds = computed(() => {
 .prm-role { width: 150px; flex: none; }
 .prm-user { display: inline-flex; align-items: center; gap: 4px; color: #fff; cursor: pointer; font-size: 13px; padding: 0 4px; }
 .prm-user:hover { color: rgba(255, 255, 255, 0.8); }
-.prm-ait-btn { color: #fff; font-size: 13px; }
-.prm-ait-btn:hover { color: rgba(255, 255, 255, 0.8); }
 /* 顶栏内铃铛:蓝底上改白 */
 .prm-header :deep(.nc-bell) { color: #fff; }
 .prm-header :deep(.nc-bell:hover) { color: rgba(255, 255, 255, 0.8); }

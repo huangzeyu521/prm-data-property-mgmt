@@ -3,8 +3,8 @@ package com.csg.prm.ledger.monitor.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.api.ResultCode;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.api.ResponseCode;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.ledger.monitor.dto.AlertNotificationQuery;
 import com.csg.prm.ledger.monitor.entity.AlertNotification;
 import com.csg.prm.ledger.monitor.entity.AlertRecord;
@@ -91,7 +91,7 @@ public class AlertNotificationServiceImpl implements AlertNotificationService {
     public int repush(String alertId) {
         AlertRecord alert = alertMapper.selectById(alertId);
         if (alert == null) {
-            throw new BizException(ResultCode.NOT_FOUND.getCode(), "预警不存在:" + alertId);
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "预警不存在:" + alertId);
         }
         pushForAlert(alert, alert.getRuleId());
         return 1;

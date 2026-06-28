@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.csg.prm.common.ai.DawatAiGateway;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.exception.BizException;
+import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.common.query.PageQuery;
 import com.csg.prm.confirm.aitool.entity.AitKbChunk;
 import com.csg.prm.confirm.aitool.entity.AitKbDoc;
@@ -107,7 +107,7 @@ public class AitKbService implements ApplicationRunner {
     @Transactional
     public String addDoc(AitKbDoc doc, String content) {
         if (!StringUtils.hasText(doc.getTitle())) {
-            throw new BizException("文档标题不能为空");
+            throw new BusinessException("文档标题不能为空");
         }
         doc.setDocId(null);
         doc.setVersion(StringUtils.hasText(doc.getVersion()) ? doc.getVersion() : "v1");
@@ -246,7 +246,7 @@ public class AitKbService implements ApplicationRunner {
     @Transactional
     public String newVersion(AitKbDoc doc, String content) {
         if (!StringUtils.hasText(doc.getTitle())) {
-            throw new BizException("文档标题不能为空");
+            throw new BusinessException("文档标题不能为空");
         }
         List<AitKbDoc> history = docMapper.selectList(new LambdaQueryWrapper<AitKbDoc>()
                 .eq(AitKbDoc::getTitle, doc.getTitle()));
@@ -268,7 +268,7 @@ public class AitKbService implements ApplicationRunner {
     public void replaceClause(String docId, String clauseNo, String newContent) {
         AitKbDoc doc = docMapper.selectById(docId);
         if (doc == null) {
-            throw new BizException("文档不存在");
+            throw new BusinessException("文档不存在");
         }
         List<AitKbChunk> old = chunkMapper.selectList(new LambdaQueryWrapper<AitKbChunk>()
                 .eq(AitKbChunk::getDocId, docId).eq(AitKbChunk::getClauseNo, clauseNo)
@@ -300,7 +300,7 @@ public class AitKbService implements ApplicationRunner {
     public void invalidate(String docId) {
         AitKbDoc doc = docMapper.selectById(docId);
         if (doc == null) {
-            throw new BizException("文档不存在");
+            throw new BusinessException("文档不存在");
         }
         doc.setStatus(AitKbDoc.STATUS_INVALID);
         doc.setIsLatest(false);
@@ -313,7 +313,7 @@ public class AitKbService implements ApplicationRunner {
     public void rollback(String docId) {
         AitKbDoc target = docMapper.selectById(docId);
         if (target == null) {
-            throw new BizException("文档不存在");
+            throw new BusinessException("文档不存在");
         }
         List<AitKbDoc> sib = docMapper.selectList(new LambdaQueryWrapper<AitKbDoc>()
                 .eq(AitKbDoc::getTitle, target.getTitle()));
