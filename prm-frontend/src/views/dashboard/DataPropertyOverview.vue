@@ -39,6 +39,9 @@
       <el-col :span="12" :sm="24" :xs="24"><el-card :header="`地市分布（${drillProvince || '全部省域'}）`"><div ref="bureauRef" style="height:300px"></div></el-card></el-col>
     </el-row>
     <el-row :gutter="16" style="margin-top:16px">
+      <el-col :span="24"><el-card header="按系统部署单位分布(总部 · 超高压 · 双调 · 五省网 · 广州 · 深圳)"><div ref="deployRef" style="height:300px"></div></el-card></el-col>
+    </el-row>
+    <el-row :gutter="16" style="margin-top:16px">
       <el-col :span="12" :sm="24" :xs="24"><el-card header="各省确权覆盖率对比"><div ref="confirmRateRef" style="height:300px"></div></el-card></el-col>
       <el-col :span="12" :sm="24" :xs="24"><el-card header="各省授权状态结构"><div ref="authStructRef" style="height:300px"></div></el-card></el-col>
     </el-row>
@@ -59,7 +62,7 @@ const au = reactive({ certCount: 0, effectiveRate: 0 })
 const lk = reactive({ reConfirmCount: 0, suspendedCount: 0, expiring: 0, closureRate: 0 })
 const rtRef = ref(); const csRef = ref(); const amRef = ref()
 const trendRef = ref(); const authStatusRef = ref(); const provinceRef = ref(); const bureauRef = ref()
-const confirmRateRef = ref(); const authStructRef = ref()
+const confirmRateRef = ref(); const authStructRef = ref(); const deployRef = ref()
 const drillProvince = ref('')
 let bureauChart = null
 const pairs = (m) => Object.entries(m || {}).map(([name, value]) => ({ name, value }))
@@ -123,6 +126,16 @@ async function load() {
     drillProvince.value = (drillProvince.value === p.name) ? '' : p.name
     const map = drillProvince.value ? (byBureau[drillProvince.value] || {}) : flattenBureau(byBureau)
     bureauChart.setOption(applyChartBase(bureauOption(map)), true)
+  })
+
+  // 系统部署单位(打√口径固定10桶,服务端零填充恒显;保持服务端顺序)
+  const du = st.byDeploymentUnit || {}
+  initChart(deployRef.value,{
+    color: CHART_COLORS, tooltip: { trigger: 'axis' }, grid: { left: 48, right: 24, top: 20, bottom: 50 },
+    xAxis: { type: 'category', data: Object.keys(du), axisLabel: { interval: 0, rotate: 20 } },
+    yAxis: { type: 'value', name: '资产数' },
+    series: [{ type: 'bar', data: Object.values(du), barWidth: '40%', itemStyle: { color: C.green },
+      label: { show: true, position: 'top' } }]
   })
 
   // 跨维:各省确权覆盖率对比
