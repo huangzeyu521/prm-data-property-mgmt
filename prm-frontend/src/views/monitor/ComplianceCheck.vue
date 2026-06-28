@@ -23,7 +23,8 @@
     <div class="prm-table-card">
       <el-table :data="rows" v-loading="loading" border stripe>
         <el-table-column type="index" label="序号" width="56" align="center" />
-        <el-table-column prop="assetId" label="资产ID" width="150" show-overflow-tooltip />
+        <el-table-column label="所属系统" min-width="120" show-overflow-tooltip><template #default="{ row }">{{ sysName(row) }}</template></el-table-column>
+        <el-table-column prop="assetName" label="数据表" min-width="120" show-overflow-tooltip><template #default="{ row }">{{ row.assetName || '—' }}</template></el-table-column>
         <el-table-column prop="checkDim" label="检查维度" width="100" align="center">
           <template #default="{ row }"><el-tag v-if="row.checkDim" effect="plain" :type="dimTag(row.checkDim)">{{ row.checkDim }}</el-tag><span v-else>-</span></template>
         </el-table-column>
@@ -41,7 +42,7 @@
           </template>
         </el-table-column>
       </el-table>
-      <div class="prm-table-note">注:合规检查为多维自动巡检——有效期 / 权限范围(越权) / 申请材料 / 协议内容;命中生成检查结果+预警,并产出检查报告。已由定时器周期自动执行。</div>
+      <div class="prm-table-note">注:台账级多维自动巡检——有效期(权益到期) / 权限范围(越权·先确后授·经营权对外开放 §3.4.3) / 申请材料(确权流程) / 协议内容(授权协议到期未续)。命中生成检查结果+预警+报告,定时器周期执行。附录D §3.4.4 协议要素(数据范围/场景/目的/利益分配/安全保障)由「授权合规校验」逐项精检,本巡检不重复。</div>
       <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
         :total="total" :current-page="query.current" :page-size="query.size" @current-change="onPage" @size-change="s=>{query.size=s;query.current=1;load()}" />
     </div>
@@ -82,6 +83,8 @@ const reportDlg = ref(false)
 const report = ref(null)
 const dimRows = computed(() => Object.entries(report.value?.byDimension || {}).map(([dim, count]) => ({ dim, count })))
 
+// 库表级:assetId=SYS:系统名 → 所属系统;非 SYS: 原样(兼容台账 assetId)
+function sysName(row) { const a = (row && row.assetId) || ''; return a.startsWith('SYS:') ? a.slice(4) : (a || '—') }
 function tag(r) { return { 合规: 'success', 警告: 'warning', 不合规: 'danger' }[r] || 'info' }
 function dimTag(d) { return { 有效期: 'warning', 权限范围: 'danger', 申请材料: 'info', 协议内容: 'danger' }[d] || 'info' }
 function fmtTime(t) { return t ? String(t).replace('T', ' ').slice(0, 19) : '-' }
