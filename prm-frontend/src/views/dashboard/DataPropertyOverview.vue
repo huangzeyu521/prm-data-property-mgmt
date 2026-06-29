@@ -16,17 +16,11 @@
       <el-col :span="4" :sm="8" :xs="12"><el-card shadow="hover"><div class="st"><b class="blue">{{ au.effectiveRate }}%</b><span>授权生效率</span></div></el-card></el-col>
     </el-row>
 
-    <div class="lk-title">权益闭环联动治理(确权↔授权↔监测)</div>
-    <el-row :gutter="16">
-      <el-col :span="6" :sm="12" :xs="24"><el-card shadow="hover" class="lk"><div class="st"><b class="orange">{{ lk.reConfirmCount }}</b><span>重确权工单(联动派生)</span></div></el-card></el-col>
-      <el-col :span="6" :sm="12" :xs="24"><el-card shadow="hover" class="lk"><div class="st"><b class="red">{{ lk.suspendedCount }}</b><span>熔断暂停证书</span></div></el-card></el-col>
-      <el-col :span="6" :sm="12" :xs="24"><el-card shadow="hover" class="lk"><div class="st"><b class="orange">{{ lk.expiring }}</b><span>授权到期预警(30天)</span></div></el-card></el-col>
-      <el-col :span="6" :sm="12" :xs="24"><el-card shadow="hover" class="lk"><div class="st"><b class="green">{{ lk.closureRate }}%</b><span>风险整改闭环率</span></div></el-card></el-col>
-    </el-row>
     <el-row :gutter="16" style="margin-top:16px">
-      <el-col :span="8" :sm="12" :xs="24"><el-card header="已确权 · 三权分置结构"><div ref="rtRef" style="height:300px"></div></el-card></el-col>
-      <el-col :span="8" :sm="12" :xs="24"><el-card header="确权状态分布"><div ref="csRef" style="height:300px"></div></el-card></el-col>
-      <el-col :span="8" :sm="12" :xs="24"><el-card header="授权模式分布"><div ref="amRef" style="height:300px"></div></el-card></el-col>
+      <el-col :span="6" :sm="12" :xs="24"><el-card header="已确权 · 三权分置结构"><div ref="rtRef" style="height:300px"></div></el-card></el-col>
+      <el-col :span="6" :sm="12" :xs="24"><el-card header="确权状态分布"><div ref="csRef" style="height:300px"></div></el-card></el-col>
+      <el-col :span="6" :sm="12" :xs="24"><el-card header="授权模式分布"><div ref="amRef" style="height:300px"></div></el-card></el-col>
+      <el-col :span="6" :sm="12" :xs="24"><el-card header="确权 · 授权转化漏斗(纳管→已确权→已授权)"><div ref="funnelRef" style="height:300px"></div></el-card></el-col>
     </el-row>
 
     <div class="lk-title">趋势与多维统计(系统部署单位 · 时间 · 同比环比)</div>
@@ -38,6 +32,14 @@
       <el-col :span="24"><el-card header="各系统部署单位 确权覆盖率 / 授权率(总部 · 超高压 · 双调 · 广东 · 广西 · 云南 · 贵州 · 海南 · 广州 · 深圳)"><div ref="deployRef" style="height:300px"></div></el-card></el-col>
     </el-row>
     <div class="prm-table-note" style="margin-top:12px">注:数据产权概览跨域聚合确权、授权、台账核心指标。资产卡片由数据资产管理平台维护,本模块不增删资产;故部门维度以「确权覆盖率/授权率」(产权进度口径,分母=纳管资产数)呈现,而非资产库存数。含趋势/同比环比/系统部署单位多维统计(南网打√口径,不按地理省域统计),支撑公司数据产权全貌战略决策。</div>
+
+    <div class="lk-title">权益闭环联动治理(确权↔授权↔监测)</div>
+    <el-row :gutter="16">
+      <el-col :span="6" :sm="12" :xs="24"><el-card shadow="hover" class="lk"><div class="st"><b class="orange">{{ lk.reConfirmCount }}</b><span>重确权工单(联动派生)</span></div></el-card></el-col>
+      <el-col :span="6" :sm="12" :xs="24"><el-card shadow="hover" class="lk"><div class="st"><b class="red">{{ lk.suspendedCount }}</b><span>熔断暂停证书</span></div></el-card></el-col>
+      <el-col :span="6" :sm="12" :xs="24"><el-card shadow="hover" class="lk"><div class="st"><b class="orange">{{ lk.expiring }}</b><span>授权到期预警(30天)</span></div></el-card></el-col>
+      <el-col :span="6" :sm="12" :xs="24"><el-card shadow="hover" class="lk"><div class="st"><b class="green">{{ lk.closureRate }}%</b><span>风险整改闭环率</span></div></el-card></el-col>
+    </el-row>
   </div>
 </template>
 <script setup>
@@ -52,7 +54,7 @@ const ov = reactive({ totalAssets: 0, confirmRate: 0 })
 const cf = reactive({ cardCount: 0, passRate: 0 })
 const au = reactive({ certCount: 0, effectiveRate: 0 })
 const lk = reactive({ reConfirmCount: 0, suspendedCount: 0, expiring: 0, closureRate: 0 })
-const rtRef = ref(); const csRef = ref(); const amRef = ref()
+const rtRef = ref(); const csRef = ref(); const amRef = ref(); const funnelRef = ref()
 const trendRef = ref(); const authStatusRef = ref(); const deployRef = ref()
 const pairs = (m) => Object.entries(m || {}).map(([name, value]) => ({ name, value }))
 async function loadLinkage(c, a) {
@@ -103,6 +105,26 @@ async function load() {
       { name: '确权覆盖率', type: 'bar', data: du.map(d => d.confirmRate), barMaxWidth: 28, itemStyle: { color: C.blue } },
       { name: '授权率', type: 'bar', data: du.map(d => d.authRate), barMaxWidth: 28, itemStyle: { color: C.green } }
     ]
+  })
+
+  // 确权·授权转化漏斗:由各部署单位覆盖率汇总分子分母(纳管资产 → 已确权 → 已授权),全景反映产权进度链路
+  const sum = (k) => du.reduce((s, x) => s + (x[k] || 0), 0)
+  const managed = sum('total'); const confirmed = sum('confirmed'); const authorized = sum('authorized')
+  const pct = (n) => (managed > 0 ? Math.round(n * 1000 / managed) / 10 : 0)
+  initChart(funnelRef.value,{
+    color: [C.gray, C.blue, C.green],
+    tooltip: { trigger: 'item', formatter: (p) => `${p.name}: ${p.value}(占纳管 ${pct(p.value)}%)` },
+    legend: { bottom: 0, data: ['纳管资产', '已确权', '已授权'] },
+    series: [{
+      name: '确权授权转化', type: 'funnel', left: '8%', right: '8%', top: 16, bottom: 44,
+      min: 0, max: managed || 1, minSize: '24%', maxSize: '100%', sort: 'descending', gap: 2,
+      label: { show: true, position: 'inside', formatter: (p) => `${p.name} ${p.value}` },
+      data: [
+        { value: managed, name: '纳管资产' },
+        { value: confirmed, name: '已确权' },
+        { value: authorized, name: '已授权' }
+      ]
+    }]
   })
 }
 onMounted(load)
