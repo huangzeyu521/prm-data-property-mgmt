@@ -24,6 +24,10 @@ mybatis-plus:
 
 prm:
   db-type: MYSQL
+  # RBAC 强制:默认开启(生产/演示,@RequiresRole 端点逐角色校验,杜绝越权访问系统管理/审批端点);
+  # 单测走 test profile 置 false(兼容既有无 token MockMvc 调用)。PRM_AUTH_ENABLED 可显式覆盖。
+  auth:
+    enabled: ${PRM_AUTH_ENABLED:true}
   # 真实文件上传(#1)本地存储目录;生产以对象存储(OBS/MinIO)网关覆盖
   storage:
     dir: ${PRM_STORAGE_DIR:/app/_ait_storage}
