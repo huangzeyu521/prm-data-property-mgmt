@@ -12,10 +12,12 @@ import path from 'node:path'
  * 让基础设施问题在 setup 阶段就以清晰信息失败,而非淹没在 19 条 500 里。
  */
 async function preflightBackends() {
+  // 用 127.0.0.1(非 localhost):node fetch 会先解析 localhost→IPv6 ::1,而 Docker 端口绑 IPv4 → 误判不可达。
+  // 探活 URL 取确定返回 200 的端点(服务"起着但全 404"也应能区分)。
   const probes = [
-    { name: 'dpr-ledger-service(9101)', url: 'http://localhost:9101/api/dpr/ledger/property/page?current=1&size=1' },
-    { name: 'dpr-confirm-service(9102)', url: 'http://localhost:9102/api/dpr/confirm/scenario/list' },
-    { name: 'dpr-authorize-service(9103)', url: 'http://localhost:9103/api/dpr/auth/scenario/list' },
+    { name: 'dpr-ledger-service(9101)', url: 'http://127.0.0.1:9101/api/dpr/ledger/statistics' },
+    { name: 'dpr-confirm-service(9102)', url: 'http://127.0.0.1:9102/api/dpr/confirm/apply/page' },
+    { name: 'dpr-authorize-service(9103)', url: 'http://127.0.0.1:9103/api/dpr/auth/scenario/list' },
   ]
   const down = []
   for (const p of probes) {

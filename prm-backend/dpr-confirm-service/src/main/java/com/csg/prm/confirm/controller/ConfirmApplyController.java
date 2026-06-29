@@ -117,8 +117,9 @@ public class ConfirmApplyController {
     // 须含 precheck/manager/director,否则人工预审/主管复核/经理终审节点的单角色账号会被控制器 403 挡死(逐节点门禁失效)。
     @com.csg.prm.common.auth.RequiresRole({"precheck", "review", "manager", "director", "admin"})
     @PostMapping("/{applyId}/approve")
-    public Result<String> approve(@PathVariable String applyId) {
-        return Result.success(service.approve(applyId));
+    public Result<String> approve(@PathVariable String applyId,
+                                  @RequestParam(required = false) String opinion) {
+        return Result.success(service.approve(applyId, opinion));
     }
 
     @com.csg.prm.common.auth.RequiresRole({"precheck", "review", "manager", "director", "admin"})

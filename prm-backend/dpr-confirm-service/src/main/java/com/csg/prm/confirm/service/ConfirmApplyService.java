@@ -44,6 +44,12 @@ public interface ConfirmApplyService {
      */
     String approve(String applyId);
 
+    /**
+     * 审批通过(可录审核意见)。合规节点(50)以该意见作为「权益认定意见」(空则用规范默认);各节点意见均留痕进度。
+     * @param opinion 审批人意见(合规小组的权益认定意见 / 主管·经理审核意见),可空
+     */
+    String approve(String applyId, String opinion);
+
     /** 驳回 */
     void reject(String applyId, String reason);
 

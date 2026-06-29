@@ -276,16 +276,25 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
     @Override
     @Transactional
     public String approve(String applyId) {
+        return approve(applyId, null);
+    }
+
+    @Override
+    @Transactional
+    public String approve(String applyId, String reviewerOpinion) {
         ConfirmApply apply = require(applyId);
         String from = apply.getStatus();
         assertNodeRole(from);
         if (!flowEngine.canAdvance(FlowDefinitions.DPR_CONFIRM, from)) {
             throw new BusinessException("当前状态不可审批:" + from);
         }
-        // 节点50合规审核通过的随状态副作用:生成表3/表4与认定意见
-        String opinion = null;
+        // 节点50合规审核通过的随状态副作用:生成表3/表4与认定意见(优先用合规小组录入的认定意见,空则用规范默认)
+        // 其余节点(预审/主管/经理):审批人录入的审核意见随节点留痕。
+        String opinion = StringUtils.hasText(reviewerOpinion) ? reviewerOpinion : null;
         if (ConfirmApply.STATUS_COMPLIANCE.equals(from)) {
-            if (!StringUtils.hasText(apply.getRecognitionOpinion())) {
+            if (StringUtils.hasText(reviewerOpinion)) {
+                apply.setRecognitionOpinion(reviewerOpinion);
+            } else if (!StringUtils.hasText(apply.getRecognitionOpinion())) {
                 apply.setRecognitionOpinion("合规管控小组审核通过,权属认定符合三权分置要求");
             }
             opinion = apply.getRecognitionOpinion();
@@ -293,8 +302,10 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
         }
         // 由流程引擎推进(去除硬编码 switch):合规->主管->经理->制卡完成
         FlowTransition t = flowEngine.advance(FlowDefinitions.DPR_CONFIRM, applyId, from);
-        updateNode(applyId, t.nextState(), nodeOf(t.nextState()), null, opinion);
-        // 流转留痕 + 进度通知(责任人=本节点审批人)
+        // updateNode 第5参写入 recognitionOpinion 列:仅合规节点写认定意见,其余节点传 null(MyBatis-Plus 不更新 null,避免被主管/经理意见覆盖)
+        String persistOpinion = ConfirmApply.STATUS_COMPLIANCE.equals(from) ? apply.getRecognitionOpinion() : null;
+        updateNode(applyId, t.nextState(), nodeOf(t.nextState()), null, persistOpinion);
+        // 流转留痕 + 进度通知(责任人=本节点审批人):各节点审批人意见均留痕
         flowLogService.record(apply, from, t.nextState(), responderOf(from), opinion);
         // 终态(节点80制卡):生成权益卡片并回写台账(EquityCardService 内完成)
         if (!t.terminal()) {

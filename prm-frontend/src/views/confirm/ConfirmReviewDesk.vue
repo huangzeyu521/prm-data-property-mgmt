@@ -328,8 +328,14 @@ async function load() {
   try { const r = await pageConfirmApply({ current: 1, size: 100 }); rows.value = r.records || [] } finally { loading.value = false }
 }
 async function onApprove(row, fromDrawer) {
-  const cardId = await approveConfirm(row.applyId)
-  ElMessage.success(cardId ? '终审通过,已生成权益卡片' : '审批通过,进入下一环节')
+  // 合规审核节点录入「权益认定意见」(BA-03 节点50 合规小组核心产出),其余节点录入「审核意见」;可空则用规范默认
+  const isCompliance = row.status === '合规审核中'
+  const label = isCompliance ? '权益认定意见' : '审核意见'
+  const { value } = await ElMessageBox.prompt(`请输入${label}(可空,默认按规范填充)`, label,
+    { inputType: 'textarea', inputValue: isCompliance ? '权属认定符合三权分置要求,确权资料合规、权益识别完整' : '同意' }).catch(() => ({ value: undefined }))
+  if (value === undefined) return // 取消
+  const cardId = await approveConfirm(row.applyId, value || '')
+  ElMessage.success(cardId ? '终审通过,已生成权益卡片' : (isCompliance ? '合规审核通过,已生成表3/表4及认定意见' : '审批通过,进入下一环节'))
   if (fromDrawer) drawer.value = false
   load()
 }

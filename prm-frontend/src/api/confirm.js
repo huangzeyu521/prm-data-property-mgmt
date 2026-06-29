@@ -17,7 +17,7 @@ export const confirmHistoryExportUrl = (params) => {
 export const batchSubmitConfirm = (ids) => request.post('/dpr/confirm/apply/batch-submit', ids)
 export const batchApproveConfirm = (ids) => request.post('/dpr/confirm/apply/batch-approve', ids)
 export const batchRejectConfirm = (ids, reason) => request.post('/dpr/confirm/apply/batch-reject', ids, { params: { reason } })
-export const approveConfirm = (applyId) => request.post(`/dpr/confirm/apply/${applyId}/approve`)
+export const approveConfirm = (applyId, opinion) => request.post(`/dpr/confirm/apply/${applyId}/approve`, null, { params: { opinion } })
 export const rejectConfirm = (applyId, reason) =>
   request.post(`/dpr/confirm/apply/${applyId}/reject`, null, { params: { reason } })
 // 申请人主动撤回(审批中 -> 已撤回中间态),撤回后可重新编辑提交
