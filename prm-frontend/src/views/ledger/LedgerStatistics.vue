@@ -16,15 +16,15 @@
     </el-card>
 
     <el-row :gutter="16" style="margin-bottom:16px">
-      <el-col :span="8"><el-card header="各子公司 确权覆盖率 / 授权率"><div ref="subRef" style="height:300px"></div></el-card></el-col>
-      <el-col :span="8"><el-card header="已确权 · 三权分置结构"><div ref="rtRef" style="height:300px"></div></el-card></el-col>
-      <el-col :span="8"><el-card header="按确权状态分布"><div ref="csRef" style="height:300px"></div></el-card></el-col>
+      <el-col :span="12"><el-card header="已确权 · 三权分置结构"><div ref="rtRef" style="height:300px"></div></el-card></el-col>
+      <el-col :span="12"><el-card header="按确权状态分布"><div ref="csRef" style="height:300px"></div></el-card></el-col>
     </el-row>
-    <el-card header="各系统部署单位 确权覆盖率 / 授权率(总部 · 超高压 · 双调 · 五省网 · 广州 · 深圳)" style="margin-bottom:16px">
+    <el-card header="各系统部署单位 确权覆盖率 / 授权率(总部 · 超高压 · 双调 · 广东 · 广西 · 云南 · 贵州 · 海南 · 广州 · 深圳)" style="margin-bottom:16px">
       <div ref="deployRef" style="height:300px"></div>
     </el-card>
     <el-row :gutter="16">
       <el-col :span="12"><el-card header="按授权状态分布"><div ref="authRef" style="height:300px"></div></el-card></el-col>
+      <el-col :span="12"><el-card header="确权 · 授权转化漏斗(纳管 → 已确权 → 已授权)"><div ref="funnelRef" style="height:300px"></div></el-card></el-col>
     </el-row>
   </div>
 </template>
@@ -36,7 +36,7 @@ import { CHART_COLORS, C } from '@/lib/chartPalette'
 import { getLedgerStatistics } from '@/api/ledger'
 
 const d = reactive({ totalArchive: 0, mom: null, yoy: null })
-const trendRef = ref(); const subRef = ref(); const rtRef = ref(); const csRef = ref(); const deployRef = ref(); const authRef = ref()
+const trendRef = ref(); const rtRef = ref(); const csRef = ref(); const deployRef = ref(); const authRef = ref(); const funnelRef = ref()
 const pairs = (m) => Object.entries(m || {}).map(([name, value]) => ({ name, value }))
 const fmtRate = (r) => (r == null ? '—' : (r > 0 ? '+' : '') + r + '%')
 const rateClass = (r) => (r == null ? '' : r > 0 ? 'up' : r < 0 ? 'down' : '')
@@ -90,12 +90,32 @@ async function load() {
       { name: '环比%', type: 'line', yAxisIndex: 1, data: t.map(x => x.momRate), connectNulls: true, smooth: true, itemStyle: { color: C.gold } }
     ]
   })
-  initChart(subRef.value,coverageBarOpt(res.coverageBySubsidiary || []))
   // 系统部署单位:固定 10 桶(后端按打√清单顺序零填充),保持服务端顺序不再二次排序;率口径
   initChart(deployRef.value,coverageBarOpt(res.coverageByDeploymentUnit || []))
   initChart(rtRef.value,pieOpt(pairs(res.byRightType), ['40%', '70%'], '档案数'))
   initChart(csRef.value,pieOpt(pairs(res.byConfirmStatus), '65%', '档案数'))
   initChart(authRef.value,pieOpt(pairs(res.byAuthStatus), '65%', '档案数'))
+
+  // 确权·授权转化漏斗:由各部署单位覆盖率汇总分子分母(纳管资产 → 已确权 → 已授权),反映产权进度链路
+  const du = res.coverageByDeploymentUnit || []
+  const sum = (k) => du.reduce((s, x) => s + (x[k] || 0), 0)
+  const managed = sum('total'); const confirmed = sum('confirmed'); const authorized = sum('authorized')
+  const pct = (n) => (managed > 0 ? Math.round(n * 1000 / managed) / 10 : 0)
+  initChart(funnelRef.value,{
+    color: [C.gray, C.blue, C.green],
+    tooltip: { trigger: 'item', formatter: (p) => `${p.name}: ${p.value}(占纳管 ${pct(p.value)}%)` },
+    legend: { bottom: 0, data: ['纳管资产', '已确权', '已授权'] },
+    series: [{
+      name: '确权授权转化', type: 'funnel', left: '8%', right: '8%', top: 16, bottom: 44,
+      min: 0, max: managed || 1, minSize: '24%', maxSize: '100%', sort: 'descending', gap: 2,
+      label: { show: true, position: 'inside', formatter: (p) => `${p.name} ${p.value}` },
+      data: [
+        { value: managed, name: '纳管资产' },
+        { value: confirmed, name: '已确权' },
+        { value: authorized, name: '已授权' }
+      ]
+    }]
+  })
 }
 onMounted(load)
 </script>

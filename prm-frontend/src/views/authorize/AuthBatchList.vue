@@ -13,7 +13,7 @@
             <el-option v-for="s in statuses" :key="s" :label="s" :value="s" />
           </el-select>
         </el-form-item>
-        <el-form-item><el-button type="primary" @click="load">查询</el-button><el-button type="primary" @click="onAdd">新增清单</el-button></el-form-item>
+        <el-form-item><el-button type="primary" @click="load">查询</el-button><el-button v-if="isMaintainer" type="primary" @click="onAdd">新增清单</el-button></el-form-item>
       </el-form>
     </div>
     <div class="prm-table-card">
@@ -30,9 +30,9 @@
         <el-table-column label="操作" width="300" fixed="right">
           <template #default="{ row }">
             <el-button link type="info" @click="onDetail(row)">明细(表6)</el-button>
-            <el-button link type="primary" :disabled="row.listStatus !== '草案'" @click="onSubmit(row)">提交申报稿</el-button>
+            <el-button v-if="isMaintainer" link type="primary" :disabled="row.listStatus !== '草案'" @click="onSubmit(row)">提交申报稿</el-button>
             <el-button v-if="isApprover" link type="success" :disabled="row.listStatus !== '申报稿'" @click="onApprove(row)">领导小组批准</el-button>
-            <el-button link type="warning" :disabled="row.listStatus !== '批准'" @click="onGenAgreement(row)">生成运营授权协议</el-button>
+            <el-button v-if="isMaintainer" link type="warning" :disabled="row.listStatus !== '批准'" @click="onGenAgreement(row)">生成运营授权协议</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -100,6 +100,9 @@ import { currentRole } from '@/lib/roles'
 // 申报人只做 新增/提交申报稿;批准属审批角色(领导小组办公室),与后端 @RequiresRole 一致,隐藏批准按钮避免误点 403
 // 清单级终批=领导小组办公室专属(BA-03 node90);数字化部主管/经理/副总的审核在明细链逐项完成,不在清单级
 const isApprover = ['leadership', 'admin', 'all'].includes(currentRole())
+// 清单维护(新增/提交申报稿/生成协议)是申报人(数字化部)职责;副总/经理/主管/合规/领导小组在此页只查看,
+// 其授权审核在「授权审核台」明细链逐项完成。隐藏维护按钮,避免越职误操作(与 isApprover 同口径分层)。
+const isMaintainer = ['apply', 'admin', 'all'].includes(currentRole())
 const statuses = ['草案', '申报稿', '批准']
 const q = reactive({ current: 1, size: 10, listYear: '', listStatus: '' })
 const rows = ref([]); const total = ref(0); const loading = ref(false)

@@ -35,7 +35,7 @@
       <el-col :span="8" :sm="24" :xs="24"><el-card header="授权状态分布"><div ref="authStatusRef" style="height:320px"></div></el-card></el-col>
     </el-row>
     <el-row :gutter="16" style="margin-top:16px">
-      <el-col :span="24"><el-card header="各系统部署单位 确权覆盖率 / 授权率(总部 · 超高压 · 双调 · 五省网 · 广州 · 深圳)"><div ref="deployRef" style="height:300px"></div></el-card></el-col>
+      <el-col :span="24"><el-card header="各系统部署单位 确权覆盖率 / 授权率(总部 · 超高压 · 双调 · 广东 · 广西 · 云南 · 贵州 · 海南 · 广州 · 深圳)"><div ref="deployRef" style="height:300px"></div></el-card></el-col>
     </el-row>
     <div class="prm-table-note" style="margin-top:12px">注:数据产权概览跨域聚合确权、授权、台账核心指标。资产卡片由数据资产管理平台维护,本模块不增删资产;故部门维度以「确权覆盖率/授权率」(产权进度口径,分母=纳管资产数)呈现,而非资产库存数。含趋势/同比环比/系统部署单位多维统计(南网打√口径,不按地理省域统计),支撑公司数据产权全貌战略决策。</div>
   </div>

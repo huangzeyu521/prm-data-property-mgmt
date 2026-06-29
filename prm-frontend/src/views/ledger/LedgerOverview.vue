@@ -20,7 +20,7 @@
             </el-card>
           </el-col>
           <el-col :span="12">
-            <el-card shadow="never" header="各子公司 确权覆盖率 / 授权率">
+            <el-card shadow="never" header="各系统部署单位 确权覆盖率 / 授权率">
               <div ref="barRef" style="height: 320px"></div>
             </el-card>
           </el-col>
@@ -50,7 +50,7 @@ function toPairs(map) {
 }
 
 async function load() {
-  // 概览(确权率卡片+产权类型)与台账统计(各子公司覆盖率)并行;率口径而非资产库存数
+  // 概览(确权率卡片+产权类型)与台账统计(各系统部署单位覆盖率)并行;率口径而非资产库存数
   const [res, st] = await Promise.all([getOverview(), getLedgerStatistics()])
   Object.assign(data, res)
   await nextTick()
@@ -59,8 +59,8 @@ async function load() {
     legend: { bottom: 0 },
     series: [{ name: '产权类型', type: 'pie', radius: ['40%', '70%'], data: toPairs(res.rightTypeDistribution) }]
   })
-  // 各子公司 确权覆盖率/授权率(资产卡片由资产平台维护本模块不增删,故用率而非资产库存数)
-  const cov = st.coverageBySubsidiary || []
+  // 各系统部署单位 确权覆盖率/授权率(南网打√10桶恒显;率而非资产库存数,资产卡片由资产平台维护本模块不增删)
+  const cov = st.coverageByDeploymentUnit || []
   initChart(barRef.value, {
     color: CHART_COLORS,
     tooltip: { trigger: 'axis', valueFormatter: (v) => (v == null ? '—' : v + '%') },
