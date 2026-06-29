@@ -215,7 +215,7 @@ const openeds = computed(() => {
   background: #fff;
 }
 .prm-crumb-right { margin-left: auto; display: flex; align-items: center; gap: 12px; min-width: 0; }
-.prm-goal { font-size: 12px; color: #8a8a8a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 460px; }
+.prm-goal { font-size: 12px; color: var(--prm-color-text-weak); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 460px; }
 /* 统一页面操作区:面包屑行右上角,各页主操作按钮传送至此 */
 .prm-page-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
 .prm-page-actions:empty { display: none; }
