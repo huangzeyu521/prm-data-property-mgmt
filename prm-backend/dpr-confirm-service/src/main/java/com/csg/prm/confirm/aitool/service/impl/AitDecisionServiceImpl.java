@@ -7,7 +7,7 @@ import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.ResponseCode;
 import com.csg.prm.common.crypto.Sm3Util;
 import com.csg.prm.common.exception.BusinessException;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.aitool.entity.AitConflict;
 import com.csg.prm.confirm.aitool.entity.AitDecision;
 import com.csg.prm.confirm.aitool.entity.AitKgClaim;
@@ -439,7 +439,7 @@ public class AitDecisionServiceImpl implements AitDecisionService {
     }
 
     @Override
-    public PageResult<AitDecision> page(PageQuery query, String prediction) {
+    public PageResult<AitDecision> page(PageRequest query, String prediction) {
         LambdaQueryWrapper<AitDecision> w = new LambdaQueryWrapper<>();
         w.eq(StringUtils.hasText(prediction), AitDecision::getPrediction, prediction)
                 .orderByDesc(AitDecision::getCreateTime);

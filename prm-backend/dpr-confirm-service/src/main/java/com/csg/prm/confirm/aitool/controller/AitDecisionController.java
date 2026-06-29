@@ -2,7 +2,7 @@ package com.csg.prm.confirm.aitool.controller;
 
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.Result;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.aitool.entity.AitDecision;
 import com.csg.prm.confirm.aitool.service.AitDecisionService;
 import jakarta.validation.Valid;
@@ -39,7 +39,7 @@ public class AitDecisionController {
     }
 
     @GetMapping("/page")
-    public Result<PageResult<AitDecision>> page(@Valid PageQuery query,
+    public Result<PageResult<AitDecision>> page(@Valid PageRequest query,
                                            @RequestParam(required = false) String prediction) {
         return Result.success(service.page(query, prediction));
     }

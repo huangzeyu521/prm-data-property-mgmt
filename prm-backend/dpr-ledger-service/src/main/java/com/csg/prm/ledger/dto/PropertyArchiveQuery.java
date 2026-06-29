@@ -1,11 +1,11 @@
 package com.csg.prm.ledger.dto;
 
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 
 /**
  * 产权档案多维查询条件(对应"产权信息查询筛选"页面)。
  */
-public class PropertyArchiveQuery extends PageQuery {
+public class PropertyArchiveQuery extends PageRequest {
 
     /** 资产名称模糊匹配 */
     private String assetName;

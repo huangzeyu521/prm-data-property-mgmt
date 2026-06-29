@@ -28,13 +28,20 @@
           </el-alert>
           <el-form-item label="授权年度" required><el-input v-model="listForm.listYear" placeholder="如 2026" /></el-form-item>
           <el-form-item label="申请主体(被授权方)" required>
-            <el-input v-model="listForm.granteeOrg" placeholder="表5/表6 申请单位:本批数据统一授给谁(批量共享,逐条沿用)" clearable />
+            <el-select v-if="!externalGrantee" v-model="listForm.granteeOrg" filterable allow-create default-first-option clearable
+              placeholder="选择被授权方(南网组织;搜不到可直接输入)— 本批数据统一授给谁" style="width:100%">
+              <el-option v-for="o in orgOptions" :key="o.id" :label="o.bizOrgName" :value="o.bizOrgName" />
+            </el-select>
+            <el-input v-else v-model="listForm.granteeOrg" placeholder="外部被授权主体名称(政府/外部企业/社会组织)" clearable />
+            <div style="margin-top:4px">
+              <el-checkbox v-model="externalGrantee" @change="listForm.granteeOrg = ''">被授权方为外部主体(不在南网组织结构内;对外经营权另备案附录G)</el-checkbox>
+            </div>
           </el-form-item>
           <el-form-item label="联系人/单位主管" required>
-            <el-input v-model="listForm.contactPerson" placeholder="表5 申请单位主管 / 表6 联络人(批量共享)" clearable />
+            <el-input v-model="listForm.contactPerson" placeholder="表6 联络人/单位主管(批量共享)" clearable />
           </el-form-item>
           <el-form-item label="联系方式" required>
-            <el-input v-model="listForm.contactInfo" placeholder="表5/表6 联系方式(电话/邮箱)" clearable />
+            <el-input v-model="listForm.contactInfo" placeholder="表6 联系方式(电话/邮箱)" clearable />
           </el-form-item>
           <el-divider content-position="left" style="margin:8px 0">
             <span style="font-size:12px;color:var(--prm-color-text-weak)">批量默认(逐条加项时自动带入,可逐项调整)</span>
@@ -44,11 +51,12 @@
               <el-option v-for="t in rightTypes" :key="t" :label="t" :value="t" />
             </el-select>
             <div style="font-size:12px;color:var(--prm-color-text-weak);line-height:1.5;margin-top:2px">
-              授权仅授「使用权 / 经营权」两类;数据持有权经确权认定取得,不在授权范围(三权分置)。
+              授权仅授「使用权 / 经营权」两类;数据持有权经确权认定取得,不在授权范围(三权分置)。<br/>
+              可授数据集合由确权资源池决定(先确后授);此处选整批默认,逐项可调。
             </div>
           </el-form-item>
           <el-form-item label="默认使用场景"><el-input v-model="listForm.scenario" placeholder="整批默认使用场景及目的" clearable /></el-form-item>
-          <el-form-item label="默认业务域"><el-input v-model="listForm.businessDomain" placeholder="营销/生产/调度/财务...(整批默认,表5/表6 所属业务域)" clearable /></el-form-item>
+          <!-- 业务域=数据/资产属性(表5「所属业务域」),由 step2 选中的数据表从确权目录逐表带出,不在此手填(避免与真实数据域冲突) -->
           <el-form-item label="默认授权时效">
             <el-select v-model="listForm.validTerm" style="width:100%" placeholder="默认两年(时长)">
               <el-option v-for="t in validTerms" :key="t" :label="t" :value="t" />
@@ -66,7 +74,7 @@
           <el-button type="primary" size="large" @click="openPicker">① 从确权目录批量选取数据资产</el-button>
           <span class="batch-primary-hint">
             目录按「选系统 → 选模块 → 选库表」展示,且仅列<b>当前权益类型可授</b>的已确权数据表(经营权另需在对外开放目录);
-            勾选后自动套用清单头默认(被授权方/场景/时效/业务域)+ 确权带出(第三方/隐私),可跨系统累加一次加入。
+            勾选后自动套用清单头默认(被授权方/场景/时效)+ 确权带出(业务域/第三方/隐私),可跨系统累加一次加入。
           </span>
         </div>
         <div v-if="requiredChecklist.length" style="margin:8px 0 4px">
@@ -244,6 +252,7 @@ import { useAiThinking } from '@/composables/useAiThinking'
 import { AI_PHASES } from '@/lib/aiPhases'
 const aiThink = useAiThinking()
 import { pageEquityCard, getRightsFacts } from '@/api/confirm'
+import { listOrg } from '@/api/org'
 
 const router = useRouter()
 const rightTypes = ['数据加工使用权', '数据产品经营权']
@@ -266,7 +275,7 @@ const creating = ref(false); const submitting = ref(false)
 const batchListId = ref(''); const listNo = ref('')
 const items = ref([])
 // 清单头(批量级):被授权方为批量共享;权益类型/场景/时效为整批默认,加项时带入(资源池按权益类型过滤)
-const listForm = reactive({ listYear: '', granteeOrg: '', contactPerson: '', contactInfo: '', rightType: '', scenario: '', validTerm: '两年', businessDomain: '', remark: '' })
+const listForm = reactive({ listYear: '', granteeOrg: '', contactPerson: '', contactInfo: '', rightType: '', scenario: '', validTerm: '两年', remark: '' })
 function emptyItem() {
   return { assetId: '', assetName: '', tableCode: '', systemName: '', schemaName: '', equityCardId: '', granteeOrg: '', rightType: '', scenario: '', validTerm: '两年', validDate: '', businessDomain: '', thirdPartySource: '', sensitiveType: '', crossRegion: false, applicantManager: '', contactInfo: '' }
 }
@@ -329,11 +338,17 @@ async function doUploadBatchItem(materialName, file) {
     ElMessage.success(`已上传「${materialName}」`); refreshBatchMaterials()
   } finally { matUploading.value = false }
 }
+// 被授权方组织选择器:接南网真实组织树(listOrg);外部主体走自由文本例外(对外经营权附录G)
+const orgOptions = ref([])
+const externalGrantee = ref(false)
 onMounted(async () => {
   try {
     const rules = await listAuthMaterialRules('批量')
     if (Array.isArray(rules) && rules.length) materialRules.value = rules
   } catch (e) { /* 规则接口不可用 → requiredChecklist 自动用内置兜底,不丢指引 */ }
+  try {
+    orgOptions.value = (await listOrg()) || []
+  } catch (e) { /* 组织接口不可用 → 选择器降级为可输入(allow-create),不阻断申报 */ }
 })
 
 // 合规校验闭环:清单明细变化即让上次校验失效(必须重新校验才能提交)
@@ -404,7 +419,7 @@ async function confirmPick() {
         systemName: lf.systemName, schemaName: lf.schemaName, equityCardId: lf.equityCardId,
         granteeOrg: listForm.granteeOrg, rightType: lf.rightType || listForm.rightType,
         scenario: listForm.scenario, validDate: expiryOf(listForm.validTerm),
-        businessDomain: lf.businessDomain || f.businessDomain || listForm.businessDomain,
+        businessDomain: lf.businessDomain || f.businessDomain || '', // 业务域由确权目录(lf)优先、确权事实(f)兜底带出,不再用清单头手填默认
         thirdPartySource: f.thirdPartySource, sensitiveType: f.sensitiveType,
         crossRegion: isCross, applicantManager: listForm.contactPerson, contactInfo: listForm.contactInfo }
       const k = dupKey(it)
@@ -439,7 +454,7 @@ const cardOpts = ref([])
 let cardsLoaded = false
 async function loadCards() {
   if (cardsLoaded) return
-  const r = await pageEquityCard({ current: 1, size: 500 })
+  const r = await pageEquityCard({ current: 1, size: 100 })
   cardOpts.value = r.records || []
   cardsLoaded = true
 }
@@ -479,7 +494,7 @@ async function fillDemo() {
       const f = await deriveFacts(aid)
       const it = { ...emptyItem(), assetId: aid, assetName: name, systemName: sys, equityCardId: card,
         granteeOrg: listForm.granteeOrg, rightType: listForm.rightType, scenario: listForm.scenario, validDate: expiryOf(listForm.validTerm),
-        businessDomain: listForm.businessDomain, thirdPartySource: f.thirdPartySource, sensitiveType: f.sensitiveType,
+        businessDomain: f.businessDomain, thirdPartySource: f.thirdPartySource, sensitiveType: f.sensitiveType,
         applicantManager: listForm.contactPerson, contactInfo: listForm.contactInfo }
       const k = dupKey(it)
       if (seen.has(k)) continue // 去重:同表+权益+场景已在清单
@@ -512,8 +527,8 @@ async function doSubmit() {
 
 function go(p) { router.push(p) }
 function reset() {
-  step.value = 0; submitted.value = false; batchListId.value = ''; listNo.value = ''; items.value = []; pickedLeaves.value = []
-  Object.assign(listForm, { listYear: '', granteeOrg: '', contactPerson: '', contactInfo: '', rightType: '', scenario: '', validTerm: '两年', businessDomain: '', remark: '' })
+  step.value = 0; submitted.value = false; externalGrantee.value = false; batchListId.value = ''; listNo.value = ''; items.value = []; pickedLeaves.value = []
+  Object.assign(listForm, { listYear: '', granteeOrg: '', contactPerson: '', contactInfo: '', rightType: '', scenario: '', validTerm: '两年', remark: '' })
 }
 </script>
 

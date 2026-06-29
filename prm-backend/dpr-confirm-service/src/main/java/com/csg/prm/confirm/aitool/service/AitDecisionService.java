@@ -1,7 +1,7 @@
 package com.csg.prm.confirm.aitool.service;
 
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.aitool.entity.AitDecision;
 
 /**
@@ -15,5 +15,5 @@ public interface AitDecisionService {
 
     AitDecision getByApply(String applyId);
 
-    PageResult<AitDecision> page(PageQuery query, String prediction);
+    PageResult<AitDecision> page(PageRequest query, String prediction);
 }

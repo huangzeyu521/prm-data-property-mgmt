@@ -2,7 +2,7 @@ package com.csg.prm.confirm.aitool.controller;
 
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.Result;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.aitool.entity.AitAuditBase;
 import com.csg.prm.confirm.aitool.entity.AitAuditResult;
 import com.csg.prm.confirm.aitool.entity.AitEvidence;
@@ -71,7 +71,7 @@ public class AitAuditAgentController {
 
     /** 3.2#5 审核台账分页(多维筛选)。 */
     @GetMapping("/ledger/page")
-    public Result<PageResult<AitAuditResult>> ledgerPage(@Valid PageQuery query,
+    public Result<PageResult<AitAuditResult>> ledgerPage(@Valid PageRequest query,
                                                     @RequestParam(required = false) String assetId,
                                                     @RequestParam(required = false) String dataClass,
                                                     @RequestParam(required = false) String riskLevel,

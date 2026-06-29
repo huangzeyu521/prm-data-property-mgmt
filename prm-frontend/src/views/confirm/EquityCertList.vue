@@ -228,7 +228,7 @@ function printCert() { window.print() }
 async function loadCerts() {
   loading.value = true
   try {
-    const [rc, rk] = await Promise.all([pageCert({ current: 1, size: 500 }), pageEquityCard({ current: 1, size: 500 })])
+    const [rc, rk] = await Promise.all([pageCert({ current: 1, size: 100 }), pageEquityCard({ current: 1, size: 100 })])
     certs.value = rc.records || []
     cards.value = rk.records || []
   } finally { loading.value = false }

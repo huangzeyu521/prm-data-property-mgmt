@@ -85,7 +85,7 @@ const pairs = (m) => Object.entries(m || {}).map(([name, value]) => ({ name, val
 // 授权证书生命周期:无专用 stats 接口,分页拉取后按状态聚合 + 到期接口取即将到期数
 async function loadCertStat() {
   try {
-    const r = await pageAuthCert({ current: 1, size: 500 })
+    const r = await pageAuthCert({ current: 1, size: 100 })
     const recs = r.records || []
     certStat.total = r.total || recs.length
     certStat.effective = recs.filter(c => c.certStatus === '生效').length

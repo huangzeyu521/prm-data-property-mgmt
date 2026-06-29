@@ -7,7 +7,7 @@ import com.csg.prm.common.api.ResponseCode;
 import com.csg.prm.common.context.UserContextHolder;
 import com.csg.prm.common.crypto.Sm3Util;
 import com.csg.prm.common.exception.BusinessException;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.aitool.service.AitParseConfigService;
 import com.csg.prm.confirm.aitool.service.AitParseRecordService;
 import com.csg.prm.confirm.aitool.entity.AitCompare;
@@ -1090,7 +1090,7 @@ public class AitMaterialServiceImpl implements AitMaterialService {
     }
 
     @Override
-    public PageResult<AitMaterial> page(PageQuery query, String batchNo, String parseStatus, String applyId) {
+    public PageResult<AitMaterial> page(PageRequest query, String batchNo, String parseStatus, String applyId) {
         LambdaQueryWrapper<AitMaterial> w = new LambdaQueryWrapper<>();
         w.eq(StringUtils.hasText(batchNo), AitMaterial::getBatchNo, batchNo)
                 .eq(StringUtils.hasText(parseStatus), AitMaterial::getParseStatus, parseStatus)

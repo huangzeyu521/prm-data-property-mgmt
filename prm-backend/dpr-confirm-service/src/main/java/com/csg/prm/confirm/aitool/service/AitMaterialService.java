@@ -1,7 +1,7 @@
 package com.csg.prm.confirm.aitool.service;
 
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.aitool.entity.AitCompare;
 import com.csg.prm.confirm.aitool.entity.AitDocSegment;
 import com.csg.prm.confirm.aitool.entity.AitMaterial;
@@ -65,7 +65,7 @@ public interface AitMaterialService {
     /** 解析结果与确权申请表单的比对差异 */
     List<AitCompare> compares(String materialId);
 
-    PageResult<AitMaterial> page(PageQuery query, String batchNo, String parseStatus, String applyId);
+    PageResult<AitMaterial> page(PageRequest query, String batchNo, String parseStatus, String applyId);
 
     /** #5 取材料的多粒度解析片段(granularity 可空=全部:PAGE/PARAGRAPH/CELL/TABLE/TITLE) */
     List<AitDocSegment> segments(String materialId, String granularity);

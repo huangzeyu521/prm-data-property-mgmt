@@ -52,7 +52,7 @@ class AitMaterialTest {
         m.setContent("权利主体广东电网,数据持有权,有效期3年,授权范围约定字段,自行生产,已盖章");
         String id = aitService.upload(m);
 
-        AitMaterial saved = aitService.page(new com.csg.prm.common.query.PageQuery(), null, null, applyId)
+        AitMaterial saved = aitService.page(new com.csg.prm.common.query.PageRequest(), null, null, applyId)
                 .getRecords().get(0);
         assertEquals("PDF", saved.getFileType());
         assertNotNull(saved.getFileHash());

@@ -1,8 +1,8 @@
 package com.csg.prm.ledger.monitor.dto;
 
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 
-public class MonitorRuleQuery extends PageQuery {
+public class MonitorRuleQuery extends PageRequest {
 
     private String ruleName;
     private String ruleCategory;

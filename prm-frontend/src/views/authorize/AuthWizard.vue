@@ -6,14 +6,13 @@
 <template>
   <div class="prm-page">
     <div class="prm-table-note" style="margin:0 0 12px">
-      注:一站式一事一议(专项)授权申请——填申请(表5) → 合规校验 → 提交审核,一条流程办完。后续多级审批 → 授权方/被授权方双签《运营授权协议(附录D)》 → 自动签发授权证书(对齐附录F §4.3)。
+      注:一站式一事一议(专项)授权申请——填写申请 → 合规校验 → 提交审核,一次办完申报。提交后进入多级审批(合规→业务部门→主管→经理→副总/总经理),经甲乙双签《数据运营授权协议(附录D)》后执行授权·记录。授权凭证为协议,非"证书"。
     </div>
 
-    <el-steps :active="step" finish-status="success" align-center class="wz-steps">
-      <el-step title="填写申请" description="表5 + 先确后授" />
-      <el-step title="合规校验" description="范围≤确权边界" />
-      <el-step title="提交审核" description="进入多级审批" />
-      <el-step title="完成" description="审批→双签→发证" />
+    <el-steps :active="submitted ? 3 : step" finish-status="success" align-center class="wz-steps">
+      <el-step title="填写申请" description="先确后授(表5 申请单)" />
+      <el-step title="合规校验" description="授权范围 ≤ 确权边界" />
+      <el-step title="确认并提交" description="提交进入多级审批" />
     </el-steps>
 
     <div class="wz-body">
@@ -216,19 +215,17 @@
         </el-result>
       </el-card>
 
-      <!-- 步骤4:完成 -->
-      <el-card v-show="step === 3" shadow="never">
-        <el-result icon="success" title="一事一议授权申请已提交" :sub-title="`申请 ${applyId} 已进入审批流`">
+      <!-- 提交成功页 + 后续流转进度时间轴(单一真相,对齐 35号文 附录C 表2 一事一议) -->
+      <el-card v-show="submitted" shadow="never">
+        <el-result icon="success" title="一事一议授权申请已提交" :sub-title="`申请 ${applyId} 已进入审批链,当前待「合规管控小组评审」`">
           <template #extra>
-            <div style="margin-bottom:10px">
-              <el-button type="success" @click="go('/dpr/auth/review?applyId=' + applyId)">去审核(授权审核提交)</el-button>
-              <el-button type="primary" plain @click="go('/dpr/auth/agreement-seal')">去协议签章(双签附录D)</el-button>
+            <div class="wz-progress">
+              <div class="wz-progress-t">后续流转进度(实时以「申请历史查询」为准)</div>
+              <AuthFlowProgress mode="single" current="compliance" />
             </div>
-            <div class="wz-flow">后续闭环:多级审批 → 授权方/被授权方双签《运营授权协议(附录D)》→ 自动签发授权证书 → 执行授权</div>
-            <div style="margin-top:14px">
-              <el-button type="primary" @click="go('/dpr/auth/review')">去审核台</el-button>
-              <el-button @click="go('/dpr/auth/agreement-seal')">协议双签</el-button>
-              <el-button @click="go('/dpr/auth/cert')">授权证书</el-button>
+            <div style="margin-top:6px">
+              <el-button type="primary" @click="go('/dpr/auth/history')">去申请历史查看进度</el-button>
+              <el-button @click="go('/dpr/auth/agreement-seal')">协议双签(附录D)</el-button>
               <el-button @click="reset">再发起一笔</el-button>
             </div>
           </template>
@@ -236,8 +233,8 @@
       </el-card>
     </div>
 
-    <PageActions>
-      <el-button v-if="step > 0 && step < 3" @click="step--">上一步</el-button>
+    <PageActions v-if="!submitted">
+      <el-button v-if="step > 0" @click="step--">上一步</el-button>
       <el-button v-if="step === 0" type="primary" :loading="saving" @click="next0">下一步</el-button>
       <el-button v-if="step === 1" type="primary" :disabled="!canSubmit" @click="step = 2">下一步</el-button>
       <el-tooltip v-if="step === 2 && !canSubmit" content="请先通过合规校验(全部红线合规)" placement="top">
@@ -257,6 +254,7 @@ import { aiAuthIntent } from '@/api/confirm'
 import { aiAuthMaterialCheck, aiAuthPreReview } from '@/api/authorize'
 import AiThinking from '@/components/AiThinking.vue'
 import PageActions from '@/components/PageActions.vue'
+import AuthFlowProgress from '@/components/AuthFlowProgress.vue'
 import { useAiThinking } from '@/composables/useAiThinking'
 import { openFilePreview } from '@/composables/useFilePreview'
 import { AI_PHASES } from '@/lib/aiPhases'
@@ -280,6 +278,8 @@ function expiryOf(term) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
 }
 const step = ref(0)
+// 提交后进入「提交成功页 + 进度时间轴」(创建/流转分离;流转属多主体跨周案件,不再当作向导第4步)
+const submitted = ref(false)
 const formRef = ref()
 const saving = ref(false)
 const checking = ref(false)
@@ -690,13 +690,13 @@ async function doSubmit() {
       const snapshot = { checkedAt: new Date().toISOString(), materialCheck: aiMatResult.value || null, ruleReport: checkResult.value || null }
       await saveAuthAiSnapshot(applyId.value, JSON.stringify(snapshot))
     } catch (e) { /* 快照失败不阻断提交 */ }
-    await submitAuth(applyId.value); step.value = 3
+    await submitAuth(applyId.value); submitted.value = true
   } finally { submitting.value = false }
 }
 
 function go(path) { router.push(path) }
 function reset() {
-  step.value = 0; applyId.value = ''; checkResult.value = null; needRecheck.value = false; editing.value = false; aiText.value = ''; aiTip.value = ''
+  step.value = 0; submitted.value = false; applyId.value = ''; checkResult.value = null; needRecheck.value = false; editing.value = false; aiText.value = ''; aiTip.value = ''
   Object.assign(form, empty())
 }
 </script>
@@ -704,6 +704,7 @@ function reset() {
 <style scoped>
 .wz-steps { max-width: 900px; margin: 8px auto 20px; }
 .wz-body { min-height: 320px; }
-.wz-flow { background: #f7f9ff; border-radius: 8px; padding: 10px 16px; color: var(--prm-color-text-secondary); font-size: 13px; display: inline-block; }
+.wz-progress { background: #f7f9ff; border-radius: 8px; padding: 14px 20px 6px; margin: 4px auto 12px; max-width: 560px; text-align: left; }
+.wz-progress-t { font-weight: 600; font-size: 13px; color: var(--prm-color-text); margin-bottom: 10px; }
 .auth-tip { font-size: 12px; color: var(--prm-color-text-weak); line-height: 1.6; }
 </style>

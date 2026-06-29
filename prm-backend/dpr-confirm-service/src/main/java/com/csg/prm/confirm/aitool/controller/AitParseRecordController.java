@@ -2,7 +2,7 @@ package com.csg.prm.confirm.aitool.controller;
 
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.Result;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.aitool.entity.AitParseRecord;
 import com.csg.prm.confirm.aitool.service.AitParseRecordService;
 import jakarta.validation.Valid;
@@ -32,7 +32,7 @@ public class AitParseRecordController {
     }
 
     @GetMapping("/page")
-    public Result<PageResult<AitParseRecord>> page(@Valid PageQuery query,
+    public Result<PageResult<AitParseRecord>> page(@Valid PageRequest query,
                                               @RequestParam(required = false) String fileName,
                                               @RequestParam(required = false) String field,
                                               @RequestParam(required = false) String operator) {

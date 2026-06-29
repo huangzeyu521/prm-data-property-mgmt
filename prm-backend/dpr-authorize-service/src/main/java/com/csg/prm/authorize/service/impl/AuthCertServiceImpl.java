@@ -14,7 +14,7 @@ import com.csg.prm.common.evidence.ChainEvidenceService;
 import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.common.org.Jurisdiction;
 import com.csg.prm.common.org.OrgService;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -201,7 +201,7 @@ public class AuthCertServiceImpl implements AuthCertService {
     }
 
     @Override
-    public PageResult<AuthCert> page(PageQuery query) {
+    public PageResult<AuthCert> page(PageRequest query) {
         LambdaQueryWrapper<AuthCert> wrapper = new LambdaQueryWrapper<>();
         wrapper.orderByDesc(AuthCert::getCreateTime);
         IPage<AuthCert> page = mapper.selectPage(query.toPage(), wrapper);

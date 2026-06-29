@@ -6,7 +6,7 @@ import com.csg.prm.authorize.entity.AuthCert;
 import com.csg.prm.authorize.service.AccountabilityService;
 import com.csg.prm.authorize.service.AuthCertService;
 import com.csg.prm.common.exception.BusinessException;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -51,7 +51,7 @@ class CertSuspendRenewTest {
         assertEquals(2, n, "应暂停该资产下全部生效证书");
 
         // 追责记录自动建账(待追责)
-        var accs = accountabilityService.page(new PageQuery(), null, "DA-SUSP-1");
+        var accs = accountabilityService.page(new PageRequest(), null, "DA-SUSP-1");
         assertEquals(2, accs.getTotal());
         assertEquals(Accountability.STATUS_PENDING, accs.getRecords().get(0).getHandleStatus());
         assertEquals("越权调用", accs.getRecords().get(0).getViolationType());
@@ -61,15 +61,15 @@ class CertSuspendRenewTest {
     void accountability_handle_close_loop() {
         String certId = genCert("DA-ACC-1", LocalDateTime.now().plusDays(90));
         certService.suspendByAsset("DA-ACC-1", "违规外发", "ALERT-ACC", "违规使用");
-        Accountability acc = accountabilityService.page(new PageQuery(), null, "DA-ACC-1").getRecords().get(0);
+        Accountability acc = accountabilityService.page(new PageRequest(), null, "DA-ACC-1").getRecords().get(0);
 
         accountabilityService.handle(acc.getAccountId(), "广州供电局数字化部", "已启动追责");
         assertEquals(Accountability.STATUS_HANDLING,
-                accountabilityService.page(new PageQuery(), null, "DA-ACC-1").getRecords().get(0).getHandleStatus());
+                accountabilityService.page(new PageRequest(), null, "DA-ACC-1").getRecords().get(0).getHandleStatus());
 
         accountabilityService.close(acc.getAccountId(), "已问责整改");
         assertEquals(Accountability.STATUS_DONE,
-                accountabilityService.page(new PageQuery(), null, "DA-ACC-1").getRecords().get(0).getHandleStatus());
+                accountabilityService.page(new PageRequest(), null, "DA-ACC-1").getRecords().get(0).getHandleStatus());
     }
 
     @Test

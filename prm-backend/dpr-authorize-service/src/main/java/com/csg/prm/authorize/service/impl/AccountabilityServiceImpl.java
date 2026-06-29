@@ -9,7 +9,7 @@ import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.ResponseCode;
 import com.csg.prm.common.context.UserContextHolder;
 import com.csg.prm.common.exception.BusinessException;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -64,7 +64,7 @@ public class AccountabilityServiceImpl implements AccountabilityService {
     }
 
     @Override
-    public PageResult<Accountability> page(PageQuery query, String handleStatus, String assetId) {
+    public PageResult<Accountability> page(PageRequest query, String handleStatus, String assetId) {
         LambdaQueryWrapper<Accountability> w = new LambdaQueryWrapper<>();
         w.eq(StringUtils.hasText(handleStatus), Accountability::getHandleStatus, handleStatus)
                 .eq(StringUtils.hasText(assetId), Accountability::getAssetId, assetId)

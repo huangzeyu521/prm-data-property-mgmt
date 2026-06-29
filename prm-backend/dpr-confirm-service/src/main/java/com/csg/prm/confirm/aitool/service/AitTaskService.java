@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.exception.BusinessException;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.aitool.entity.AitTask;
 import com.csg.prm.confirm.aitool.mapper.AitTaskMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -157,7 +157,7 @@ public class AitTaskService {
         runLog.log("操作", "AitTaskService", "暂停任务", taskId, null, null, "成功", taskId);
     }
 
-    public PageResult<AitTask> page(PageQuery query, String taskType, String status) {
+    public PageResult<AitTask> page(PageRequest query, String taskType, String status) {
         LambdaQueryWrapper<AitTask> w = new LambdaQueryWrapper<AitTask>()
                 .eq(StringUtils.hasText(taskType), AitTask::getTaskType, taskType)
                 .eq(StringUtils.hasText(status), AitTask::getStatus, status)

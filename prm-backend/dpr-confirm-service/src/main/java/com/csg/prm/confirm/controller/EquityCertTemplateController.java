@@ -3,7 +3,7 @@ package com.csg.prm.confirm.controller;
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.Result;
 import com.csg.prm.common.exception.BusinessException;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.entity.EquityCertTemplate;
 import com.csg.prm.confirm.service.EquityCertTemplateService;
 import jakarta.validation.Valid;
@@ -83,7 +83,7 @@ public class EquityCertTemplateController {
     }
 
     @GetMapping("/page")
-    public Result<PageResult<EquityCertTemplate>> page(@Valid PageQuery page,
+    public Result<PageResult<EquityCertTemplate>> page(@Valid PageRequest page,
                                                   @RequestParam(required = false) String templateName,
                                                   @RequestParam(required = false) String templateStatus) {
         return Result.success(service.page(page.getCurrent(), page.getSize(), templateName, templateStatus));

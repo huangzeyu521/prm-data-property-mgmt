@@ -4,7 +4,7 @@ import com.csg.prm.authorize.entity.AuthFiling;
 import com.csg.prm.authorize.service.AuthFilingService;
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.Result;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import jakarta.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -39,7 +39,7 @@ public class AuthFilingController {
     }
 
     @GetMapping("/page")
-    public Result<PageResult<AuthFiling>> page(@Valid PageQuery page,
+    public Result<PageResult<AuthFiling>> page(@Valid PageRequest page,
                                           @RequestParam(required = false) String filingStatus) {
         return Result.success(service.page(page.getCurrent(), page.getSize(), filingStatus));
     }

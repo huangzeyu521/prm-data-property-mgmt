@@ -2,7 +2,7 @@ package com.csg.prm.confirm.integration;
 
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.Result;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.integration.dto.AssetArchiveRowVO;
 import com.csg.prm.confirm.integration.dto.AssetEquityVO;
 import com.csg.prm.confirm.integration.dto.AssetPropertyVO;
@@ -60,7 +60,7 @@ public class AssetCardIntegrationController {
 
     /** 数据集产权档案管理:只读分页查询可见卡片的确权/授权概要(无新增)。 */
     @GetMapping("/archive")
-    public Result<PageResult<AssetArchiveRowVO>> archive(@Valid PageQuery query,
+    public Result<PageResult<AssetArchiveRowVO>> archive(@Valid PageRequest query,
                                                     @RequestParam(required = false) String keyword,
                                                     @RequestParam(required = false) String state) {
         return Result.success(archiveService.page(query, keyword, state));

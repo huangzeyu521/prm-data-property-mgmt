@@ -3,7 +3,7 @@ package com.csg.prm.authorize.service;
 import com.csg.prm.authorize.entity.AuthApply;
 import com.csg.prm.authorize.entity.AuthCert;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -22,7 +22,7 @@ public interface AuthCertService {
 
     void revoke(String certId);
 
-    PageResult<AuthCert> page(PageQuery query);
+    PageResult<AuthCert> page(PageRequest query);
 
     /**
      * 监测联动熔断:暂停某资产下所有生效证书,并自动建违规追责记录。

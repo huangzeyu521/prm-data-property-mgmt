@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.csg.prm.common.ai.DawatAiGateway;
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.exception.BusinessException;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.aitool.entity.AitKbChunk;
 import com.csg.prm.confirm.aitool.entity.AitKbDoc;
 import com.csg.prm.confirm.aitool.gateway.AiToolParseGateway;
@@ -331,7 +331,7 @@ public class AitKbService implements ApplicationRunner {
                 .eq(AitKbDoc::getTitle, title).orderByDesc(AitKbDoc::getVersion));
     }
 
-    public PageResult<AitKbDoc> docPage(PageQuery query, String docType, String domain) {
+    public PageResult<AitKbDoc> docPage(PageRequest query, String docType, String domain) {
         LambdaQueryWrapper<AitKbDoc> w = new LambdaQueryWrapper<AitKbDoc>()
                 .eq(StringUtils.hasText(docType), AitKbDoc::getDocType, docType)
                 .eq(StringUtils.hasText(domain), AitKbDoc::getDomain, domain)

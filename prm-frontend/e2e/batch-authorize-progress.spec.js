@@ -33,7 +33,10 @@ test('batch authorize A+C′: 3步向导 + 进度时间轴结构正确', async (
   await expect(body).toContainText('甲乙双签《数据运营授权协议(附录D)》')
   await expect(body).toContainText('执行授权 · 归档(对外经营权另备案附录G)')
 
-  // ④ 无「证书/发证 / 附录F §4.2」误述
+  // ④ step1 不再有「默认业务域」手填框(业务域=数据属性,由确权目录逐表带出)
+  await expect(body).not.toContainText('默认业务域')
+
+  // ⑤ 无「证书/发证 / 附录F §4.2」误述
   await expect(body).not.toContainText('自动签发授权证书')
   await expect(body).not.toContainText('自动发证')
   await expect(body).not.toContainText('附录F')

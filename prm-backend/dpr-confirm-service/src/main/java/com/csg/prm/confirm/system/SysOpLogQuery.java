@@ -1,9 +1,9 @@
 package com.csg.prm.confirm.system;
 
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 
 /** 操作日志查询条件:按操作人/动作/结果/时间范围过滤。 */
-public class SysOpLogQuery extends PageQuery {
+public class SysOpLogQuery extends PageRequest {
 
     private String userName;
     private String action;

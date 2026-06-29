@@ -1,11 +1,11 @@
 package com.csg.prm.ledger.dto;
 
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 
 /**
  * 数据资产信息查询条件。
  */
-public class DataAssetInfoQuery extends PageQuery {
+public class DataAssetInfoQuery extends PageRequest {
 
     private String assetName;
     private String subsidiaryName;

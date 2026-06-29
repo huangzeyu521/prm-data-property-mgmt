@@ -115,7 +115,7 @@ async function build() {
   try {
     const [tree, cardPage] = await Promise.all([
       fullCatalogTree(),
-      pageEquityCard({ current: 1, size: 500 })
+      pageEquityCard({ current: 1, size: 100 })
     ])
     // 先确后授 + 权属可授:仅"可用 + 卡片权益==所选权益"的生效卡片;库表级按 (assetId, tableCode) 配对,
     // 缺 tableCode 的系统级卡片作为该系统兜底(覆盖未拆库表的旧制卡)。

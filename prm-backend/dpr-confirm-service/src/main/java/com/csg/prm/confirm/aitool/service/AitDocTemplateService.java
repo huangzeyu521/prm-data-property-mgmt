@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.exception.BusinessException;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.aitool.entity.AitDocTemplate;
 import com.csg.prm.confirm.aitool.mapper.AitDocTemplateMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -108,7 +108,7 @@ public class AitDocTemplateService implements ApplicationRunner {
         mapper.insert(t);
     }
 
-    public PageResult<AitDocTemplate> page(PageQuery query, String type, String name, boolean onlyLatest) {
+    public PageResult<AitDocTemplate> page(PageRequest query, String type, String name, boolean onlyLatest) {
         LambdaQueryWrapper<AitDocTemplate> w = new LambdaQueryWrapper<>();
         w.eq(StringUtils.hasText(type), AitDocTemplate::getTemplateType, type)
                 .like(StringUtils.hasText(name), AitDocTemplate::getTemplateName, name)

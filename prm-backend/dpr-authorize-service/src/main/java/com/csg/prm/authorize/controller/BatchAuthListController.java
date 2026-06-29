@@ -4,7 +4,7 @@ import com.csg.prm.authorize.entity.BatchAuthList;
 import com.csg.prm.authorize.service.BatchAuthListService;
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.Result;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import jakarta.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -108,7 +108,7 @@ public class BatchAuthListController {
     }
 
     @GetMapping("/page")
-    public Result<PageResult<BatchAuthList>> page(@Valid PageQuery page,
+    public Result<PageResult<BatchAuthList>> page(@Valid PageRequest page,
                                              @RequestParam(required = false) String listYear,
                                              @RequestParam(required = false) String listStatus) {
         return Result.success(service.page(page.getCurrent(), page.getSize(), listYear, listStatus));

@@ -1,8 +1,8 @@
 package com.csg.prm.ledger.monitor.dto;
 
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 
-public class ComplianceResultQuery extends PageQuery {
+public class ComplianceResultQuery extends PageRequest {
 
     private String checkResult;
     private String assetId;

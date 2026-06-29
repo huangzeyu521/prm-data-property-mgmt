@@ -2,7 +2,7 @@ package com.csg.prm.confirm.controller;
 
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.Result;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.entity.ConfirmMaterial;
 import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.confirm.dto.MaterialCheckReport;
@@ -148,7 +148,7 @@ public class ConfirmMaterialController {
     }
 
     @GetMapping("/page")
-    public Result<PageResult<ConfirmMaterial>> page(@Valid PageQuery page,
+    public Result<PageResult<ConfirmMaterial>> page(@Valid PageRequest page,
                                                @RequestParam(required = false) String applyId,
                                                @RequestParam(required = false) String checkResult) {
         return Result.success(service.page(page.getCurrent(), page.getSize(), applyId, checkResult));

@@ -17,6 +17,19 @@ request.interceptors.request.use((config) => {
     config.headers['X-User-Name'] = localStorage.getItem('X-User-Name') || ''
     config.headers['X-Province-Code'] = localStorage.getItem('X-Province-Code') || ''
   }
+  // 分页入参契约对齐 data_pod 基准 PageRequest:前端内部沿用 current/size,在出站边界(仅 /page 端点)
+  // 统一映射为 pageNum/pageSize,避免逐页改造;el-pagination 仍按 current/size 工作。
+  if (config.url && config.url.includes('/page')) {
+    const toBaseline = (o) => {
+      if (!o || typeof o !== 'object' || Array.isArray(o)) return o
+      const r = { ...o }
+      if ('current' in r) { r.pageNum = r.current; delete r.current }
+      if ('size' in r) { r.pageSize = r.size; delete r.size }
+      return r
+    }
+    if (config.params) config.params = toBaseline(config.params)
+    if (config.data && typeof config.data === 'object') config.data = toBaseline(config.data)
+  }
   return config
 })
 

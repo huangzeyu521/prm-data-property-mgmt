@@ -2,7 +2,7 @@ package com.csg.prm.confirm.controller;
 
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.Result;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.dto.CertRenderVO;
 import com.csg.prm.confirm.entity.EquityCert;
 import com.csg.prm.confirm.service.EquityCertService;
@@ -53,7 +53,7 @@ public class EquityCertController {
     }
 
     @GetMapping("/page")
-    public Result<PageResult<EquityCert>> page(@Valid PageQuery page,
+    public Result<PageResult<EquityCert>> page(@Valid PageRequest page,
                                           @RequestParam(required = false) String cardId) {
         return Result.success(service.page(page.getCurrent(), page.getSize(), cardId));
     }

@@ -8,7 +8,7 @@ import com.csg.prm.common.evidence.ChainEvidenceService;
 import com.csg.prm.common.exception.BusinessException;
 import com.csg.prm.common.org.Jurisdiction;
 import com.csg.prm.common.org.OrgService;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.common.writeback.LedgerWritebackGateway;
 import com.csg.prm.common.writeback.RightsEvent;
 import com.csg.prm.confirm.entity.ConfirmApply;

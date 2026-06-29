@@ -4,7 +4,7 @@ import com.csg.prm.authorize.entity.AuthApplyTemplate;
 import com.csg.prm.authorize.service.AuthApplyTemplateService;
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.Result;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import jakarta.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -64,7 +64,7 @@ public class AuthApplyTemplateController {
     }
 
     @GetMapping("/page")
-    public Result<PageResult<AuthApplyTemplate>> page(@Valid PageQuery page,
+    public Result<PageResult<AuthApplyTemplate>> page(@Valid PageRequest page,
                                                  @RequestParam(required = false) String templateName,
                                                  @RequestParam(required = false) String authType,
                                                  @RequestParam(required = false) String templateStatus) {

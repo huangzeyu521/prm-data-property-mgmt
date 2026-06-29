@@ -5,7 +5,7 @@ import com.csg.prm.authorize.entity.AuthCompliance;
 import com.csg.prm.authorize.service.AuthComplianceService;
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.Result;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import jakarta.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.http.ContentDisposition;
@@ -56,7 +56,7 @@ public class AuthComplianceController {
     }
 
     @GetMapping("/page")
-    public Result<PageResult<AuthCompliance>> page(@Valid PageQuery page,
+    public Result<PageResult<AuthCompliance>> page(@Valid PageRequest page,
                                               @RequestParam(required = false) String applyId,
                                               @RequestParam(required = false) String riskLevel) {
         return Result.success(service.page(page.getCurrent(), page.getSize(), applyId, riskLevel));

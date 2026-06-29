@@ -3,7 +3,7 @@ package com.csg.prm.confirm.controller;
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.Result;
 import com.csg.prm.common.auth.RequiresRole;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.entity.EquityCard;
 import com.csg.prm.confirm.entity.EquityCardLog;
 import com.csg.prm.confirm.service.EquityCardService;

@@ -1,7 +1,7 @@
 package com.csg.prm.confirm.aitool;
 
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.aitool.dto.AitCleanRequest;
 import com.csg.prm.confirm.aitool.entity.AitAuditBase;
 import com.csg.prm.confirm.aitool.entity.AitDocTemplate;
@@ -55,7 +55,7 @@ class AitParseMgmtTest {
         String id = materialService.upload(m);
         materialService.parse(id);
 
-        PageResult<AitParseRecord> page = recordService.page(new PageQuery(), "确权材料-记录", null, null);
+        PageResult<AitParseRecord> page = recordService.page(new PageRequest(), "确权材料-记录", null, null);
         assertTrue(page.getTotal() >= 1, "解析后应有记录档");
         AitParseRecord rt = page.getRecords().stream()
                 .filter(r -> "权利类型".equals(r.getField())).findFirst().orElse(null);
@@ -88,7 +88,7 @@ class AitParseMgmtTest {
     @Test
     void doc_template_library_versioning_and_download() {
         // 启动种入的标准模板
-        PageResult<AitDocTemplate> seeded = templateService.page(new PageQuery(), null, null, true);
+        PageResult<AitDocTemplate> seeded = templateService.page(new PageRequest(), null, null, true);
         assertTrue(seeded.getTotal() >= 3, "应种入确权书/授权函/权属证明标准模板");
 
         AitDocTemplate t = new AitDocTemplate();

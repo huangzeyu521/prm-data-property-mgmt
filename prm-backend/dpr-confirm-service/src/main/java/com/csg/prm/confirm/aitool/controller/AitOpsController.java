@@ -2,7 +2,7 @@ package com.csg.prm.confirm.aitool.controller;
 
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.Result;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.aitool.entity.AitRunLog;
 import com.csg.prm.confirm.aitool.entity.AitTask;
 import com.csg.prm.confirm.aitool.service.AiToolFacade;
@@ -93,7 +93,7 @@ public class AitOpsController {
 
     /** #4 任务监控:列表。 */
     @GetMapping("/task/page")
-    public Result<PageResult<AitTask>> taskPage(@Valid PageQuery query,
+    public Result<PageResult<AitTask>> taskPage(@Valid PageRequest query,
                                            @RequestParam(required = false) String taskType,
                                            @RequestParam(required = false) String status) {
         return Result.success(taskService.page(query, taskType, status));
@@ -102,7 +102,7 @@ public class AitOpsController {
     // ---- #6 统一运行日志 ----
 
     @GetMapping("/runlog/page")
-    public Result<PageResult<AitRunLog>> runLogPage(@Valid PageQuery query,
+    public Result<PageResult<AitRunLog>> runLogPage(@Valid PageRequest query,
                                                @RequestParam(required = false) String logType,
                                                @RequestParam(required = false) String source,
                                                @RequestParam(required = false) String result) {
@@ -116,7 +116,7 @@ public class AitOpsController {
 
     /** #4 异常告警:运行日志中类型=告警 的记录。 */
     @GetMapping("/alerts")
-    public Result<PageResult<AitRunLog>> alerts(@Valid PageQuery query) {
+    public Result<PageResult<AitRunLog>> alerts(@Valid PageRequest query) {
         return Result.success(runLogService.page(query, AitRunLog.T_ALERT, null, null));
     }
 

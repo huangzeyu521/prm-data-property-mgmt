@@ -6,7 +6,7 @@ import com.csg.prm.authorize.service.AuthAgreementService;
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.Result;
 import com.csg.prm.common.exception.BusinessException;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import jakarta.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.http.ContentDisposition;
@@ -127,7 +127,7 @@ public class AuthAgreementController {
     }
 
     @GetMapping("/page")
-    public Result<PageResult<AuthAgreement>> page(@Valid PageQuery page,
+    public Result<PageResult<AuthAgreement>> page(@Valid PageRequest page,
                                              @RequestParam(required = false) String reviewStatus,
                                              @RequestParam(required = false) String archiveStatus,
                                              @RequestParam(required = false) String agreementType,

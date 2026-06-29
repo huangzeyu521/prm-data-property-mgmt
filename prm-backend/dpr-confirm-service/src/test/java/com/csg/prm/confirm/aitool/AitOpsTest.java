@@ -1,6 +1,6 @@
 package com.csg.prm.confirm.aitool;
 
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.aitool.entity.AitMaterial;
 import com.csg.prm.confirm.aitool.entity.AitRunLog;
 import com.csg.prm.confirm.aitool.entity.AitTask;
@@ -51,7 +51,7 @@ class AitOpsTest {
         assertTrue(((Map<?, ?>) out).get("dim") instanceof Integer, "embedding 应返回维度");
 
         // #6 模型调用日志
-        assertTrue(runLogService.page(new PageQuery(), AitRunLog.T_MODEL, null, null).getTotal() >= 1,
+        assertTrue(runLogService.page(new PageRequest(), AitRunLog.T_MODEL, null, null).getTotal() >= 1,
                 "应记录模型调用日志");
     }
 
@@ -77,7 +77,7 @@ class AitOpsTest {
         assertEquals(AitTask.ST_PARTIAL, t.getStatus(), "部分失败状态");
 
         // #6 告警日志(失败项)
-        assertTrue(runLogService.page(new PageQuery(), AitRunLog.T_ALERT, null, null).getTotal() >= 1, "失败应产生告警");
+        assertTrue(runLogService.page(new PageRequest(), AitRunLog.T_ALERT, null, null).getTotal() >= 1, "失败应产生告警");
 
         // #5 断点续跑:重跑跳过已成功,仍仅失败项重试
         AitTask t2 = taskService.run(taskId);
@@ -85,7 +85,7 @@ class AitOpsTest {
 
         // #4 任务监控
         assertEquals(taskId, taskService.get(taskId).getTaskId());
-        assertTrue(taskService.page(new PageQuery(), AitTask.TYPE_PARSE, null).getTotal() >= 1, "任务列表可查");
+        assertTrue(taskService.page(new PageRequest(), AitTask.TYPE_PARSE, null).getTotal() >= 1, "任务列表可查");
     }
 
     /** #6 统一运行日志查询与统计。 */

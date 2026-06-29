@@ -129,8 +129,8 @@ async function load() {
   loading.value = true
   try {
     const [c, a] = await Promise.all([
-      pageConfirmApply({ current: 1, size: 200 }),
-      pageAuthApply({ current: 1, size: 200 })
+      pageConfirmApply({ current: 1, size: 100 }),
+      pageAuthApply({ current: 1, size: 100 })
     ])
     const cf = (c.records || []).map((r) => ({ domain: '确权', mode: '', no: r.applyNo, assetName: r.assetName, status: r.status, rejectReason: r.rejectReason, createTime: r.createTime, creatorId: r.creatorId, raw: r }))
     const af = (a.records || []).map((r) => ({ domain: '授权', mode: r.authMode, no: r.applyNo, assetName: r.assetName, status: r.status, rejectReason: r.rejectReason, createTime: r.createTime, creatorId: r.creatorId, raw: r }))

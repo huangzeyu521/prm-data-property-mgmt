@@ -1,8 +1,8 @@
 package com.csg.prm.ledger.monitor.dto;
 
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 
-public class AlertRecordQuery extends PageQuery {
+public class AlertRecordQuery extends PageRequest {
 
     private String alertLevel;
     private String disposeStatus;

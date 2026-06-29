@@ -4,7 +4,7 @@ import com.csg.prm.authorize.entity.AuthCatalogItem;
 import com.csg.prm.authorize.service.AuthCatalogService;
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.Result;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import jakarta.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -45,7 +45,7 @@ public class AuthCatalogController {
     }
 
     @GetMapping("/page")
-    public Result<PageResult<AuthCatalogItem>> page(@Valid PageQuery page,
+    public Result<PageResult<AuthCatalogItem>> page(@Valid PageRequest page,
                                                @RequestParam(required = false) String category,
                                                @RequestParam(required = false) String name,
                                                @RequestParam(required = false) String status) {

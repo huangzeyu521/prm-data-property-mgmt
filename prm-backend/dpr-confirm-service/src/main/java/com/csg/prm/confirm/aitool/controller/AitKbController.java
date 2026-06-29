@@ -3,7 +3,7 @@ package com.csg.prm.confirm.aitool.controller;
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.Result;
 import com.csg.prm.common.auth.RequiresRole;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.aitool.entity.AitKbChunk;
 import com.csg.prm.confirm.aitool.entity.AitKbDoc;
 import com.csg.prm.confirm.aitool.service.AitKbService;
@@ -52,7 +52,7 @@ public class AitKbController {
     // ---- 知识库浏览 ----
 
     @GetMapping("/doc/page")
-    public Result<PageResult<AitKbDoc>> docPage(@Valid PageQuery query,
+    public Result<PageResult<AitKbDoc>> docPage(@Valid PageRequest query,
                                            @RequestParam(required = false) String docType,
                                            @RequestParam(required = false) String domain) {
         return Result.success(service.docPage(query, docType, domain));

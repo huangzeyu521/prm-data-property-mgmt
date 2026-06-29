@@ -4,7 +4,7 @@ import com.csg.prm.authorize.entity.AuthScenario;
 import com.csg.prm.authorize.service.AuthScenarioService;
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.Result;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import jakarta.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -64,7 +64,7 @@ public class AuthScenarioController {
     }
 
     @GetMapping("/page")
-    public Result<PageResult<AuthScenario>> page(@Valid PageQuery page,
+    public Result<PageResult<AuthScenario>> page(@Valid PageRequest page,
                                             @RequestParam(required = false) String keyword,
                                             @RequestParam(required = false) String category,
                                             @RequestParam(required = false) String status,

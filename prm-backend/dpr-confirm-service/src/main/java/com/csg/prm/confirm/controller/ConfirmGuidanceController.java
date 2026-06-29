@@ -3,7 +3,7 @@ package com.csg.prm.confirm.controller;
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.Result;
 import com.csg.prm.common.exception.BusinessException;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.entity.ConfirmGuidance;
 import com.csg.prm.confirm.service.ConfirmGuidanceService;
 import jakarta.validation.Valid;
@@ -118,7 +118,7 @@ public class ConfirmGuidanceController {
     }
 
     @GetMapping("/page")
-    public Result<PageResult<ConfirmGuidance>> page(@Valid PageQuery page,
+    public Result<PageResult<ConfirmGuidance>> page(@Valid PageRequest page,
                                                @RequestParam(required = false) String title,
                                                @RequestParam(required = false) String guidanceType,
                                                @RequestParam(required = false) String excludeType,

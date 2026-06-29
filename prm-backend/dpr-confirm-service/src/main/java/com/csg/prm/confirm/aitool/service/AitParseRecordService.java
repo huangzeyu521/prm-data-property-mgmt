@@ -3,7 +3,7 @@ package com.csg.prm.confirm.aitool.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.aitool.entity.AitMaterial;
 import com.csg.prm.confirm.aitool.entity.AitParseRecord;
 import com.csg.prm.confirm.aitool.entity.AitParseResult;
@@ -58,7 +58,7 @@ public class AitParseRecordService {
         }
     }
 
-    public PageResult<AitParseRecord> page(PageQuery query, String fileName, String field, String operator) {
+    public PageResult<AitParseRecord> page(PageRequest query, String fileName, String field, String operator) {
         LambdaQueryWrapper<AitParseRecord> w = new LambdaQueryWrapper<>();
         w.like(StringUtils.hasText(fileName), AitParseRecord::getFileName, fileName)
                 .eq(StringUtils.hasText(field), AitParseRecord::getField, field)

@@ -5,7 +5,7 @@ import com.csg.prm.authorize.service.AuthGuidanceService;
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.Result;
 import com.csg.prm.common.exception.BusinessException;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import jakarta.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.http.ContentDisposition;
@@ -118,7 +118,7 @@ public class AuthGuidanceController {
     }
 
     @GetMapping("/page")
-    public Result<PageResult<AuthGuidance>> page(@Valid PageQuery page,
+    public Result<PageResult<AuthGuidance>> page(@Valid PageRequest page,
                                             @RequestParam(required = false) String title,
                                             @RequestParam(required = false) String guidanceType,
                                             @RequestParam(defaultValue = "true") boolean latestOnly) {

@@ -118,7 +118,7 @@ async function load() {
   try {
     const [treeData, applyPage] = await Promise.all([
       fullCatalogTree(),
-      pageConfirmApply({ current: 1, size: 500 })
+      pageConfirmApply({ current: 1, size: 100 })
     ])
     const set = new Set()
     for (const a of (applyPage.records || [])) {

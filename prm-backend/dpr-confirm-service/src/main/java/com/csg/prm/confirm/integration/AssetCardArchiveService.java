@@ -2,7 +2,7 @@ package com.csg.prm.confirm.integration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.entity.ConfirmApply;
 import com.csg.prm.confirm.integration.dto.AssetArchiveRowVO;
 import com.csg.prm.confirm.integration.dto.AssetPropertyVO;
@@ -35,7 +35,7 @@ public class AssetCardArchiveService {
     }
 
     /** 档案分页查询。keyword 命中资产名/ID;state 按确权状态筛选。 */
-    public PageResult<AssetArchiveRowVO> page(PageQuery query, String keyword, String state) {
+    public PageResult<AssetArchiveRowVO> page(PageRequest query, String keyword, String state) {
         // 数据源:平台权限清单优先,未接入回退 PRM 已确权资产(兜底)
         List<String> assetIds = platform.platformAvailable() ? platform.listVisibleAssetIds() : prmConfirmedAssetIds();
 

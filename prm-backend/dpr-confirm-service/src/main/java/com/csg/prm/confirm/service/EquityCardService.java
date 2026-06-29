@@ -1,7 +1,7 @@
 package com.csg.prm.confirm.service;
 
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.entity.ConfirmApply;
 import com.csg.prm.confirm.entity.EquityCard;
 import com.csg.prm.confirm.entity.EquityCardLog;

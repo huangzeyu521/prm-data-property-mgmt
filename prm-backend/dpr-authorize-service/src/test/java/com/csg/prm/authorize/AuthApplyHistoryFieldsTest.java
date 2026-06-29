@@ -50,7 +50,7 @@ class AuthApplyHistoryFieldsTest {
 
         AuthApplyQuery q = new AuthApplyQuery();
         q.setGranteeOrg(grantee);
-        q.setSize(50);
+        q.setPageSize(50);
         List<AuthApply> records = applyService.page(q).getRecords();
 
         AuthApply got = records.stream().filter(r -> grantee.equals(r.getGranteeOrg())).findFirst().orElse(null);

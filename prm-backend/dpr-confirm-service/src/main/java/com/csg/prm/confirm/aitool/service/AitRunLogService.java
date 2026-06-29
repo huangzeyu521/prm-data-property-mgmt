@@ -3,7 +3,7 @@ package com.csg.prm.confirm.aitool.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.aitool.entity.AitRunLog;
 import com.csg.prm.confirm.aitool.mapper.AitRunLogMapper;
 import org.springframework.stereotype.Service;
@@ -59,7 +59,7 @@ public class AitRunLogService {
         log(AitRunLog.T_ALERT, source, action, detail, null, null, "告警", taskId);
     }
 
-    public PageResult<AitRunLog> page(PageQuery query, String logType, String source, String result) {
+    public PageResult<AitRunLog> page(PageRequest query, String logType, String source, String result) {
         LambdaQueryWrapper<AitRunLog> w = new LambdaQueryWrapper<AitRunLog>()
                 .eq(StringUtils.hasText(logType), AitRunLog::getLogType, logType)
                 .like(StringUtils.hasText(source), AitRunLog::getSource, source)

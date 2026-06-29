@@ -5,7 +5,7 @@ import com.csg.prm.authorize.service.AuthCertTemplateService;
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.Result;
 import com.csg.prm.common.exception.BusinessException;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import jakarta.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.http.ContentDisposition;
@@ -90,7 +90,7 @@ public class AuthCertTemplateController {
     }
 
     @GetMapping("/page")
-    public Result<PageResult<AuthCertTemplate>> page(@Valid PageQuery page,
+    public Result<PageResult<AuthCertTemplate>> page(@Valid PageRequest page,
                                                 @RequestParam(required = false) String templateName,
                                                 @RequestParam(required = false) String certType,
                                                 @RequestParam(required = false) String templateStatus) {

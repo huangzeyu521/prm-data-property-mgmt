@@ -4,7 +4,7 @@ import com.csg.prm.authorize.entity.AuthCert;
 import com.csg.prm.authorize.service.AuthCertService;
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.Result;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import jakarta.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -77,7 +77,7 @@ public class AuthCertController {
     }
 
     @PostMapping("/page")
-    public Result<PageResult<AuthCert>> page(@Valid @RequestBody PageQuery query) {
+    public Result<PageResult<AuthCert>> page(@Valid @RequestBody PageRequest query) {
         return Result.success(service.page(query));
     }
 }

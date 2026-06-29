@@ -1,13 +1,13 @@
 package com.csg.prm.confirm.dto;
 
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 
 /**
  * 权益卡片查询条件(权益卡片生成管理,库表级)。
  * sysName=系统名(like on assetId「SYS:系统名」);tableName=库表名(like on assetName,卡片下沉库表级后 assetName=库表名);
  * cardStatus=状态(eq);rightType=权属类型(like,短名命中全名)。
  */
-public class EquityCardQuery extends PageQuery {
+public class EquityCardQuery extends PageRequest {
 
     private String sysName;
     private String tableName;

@@ -1,6 +1,6 @@
 package com.csg.prm.confirm.aitool;
 
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.aitool.entity.AitAuditResult;
 import com.csg.prm.confirm.aitool.entity.AitEvidence;
 import com.csg.prm.confirm.aitool.entity.AitMaterial;
@@ -63,7 +63,7 @@ class AitAuditLedgerTest {
         assertEquals(2, batch.size(), "批量审核应产出 2 条");
         assertNotNull(batch.get(0).getAuthLevel(), "应输出授权级别");
 
-        assertTrue(agent.ledgerPage(new PageQuery(), null, null, null, null, null).getTotal() >= 2, "台账应可分页查到");
+        assertTrue(agent.ledgerPage(new PageRequest(), null, null, null, null, null).getTotal() >= 2, "台账应可分页查到");
         // 字段级结论端点可用(可空)
         assertNotNull(agent.fieldLevel(id1));
     }
@@ -122,7 +122,7 @@ class AitAuditLedgerTest {
 
         assertTrue(agent.exportLedgerExcel(null, null, null, null, null).length > 0, "台账应可导出 Excel");
         // 按通道筛选
-        assertTrue(agent.ledgerPage(new PageQuery(), null, null, null, AitAuditResult.CH_FAST, null).getTotal() >= 1,
+        assertTrue(agent.ledgerPage(new PageRequest(), null, null, null, AitAuditResult.CH_FAST, null).getTotal() >= 1,
                 "应能按快速通道筛选");
     }
 }

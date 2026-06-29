@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Configuration;
  * <p>统一 {@link io.swagger.v3.oas.models.info.Info}(标题取 spring.application.name),并声明内建登录
  * JWT(Authorization: Bearer)鉴权方案,供 swagger-ui 在线调试时一键 Authorize。
  * <p>统一返回体 Result{code,message,data,timestamp}、分页 PageResult{total,pageNum,pageSize,records}、
- * 分页入参 PageQuery{current,size} 由 springdoc 自动 introspect,无需额外注册;业务异常经
+ * 分页入参 PageRequest{current,size} 由 springdoc 自动 introspect,无需额外注册;业务异常经
  * GlobalExceptionHandler 统一为 Result(HTTP 200,体内 code 携带业务码)。
  * <p>UI:{@code /swagger-ui.html}(在线预览调试),机读:{@code /v3/api-docs}。鉴权拦截仅作用于
  * {@code /api/**},文档端点不受 RBAC 拦截。

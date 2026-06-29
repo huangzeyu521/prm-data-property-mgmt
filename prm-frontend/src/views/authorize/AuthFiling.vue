@@ -74,7 +74,7 @@ const agreementOpts = ref([]); const agLoading = ref(false); const elem = ref(nu
 async function loadAgreements() {
   agLoading.value = true
   try {
-    const r = await pageAgreement({ current: 1, size: 200, agreementType: '数据产品经营权' })
+    const r = await pageAgreement({ current: 1, size: 100, agreementType: '数据产品经营权' })
     agreementOpts.value = (r.records || []).filter(a => a.reviewStatus === '审核通过')
   } catch { agreementOpts.value = [] } finally { agLoading.value = false }
 }

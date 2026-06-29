@@ -1,8 +1,8 @@
 package com.csg.prm.confirm.dto;
 
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 
-public class ConfirmApplyQuery extends PageQuery {
+public class ConfirmApplyQuery extends PageRequest {
 
     private String assetName;
     private String rightType;

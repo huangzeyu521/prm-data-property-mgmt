@@ -1,7 +1,7 @@
 package com.csg.prm.common.api;
 
 import com.csg.prm.common.exception.GlobalExceptionHandler;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validation;
@@ -45,11 +45,11 @@ class ResponseConventionTest {
 
     @Test
     void constraintViolation_mapsToBadRequest400_notSystemError() {
-        // PageQuery 的 jakarta 约束:current 最小为 1
+        // PageRequest 的 jakarta 约束:current 最小为 1
         Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
-        PageQuery q = new PageQuery();
-        q.setCurrent(0);
-        Set<ConstraintViolation<PageQuery>> violations = validator.validate(q);
+        PageRequest q = new PageRequest();
+        q.setPageNum(0);
+        Set<ConstraintViolation<PageRequest>> violations = validator.validate(q);
         assertFalse(violations.isEmpty(), "current=0 应触发 @Min 校验");
 
         Result<Void> r = handler.handleConstraintViolation(new ConstraintViolationException(violations));

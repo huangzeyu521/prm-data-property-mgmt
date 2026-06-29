@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.crypto.Sm3Util;
 import com.csg.prm.common.exception.BusinessException;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.aitool.entity.AitAuditBase;
 import com.csg.prm.confirm.aitool.entity.AitAuditResult;
 import com.csg.prm.confirm.aitool.entity.AitConflict;
@@ -315,7 +315,7 @@ public class AitAuditAgentService {
     }
 
     /** 3.2#5 审核台账分页(按 资产/业务域(数据分类)/风险等级/通道/授权建议 筛选)。 */
-    public PageResult<AitAuditResult> ledgerPage(PageQuery query, String assetId, String dataClass,
+    public PageResult<AitAuditResult> ledgerPage(PageRequest query, String assetId, String dataClass,
                                                  String riskLevel, String channel, String authAdvice) {
         LambdaQueryWrapper<AitAuditResult> w = new LambdaQueryWrapper<AitAuditResult>()
                 .eq(StringUtils.hasText(assetId), AitAuditResult::getAssetId, assetId)
@@ -360,8 +360,8 @@ public class AitAuditAgentService {
     /** 3.2#5 审核台账导出 Excel。 */
     public byte[] exportLedgerExcel(String assetId, String dataClass, String riskLevel,
                                     String channel, String authAdvice) {
-        PageQuery q = new PageQuery();
-        q.setSize(10000);
+        PageRequest q = new PageRequest();
+        q.setPageSize(10000);
         List<AitAuditResult> list = ledgerPage(q, assetId, dataClass, riskLevel, channel, authAdvice).getRecords();
         try (org.apache.poi.ss.usermodel.Workbook wb = new org.apache.poi.xssf.usermodel.XSSFWorkbook();
              ByteArrayOutputStream bos = new ByteArrayOutputStream()) {

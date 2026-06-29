@@ -1,6 +1,6 @@
 package com.csg.prm.confirm.aitool;
 
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.aitool.entity.AitKbDoc;
 import com.csg.prm.confirm.aitool.service.AitKbService;
 import org.junit.jupiter.api.Test;
@@ -26,15 +26,15 @@ class AitKbTest {
     /** #1 多类型知识库 + 知识域 + 内置基础语料。 */
     @Test
     void seed_corpus_with_domains() {
-        assertTrue(kb.docPage(new PageQuery(), null, null).getTotal() >= 9, "应种入多篇基础语料");
-        assertFalse(kb.docPage(new PageQuery(), null, "数据安全").getRecords().isEmpty(), "应含数据安全域");
-        assertFalse(kb.docPage(new PageQuery(), null, "个人信息保护").getRecords().isEmpty(), "应含个人信息保护域");
-        assertFalse(kb.docPage(new PageQuery(), null, "网络安全").getRecords().isEmpty(), "应含网络安全域");
-        assertFalse(kb.docPage(new PageQuery(), "法规", null).getRecords().isEmpty(), "应含法规类型");
-        assertFalse(kb.docPage(new PageQuery(), "行业标准", null).getRecords().isEmpty(), "应含行业标准类型(多类型知识库)");
-        assertFalse(kb.docPage(new PageQuery(), "内部制度", null).getRecords().isEmpty(), "应含内部制度类型");
-        assertFalse(kb.docPage(new PageQuery(), "审核规则", null).getRecords().isEmpty(), "应含审核规则类型");
-        assertFalse(kb.docPage(new PageQuery(), "典型案例", null).getRecords().isEmpty(), "应含典型案例类型");
+        assertTrue(kb.docPage(new PageRequest(), null, null).getTotal() >= 9, "应种入多篇基础语料");
+        assertFalse(kb.docPage(new PageRequest(), null, "数据安全").getRecords().isEmpty(), "应含数据安全域");
+        assertFalse(kb.docPage(new PageRequest(), null, "个人信息保护").getRecords().isEmpty(), "应含个人信息保护域");
+        assertFalse(kb.docPage(new PageRequest(), null, "网络安全").getRecords().isEmpty(), "应含网络安全域");
+        assertFalse(kb.docPage(new PageRequest(), "法规", null).getRecords().isEmpty(), "应含法规类型");
+        assertFalse(kb.docPage(new PageRequest(), "行业标准", null).getRecords().isEmpty(), "应含行业标准类型(多类型知识库)");
+        assertFalse(kb.docPage(new PageRequest(), "内部制度", null).getRecords().isEmpty(), "应含内部制度类型");
+        assertFalse(kb.docPage(new PageRequest(), "审核规则", null).getRecords().isEmpty(), "应含审核规则类型");
+        assertFalse(kb.docPage(new PageRequest(), "典型案例", null).getRecords().isEmpty(), "应含典型案例类型");
     }
 
     /** #3 关键词检索。 */

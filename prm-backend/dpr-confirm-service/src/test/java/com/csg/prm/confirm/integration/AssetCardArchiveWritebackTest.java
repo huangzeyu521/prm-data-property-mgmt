@@ -1,7 +1,7 @@
 package com.csg.prm.confirm.integration;
 
 import com.csg.prm.common.api.PageResult;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.entity.ConfirmApply;
 import com.csg.prm.confirm.entity.EquityCard;
 import com.csg.prm.confirm.integration.dto.AssetArchiveRowVO;
@@ -76,7 +76,7 @@ class AssetCardArchiveWritebackTest {
     @Test
     void archive_lists_confirmed_assets() {
         String asset = seedDone("LIST");
-        PageResult<AssetArchiveRowVO> page = archive.page(new PageQuery(), null, null);
+        PageResult<AssetArchiveRowVO> page = archive.page(new PageRequest(), null, null);
         assertTrue(page.getTotal() >= 1);
         AssetArchiveRowVO row = page.getRecords().stream()
                 .filter(r -> asset.equals(r.assetId())).findFirst().orElseThrow();
@@ -89,8 +89,8 @@ class AssetCardArchiveWritebackTest {
     @Test
     void archive_filters_by_keyword_and_state() {
         String asset = seedDone("KW");
-        PageQuery q = new PageQuery();
-        q.setSize(100);
+        PageRequest q = new PageRequest();
+        q.setPageSize(100);
         // 关键词命中资产ID
         assertTrue(archive.page(q, asset, null).getRecords().stream().anyMatch(r -> asset.equals(r.assetId())));
         // 状态筛"已确权"应包含;筛"待确权"不应包含该已确权资产

@@ -1,11 +1,11 @@
 package com.csg.prm.ledger.monitor.dto;
 
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 
 /**
  * 预警通知查询条件:按接收方(责任人)、已读状态过滤——支撑铃铛"我的未读"。
  */
-public class AlertNotificationQuery extends PageQuery {
+public class AlertNotificationQuery extends PageRequest {
 
     private String recipient;
     private String readStatus;

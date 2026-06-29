@@ -1,11 +1,11 @@
 package com.csg.prm.ledger.dto;
 
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 
 /**
  * 产权变更记录查询条件(对应"产权变更记录管理"页面多维筛选)。
  */
-public class PropertyChangeRecordQuery extends PageQuery {
+public class PropertyChangeRecordQuery extends PageRequest {
 
     private String assetId;
     private String changeType;

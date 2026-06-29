@@ -1,9 +1,9 @@
 package com.csg.prm.confirm.system;
 
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 
 /** 用户查询条件:按登录名/姓名/角色/状态过滤。 */
-public class SysUserQuery extends PageQuery {
+public class SysUserQuery extends PageRequest {
 
     private String username;
     private String realName;

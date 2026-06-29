@@ -2,7 +2,7 @@ package com.csg.prm.confirm.aitool.controller;
 
 import com.csg.prm.common.api.PageResult;
 import com.csg.prm.common.api.Result;
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.aitool.entity.AitCompare;
 import com.csg.prm.confirm.aitool.entity.AitDocSegment;
 import com.csg.prm.confirm.aitool.entity.AitMaterial;
@@ -174,7 +174,7 @@ public class AitMaterialController {
     }
 
     @GetMapping("/page")
-    public Result<PageResult<AitMaterial>> page(@Valid PageQuery query,
+    public Result<PageResult<AitMaterial>> page(@Valid PageRequest query,
                                            @RequestParam(required = false) String batchNo,
                                            @RequestParam(required = false) String parseStatus,
                                            @RequestParam(required = false) String applyId) {

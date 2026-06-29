@@ -15,8 +15,12 @@ test('batch authorize: 建清单 → 资源池选取 → 加入明细', async ({
 
   // 步骤1:清单头(年度/被授权方/联系人/联系方式 必填,权益类型驱动资源池过滤)
   await page.getByPlaceholder('如 2026').fill('2026')
-  await page.locator('input[placeholder*="申请单位"]').first().fill('南网综合能源股份有限公司')
-  await page.locator('input[placeholder*="申请单位主管"]').first().fill('张三')
+  // 被授权方 = 南网组织选择器(listOrg);键入即从已确权种子组织里命中(验证 21 组织已加载),点选「南网综合能源股份有限公司」
+  const grantee = page.locator('.el-form-item:has-text("申请主体(被授权方)")')
+  await grantee.locator('.el-select__wrapper').first().click()
+  await grantee.locator('input').first().fill('综合能源')
+  await page.locator('.el-select-dropdown__item:has-text("南网综合能源股份有限公司")').first().click()
+  await page.locator('input[placeholder*="联络人"]').first().fill('张三')
   await page.locator('input[placeholder*="联系方式"]').first().fill('020-31000000')
   await page.locator('.el-form-item:has-text("默认权益类型") .el-select__wrapper').first().click()
   await page.locator('.el-select-dropdown__item:has-text("数据加工使用权")').first().click()

@@ -1,8 +1,8 @@
 package com.csg.prm.authorize.dto;
 
-import com.csg.prm.common.query.PageQuery;
+import com.csg.prm.common.query.PageRequest;
 
-public class AuthApplyQuery extends PageQuery {
+public class AuthApplyQuery extends PageRequest {
 
     private String assetName;
     private String authMode;
