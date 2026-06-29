@@ -6,14 +6,13 @@
 <template>
   <div class="prm-page">
     <div class="prm-table-note" style="margin:0 0 12px">
-      注:一站式批量授权——建清单(表6) → 逐条加授权项 → 提交清单审批,一条流程办完。后续领导小组决策批准 → 双签《运营授权协议(附录D)》→ 自动发证(对齐附录F §4.2)。
+      注:一站式批量授权——填清单基础信息 → 从确权资源池选授权数据 → 确认提交申报稿,一次办完申报。提交后进入审批链(合规→主管→经理→副总→领导小组决策),经甲乙双签《数据运营授权协议(附录D)》后执行授权·归档(对外经营权另备案附录G)。授权凭证为协议,非"证书"。
     </div>
 
-    <el-steps :active="step" finish-status="success" align-center class="wz-steps">
-      <el-step title="建批量清单" description="表6 清单头" />
-      <el-step title="逐条加授权项" description="表6 明细行" />
-      <el-step title="提交清单审批" description="申报稿→决策批准" />
-      <el-step title="完成" description="决策→双签→发证" />
+    <el-steps :active="submitted ? 3 : step" finish-status="success" align-center class="wz-steps">
+      <el-step title="清单基础信息" description="被授权方 · 授权年度(表6 清单头)" />
+      <el-step title="选择授权数据" description="从确权资源池逐条加入(表6 明细)" />
+      <el-step title="确认并提交" description="合规校验 → 提交申报稿" />
     </el-steps>
 
     <div class="wz-body">
@@ -187,14 +186,17 @@
         <el-alert v-if="listOpinion" type="info" :closable="false" style="margin-top:12px" title="AI 清单预审意见" :description="listOpinion" show-icon />
       </el-card>
 
-      <!-- 步骤4:完成 -->
-      <el-card v-show="step === 3" shadow="never">
-        <el-result icon="success" title="批量授权清单已提交申报稿" :sub-title="`清单 ${listNo}（${items.length} 项）已进入审批`">
+      <!-- 提交成功页 + 后续流转进度时间轴(单一真相,对齐 35号文 附录C 表1) -->
+      <el-card v-show="submitted" shadow="never">
+        <el-result icon="success" title="批量授权清单申报稿已提交" :sub-title="`清单 ${listNo}（${items.length} 项）已进入审批链,当前待「合规管控小组审核」`">
           <template #extra>
-            <div class="wz-flow">后续闭环:领导小组决策批准 → 授权方/被授权方双签《运营授权协议(附录D)》→ 自动签发授权证书 → 执行授权</div>
-            <div style="margin-top:14px">
-              <el-button type="primary" @click="go('/dpr/auth/batch-list')">去清单管理</el-button>
-              <el-button @click="go('/dpr/auth/cert')">授权证书</el-button>
+            <div class="wz-progress">
+              <div class="wz-progress-t">后续流转进度(实时以「清单管理」为准)</div>
+              <AuthFlowProgress mode="batch" current="compliance" />
+            </div>
+            <div style="margin-top:6px">
+              <el-button type="primary" @click="go('/dpr/auth/batch-list')">去清单管理查看进度</el-button>
+              <el-button @click="go('/dpr/auth/filing')">对外经营权备案(附录G)</el-button>
               <el-button @click="reset">再建一份清单</el-button>
             </div>
           </template>
@@ -202,14 +204,14 @@
       </el-card>
     </div>
 
-    <PageActions>
-      <el-button v-if="step > 0 && step < 3" @click="step--">上一步</el-button>
+    <PageActions v-if="!submitted">
+      <el-button v-if="step > 0" @click="step--">上一步</el-button>
       <el-button v-if="step === 0" type="primary" :loading="creating" @click="next0">下一步</el-button>
       <el-button v-if="step === 1" type="primary" :disabled="items.length===0" @click="step = 2">下一步</el-button>
       <el-tooltip v-if="step === 2 && !canSubmit" content="请先通过合规校验(全部明细合规)" placement="top">
-        <span><el-button type="primary" disabled>提交审批</el-button></span>
+        <span><el-button type="primary" disabled>提交申报稿</el-button></span>
       </el-tooltip>
-      <el-button v-else-if="step === 2" type="primary" :loading="submitting" @click="doSubmit">提交审批</el-button>
+      <el-button v-else-if="step === 2" type="primary" :loading="submitting" @click="doSubmit">提交申报稿</el-button>
     </PageActions>
 
     <!-- 从确权目录多选资产(资源池:先确后授 + 权属可授 + 经营权对外开放,展示对齐确权范围树) -->
@@ -236,6 +238,7 @@ import { createBatchList, saveAuthDraft, deleteAuthApply, submitBatchList, aiBat
 import { openFilePreview } from '@/composables/useFilePreview'
 import AiThinking from '@/components/AiThinking.vue'
 import PageActions from '@/components/PageActions.vue'
+import AuthFlowProgress from '@/components/AuthFlowProgress.vue'
 import GrantableCatalogTree from './GrantableCatalogTree.vue'
 import { useAiThinking } from '@/composables/useAiThinking'
 import { AI_PHASES } from '@/lib/aiPhases'
@@ -257,6 +260,8 @@ function expiryOf(term) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
 }
 const step = ref(0)
+// 提交后进入「提交成功页 + 进度时间轴」(创建/流转分离;流转属多主体跨周案件,不再当作向导第4步)
+const submitted = ref(false)
 const creating = ref(false); const submitting = ref(false)
 const batchListId = ref(''); const listNo = ref('')
 const items = ref([])
@@ -501,13 +506,13 @@ async function removeItem(row, idx) {
 
 async function doSubmit() {
   submitting.value = true
-  try { await submitBatchList(batchListId.value); step.value = 3 }
+  try { await submitBatchList(batchListId.value); submitted.value = true }
   finally { submitting.value = false }
 }
 
 function go(p) { router.push(p) }
 function reset() {
-  step.value = 0; batchListId.value = ''; listNo.value = ''; items.value = []; pickedLeaves.value = []
+  step.value = 0; submitted.value = false; batchListId.value = ''; listNo.value = ''; items.value = []; pickedLeaves.value = []
   Object.assign(listForm, { listYear: '', granteeOrg: '', contactPerson: '', contactInfo: '', rightType: '', scenario: '', validTerm: '两年', businessDomain: '', remark: '' })
 }
 </script>
@@ -515,7 +520,8 @@ function reset() {
 <style scoped>
 .wz-steps { max-width: 900px; margin: 8px auto 20px; }
 .wz-body { min-height: 340px; }
-.wz-flow { background: #f7f9ff; border-radius: 8px; padding: 10px 16px; color: var(--prm-color-text-secondary); font-size: 13px; display: inline-block; }
+.wz-progress { background: #f7f9ff; border-radius: 8px; padding: 14px 20px 6px; margin: 4px auto 12px; max-width: 560px; text-align: left; }
+.wz-progress-t { font-weight: 600; font-size: 13px; color: var(--prm-color-text); margin-bottom: 10px; }
 .batch-primary { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 16px; margin-bottom: 14px; background: linear-gradient(180deg, #eef4ff, #f7faff); border: 1px solid #d6e4ff; border-radius: 8px; }
 .batch-primary-hint { color: var(--prm-color-text-secondary); font-size: 13px; line-height: 1.5; flex: 1; min-width: 240px; }
 </style>

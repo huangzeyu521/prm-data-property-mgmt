@@ -48,6 +48,13 @@
     </el-dialog>
 
     <el-drawer v-model="detailDrawer" :title="`批量授权清单明细(表6) · ${curList.listNo||''}`" size="80%">
+      <!-- 流转进度时间轴(单一真相,对齐 35号文 附录C 表1 批量流程)。创建在向导;此处看「办到哪、卡在谁」 -->
+      <el-collapse v-model="flowOpen" style="margin-bottom:10px">
+        <el-collapse-item name="flow">
+          <template #title><b>流转进度</b>　<el-tag size="small" :type="curList.listStatus==='批准' ? 'success' : 'info'" effect="plain" style="margin-left:8px">{{ flowHint }}</el-tag></template>
+          <AuthFlowProgress mode="batch" :current="flowCurrent" />
+        </el-collapse-item>
+      </el-collapse>
       <div class="prm-table-note" style="margin-bottom:8px">表6 明细行:本清单(batchListId)下的所有批量授权项。每项=一个库表的授权,逐项含 系统/模式/权益/场景 + 确权带出的第三方·隐私 + 先确后授生效卡片。</div>
       <!-- 清单级「是否跨系统域」判定(表6 专设;批量可跨多系统聚合),与一站式向导同口径 -->
       <el-alert v-if="detailRows.length" :type="crossSystemInfo.isCross ? 'warning' : 'info'" :closable="false" style="margin-bottom:10px">
@@ -97,6 +104,7 @@ import { onMounted, reactive, ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { pageBatchList, createBatchList, submitBatchList, approveBatchList, listAuthByBatch, generateAgreementForBatch } from '@/api/authorize'
 import { currentRole } from '@/lib/roles'
+import AuthFlowProgress from '@/components/AuthFlowProgress.vue'
 // 申报人只做 新增/提交申报稿;批准属审批角色(领导小组办公室),与后端 @RequiresRole 一致,隐藏批准按钮避免误点 403
 // 清单级终批=领导小组办公室专属(BA-03 node90);数字化部主管/经理/副总的审核在明细链逐项完成,不在清单级
 const isApprover = ['leadership', 'admin', 'all'].includes(currentRole())
@@ -108,6 +116,26 @@ const q = reactive({ current: 1, size: 10, listYear: '', listStatus: '' })
 const rows = ref([]); const total = ref(0); const loading = ref(false)
 const dlg = ref(false); const form = reactive({ listYear: '', remark: '' })
 const detailDrawer = ref(false); const detailRows = ref([]); const detailLoading = ref(false); const curList = ref({})
+// 流转进度时间轴(对齐 35号文 表1):清单级状态(草案/申报稿/批准)+ 明细审批链聚合 → 当前节点
+const flowOpen = ref(['flow'])
+const FLOW_KEY = { 合规审核中: 'compliance', 主管审核中: 'manager', 经理审核中: 'director', 副总审批中: 'gm', 领导小组审批中: 'leadership', 已生效: 'execute' }
+const FLOW_RANK = { 合规审核中: 1, 主管审核中: 2, 经理审核中: 3, 副总审批中: 4, 领导小组审批中: 5, 已生效: 6 }
+const flowCurrent = computed(() => {
+  const ls = curList.value.listStatus
+  if (ls === '草案') return 'submit'
+  if (ls === '批准') return 'sign' // 领导小组已批准 → 待甲乙双签协议
+  // 申报稿:取明细中"最早仍在审"的节点为当前进度
+  const inReview = (detailRows.value || []).map((r) => r.status).filter((s) => FLOW_RANK[s])
+  if (!inReview.length) return 'compliance'
+  const earliest = inReview.reduce((a, b) => (FLOW_RANK[b] < FLOW_RANK[a] ? b : a))
+  return FLOW_KEY[earliest] || 'compliance'
+})
+const flowHint = computed(() => {
+  const ls = curList.value.listStatus
+  if (ls === '批准') return '领导小组已批准 · 待双签协议(附录D)'
+  if (ls === '草案') return '草案 · 未提交'
+  return '审批链进行中'
+})
 function tag(s) { return { 批准: 'success', 申报稿: 'warning', 草案: 'info', 已生效: 'success', 已驳回: 'danger' }[s] || 'warning' }
 // 库表级:assetId=SYS:系统名 → 系统名;数据表名=assetName(库表名)。与向导/确权目录同一派生。
 function sysName(row) { const a = row.assetId || ''; return a.startsWith('SYS:') ? a.slice(4) : (a || '—') }
