@@ -42,10 +42,8 @@
     </el-card>
 
     <el-row :gutter="16" style="margin-top:16px">
-      <el-col :span="6"><el-card header="授权方式分布(一事一议/批量)"><div ref="modeRef" style="height:300px"></div></el-card></el-col>
-      <el-col :span="6"><el-card header="授权权益类型(使用权/经营权)"><div ref="rightRef" style="height:300px"></div></el-card></el-col>
-      <el-col :span="6"><el-card header="合规检查结果(红/黄/绿)"><div ref="compRef" style="height:300px"></div></el-card></el-col>
-      <el-col :span="6"><el-card header="使用场景授权频次"><div ref="scenarioRef" style="height:300px"></div></el-card></el-col>
+      <el-col :span="12"><el-card header="授权方式分布(一事一议/批量)"><div ref="modeRef" style="height:300px"></div></el-card></el-col>
+      <el-col :span="12"><el-card header="授权权益类型(使用权/经营权)"><div ref="rightRef" style="height:300px"></div></el-card></el-col>
     </el-row>
     <el-row :gutter="16" style="margin-top:16px">
       <el-col :span="24"><el-card header="按业务域分布(表5/表6 所属业务域)"><div ref="bizRef" style="height:300px"></div></el-card></el-col>
@@ -59,7 +57,9 @@
 <script setup>
 import { onMounted, reactive, ref, nextTick } from 'vue'
 import { initChart } from '@/lib/chartBase'
-import { CHART_COLORS, C, RISK_RAMP } from '@/lib/chartPalette'
+import { CHART_COLORS, C } from '@/lib/chartPalette'
+import { padMonthly } from '@/lib/trend'
+import { fixedBizDist } from '@/lib/bizDomains'
 import { getAuthDashboard } from '@/api/authorize'
 import { listOrg } from '@/api/org'
 
@@ -67,10 +67,8 @@ const d = reactive({ totalApply: 0, effective: 0, inReview: 0, rejected: 0, effe
 const q = reactive({ scenario: '', deptName: '' })
 const orgOptions = ref([])
 const range = ref([])
-const modeRef = ref(); const rightRef = ref(); const compRef = ref(); const scenarioRef = ref(); const bizRef = ref(); const trendRef = ref()
+const modeRef = ref(); const rightRef = ref(); const bizRef = ref(); const trendRef = ref()
 const pairs = (m) => Object.entries(m || {}).map(([name, value]) => ({ name, value }))
-// 合规分布按规范色板的暖→冷风险梯度取色(高=橙/中=金/低=绿),不再用非规范红
-const COMP_COLOR = { '红': RISK_RAMP['高'], '高': RISK_RAMP['高'], '黄': RISK_RAMP['中'], '中': RISK_RAMP['中'], '绿': RISK_RAMP['低'], '低': RISK_RAMP['低'] }
 
 function onReset() { q.scenario = ''; q.deptName = ''; range.value = []; load() }
 
@@ -86,23 +84,17 @@ async function load() {
   initChart(modeRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'item' }, legend: { bottom: 0 }, series: [{ name: '授权模式', type: 'pie', radius: ['40%', '70%'], data: pairs(res.modeDistribution) }] })
   const rt = pairs(res.rightTypeDistribution)
   initChart(rightRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'axis' }, grid: { left: 40, right: 16, top: 20, bottom: 30 }, xAxis: { type: 'category', data: rt.map(x => x.name) }, yAxis: { type: 'value', name: '授权数' }, series: [{ name: '授权数', type: 'bar', data: rt.map(x => x.value), itemStyle: { color: C.blue }, barMaxWidth: 50 }] })
-  initChart(compRef.value,{
-    color: CHART_COLORS, tooltip: { trigger: 'item' }, legend: { bottom: 0 },
-    series: [{ name: '合规结果', type: 'pie', radius: ['40%', '70%'], data: pairs(res.complianceDist).map(x => ({ ...x, itemStyle: { color: COMP_COLOR[x.name] } })) }]
-  })
-  const sc = pairs(res.byScenario)
-  initChart(scenarioRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'axis' }, grid: { left: 40, right: 16, top: 20, bottom: 45 }, xAxis: { type: 'category', data: sc.map(x => x.name), axisLabel: { interval: 0, rotate: 20 } }, yAxis: { type: 'value', name: '频次' }, series: [{ name: '频次', type: 'bar', data: sc.map(x => x.value), itemStyle: { color: C.cyan }, barMaxWidth: 40 }] })
-  const biz = pairs(res.byBusinessDomain)
-  initChart(bizRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'axis' }, grid: { left: 48, right: 16, top: 20, bottom: 45 }, xAxis: { type: 'category', data: biz.map(x => x.name), axisLabel: { interval: 0, rotate: 20 } }, yAxis: { type: 'value', name: '授权数' }, series: [{ name: '授权数', type: 'bar', data: biz.map(x => x.value), itemStyle: { color: C.blue }, barMaxWidth: 48 }] })
-  const tr = res.trend || []
+  const biz = fixedBizDist(res.byBusinessDomain) // 标准业务域恒显(零填充)+ 追加非标准项(未分类等)
+  initChart(bizRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'axis' }, grid: { left: 48, right: 16, top: 20, bottom: 60 }, xAxis: { type: 'category', data: biz.map(x => x.name), axisLabel: { interval: 0, rotate: 30 } }, yAxis: { type: 'value', name: '授权数' }, series: [{ name: '授权数', type: 'bar', data: biz.map(x => x.value), itemStyle: { color: C.blue }, barMaxWidth: 40 }] })
+  const tr = padMonthly(res.trend, 12) // 补齐近12个月连续横坐标(缺月柱归零、率跳过)
   initChart(trendRef.value,{
     color: CHART_COLORS, tooltip: { trigger: 'axis' }, legend: { bottom: 0, data: ['申请量', '生效率%'] },
     grid: { left: 48, right: 48, top: 20, bottom: 40 },
-    xAxis: { type: 'category', data: tr.map(p => p.month) },
+    xAxis: { type: 'category', data: tr.map(p => p.month), axisLabel: { rotate: 35 } },
     yAxis: [{ type: 'value', name: '申请量' }, { type: 'value', name: '%', axisLabel: { formatter: '{value}%' } }],
     series: [
-      { name: '申请量', type: 'bar', data: tr.map(p => p.applyCount), itemStyle: { color: C.blue } },
-      { name: '生效率%', type: 'line', yAxisIndex: 1, smooth: true, data: tr.map(p => p.effectiveRate), itemStyle: { color: C.green } }
+      { name: '申请量', type: 'bar', data: tr.map(p => p.applyCount || 0), barMaxWidth: 36, itemStyle: { color: C.blue } },
+      { name: '生效率%', type: 'line', yAxisIndex: 1, smooth: true, connectNulls: true, data: tr.map(p => p.effectiveRate ?? null), itemStyle: { color: C.green } }
     ]
   })
 }

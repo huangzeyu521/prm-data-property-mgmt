@@ -49,6 +49,7 @@
 import { onMounted, reactive, ref, nextTick } from 'vue'
 import { initChart } from '@/lib/chartBase'
 import { CHART_COLORS, C } from '@/lib/chartPalette'
+import { padMonthly } from '@/lib/trend'
 import { getConfirmDashboard } from '@/api/confirm'
 import { listOrg } from '@/api/org'
 
@@ -78,15 +79,15 @@ async function load() {
     yAxis: { type: 'value', name: '积压数' },
     series: [{ name: '积压数', type: 'bar', data: Object.values(bk), barWidth: '45%', itemStyle: { color: C.gold } }]
   })
-  const tr = res.trend || []
+  const tr = padMonthly(res.trend, 12) // 补齐近12个月连续横坐标(缺月柱归零、率跳过)
   initChart(trendRef.value,{
     color: CHART_COLORS, tooltip: { trigger: 'axis' }, legend: { bottom: 0, data: ['申请量', '通过率%'] },
     grid: { left: 48, right: 48, top: 20, bottom: 40 },
-    xAxis: { type: 'category', data: tr.map(p => p.month) },
+    xAxis: { type: 'category', data: tr.map(p => p.month), axisLabel: { rotate: 35 } },
     yAxis: [{ type: 'value', name: '申请量' }, { type: 'value', name: '%', axisLabel: { formatter: '{value}%' } }],
     series: [
-      { name: '申请量', type: 'bar', data: tr.map(p => p.applyCount), itemStyle: { color: C.blue } },
-      { name: '通过率%', type: 'line', yAxisIndex: 1, smooth: true, data: tr.map(p => p.passRate), itemStyle: { color: C.green } }
+      { name: '申请量', type: 'bar', data: tr.map(p => p.applyCount || 0), barMaxWidth: 36, itemStyle: { color: C.blue } },
+      { name: '通过率%', type: 'line', yAxisIndex: 1, smooth: true, connectNulls: true, data: tr.map(p => p.passRate ?? null), itemStyle: { color: C.green } }
     ]
   })
 }
