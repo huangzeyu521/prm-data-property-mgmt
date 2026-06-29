@@ -98,7 +98,8 @@ import { ElMessage } from 'element-plus'
 import { pageBatchList, createBatchList, submitBatchList, approveBatchList, listAuthByBatch, generateAgreementForBatch } from '@/api/authorize'
 import { currentRole } from '@/lib/roles'
 // 申报人只做 新增/提交申报稿;批准属审批角色(领导小组办公室),与后端 @RequiresRole 一致,隐藏批准按钮避免误点 403
-const isApprover = ['review', 'manager', 'director', 'gm', 'leadership', 'admin', 'all'].includes(currentRole())
+// 清单级终批=领导小组办公室专属(BA-03 node90);数字化部主管/经理/副总的审核在明细链逐项完成,不在清单级
+const isApprover = ['leadership', 'admin', 'all'].includes(currentRole())
 const statuses = ['草案', '申报稿', '批准']
 const q = reactive({ current: 1, size: 10, listYear: '', listStatus: '' })
 const rows = ref([]); const total = ref(0); const loading = ref(false)

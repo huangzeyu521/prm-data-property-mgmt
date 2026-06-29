@@ -1,6 +1,6 @@
 // 角色菜单可见域守卫测试(对齐 AA-10 角色功能矩阵 + BA-03 节点责任人)。
 // 纯函数 visibleMenu() 断言;无需浏览器/框架。运行:node scripts/test-roles.mjs
-import { visibleMenu } from '../src/lib/roles.js'
+import { visibleMenu, handledStatuses, AUTH_NODE_ROLE, CONFIRM_NODE_ROLE } from '../src/lib/roles.js'
 
 // 展平某角色可见的全部路径(顶层项 + 各分组子项)
 function pathsOf(role) {
@@ -62,8 +62,31 @@ check('business', {
 // 管理员视图(all):全可见
 check('all', { has: [SYS, LEDGER, CONFIRM_REVIEW, AUTH_REVIEW, DASH_AUTH] })
 
+// 审批节点收敛守卫:审核台/待办按「本角色·本节点」裁剪(镜像后端 NODE_ROLE),杜绝越节点误点 403。
+function setEq(actual, expected, msg) {
+  const a = new Set(actual), e = new Set(expected)
+  const ok = a.size === e.size && [...e].every(x => a.has(x))
+  if (!ok) { console.error(`✗ ${msg}: 期望[${expected.join(',')}] 实得[${(actual||[]).join(',')}]`); fails++ }
+}
+// 副总/总经理:授权仅「副总审批中」;不涉确权(确权节点集为空 → 待办确权 tab 隐藏)
+setEq(handledStatuses('gm', AUTH_NODE_ROLE), ['副总审批中'], 'gm 授权可办节点')
+setEq(handledStatuses('gm', CONFIRM_NODE_ROLE), [], 'gm 确权可办节点(应为空,gm 不涉确权)')
+// 合规/业务/主管/经理/领导小组:各自唯一授权节点
+setEq(handledStatuses('review', AUTH_NODE_ROLE), ['合规审核中'], 'review 授权可办节点')
+setEq(handledStatuses('business', AUTH_NODE_ROLE), ['业务审核中'], 'business 授权可办节点')
+setEq(handledStatuses('manager', AUTH_NODE_ROLE), ['主管审核中'], 'manager 授权可办节点')
+setEq(handledStatuses('director', AUTH_NODE_ROLE), ['经理审核中'], 'director 授权可办节点')
+setEq(handledStatuses('leadership', AUTH_NODE_ROLE), ['领导小组审批中'], 'leadership 授权可办节点')
+// 确权侧:预审/合规/主管/经理各自节点
+setEq(handledStatuses('precheck', CONFIRM_NODE_ROLE), ['人工预审中'], 'precheck 确权可办节点')
+setEq(handledStatuses('manager', CONFIRM_NODE_ROLE), ['主管复核中'], 'manager 确权可办节点')
+setEq(handledStatuses('director', CONFIRM_NODE_ROLE), ['经理终审中'], 'director 确权可办节点')
+// 管理员/超级视角:不过滤(null = 看全部队列)
+if (handledStatuses('admin', AUTH_NODE_ROLE) !== null) { console.error('✗ admin 应不过滤审批队列(null)'); fails++ }
+if (handledStatuses('all', CONFIRM_NODE_ROLE) !== null) { console.error('✗ all 应不过滤审批队列(null)'); fails++ }
+
 if (fails) {
   console.error(`\n角色守卫测试失败:${fails} 处不符 AA-10`)
   process.exit(1)
 }
-console.log('✓ 角色菜单可见域守卫测试通过(对齐 AA-10:gm/director/review 产权信息已补,确权审核台/分析可见域已精确化)')
+console.log('✓ 角色菜单可见域 + 审批节点收敛守卫测试通过(gm/director/review 产权信息已补;审核台/待办按本角色本节点裁剪)')

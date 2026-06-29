@@ -91,8 +91,11 @@ public class BatchAuthListController {
         return Result.success();
     }
 
-    /** 批准批量清单(逐节点推进至生效)。申报人只能 submit,不得自批。 */
-    @com.csg.prm.common.auth.RequiresRole({"review", "manager", "director", "gm", "leadership", "admin"})
+    /**
+     * 批准批量清单(申报稿→批准)。BA-03 批量授权 node90:此终批为「领导小组办公室」专属。
+     * 数字化部三节点(主管/经理/副总)的审核在明细 AuthApply 链逐项完成(主管=node60),不在清单级终批。
+     */
+    @com.csg.prm.common.auth.RequiresRole({"leadership", "admin"})
     @PostMapping("/{batchListId}/approve")
     public Result<Void> approve(@PathVariable String batchListId) {
         service.approve(batchListId);

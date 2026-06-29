@@ -109,7 +109,7 @@ async function load() {
     await nextTick()
     initChart(levelRef.value, {
       tooltip: { trigger: 'item' }, legend: { bottom: 0 },
-      series: [{ type: 'pie', radius: ['40%', '70%'], data: pairs(s.levelDistribution) }]
+      series: [{ name: '预警数', type: 'pie', radius: ['40%', '70%'], data: pairs(s.levelDistribution) }]
     })
   } finally { loading.value = false }
 }

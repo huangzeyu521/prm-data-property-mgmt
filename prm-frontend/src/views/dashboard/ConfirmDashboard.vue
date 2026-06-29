@@ -69,14 +69,14 @@ async function load() {
   })
   Object.assign(d, res)
   await nextTick()
-  initChart(statusRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'item' }, legend: { bottom: 0 }, series: [{ type: 'pie', radius: ['40%', '70%'], data: pairs(res.statusDistribution) }] })
-  initChart(rightRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'item' }, legend: { bottom: 0 }, series: [{ type: 'pie', radius: '65%', data: pairs(res.rightTypeDistribution) }] })
+  initChart(statusRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'item' }, legend: { bottom: 0 }, series: [{ name: '确权状态', type: 'pie', radius: ['40%', '70%'], data: pairs(res.statusDistribution) }] })
+  initChart(rightRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'item' }, legend: { bottom: 0 }, series: [{ name: '产权类型', type: 'pie', radius: '65%', data: pairs(res.rightTypeDistribution) }] })
   const bk = res.nodeBacklog || {}
   initChart(backlogRef.value,{
     color: CHART_COLORS, tooltip: { trigger: 'axis' }, grid: { left: 40, right: 20, top: 20, bottom: 40 },
     xAxis: { type: 'category', data: Object.keys(bk), axisLabel: { interval: 0, rotate: 15 } },
     yAxis: { type: 'value', name: '积压数' },
-    series: [{ type: 'bar', data: Object.values(bk), barWidth: '45%', itemStyle: { color: C.gold } }]
+    series: [{ name: '积压数', type: 'bar', data: Object.values(bk), barWidth: '45%', itemStyle: { color: C.gold } }]
   })
   const tr = res.trend || []
   initChart(trendRef.value,{

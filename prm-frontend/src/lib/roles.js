@@ -122,6 +122,33 @@ export function currentRole() {
   return localStorage.getItem('prm-role') || 'all'
 }
 
+// 审批节点(状态名)→ 处理角色:镜像后端 AuthApplyServiceImpl.NODE_ROLE / ConfirmApplyServiceImpl.NODE_ROLE。
+// 用途:把「授权审核台 / 统一待办中心」收敛到「本角色·本节点」,让每个审批人只见自己队列。
+// 后端 assertNodeRole 仍是硬门禁(越节点审批 403);此处是呈现层对齐,杜绝 gm 误见确权待办 / 误点非本节点单据被 403。
+export const AUTH_NODE_ROLE = {
+  合规审核中: 'review',
+  业务审核中: 'business',
+  主管审核中: 'manager',
+  经理审核中: 'director',
+  副总审批中: 'gm',
+  领导小组审批中: 'leadership',
+}
+export const CONFIRM_NODE_ROLE = {
+  人工预审中: 'precheck',
+  合规审核中: 'review',
+  主管复核中: 'manager',
+  经理终审中: 'director',
+}
+
+/**
+ * 当前角色在某审批域可处理的节点状态集合。
+ * 返回 null = 不过滤(admin/all/超级视角看全部队列);返回数组 = 仅这些状态归本角色办理(可能为空数组=本域无本角色节点)。
+ */
+export function handledStatuses(role, nodeRole) {
+  if (!role || role === 'all' || role === 'admin') return null
+  return Object.entries(nodeRole).filter(([, r]) => r === role).map(([s]) => s)
+}
+
 function itemVisible(item, role) {
   if (role === 'all' || !item.roles || item.roles.length === 0) return true
   const eff = [role, ...(MENU_GROUP[role] || [])]

@@ -10,18 +10,18 @@
     </div>
 
     <el-row :gutter="12" class="todo-stats">
-      <el-col :span="8"><el-card shadow="never"><el-statistic title="待办合计" :value="vo.total || 0" /></el-card></el-col>
-      <el-col :span="8"><el-card shadow="never"><el-statistic title="确权审批待办" :value="vo.confirmCount || 0" /></el-card></el-col>
-      <el-col :span="8"><el-card shadow="never"><el-statistic title="授权审批待办" :value="vo.authCount || 0" /></el-card></el-col>
+      <el-col :span="8"><el-card shadow="never"><el-statistic title="待办合计" :value="view.total" /></el-card></el-col>
+      <el-col v-if="doesConfirm" :span="8"><el-card shadow="never"><el-statistic title="确权审批待办" :value="view.confirmCount" /></el-card></el-col>
+      <el-col v-if="doesAuth" :span="8"><el-card shadow="never"><el-statistic title="授权审批待办" :value="view.authCount" /></el-card></el-col>
     </el-row>
 
     <div class="prm-table-card" style="margin-top:12px" v-loading="loading">
       <el-tabs v-model="tab">
-        <el-tab-pane :label="`确权审批 (${vo.confirmCount || 0})`" name="confirm">
-          <todo-table :rows="vo.confirmTodos" domain="确权" @go="goHandle" />
+        <el-tab-pane v-if="doesConfirm" :label="`确权审批 (${view.confirmCount})`" name="confirm">
+          <todo-table :rows="view.confirmTodos" domain="确权" @go="goHandle" />
         </el-tab-pane>
-        <el-tab-pane :label="`授权审批 (${vo.authCount || 0})`" name="auth">
-          <todo-table :rows="vo.authTodos" domain="授权" @go="goHandle" />
+        <el-tab-pane v-if="doesAuth" :label="`授权审批 (${view.authCount})`" name="auth">
+          <todo-table :rows="view.authTodos" domain="授权" @go="goHandle" />
         </el-tab-pane>
       </el-tabs>
     </div>
@@ -29,15 +29,34 @@
 </template>
 
 <script setup>
-import { h, onMounted, reactive, ref } from 'vue'
+import { computed, h, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElTable, ElTableColumn, ElButton, ElTag, ElEmpty } from 'element-plus'
 import { getTodos } from '@/api/workbench'
+import { currentRole, AUTH_NODE_ROLE, CONFIRM_NODE_ROLE, handledStatuses } from '@/lib/roles'
 
 const router = useRouter()
 const loading = ref(false)
-const tab = ref('confirm')
 const vo = reactive({ confirmTodos: [], authTodos: [], confirmCount: 0, authCount: 0, total: 0 })
+
+// 待办收敛到「本角色·本节点」:后端待办网关返回全节点在办,前端按当前角色裁剪为各自队列。
+// 副总(gm)不涉确权 → 确权 tab 整体隐藏;授权只见「副总审批中」。admin/all 看全部(null)。
+const role = currentRole()
+const confirmStatuses = handledStatuses(role, CONFIRM_NODE_ROLE) // null=全部 / []=本域无本角色节点
+const authStatuses = handledStatuses(role, AUTH_NODE_ROLE)
+const doesConfirm = computed(() => confirmStatuses === null || confirmStatuses.length > 0)
+const doesAuth = computed(() => authStatuses === null || authStatuses.length > 0)
+function scope(list, statuses) {
+  const arr = list || []
+  return statuses === null ? arr : arr.filter(r => statuses.includes(r.status))
+}
+const view = computed(() => {
+  const confirmTodos = doesConfirm.value ? scope(vo.confirmTodos, confirmStatuses) : []
+  const authTodos = doesAuth.value ? scope(vo.authTodos, authStatuses) : []
+  return { confirmTodos, authTodos, confirmCount: confirmTodos.length, authCount: authTodos.length, total: confirmTodos.length + authTodos.length }
+})
+// 默认落到本角色实际承担的队列(gm 直接进授权 tab,不停在空的确权 tab)
+const tab = ref(handledStatuses(role, CONFIRM_NODE_ROLE)?.length === 0 ? 'auth' : 'confirm')
 
 // 域 -> 办理页路由(路由不带 :id,统一跳到对应办理/列表页)
 const HANDLE_ROUTE = { 确权: '/dpr/confirm/review', 授权: '/dpr/auth/review' }

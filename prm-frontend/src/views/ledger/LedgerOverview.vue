@@ -15,12 +15,12 @@
         </el-row>
         <el-row :gutter="16" style="margin-top: 16px">
           <el-col :span="12">
-            <el-card shadow="never" header="产权类型构成">
+            <el-card shadow="never" header="已确权 · 三权分置结构">
               <div ref="pieRef" style="height: 320px"></div>
             </el-card>
           </el-col>
           <el-col :span="12">
-            <el-card shadow="never" header="组织部门资产分布">
+            <el-card shadow="never" header="各子公司 确权覆盖率 / 授权率">
               <div ref="barRef" style="height: 320px"></div>
             </el-card>
           </el-col>
@@ -36,8 +36,8 @@
 <script setup>
 import { onMounted, reactive, ref, nextTick } from 'vue'
 import { initChart } from '@/lib/chartBase'
-import { C } from '@/lib/chartPalette'
-import { getOverview } from '@/api/ledger'
+import { C, CHART_COLORS } from '@/lib/chartPalette'
+import { getOverview, getLedgerStatistics } from '@/api/ledger'
 import PropertyTree from './PropertyTree.vue'
 
 const tab = ref('overview')
@@ -50,20 +50,28 @@ function toPairs(map) {
 }
 
 async function load() {
-  const res = await getOverview()
+  // 概览(确权率卡片+产权类型)与台账统计(各子公司覆盖率)并行;率口径而非资产库存数
+  const [res, st] = await Promise.all([getOverview(), getLedgerStatistics()])
   Object.assign(data, res)
   await nextTick()
   initChart(pieRef.value, {
     tooltip: { trigger: 'item' },
     legend: { bottom: 0 },
-    series: [{ type: 'pie', radius: ['40%', '70%'], data: toPairs(res.rightTypeDistribution) }]
+    series: [{ name: '产权类型', type: 'pie', radius: ['40%', '70%'], data: toPairs(res.rightTypeDistribution) }]
   })
-  const subs = toPairs(res.subsidiaryDistribution)
+  // 各子公司 确权覆盖率/授权率(资产卡片由资产平台维护本模块不增删,故用率而非资产库存数)
+  const cov = st.coverageBySubsidiary || []
   initChart(barRef.value, {
-    tooltip: { trigger: 'axis' },
-    xAxis: { type: 'category', data: subs.map((s) => s.name), axisLabel: { interval: 0, rotate: 20 } },
-    yAxis: { type: 'value' },
-    series: [{ type: 'bar', data: subs.map((s) => s.value), itemStyle: { color: C.blue }, barMaxWidth: 48 }]
+    color: CHART_COLORS,
+    tooltip: { trigger: 'axis', valueFormatter: (v) => (v == null ? '—' : v + '%') },
+    legend: { bottom: 0, data: ['确权覆盖率', '授权率'] },
+    grid: { left: 48, right: 24, top: 20, bottom: 56 },
+    xAxis: { type: 'category', data: cov.map((s) => s.name), axisLabel: { interval: 0, rotate: 20 } },
+    yAxis: { type: 'value', name: '%', max: 100, axisLabel: { formatter: '{value}%' } },
+    series: [
+      { name: '确权覆盖率', type: 'bar', data: cov.map((s) => s.confirmRate), barMaxWidth: 28, itemStyle: { color: C.blue } },
+      { name: '授权率', type: 'bar', data: cov.map((s) => s.authRate), barMaxWidth: 28, itemStyle: { color: C.green } }
+    ]
   })
 }
 

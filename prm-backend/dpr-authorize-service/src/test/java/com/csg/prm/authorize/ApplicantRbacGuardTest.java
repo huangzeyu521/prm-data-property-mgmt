@@ -51,6 +51,22 @@ class ApplicantRbacGuardTest {
         assertGuardedExcludingApply(BatchAuthListController.class, "approve", String.class);
     }
 
+    /**
+     * 清单级终批(申报稿→批准)= BA-03 node90「领导小组办公室」专属:仅 leadership/admin。
+     * 数字化部主管/经理/副总在明细 AuthApply 链逐项审核(不在清单级终批),故清单 approve 不得放行 manager/director/gm/review。
+     */
+    @Test
+    void batchList_approve_isLeadershipExclusive() throws Exception {
+        RequiresRole rr = BatchAuthListController.class.getMethod("approve", String.class).getAnnotation(RequiresRole.class);
+        assertNotNull(rr, "batch-list approve 须标注 @RequiresRole");
+        var roles = Arrays.asList(rr.value());
+        assertTrue(roles.contains("leadership"), "清单终批须允许领导小组办公室");
+        for (String notAllowed : new String[]{"apply", "manager", "director", "gm", "review", "business", "precheck"}) {
+            assertFalse(roles.contains(notAllowed),
+                    "清单级终批是领导小组专属,不得放行「" + notAllowed + "」(其审核在明细链完成)");
+        }
+    }
+
     @Test
     void agreement_review_blockApplicant() throws Exception {
         assertGuardedExcludingApply(AuthAgreementController.class, "review", String.class, boolean.class, String.class);

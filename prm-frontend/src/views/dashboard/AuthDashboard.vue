@@ -83,17 +83,17 @@ async function load() {
   })
   Object.assign(d, res)
   await nextTick()
-  initChart(modeRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'item' }, legend: { bottom: 0 }, series: [{ type: 'pie', radius: ['40%', '70%'], data: pairs(res.modeDistribution) }] })
+  initChart(modeRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'item' }, legend: { bottom: 0 }, series: [{ name: '授权模式', type: 'pie', radius: ['40%', '70%'], data: pairs(res.modeDistribution) }] })
   const rt = pairs(res.rightTypeDistribution)
-  initChart(rightRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'axis' }, grid: { left: 40, right: 16, top: 20, bottom: 30 }, xAxis: { type: 'category', data: rt.map(x => x.name) }, yAxis: { type: 'value' }, series: [{ type: 'bar', data: rt.map(x => x.value), itemStyle: { color: C.blue }, barMaxWidth: 50 }] })
+  initChart(rightRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'axis' }, grid: { left: 40, right: 16, top: 20, bottom: 30 }, xAxis: { type: 'category', data: rt.map(x => x.name) }, yAxis: { type: 'value', name: '授权数' }, series: [{ name: '授权数', type: 'bar', data: rt.map(x => x.value), itemStyle: { color: C.blue }, barMaxWidth: 50 }] })
   initChart(compRef.value,{
     color: CHART_COLORS, tooltip: { trigger: 'item' }, legend: { bottom: 0 },
-    series: [{ type: 'pie', radius: ['40%', '70%'], data: pairs(res.complianceDist).map(x => ({ ...x, itemStyle: { color: COMP_COLOR[x.name] } })) }]
+    series: [{ name: '合规结果', type: 'pie', radius: ['40%', '70%'], data: pairs(res.complianceDist).map(x => ({ ...x, itemStyle: { color: COMP_COLOR[x.name] } })) }]
   })
   const sc = pairs(res.byScenario)
-  initChart(scenarioRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'axis' }, grid: { left: 40, right: 16, top: 20, bottom: 45 }, xAxis: { type: 'category', data: sc.map(x => x.name), axisLabel: { interval: 0, rotate: 20 } }, yAxis: { type: 'value', name: '频次' }, series: [{ type: 'bar', data: sc.map(x => x.value), itemStyle: { color: C.cyan }, barMaxWidth: 40 }] })
+  initChart(scenarioRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'axis' }, grid: { left: 40, right: 16, top: 20, bottom: 45 }, xAxis: { type: 'category', data: sc.map(x => x.name), axisLabel: { interval: 0, rotate: 20 } }, yAxis: { type: 'value', name: '频次' }, series: [{ name: '频次', type: 'bar', data: sc.map(x => x.value), itemStyle: { color: C.cyan }, barMaxWidth: 40 }] })
   const biz = pairs(res.byBusinessDomain)
-  initChart(bizRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'axis' }, grid: { left: 48, right: 16, top: 20, bottom: 45 }, xAxis: { type: 'category', data: biz.map(x => x.name), axisLabel: { interval: 0, rotate: 20 } }, yAxis: { type: 'value', name: '授权数' }, series: [{ type: 'bar', data: biz.map(x => x.value), itemStyle: { color: C.blue }, barMaxWidth: 48 }] })
+  initChart(bizRef.value,{ color: CHART_COLORS, tooltip: { trigger: 'axis' }, grid: { left: 48, right: 16, top: 20, bottom: 45 }, xAxis: { type: 'category', data: biz.map(x => x.name), axisLabel: { interval: 0, rotate: 20 } }, yAxis: { type: 'value', name: '授权数' }, series: [{ name: '授权数', type: 'bar', data: biz.map(x => x.value), itemStyle: { color: C.blue }, barMaxWidth: 48 }] })
   const tr = res.trend || []
   initChart(trendRef.value,{
     color: CHART_COLORS, tooltip: { trigger: 'axis' }, legend: { bottom: 0, data: ['申请量', '生效率%'] },

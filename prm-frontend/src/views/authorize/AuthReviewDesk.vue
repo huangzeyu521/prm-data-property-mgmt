@@ -118,13 +118,18 @@
 import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { pageAuthApply, approveAuth, rejectAuth, batchApproveAuth, batchRejectAuth, getAuthFlowLog, getAuthAiCheckLogic, getAuthAiRunlog, verifyAuthAiSnapshot } from '@/api/authorize'
+import { currentRole, AUTH_NODE_ROLE, handledStatuses } from '@/lib/roles'
 
 const rows = ref([]); const loading = ref(false); const sel = ref([])
 const drawer = ref(false); const cur = ref({}); const logs = ref([])
 // 大模型校验机制完善(授权侧):校验规则可视化 / 回放 / 快照防篡改验真
 const checkLogic = ref(null); const aiRunlog = ref([]); const snapVerify = ref(null)
 const PENDING = ['合规审核中', '业务审核中', '主管审核中', '经理审核中', '副总审批中', '领导小组审批中']
-const reviewing = computed(() => rows.value.filter(r => PENDING.includes(r.status)))
+// 审核台收敛到「本角色·本节点」:副总(gm)只见「副总审批中」,合规只见「合规审核中」…… admin/all 看全部。
+// 否则 gm 会看到合规/业务等非本节点单据,误点「审批通过」必被后端 assertNodeRole 拦成 403(名为审核台、实为越权点击)。
+const myStatuses = handledStatuses(currentRole(), AUTH_NODE_ROLE)
+const reviewing = computed(() => rows.value.filter(r =>
+  PENDING.includes(r.status) && (myStatuses === null || myStatuses.includes(r.status))))
 function fmt(t) { return t ? String(t).replace('T', ' ').slice(0, 19) : '-' }
 // 库表级:assetId=SYS:系统名 → 系统名;数据表名=assetName(库表名)。与向导/历史页/确权目录同一派生。
 function sysName(row) { const a = row.assetId || ''; return a.startsWith('SYS:') ? a.slice(4) : (a || '—') }
