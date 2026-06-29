@@ -93,7 +93,7 @@ function filterNode(value, data) { return !value || (data.name || '').includes(v
 <style scoped>
 .cat-tree { height: 100%; display: flex; flex-direction: column; }
 .cat-tree-hd { font-size: 12.5px; font-weight: 600; color: var(--prm-color-text); margin-bottom: 8px; }
-.cat-tree :deep(.el-tree) { flex: 1; overflow: auto; background: #fafbfc; border: 1px solid #eef0f3; border-radius: 6px; padding: 6px; max-height: 560px; }
+.cat-tree :deep(.el-tree) { flex: 1; overflow: auto; background: var(--prm-color-bg); border: 1px solid var(--prm-color-bg); border-radius: 6px; padding: 6px; max-height: 560px; }
 .cat-count { margin-left: 6px; font-size: 12px; color: var(--prm-color-text-weak); }
 .is-table { color: var(--prm-color-link); }
 .auth-badge { margin-left: 6px; transform: scale(0.85); }

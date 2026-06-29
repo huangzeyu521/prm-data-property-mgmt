@@ -43,7 +43,7 @@
                 placeholder="搜索已确权资产(名称/卡片号)选取,先确后授" @change="onAssetPicked">
                 <el-option v-for="a in assetOpts" :key="a.assetId" :value="a.assetId" :label="a.assetName || a.assetId">
                   <span>{{ a.assetName || a.assetId }}</span>
-                  <span style="float:right;color:#8a8a8a;font-size:12px">{{ a.cardNo }}</span>
+                  <span style="float:right;color:var(--prm-color-text-weak);font-size:12px">{{ a.cardNo }}</span>
                 </el-option>
               </el-select>
               <el-button :loading="assetLoading" @click="onAssetBlur">引用资产信息</el-button>
@@ -81,7 +81,7 @@
               style="width:100%" @change="onScenarioChange">
               <el-option v-for="s in filteredScenarios" :key="s.scenarioId" :label="`${s.scenarioName}（${s.category}）`" :value="s.scenarioName">
                 <span>{{ s.scenarioName }}</span>
-                <span style="float:right;color:#8492a6;font-size:12px">{{ s.category }}{{ s.rightType && s.rightType !== '通用' ? ' · ' + s.rightType : '' }}</span>
+                <span style="float:right;color:var(--prm-color-text-weak);font-size:12px">{{ s.category }}{{ s.rightType && s.rightType !== '通用' ? ' · ' + s.rightType : '' }}</span>
               </el-option>
             </el-select>
             <div v-if="form.rightType" style="font-size:12px;color:var(--prm-color-text-weak);line-height:1.5;margin-top:2px">仅列适用「{{ form.rightType }}」及通用的场景(应用场景管理按权益类型配置)</div>
@@ -704,6 +704,6 @@ function reset() {
 <style scoped>
 .wz-steps { max-width: 900px; margin: 8px auto 20px; }
 .wz-body { min-height: 320px; }
-.wz-flow { background: #f7f9ff; border-radius: 8px; padding: 10px 16px; color: #4a5160; font-size: 13px; display: inline-block; }
-.auth-tip { font-size: 12px; color: #8a8a8a; line-height: 1.6; }
+.wz-flow { background: #f7f9ff; border-radius: 8px; padding: 10px 16px; color: var(--prm-color-text-secondary); font-size: 13px; display: inline-block; }
+.auth-tip { font-size: 12px; color: var(--prm-color-text-weak); line-height: 1.6; }
 </style>

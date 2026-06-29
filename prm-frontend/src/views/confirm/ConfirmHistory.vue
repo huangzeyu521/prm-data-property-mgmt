@@ -172,13 +172,13 @@
     </div>
 
     <el-drawer v-model="drawer" :title="`进度跟踪 — ${curNo}`" size="46%">
-      <div v-if="!logs.length" style="color:#999;padding:12px">暂无流转记录(草稿尚未提交)。</div>
+      <div v-if="!logs.length" style="color:var(--prm-color-text-weak);padding:12px">暂无流转记录(草稿尚未提交)。</div>
       <el-timeline v-else style="padding:8px 6px">
         <el-timeline-item v-for="l in logs" :key="l.logId" :timestamp="fmt(l.createTime)" placement="top"
           :type="l.toStatus === '已驳回' ? 'danger' : (l.toStatus === '已完成' ? 'success' : 'primary')">
           <div style="font-weight:600">{{ l.nodeName }}{{ l.node ? '（节点' + l.node + '）' : '' }}：{{ l.fromStatus }} → {{ l.toStatus }}</div>
-          <div style="font-size:12px;color:#71717a;margin-top:2px">责任人：{{ l.responder || '-' }}</div>
-          <div v-if="l.opinion" style="font-size:12px;color:#71717a;margin-top:2px">意见：{{ l.opinion }}</div>
+          <div style="font-size:12px;color:var(--prm-color-text-secondary);margin-top:2px">责任人：{{ l.responder || '-' }}</div>
+          <div v-if="l.opinion" style="font-size:12px;color:var(--prm-color-text-secondary);margin-top:2px">意见：{{ l.opinion }}</div>
           <div style="font-size:12px;color:#1e87f0;margin-top:4px"><el-icon style="vertical-align:-2px"><Bell /></el-icon> {{ l.pushChannel }}：{{ l.notifyContent }}</div>
         </el-timeline-item>
       </el-timeline>
@@ -340,7 +340,7 @@ onMounted(load)
 /* 概览统计条:左强调色边 + 数字层级,点选下钻 */
 .stat-bar { display: flex; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
 .stat-card {
-  flex: 1; min-width: 132px; background: #fff; border: 1px solid #eef0f3; border-left: 3px solid var(--prm-color-text-disabled);
+  flex: 1; min-width: 132px; background: #fff; border: 1px solid var(--prm-color-bg); border-left: 3px solid var(--prm-color-text-disabled);
   border-radius: 6px; padding: 12px 16px; transition: box-shadow .15s, transform .15s;
 }
 .stat-card.clickable { cursor: pointer; }
@@ -355,7 +355,7 @@ onMounted(load)
 .c-init { border-left-color: var(--prm-color-primary); }
 
 /* 展开详情:键值网格 */
-.expand-detail { display: flex; flex-wrap: wrap; gap: 6px 28px; padding: 10px 18px 12px 56px; background: #fafbfc; }
+.expand-detail { display: flex; flex-wrap: wrap; gap: 6px 28px; padding: 10px 18px 12px 56px; background: var(--prm-color-bg); }
 .ed-item { display: flex; gap: 8px; min-width: 220px; font-size: 13px; line-height: 1.7; }
 .ed-item.ed-wide { flex-basis: 100%; }
 .ed-k { color: var(--prm-color-text-weak); min-width: 78px; }

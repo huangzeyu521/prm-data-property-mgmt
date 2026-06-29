@@ -42,7 +42,7 @@
         <el-table-column label="套版文件" min-width="150">
           <template #default="{ row }">
             <el-link v-if="row.fileName" type="primary" @click="onDownload(row)">{{ row.fileName }}</el-link>
-            <span v-else style="color:#bbb">未上传</span>
+            <span v-else style="color:var(--prm-color-text-disabled)">未上传</span>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="300" fixed="right">

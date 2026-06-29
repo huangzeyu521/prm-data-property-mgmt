@@ -274,7 +274,7 @@ onMounted(load)
 <style scoped>
 .stat-bar { display: flex; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
 .stat-card {
-  flex: 1; min-width: 132px; background: #fff; border: 1px solid #eef0f3; border-left: 3px solid var(--prm-color-text-disabled);
+  flex: 1; min-width: 132px; background: #fff; border: 1px solid var(--prm-color-bg); border-left: 3px solid var(--prm-color-text-disabled);
   border-radius: 6px; padding: 12px 16px; transition: box-shadow .15s, transform .15s;
 }
 .stat-card.clickable { cursor: pointer; }

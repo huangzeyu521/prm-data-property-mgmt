@@ -26,10 +26,21 @@ const BANNED = {
   '#e6a23c': '--prm-color-warning（警告=金黄 #FFC417）或 --prm-color-link；严禁橙色(客户已否决)',
   '#ff7800': '--prm-color-warning（警告=金黄 #FFC417);严禁橙色',
   '#ff7a00': '--prm-color-warning（警告=金黄 #FFC417);严禁橙色',
+  // 2026-06 全页规范审计收编的超规范中性灰/红/底(数研院调色板外),改用语义令牌:
+  '#8a8a8a': '--prm-color-text-weak（#8C8C8C）', '#999999': '--prm-color-text-weak（#8C8C8C）', '#999': '--prm-color-text-weak（#8C8C8C）',
+  '#9ca3af': '--prm-color-text-weak（#8C8C8C）', '#8a93a6': '--prm-color-text-weak（#8C8C8C）', '#8492a6': '--prm-color-text-weak（#8C8C8C）',
+  '#71717a': '--prm-color-text-secondary（#595959）', '#6b7280': '--prm-color-text-secondary（#595959）',
+  '#52606d': '--prm-color-text-secondary（#595959）', '#4a5160': '--prm-color-text-secondary（#595959）',
+  '#bbbbbb': '--prm-color-text-disabled（#B4B4B4）', '#bbb': '--prm-color-text-disabled（#B4B4B4）', '#c4c8cf': '--prm-color-text-disabled（#B4B4B4）',
+  '#1f2329': '--prm-color-text（#262626）', '#25262b': '--prm-color-text（#262626）',
+  '#f5f5f5': '--prm-color-bg（#F5F5F6）', '#eef0f3': '--prm-color-bg（#F5F5F6）', '#fafbfc': '--prm-color-bg（#F5F5F6）', '#f7f9fc': '--prm-color-bg（#F5F5F6）',
+  '#ebecec': '--prm-color-border（#D8D8D8）', '#e4e7ed': '--prm-color-border（#D8D8D8）', '#e3e8ef': '--prm-color-border（#D8D8D8）',
+  '#f53f3f': '--prm-color-danger（#E21F0C）', '#f5483b': '--prm-color-danger（#E21F0C）',
 }
 
 const SCRIPT_RE = /<script\b[\s\S]*?<\/script>/gi
-const HEX_RE = new RegExp(Object.keys(BANNED).join('|'), 'gi')
+// 长串优先(#999999 先于 #999)+ 右界不接 hex 位,避免误伤 #bbbbbb/#999999 等更长合法色
+const HEX_RE = new RegExp('(?:' + Object.keys(BANNED).sort((a, b) => b.length - a.length).join('|') + ')(?![0-9a-fA-F])', 'gi')
 
 function walk(dir, acc = []) {
   for (const name of readdirSync(dir)) {

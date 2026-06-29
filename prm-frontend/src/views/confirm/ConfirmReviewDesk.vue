@@ -51,7 +51,7 @@
               <el-button link type="danger" @click="onReject(row)">驳回</el-button>
             </template>
             <el-tooltip v-else :content="`本节点须「${needRoleLabel(row.status)}」处理`" placement="top">
-              <span style="color:#bbb;font-size:12px;margin-left:6px">非本人审批</span>
+              <span style="color:var(--prm-color-text-disabled);font-size:12px;margin-left:6px">非本人审批</span>
             </el-tooltip>
           </template>
         </el-table-column>
@@ -145,7 +145,7 @@
           <el-descriptions-item label="网公司持有权">{{ aiSnap.consolidation.holdRight }}</el-descriptions-item>
           <el-descriptions-item label="网公司经营权">{{ aiSnap.consolidation.operateRight }}</el-descriptions-item>
         </el-descriptions>
-        <div style="font-size:12px;color:#9ca3af;margin-top:4px">
+        <div style="font-size:12px;color:var(--prm-color-text-weak);margin-top:4px">
           校验时间 {{ fmt(aiSnap.checkedAt) }} · 元数据质量 {{ aiSnap.qualityScore ?? '—' }} · 提交时固化快照,供预审完整复核·可追溯
         </div>
         <!-- 快照完整性验真(防篡改):重算 SM3 比对上链存证 -->
@@ -153,7 +153,7 @@
           <el-tag :type="snapVerify.verified ? 'success' : (snapVerify.payloadSm3 ? 'danger' : 'info')" size="small" effect="dark">
             {{ snapVerify.verified ? '✔ 快照完整·未被篡改' : (snapVerify.payloadSm3 ? '✘ 快照与存证不一致·疑似篡改' : '无防篡改快照') }}
           </el-tag>
-          <span v-if="snapVerify.evidenceId" style="font-size:12px;color:#9ca3af;margin-left:8px">存证 {{ snapVerify.evidenceId.slice(0, 12) }}… · SM3 {{ (snapVerify.payloadSm3 || '').slice(0, 12) }}… · 留痕 {{ snapVerify.aiRunCount ?? 0 }} 次</span>
+          <span v-if="snapVerify.evidenceId" style="font-size:12px;color:var(--prm-color-text-weak);margin-left:8px">存证 {{ snapVerify.evidenceId.slice(0, 12) }}… · SM3 {{ (snapVerify.payloadSm3 || '').slice(0, 12) }}… · 留痕 {{ snapVerify.aiRunCount ?? 0 }} 次</span>
         </div>
       </div>
       <el-empty v-else :image-size="40" description="该申请无 AI 校验快照(旧数据 / 未经一键校验提交)" />
@@ -177,7 +177,7 @@
           </div>
         </el-collapse-item>
       </el-collapse>
-      <div v-if="checkLogic && checkLogic.summary" style="font-size:12px;color:#9ca3af;margin-top:4px">
+      <div v-if="checkLogic && checkLogic.summary" style="font-size:12px;color:var(--prm-color-text-weak);margin-top:4px">
         {{ checkLogic.summary }} · 模型 {{ checkLogic.aiModel }}
       </div>
 
@@ -190,8 +190,8 @@
           <div style="font-size:13px">
             <el-tag size="small" effect="dark" style="margin-right:6px">{{ l.capability }}</el-tag>
             <span style="color:var(--prm-color-text-secondary)">模型 {{ l.model }} · 耗时 {{ l.durationMs }}ms · 触发 {{ l.triggerUser }}</span>
-            <div style="font-size:12px;color:#9ca3af">输入:{{ l.inputSummary || '—' }}</div>
-            <div style="font-size:12px;color:#9ca3af">SM3 {{ (l.sm3Hash || '').slice(0, 16) }}…(输出防篡改指纹)</div>
+            <div style="font-size:12px;color:var(--prm-color-text-weak)">输入:{{ l.inputSummary || '—' }}</div>
+            <div style="font-size:12px;color:var(--prm-color-text-weak)">SM3 {{ (l.sm3Hash || '').slice(0, 16) }}…(输出防篡改指纹)</div>
           </div>
         </el-timeline-item>
       </el-timeline>
@@ -211,7 +211,7 @@
             <el-link v-if="row.source === '平台同步' && row.fileUrl" type="success" @click="preview(row)" :title="row.fileName">平台原件·查看</el-link>
             <span v-else-if="row.source === '平台同步'" style="color:#36b21d" :title="row.fileName">平台原件</span>
             <el-link v-else-if="row.fileName" type="primary" @click="preview(row)">查看</el-link>
-            <span v-else style="color:#bbb">-</span>
+            <span v-else style="color:var(--prm-color-text-disabled)">-</span>
           </template>
         </el-table-column>
       </el-table>
@@ -221,7 +221,7 @@
         <el-timeline-item v-for="l in logs" :key="l.logId" :timestamp="fmt(l.createTime)" placement="top"
           :type="l.toStatus === '已驳回' ? 'danger' : (l.toStatus === '已完成' ? 'success' : 'primary')">
           {{ l.nodeName }}：{{ l.fromStatus }} → {{ l.toStatus }} · 责任人 {{ l.responder }}
-          <div v-if="l.opinion" style="font-size:12px;color:#71717a">意见：{{ l.opinion }}</div>
+          <div v-if="l.opinion" style="font-size:12px;color:var(--prm-color-text-secondary)">意见：{{ l.opinion }}</div>
         </el-timeline-item>
       </el-timeline>
       <el-empty v-else :image-size="50" description="暂无流转记录" />

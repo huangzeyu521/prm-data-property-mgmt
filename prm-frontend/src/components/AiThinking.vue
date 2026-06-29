@@ -77,7 +77,7 @@ function phaseClass(i) {
   font-variant-numeric: tabular-nums;
 }
 .ai-hint {
-  color: var(--prm-color-text-weak, #8a8a8a);
+  color: var(--prm-color-text-weak);
   font-size: 12px;
   margin: 6px 0 8px;
 }
@@ -92,14 +92,14 @@ function phaseClass(i) {
   gap: 8px;
   padding: 3px 0;
   font-size: 13px;
-  color: var(--prm-color-text-weak, #8a8a8a);
+  color: var(--prm-color-text-weak);
   transition: color 0.2s;
 }
 .ai-phases li .ai-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #c4c8cf;
+  background: var(--prm-color-text-disabled);
   flex: none;
 }
 .ai-phases li.cur {
@@ -112,7 +112,7 @@ function phaseClass(i) {
   animation: ai-pulse 1s ease-in-out infinite;
 }
 .ai-phases li.passed {
-  color: #52606d;
+  color: var(--prm-color-text-secondary);
 }
 .ai-phases li.passed .ai-dot {
   background: #36b21d;

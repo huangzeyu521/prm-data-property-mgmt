@@ -557,7 +557,7 @@
               <el-link v-if="row.source === '平台同步' && row.fileUrl" type="success" @click="previewMaterial(row)" :title="row.fileName">{{ row.fileName }}（平台原件·预览）</el-link>
               <span v-else-if="row.source === '平台同步'" style="color:#36b21d" :title="row.fileName">{{ row.fileName }}（平台原件）</span>
               <el-link v-else-if="row.fileName" type="primary" @click="previewMaterial(row)">{{ row.fileName }}（预览/下载）</el-link>
-              <span v-else style="color:#bbb">占位/无原件</span>
+              <span v-else style="color:var(--prm-color-text-disabled)">占位/无原件</span>
             </template>
           </el-table-column>
         </el-table>
@@ -1757,7 +1757,7 @@ function reset() {
 .form-tip { font-size: 12px; color: var(--prm-color-text-weak); line-height: 1.6; }
 .pf-mark { margin-top: 3px; }
 /* 经营权归集判定结果卡片:结论做主角,法条折叠 */
-.consol-card { margin-top: 10px; padding: 12px 14px; border-radius: 8px; background: #fafbfc; border: 1px solid #eef0f3; border-left: 4px solid var(--prm-color-text-weak); }
+.consol-card { margin-top: 10px; padding: 12px 14px; border-radius: 8px; background: var(--prm-color-bg); border: 1px solid var(--prm-color-bg); border-left: 4px solid var(--prm-color-text-weak); }
 .consol-card.op-yes { border-left-color: #36b21d; background: #f3faf1; }
 .consol-card.op-no { border-left-color: var(--prm-color-danger); background: #fef4f4; }
 .consol-card.op-depend { border-left-color: #126cfd; background: #f2f7ff; }

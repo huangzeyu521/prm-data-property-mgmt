@@ -97,18 +97,18 @@ function onCancel() {
 }
 .prm-dialog :deep(.el-dialog__title) {
   font-size: 16px;
-  color: var(--prm-color-text, #25262b);
+  color: var(--prm-color-text);
 }
 .prm-dialog :deep(.el-dialog__body) { padding: 20px; }
 .prm-dialog :deep(.el-dialog__footer) {
   padding: 12px 20px;
-  border-top: 1px solid #ebecec;
+  border-top: 1px solid var(--prm-color-border);
 }
 .prm-dialog-prompt { display: flex; gap: 12px; align-items: flex-start; }
 .prm-dialog-prompt-body { font-size: 14px; color: var(--prm-color-text, #262626); line-height: 1.7; padding-top: 1px; }
 .prm-dialog-prompt-icon.is-warning { color: var(--prm-color-warning, #ffc417); }
 .prm-dialog-prompt-icon.is-success { color: var(--el-color-success, #36b21d); }
 .prm-dialog-prompt-icon.is-info { color: var(--prm-color-primary, #1e87f0); }
-.prm-dialog-prompt-icon.is-danger { color: var(--prm-color-danger, #f53f3f); }
+.prm-dialog-prompt-icon.is-danger { color: var(--prm-color-danger); }
 .prm-dialog-body { font-size: 14px; }
 </style>

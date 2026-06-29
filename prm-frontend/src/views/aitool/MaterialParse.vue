@@ -121,7 +121,7 @@
           <template #default="{ row }">
             <el-button v-if="!row.standard && row.standardTerm && !row.standardTerm.includes('待人工确认')"
               link type="primary" @click="onAdoptTerm(row)">采用标准术语</el-button>
-            <span v-else style="color:#bbb">—</span>
+            <span v-else style="color:var(--prm-color-text-disabled)">—</span>
           </template>
         </el-table-column>
       </el-table>
@@ -177,7 +177,7 @@
         <el-table-column label="定位" width="120" align="center">
           <template #default="{ row }">
             <el-button v-if="row.sourceOffset != null && row.sourceOffset >= 0" link type="primary" @click="onLocate(row)">定位原文</el-button>
-            <span v-else style="color:#bbb">原文未定位</span>
+            <span v-else style="color:var(--prm-color-text-disabled)">原文未定位</span>
           </template>
         </el-table-column>
       </el-table>
@@ -801,6 +801,6 @@ onMounted(() => {
 
 <style scoped>
 .hash { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: #1e87f0; }
-.locate-doc { max-height: 360px; overflow: auto; white-space: pre-wrap; word-break: break-all; line-height: 1.9; font-size: 13px; padding: 12px 14px; background: #f7f9fc; border: 1px solid #e4e7ed; border-radius: 6px; color: var(--prm-color-text); }
+.locate-doc { max-height: 360px; overflow: auto; white-space: pre-wrap; word-break: break-all; line-height: 1.9; font-size: 13px; padding: 12px 14px; background: var(--prm-color-bg); border: 1px solid var(--prm-color-border); border-radius: 6px; color: var(--prm-color-text); }
 .locate-mark { background: #ffe08a; color: #ad6800; font-weight: 700; padding: 1px 3px; border-radius: 3px; box-shadow: 0 0 0 2px #ffd666; }
 </style>

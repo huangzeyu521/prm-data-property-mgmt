@@ -51,7 +51,7 @@
             <el-tooltip v-if="row.chainHash" :content="'SM3指纹/上链:' + row.chainHash" placement="top">
               <el-tag type="success" effect="plain" size="small">已上链</el-tag>
             </el-tooltip>
-            <span v-else style="color:#bbb">-</span>
+            <span v-else style="color:var(--prm-color-text-disabled)">-</span>
           </template>
         </el-table-column>
       </el-table>

@@ -515,7 +515,7 @@ function reset() {
 <style scoped>
 .wz-steps { max-width: 900px; margin: 8px auto 20px; }
 .wz-body { min-height: 340px; }
-.wz-flow { background: #f7f9ff; border-radius: 8px; padding: 10px 16px; color: #4a5160; font-size: 13px; display: inline-block; }
+.wz-flow { background: #f7f9ff; border-radius: 8px; padding: 10px 16px; color: var(--prm-color-text-secondary); font-size: 13px; display: inline-block; }
 .batch-primary { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 16px; margin-bottom: 14px; background: linear-gradient(180deg, #eef4ff, #f7faff); border: 1px solid #d6e4ff; border-radius: 8px; }
 .batch-primary-hint { color: var(--prm-color-text-secondary); font-size: 13px; line-height: 1.5; flex: 1; min-width: 240px; }
 </style>

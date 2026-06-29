@@ -5,7 +5,11 @@
 -->
 <template>
   <div class="prm-page">
-    <h3 style="margin:0 0 16px 0">数据产权全景概览</h3>
+    <div class="ov-head">
+      <h3 style="margin:0">数据产权全景概览</h3>
+      <!-- 战略全景=固定口径快照,以显式标注替代交互筛选(存量指标按时间切语义弱),让用户一眼知道数据时间范围 -->
+      <span class="ov-scope">数据口径:截至 {{ asOf }} · 全公司全量快照;趋势为近 12 个月</span>
+    </div>
     <!-- 响应式断点(规范 p21 等效):≥md 宽屏多列,sm/xs 窄屏自动重排;Element 固定 24 栏,以断点 span 达成变栏等效 -->
     <el-row :gutter="16">
       <el-col :span="4" :sm="8" :xs="12"><el-card shadow="hover"><div class="st"><b>{{ ov.totalAssets }}</b><span>纳管资产数(覆盖率分母)</span></div></el-card></el-col>
@@ -43,13 +47,18 @@
   </div>
 </template>
 <script setup>
-import { onMounted, reactive, ref, nextTick } from 'vue'
+import { onMounted, reactive, ref, computed, nextTick } from 'vue'
 import { initChart } from '@/lib/chartBase'
 import { CHART_COLORS, C } from '@/lib/chartPalette'
 import { getOverview, getLedgerStatistics } from '@/api/ledger'
 import { getConfirmDashboard } from '@/api/confirm'
 import { getAuthDashboard, expiringAuthCerts } from '@/api/authorize'
 import { getAlertStats } from '@/api/monitor'
+// 口径标注:统计截止日 = 当前日期(全景为实时全量快照)
+const asOf = computed(() => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+})
 const ov = reactive({ totalAssets: 0, confirmRate: 0 })
 const cf = reactive({ cardCount: 0, passRate: 0 })
 const au = reactive({ certCount: 0, effectiveRate: 0 })
@@ -130,6 +139,8 @@ async function load() {
 onMounted(load)
 </script>
 <style scoped>
+.ov-head { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin:0 0 16px 0; }
+.ov-scope { font-size:12px; color: var(--prm-color-text-secondary); }
 .st { text-align: center; } .st b { display:block; font-size:24px; font-weight:700; } .st span { color: var(--prm-color-text-secondary); font-size:12px; }
 .blue { color:#1e87f0; } .green { color:#36b21d; } .orange { color:#ffc417; } .red { color:#e21f0c; }
 .lk-title { margin:18px 0 10px; font-weight:700; color: var(--prm-color-text); border-left:4px solid #1e87f0; padding-left:10px; }

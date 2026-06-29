@@ -73,7 +73,7 @@
         </el-table-column>
       </el-table>
 
-      <div v-if="!loading && view.length === 0" style="text-align:center;padding:32px;color:#8a8a8a">
+      <div v-if="!loading && view.length === 0" style="text-align:center;padding:32px;color:var(--prm-color-text-weak)">
         {{ group ? `「${group}」暂无申请。` : '暂无申请。' }}可前往
         <el-link type="primary" @click="$router.push('/dpr/confirm/wizard')">确权申请</el-link>、
         <el-link type="primary" @click="$router.push('/dpr/auth/wizard')">一事一议授权</el-link> 或
@@ -86,13 +86,13 @@
       <el-steps :active="curStep" finish-status="success" align-center class="my-flow" style="margin:4px 4px 20px">
         <el-step v-for="s in curSteps" :key="s" :title="s" />
       </el-steps>
-      <div v-if="!logs.length" style="color:#999;padding:8px 12px">暂无明细流转记录(当前进度见上方步骤条;草稿尚未提交)。</div>
+      <div v-if="!logs.length" style="color:var(--prm-color-text-weak);padding:8px 12px">暂无明细流转记录(当前进度见上方步骤条;草稿尚未提交)。</div>
       <el-timeline v-else style="padding:8px 6px">
         <el-timeline-item v-for="(l, i) in logs" :key="l.logId || i" :timestamp="fmt(l.createTime)" placement="top"
           :type="l.toStatus === '已驳回' ? 'danger' : (['已完成', '已生效'].includes(l.toStatus) ? 'success' : 'primary')">
           <div style="font-weight:600">{{ l.nodeName || l.node || '流转' }}：{{ l.fromStatus }} → {{ l.toStatus }}</div>
-          <div v-if="l.responder" style="font-size:12px;color:#71717a;margin-top:2px">责任人：{{ l.responder }}</div>
-          <div v-if="l.opinion" style="font-size:12px;color:#71717a;margin-top:2px">意见：{{ l.opinion }}</div>
+          <div v-if="l.responder" style="font-size:12px;color:var(--prm-color-text-secondary);margin-top:2px">责任人：{{ l.responder }}</div>
+          <div v-if="l.opinion" style="font-size:12px;color:var(--prm-color-text-secondary);margin-top:2px">意见：{{ l.opinion }}</div>
           <div v-if="l.notifyContent" style="font-size:12px;color:#1e87f0;margin-top:4px">{{ l.pushChannel }}：{{ l.notifyContent }}</div>
         </el-timeline-item>
       </el-timeline>
@@ -200,8 +200,8 @@ onMounted(load)
 </script>
 
 <style scoped>
-.my-sub { font-size: 12.5px; color: #8a93a6; }
-.my-sub b { color: #6b7280; }
+.my-sub { font-size: 12.5px; color: var(--prm-color-text-weak); }
+.my-sub b { color: var(--prm-color-text-secondary); }
 .my-stats { margin-top: 4px; }
 .my-card { cursor: pointer; transition: border-color .15s, box-shadow .15s; }
 .my-card:hover { border-color: #c0d4ff; }

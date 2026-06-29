@@ -106,8 +106,8 @@ function onClosed() {
 .fp-frame { width: 100%; height: 74vh; border: 0; }
 .fp-img-wrap { text-align: center; }
 .fp-img { max-width: 100%; max-height: 74vh; }
-.fp-docx { background: #f5f5f5; padding: 12px; }
-.fp-docx :deep(.docx-wrapper) { background: #f5f5f5; padding: 0; }
+.fp-docx { background: var(--prm-color-bg); padding: 12px; }
+.fp-docx :deep(.docx-wrapper) { background: var(--prm-color-bg); padding: 0; }
 .fp-docx :deep(.docx) { box-shadow: 0 0 6px rgba(0,0,0,.12); margin: 0 auto; }
 .fp-text { white-space: pre-wrap; word-break: break-all; font-size: 13px; line-height: 1.6; padding: 8px; }
 </style>

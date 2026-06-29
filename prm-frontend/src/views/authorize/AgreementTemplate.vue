@@ -38,7 +38,7 @@
         <el-table-column label="套版文件" min-width="150">
           <template #default="{ row }">
             <el-link v-if="row.fileName" type="primary" @click="onDownload(row)">{{ row.fileName }}</el-link>
-            <span v-else style="color:#bbb">未上传</span>
+            <span v-else style="color:var(--prm-color-text-disabled)">未上传</span>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="300" fixed="right">
@@ -88,7 +88,7 @@
         <el-descriptions-item label="授权类型">{{ cur.authType }}</el-descriptions-item>
         <el-descriptions-item label="使用目的">{{ cur.purpose }}</el-descriptions-item>
         <el-descriptions-item label="版本">{{ cur.templateVersion }}</el-descriptions-item>
-        <el-descriptions-item label="套版文件"><el-link v-if="cur.fileName" type="primary" @click="onDownload(cur)">{{ cur.fileName }}</el-link><span v-else style="color:#bbb">未上传</span></el-descriptions-item>
+        <el-descriptions-item label="套版文件"><el-link v-if="cur.fileName" type="primary" @click="onDownload(cur)">{{ cur.fileName }}</el-link><span v-else style="color:var(--prm-color-text-disabled)">未上传</span></el-descriptions-item>
         <el-descriptions-item label="协议内容" :span="2"><div style="white-space:pre-wrap">{{ cur.templateContent || '—' }}</div></el-descriptions-item>
       </el-descriptions>
     </el-dialog>

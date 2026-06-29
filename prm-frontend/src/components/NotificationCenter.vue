@@ -141,7 +141,7 @@ onUnmounted(() => timer && clearInterval(timer))
 </script>
 
 <style scoped>
-.nc-bell { color: #71717a; padding: 6px; }
+.nc-bell { color: var(--prm-color-text-secondary); padding: 6px; }
 .nc-bell:hover { color: var(--prm-color-primary, #1e87f0); }
 .nc-badge :deep(.el-badge__content) { border: none; }
 </style>
@@ -151,7 +151,7 @@ onUnmounted(() => timer && clearInterval(timer))
 .nc-pop { padding: 0 !important; }
 .nc-panel { display: flex; flex-direction: column; }
 .nc-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 4px; }
-.nc-title { font-weight: 700; font-size: 15px; color: var(--prm-color-text, #1f2329); }
+.nc-title { font-weight: 700; font-size: 15px; color: var(--prm-color-text); }
 .nc-refresh { color: var(--prm-color-text-weak); }
 .nc-tabs { padding: 0 6px; }
 .nc-tabs .el-tabs__header { margin-bottom: 4px; }
@@ -165,16 +165,16 @@ onUnmounted(() => timer && clearInterval(timer))
 .nc-item:hover { background: #f2f6ff; }
 .nc-body { flex: 1; min-width: 0; }
 .nc-desc {
-  font-size: 13px; color: #1f2329; line-height: 1.35;
+  font-size: 13px; color: var(--prm-color-text); line-height: 1.35;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.nc-meta { margin-top: 3px; font-size: 11px; color: #99a; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
-.nc-dotsep { color: #cdd; }
+.nc-meta { margin-top: 3px; font-size: 11px; color: var(--prm-color-text-weak); display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.nc-dotsep { color: var(--prm-color-border); }
 .nc-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex: none; }
-.lv-urgent { background: #f5483b; box-shadow: 0 0 0 3px rgba(245,72,59,0.15); }
+.lv-urgent { background: var(--prm-color-danger); box-shadow: 0 0 0 3px rgba(245,72,59,0.15); }
 .lv-major { background: #ffc417; box-shadow: 0 0 0 3px rgba(240,160,32,0.15); }
 .lv-normal { background: #1e87f0; box-shadow: 0 0 0 3px rgba(47,107,255,0.15); }
 .nc-domain { flex: none; margin-top: 2px; }
 .nc-empty { padding: 8px 0 14px; }
-.nc-foot { border-top: 1px solid #eef0f3; padding: 8px 14px; text-align: center; }
+.nc-foot { border-top: 1px solid var(--prm-color-bg); padding: 8px 14px; text-align: center; }
 </style>

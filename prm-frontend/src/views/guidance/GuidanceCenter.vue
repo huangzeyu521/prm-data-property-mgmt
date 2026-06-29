@@ -38,7 +38,7 @@
             <el-table-column type="index" label="序号" width="56" align="center" />
             <el-table-column prop="title" label="名称" min-width="220" show-overflow-tooltip />
             <el-table-column label="文件" min-width="200" show-overflow-tooltip>
-              <template #default="{ row }"><span v-if="row.fileName">{{ row.fileName }}</span><span v-else style="color:#bbb">（无原件）</span></template>
+              <template #default="{ row }"><span v-if="row.fileName">{{ row.fileName }}</span><span v-else style="color:var(--prm-color-text-disabled)">（无原件）</span></template>
             </el-table-column>
             <el-table-column prop="publisher" label="上传人" width="110" />
             <el-table-column label="上传时间" width="160"><template #default="{ row }">{{ fmt(row.publishDate) }}</template></el-table-column>
@@ -186,15 +186,15 @@ onMounted(loadWg)
 .gc-tabs { padding: 4px 4px 0; }
 /* 工作指引存档 */
 .wg-hero { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin: 4px 4px 16px; padding: 18px 22px; border-radius: 10px; background: linear-gradient(135deg, #eef4ff, #f7faff); border: 1px solid #e1ebff; }
-.wg-hero-title { font-size: 18px; font-weight: 700; color: #1f2329; margin: 8px 0 4px; }
-.wg-hero-meta { font-size: 12.5px; color: #8a93a6; }
+.wg-hero-title { font-size: 18px; font-weight: 700; color: var(--prm-color-text); margin: 8px 0 4px; }
+.wg-hero-meta { font-size: 12.5px; color: var(--prm-color-text-weak); }
 .wg-hero-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .wg-arch { margin: 0 4px; }
-.wg-arch-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-size: 14px; font-weight: 600; color: #1f2329; }
+.wg-arch-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-size: 14px; font-weight: 600; color: var(--prm-color-text); }
 .wg-tip { margin-top: 8px; font-size: 12px; color: var(--prm-color-text-weak); line-height: 1.6; }
-.gc-empty { padding: 28px 16px; text-align: center; color: var(--prm-color-text-weak); font-size: 13px; background: #fafbfc; border: 1px dashed #e3e8ef; border-radius: 8px; }
+.gc-empty { padding: 28px 16px; text-align: center; color: var(--prm-color-text-weak); font-size: 13px; background: var(--prm-color-bg); border: 1px dashed var(--prm-color-border); border-radius: 8px; }
 .wg-frame { width: 100%; height: 76vh; border: none; }
-.gc-hint { padding: 4px 4px 12px; font-size: 12.5px; color: #6b7280; }
+.gc-hint { padding: 4px 4px 12px; font-size: 12.5px; color: var(--prm-color-text-secondary); }
 </style>
 <style>
 .wg-pv .el-dialog__body { padding: 8px 16px 16px; }

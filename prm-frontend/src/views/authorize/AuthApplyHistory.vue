@@ -93,13 +93,13 @@
         <el-descriptions-item label="安全保障要求(§3.4.4)" :span="2">{{ curRow.securityReq || (curRow.authMode === '批量' ? '批量:在《运营授权协议》(清单级)统一约定' : '— 未填(协议签订前须补充)') }}</el-descriptions-item>
       </el-descriptions>
       <div class="rv-h">流转进度</div>
-      <div v-if="!logs.length" style="color:#999;padding:12px">暂无流转记录(草稿尚未提交)。</div>
+      <div v-if="!logs.length" style="color:var(--prm-color-text-weak);padding:12px">暂无流转记录(草稿尚未提交)。</div>
       <el-timeline v-else style="padding:8px 6px">
         <el-timeline-item v-for="(l, i) in logs" :key="l.logId || i" :timestamp="fmt(l.createTime)" placement="top"
           :type="l.toStatus === '已驳回' ? 'danger' : (l.toStatus === '已生效' ? 'success' : 'primary')">
           <div style="font-weight:600">{{ l.nodeName || l.node || '流转' }}：{{ l.fromStatus }} → {{ l.toStatus }}</div>
-          <div v-if="l.responder" style="font-size:12px;color:#71717a;margin-top:2px">责任人：{{ l.responder }}</div>
-          <div v-if="l.opinion" style="font-size:12px;color:#71717a;margin-top:2px">意见：{{ l.opinion }}</div>
+          <div v-if="l.responder" style="font-size:12px;color:var(--prm-color-text-secondary);margin-top:2px">责任人：{{ l.responder }}</div>
+          <div v-if="l.opinion" style="font-size:12px;color:var(--prm-color-text-secondary);margin-top:2px">意见：{{ l.opinion }}</div>
           <div v-if="l.notifyContent" style="font-size:12px;color:#1e87f0;margin-top:4px">{{ l.pushChannel }}：{{ l.notifyContent }}</div>
         </el-timeline-item>
       </el-timeline>

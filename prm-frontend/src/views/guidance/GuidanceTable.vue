@@ -29,7 +29,7 @@
         <el-table-column prop="version" label="版本" width="70" align="center" />
         <el-table-column prop="publisher" label="发布人" width="110" />
         <el-table-column label="原件" width="120" show-overflow-tooltip>
-          <template #default="{ row }"><span v-if="row.fileName">{{ row.fileName }}</span><span v-else style="color:#bbb">（纯文本）</span></template>
+          <template #default="{ row }"><span v-if="row.fileName">{{ row.fileName }}</span><span v-else style="color:var(--prm-color-text-disabled)">（纯文本）</span></template>
         </el-table-column>
         <el-table-column label="操作" :width="canManage ? 340 : 190" fixed="right">
           <template #default="{ row }">
@@ -80,7 +80,7 @@
         <el-descriptions-item label="发布日期">{{ fmt(cur.publishDate) }}</el-descriptions-item>
         <el-descriptions-item label="原件" :span="2">
           <el-link v-if="cur.fileName" type="primary" @click="onDownload(cur)">{{ cur.fileName }}（下载）</el-link>
-          <span v-else style="color:#bbb">纯文本指引</span>
+          <span v-else style="color:var(--prm-color-text-disabled)">纯文本指引</span>
         </el-descriptions-item>
         <el-descriptions-item label="内容" :span="2"><div style="white-space:pre-wrap">{{ cur.content || '（无）' }}</div></el-descriptions-item>
       </el-descriptions>

@@ -8,7 +8,7 @@
     <div class="prm-query-bar">
       <el-form :inline="true" @submit.prevent>
         <el-form-item label="责任部门">
-          <el-select v-model="q.deptName" placeholder="组织层级/部门(真实组织树)" clearable filterable allow-create default-first-option style="width:200px">
+          <el-select v-model="q.deptName" placeholder="组织/部门(真实组织树)" clearable filterable allow-create default-first-option style="width:200px">
             <el-option v-for="o in orgOptions" :key="o.id" :label="o.bizOrgName" :value="o.bizOrgName" />
           </el-select>
         </el-form-item>
@@ -27,13 +27,6 @@
       <el-col :span="4"><el-card shadow="hover"><div class="st"><b>{{ d.cardCount }}</b><span>权益卡片数</span></div></el-card></el-col>
     </el-row>
 
-    <el-card style="margin-top:16px" header="风险趋势预警">
-      <div v-if="d.bottleneckNode && d.bottleneckNode!=='无积压'" style="margin-bottom:8px">
-        <el-tag type="danger" effect="dark">流程瓶颈：{{ d.bottleneckNode }}</el-tag>
-      </div>
-      <el-alert v-for="(a,i) in (d.riskAlerts||[])" :key="i" :type="a.includes('正常')?'success':'warning'" :closable="false" :title="a" style="margin-bottom:6px" />
-    </el-card>
-
     <el-row :gutter="16" style="margin-top:16px">
       <el-col :span="8"><el-card header="确权状态分布"><div ref="statusRef" style="height:300px"></div></el-card></el-col>
       <el-col :span="8"><el-card header="权益类型构成"><div ref="rightRef" style="height:300px"></div></el-card></el-col>
@@ -42,6 +35,13 @@
     <el-row :gutter="16" style="margin-top:16px">
       <el-col :span="24"><el-card header="确权趋势（月度申请量 + 通过率）"><div ref="trendRef" style="height:320px"></div></el-card></el-col>
     </el-row>
+
+    <el-card style="margin-top:16px" header="风险趋势预警">
+      <div v-if="d.bottleneckNode && d.bottleneckNode!=='无积压'" style="margin-bottom:8px">
+        <el-tag type="danger" effect="dark">流程瓶颈：{{ d.bottleneckNode }}</el-tag>
+      </div>
+      <el-alert v-for="(a,i) in (d.riskAlerts||[])" :key="i" :type="a.includes('正常')?'success':'warning'" :closable="false" :title="a" style="margin-bottom:6px" />
+    </el-card>
   </div>
 </template>
 

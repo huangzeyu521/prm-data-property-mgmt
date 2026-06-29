@@ -7,9 +7,8 @@
   <div class="prm-page">
     <div class="prm-query-bar">
       <el-form :inline="true" @submit.prevent>
-        <el-form-item label="使用场景"><el-input v-model="q.scenario" placeholder="授权使用场景" clearable style="width:160px" /></el-form-item>
-        <el-form-item label="业务部门">
-          <el-select v-model="q.deptName" placeholder="组织/业务域(真实组织树)" clearable filterable allow-create default-first-option style="width:200px">
+        <el-form-item label="责任部门">
+          <el-select v-model="q.deptName" placeholder="组织/部门(真实组织树)" clearable filterable allow-create default-first-option style="width:200px">
             <el-option v-for="o in orgOptions" :key="o.id" :label="o.bizOrgName" :value="o.bizOrgName" />
           </el-select>
         </el-form-item>
@@ -37,10 +36,6 @@
       <el-col :span="6"><el-card shadow="hover"><div class="st"><b class="red">{{ d.sensitiveCount }}</b><span>涉个人隐私·商业秘密(表5)</span></div></el-card></el-col>
     </el-row>
 
-    <el-card style="margin-top:16px" header="授权风险预警">
-      <el-alert v-for="(a,i) in (d.riskAlerts||[])" :key="i" :type="a.includes('正常')?'success':'warning'" :closable="false" :title="a" style="margin-bottom:6px" />
-    </el-card>
-
     <el-row :gutter="16" style="margin-top:16px">
       <el-col :span="12"><el-card header="授权方式分布(一事一议/批量)"><div ref="modeRef" style="height:300px"></div></el-card></el-col>
       <el-col :span="12"><el-card header="授权权益类型(使用权/经营权)"><div ref="rightRef" style="height:300px"></div></el-card></el-col>
@@ -51,6 +46,10 @@
     <el-row :gutter="16" style="margin-top:16px">
       <el-col :span="24"><el-card header="授权趋势（月度申请量 + 生效率）"><div ref="trendRef" style="height:320px"></div></el-card></el-col>
     </el-row>
+
+    <el-card style="margin-top:16px" header="授权风险预警">
+      <el-alert v-for="(a,i) in (d.riskAlerts||[])" :key="i" :type="a.includes('正常')?'success':'warning'" :closable="false" :title="a" style="margin-bottom:6px" />
+    </el-card>
   </div>
 </template>
 
@@ -64,17 +63,16 @@ import { getAuthDashboard } from '@/api/authorize'
 import { listOrg } from '@/api/org'
 
 const d = reactive({ totalApply: 0, effective: 0, inReview: 0, rejected: 0, effectiveRate: 0, certCount: 0, batchListCount: 0, crossRegionCount: 0, thirdPartyCount: 0, sensitiveCount: 0, riskAlerts: [] })
-const q = reactive({ scenario: '', deptName: '' })
+const q = reactive({ deptName: '' })
 const orgOptions = ref([])
 const range = ref([])
 const modeRef = ref(); const rightRef = ref(); const bizRef = ref(); const trendRef = ref()
 const pairs = (m) => Object.entries(m || {}).map(([name, value]) => ({ name, value }))
 
-function onReset() { q.scenario = ''; q.deptName = ''; range.value = []; load() }
+function onReset() { q.deptName = ''; range.value = []; load() }
 
 async function load() {
   const res = await getAuthDashboard({
-    scenario: q.scenario || undefined,
     deptName: q.deptName || undefined,
     startTime: range.value?.[0] || undefined,
     endTime: range.value?.[1] ? range.value[1] + ' 23:59:59' : undefined

@@ -93,6 +93,6 @@ async function onLogin() {
 .login-brand { text-align: center; margin-bottom: 24px; }
 .login-csg { color: #1e87f0; font-weight: 700; font-size: 15px; letter-spacing: 1px; }
 .login-title { color: #262626; font-size: 18px; font-weight: 600; margin-top: 6px; }
-.login-demo { margin-top: 14px; font-size: 12px; color: #8a8a8a; line-height: 1.8; }
+.login-demo { margin-top: 14px; font-size: 12px; color: var(--prm-color-text-weak); line-height: 1.8; }
 .login-note { margin-top: 10px; font-size: 12px; color: #b4b4b4; text-align: center; }
 </style>

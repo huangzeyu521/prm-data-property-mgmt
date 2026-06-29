@@ -64,7 +64,7 @@
         <el-tag v-if="snapVerify" :type="snapVerify.verified ? 'success' : (snapVerify.payloadSm3 ? 'danger' : 'info')" size="small" effect="dark" style="margin-left:8px">
           {{ snapVerify.verified ? '✔ 快照完整·未被篡改' : (snapVerify.payloadSm3 ? '✘ 疑似篡改' : '无防篡改快照') }}
         </el-tag>
-        <span v-if="snapVerify && snapVerify.evidenceId" style="font-size:12px;color:#9ca3af;margin-left:8px">存证 {{ snapVerify.evidenceId.slice(0,12) }}… · 留痕 {{ snapVerify.aiRunCount ?? 0 }} 次</span>
+        <span v-if="snapVerify && snapVerify.evidenceId" style="font-size:12px;color:var(--prm-color-text-weak);margin-left:8px">存证 {{ snapVerify.evidenceId.slice(0,12) }}… · 留痕 {{ snapVerify.aiRunCount ?? 0 }} 次</span>
       </div>
       <!-- §1 校验规则可视化:逐应交项 校验逻辑 + 规则明细 + AI 判定依据 -->
       <el-collapse v-if="checkLogic && checkLogic.items && checkLogic.items.length" accordion>
@@ -81,14 +81,14 @@
           </div>
         </el-collapse-item>
       </el-collapse>
-      <div v-if="checkLogic && checkLogic.summary" style="font-size:12px;color:#9ca3af;margin:4px 0">{{ checkLogic.summary }} · 模型 {{ checkLogic.aiModel }}</div>
+      <div v-if="checkLogic && checkLogic.summary" style="font-size:12px;color:var(--prm-color-text-weak);margin:4px 0">{{ checkLogic.summary }} · 模型 {{ checkLogic.aiModel }}</div>
       <!-- §2 AI 校验过程回放:大模型操作留痕时间线 -->
       <el-timeline v-if="aiRunlog && aiRunlog.length" style="padding:6px">
         <el-timeline-item v-for="(l, i) in aiRunlog" :key="i" :timestamp="fmt(l.createTime)" placement="top" type="primary">
           <div style="font-size:13px">
             <el-tag size="small" effect="dark" style="margin-right:6px">{{ l.capability }}</el-tag>
             <span style="color:var(--prm-color-text-secondary)">模型 {{ l.model }} · 耗时 {{ l.durationMs }}ms · 触发 {{ l.triggerUser }}</span>
-            <div style="font-size:12px;color:#9ca3af">SM3 {{ (l.sm3Hash || '').slice(0,16) }}…(输出防篡改指纹)</div>
+            <div style="font-size:12px;color:var(--prm-color-text-weak)">SM3 {{ (l.sm3Hash || '').slice(0,16) }}…(输出防篡改指纹)</div>
           </div>
         </el-timeline-item>
       </el-timeline>
@@ -99,8 +99,8 @@
         <el-timeline-item v-for="l in logs" :key="l.logId" :timestamp="fmt(l.createTime)" placement="top"
           :type="l.toStatus === '已驳回' ? 'danger' : (l.toStatus === '已生效' ? 'success' : 'primary')">
           <div style="font-weight:600">{{ l.fromStatus }} → {{ l.toStatus }}</div>
-          <div style="font-size:12px;color:#71717a">责任人：{{ l.responder || '-' }}</div>
-          <div v-if="l.opinion" style="font-size:12px;color:#71717a">审核意见：{{ l.opinion }}</div>
+          <div style="font-size:12px;color:var(--prm-color-text-secondary)">责任人：{{ l.responder || '-' }}</div>
+          <div v-if="l.opinion" style="font-size:12px;color:var(--prm-color-text-secondary)">审核意见：{{ l.opinion }}</div>
         </el-timeline-item>
       </el-timeline>
       <el-empty v-else :image-size="50" description="暂无处理记录" />

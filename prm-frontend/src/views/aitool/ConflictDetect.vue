@@ -70,7 +70,7 @@
                 :remote-method="searchAssets" :loading="assetSearching" style="width:100%"
                 placeholder="输名称/ID 搜台账,如 用电 / AST-001" @change="onAssetPicked">
                 <el-option v-for="a in assetOpts" :key="a.assetId" :value="a.assetId" :label="a.assetId + '　' + a.assetName">
-                  <span>{{ a.assetId }}</span><span style="float:right;color:#8a8a8a;font-size:12px">{{ a.assetName }}</span>
+                  <span>{{ a.assetId }}</span><span style="float:right;color:var(--prm-color-text-weak);font-size:12px">{{ a.assetName }}</span>
                 </el-option>
               </el-select>
               <div class="cd-tip">选定后右侧查询与下方图谱自动跟随该资产;
@@ -98,7 +98,7 @@
             <el-select v-model="semMaterialId" filterable clearable style="flex:1"
               placeholder="选择已解析成功的材料(无需记材料ID)" @focus="loadParsedMaterials">
               <el-option v-for="m in parsedMats" :key="m.materialId" :value="m.materialId" :label="m.fileName">
-                <span>{{ m.fileName }}</span><span style="float:right;color:#8a8a8a;font-size:12px">{{ m.materialId.slice(0, 8) }}…</span>
+                <span>{{ m.fileName }}</span><span style="float:right;color:var(--prm-color-text-weak);font-size:12px">{{ m.materialId.slice(0, 8) }}…</span>
               </el-option>
             </el-select>
             <el-button type="success" :disabled="!semMaterialId" @click="onSemanticClaim">语义建主张</el-button>
@@ -437,8 +437,8 @@ function onResolve(row) {
 .conflict-filter { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
 .print-only { display: none; }
 .print-head h2 { text-align: center; margin: 0 0 6px; font-size: 18px; }
-.print-head div { text-align: center; color: #71717a; font-size: 12px; margin-bottom: 10px; }
-.cd-tip { font-size: 12px; color: #8a8a8a; line-height: 1.6; }
+.print-head div { text-align: center; color: var(--prm-color-text-secondary); font-size: 12px; margin-bottom: 10px; }
+.cd-tip { font-size: 12px; color: var(--prm-color-text-weak); line-height: 1.6; }
 </style>
 
 <!-- #17 PDF 打印优化:只输出报告区(报告抬头+汇总+冲突表),隐藏表单/图谱/操作/对话框 -->
