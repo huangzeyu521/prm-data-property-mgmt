@@ -104,3 +104,7 @@ INSERT INTO IM_CONFIRM_RECHECK_TASK (CEC_TASK_ID,CEC_TASK_NO,CEC_TASK_TYPE,CEC_A
 -- RT-001 到期驱动(唯一带期限的授权取得卡 EC-PRA-0003 临近到期→待处置);RT-002 事件/定期复核驱动(认定卡无固定期限,靠监测联动·管理要求核验触发,结论无变化)。
 ('RT-001','RC-20260401-00001','重确权','SYS:营销管理系统','营销管理系统','季度到期扫描','权益到期','权益卡片 EC-PRA-0003(经营权·授权取得)临近有效期,按35号文§二(三)2须重新确权',DATEADD('DAY',30,CURRENT_TIMESTAMP),'待处置',NULL,'EC-PRA-0003',NULL,NULL,NULL,NULL,DATEADD('DAY',-5,CURRENT_TIMESTAMP),0),
 ('RT-002','RC-20260101-00002','重确权','SYS:人力资源系统','人力资源系统','监测联动','管理要求变更','权益卡片 EC-PRA-0017(使用权·认定,无固定期限)季度定期复核:核验数据来源/管理要求是否变动',DATEADD('DAY',-10,CURRENT_TIMESTAMP),'已复核无变化',NULL,'EC-PRA-0017','manager','数字化部主管',DATEADD('DAY',-15,CURRENT_TIMESTAMP),'季度复核:数据来源/管理要求/权益期限均未变动,确权结论维持有效',DATEADD('DAY',-40,CURRENT_TIMESTAMP),0);
+
+
+-- 演示归属:把种子确权申请挂到申报人 USR-APPLY(梁晶晶),使其「我的申请」发件箱(初始确权/确权变更 Tab)有数据。
+UPDATE IM_CONFIRM_APPLY SET CEC_CREATOR_ID = 'USR-APPLY' WHERE CEC_CREATOR_ID IS NULL;
