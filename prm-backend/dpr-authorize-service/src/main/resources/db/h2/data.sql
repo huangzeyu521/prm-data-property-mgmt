@@ -43,6 +43,15 @@ UPDATE IM_AUTH_APPLY SET CEC_BATCH_LIST_ID='BL-001' WHERE CEC_APPLY_ID='AA-001';
 -- 补业务域(原种子未填):协议附件1《数据授权清单》「系统名称」回退展示业务域,避免显示内部资产ID
 UPDATE IM_AUTH_APPLY SET CEC_BUSINESS_DOMAIN='营销域' WHERE CEC_APPLY_ID IN ('AA-001','AA-002');
 UPDATE IM_AUTH_APPLY SET CEC_BUSINESS_DOMAIN='资产域' WHERE CEC_APPLY_ID='AA-003';
+
+-- 补提交单位省域(原种子未填,均为 NULL):AuthApplyServiceImpl.applyUnitScope() 按此对「申报单位·分管领导(unit)」
+-- 角色收窄申请历史查询范围(管辖止于本单位)。unit 演示账号 USR-UNIT 的 CEC_PROVINCE_CODE='GD'(见 SYS_USER 种子),
+-- 故下面刻意让 5 条落在 GD(该角色应看到)、3 条落在其它省(应看不到),用于验证收窄确实生效、而非误伤。
+-- AA-008 单独强调:必须落在 GD——它是 unit 角色审核台/待办的唯一在办种子,若这里不匹配会导致该角色的
+-- 「历史查询」与「审核提交」两个页面互相矛盾(审核台能看到在办、历史查询却查不到)。
+UPDATE IM_AUTH_APPLY SET CEC_PROVINCE_CODE='GD' WHERE CEC_APPLY_ID IN ('AA-001','AA-002','AA-004','AA-007','AA-008'); -- 广州/深圳供电局、广东电网综能公司相关、AA-008(单位初审中,与 USR-UNIT 同省)
+UPDATE IM_AUTH_APPLY SET CEC_PROVINCE_CODE='GX' WHERE CEC_APPLY_ID IN ('AA-003','AA-006');                          -- 南网科研院/广西电网相关
+UPDATE IM_AUTH_APPLY SET CEC_PROVINCE_CODE='GZ' WHERE CEC_APPLY_ID='AA-005';                                        -- 贵州电网相关
 UPDATE IM_AUTH_APPLY SET CEC_BUSINESS_DOMAIN='综合能源域' WHERE CEC_APPLY_ID IN ('AA-004','AA-007');
 UPDATE IM_AUTH_APPLY SET CEC_BUSINESS_DOMAIN='生产域' WHERE CEC_APPLY_ID IN ('AA-005','AA-006');
 

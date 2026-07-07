@@ -677,6 +677,11 @@ public class AuthAgreementServiceImpl implements AuthAgreementService {
         chainEvidenceService.anchor("协议续期", agreementId,
                 "授权运营协议 " + a.getAgreementNo() + " 续期至 " + until.toLocalDate(),
                 String.join("|", a.getAgreementNo(), String.valueOf(until.toLocalDate())));
+        // P0(权益动态监测):续期改的是协议 validUntil,不是 AuthApply.validDate 本身;不重新回写台账,
+        // validDate 会停在首次生效时的旧日期,续期后立即又变回"扫描的是过期数据"。
+        if (StringUtils.hasText(a.getApplyId())) {
+            authApplyService.syncLedgerValidDate(a.getApplyId(), until);
+        }
     }
 
     @Override

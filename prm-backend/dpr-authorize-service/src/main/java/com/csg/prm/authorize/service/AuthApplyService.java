@@ -13,6 +13,13 @@ import java.util.List;
  */
 public interface AuthApplyService {
 
+    /**
+     * P0(权益动态监测):协议续期后同步台账到期日。续期改的是 AuthAgreement.validUntil,不是
+     * AuthApply.validDate 本身——若不重新回写,台账 validDate 会停在首次生效时的旧日期,续期后
+     * 立即又变回"扫描的是过期数据",P0-① 的修复对已续期的协议就形同虚设。
+     */
+    void syncLedgerValidDate(String applyId, java.time.LocalDateTime validDate);
+
     String saveDraft(AuthApply apply);
 
     /** 删除授权申请(仅草稿态可删,如批量清单里加错/重复的明细项);逻辑删除。 */

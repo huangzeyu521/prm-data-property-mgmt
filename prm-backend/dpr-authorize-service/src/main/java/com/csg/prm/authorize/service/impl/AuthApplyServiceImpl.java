@@ -109,6 +109,21 @@ public class AuthApplyServiceImpl implements AuthApplyService {
     }
 
     @Override
+    public void syncLedgerValidDate(String applyId, java.time.LocalDateTime validDate) {
+        if (!StringUtils.hasText(applyId) || validDate == null) {
+            return;
+        }
+        // 与 generate() 联表带出协议类型时同一惯例:AuthAgreement.applyId 是软引用,允许指向不存在的申请
+        // (如测试夹具、历史脏数据),此处应静默跳过而非硬性 404——这不是"资源必须存在"的场景。
+        AuthApply apply = mapper.selectById(applyId);
+        if (apply == null) {
+            return;
+        }
+        ledgerWriteback.apply(com.csg.prm.common.writeback.RightsEvent.authorized(
+                apply.getAssetId(), apply.getRightType(), apply.getGranteeOrg(), applyId, validDate));
+    }
+
+    @Override
     @Transactional
     public String saveDraft(AuthApply apply) {
         validate(apply);
@@ -227,6 +242,8 @@ public class AuthApplyServiceImpl implements AuthApplyService {
         AuthApply apply = require(applyId);
         // 逐节点角色门禁:仅本节点对应角色(及 all/admin)可审批
         assertNodeRole(apply.getStatus());
+        // 职责分离:审批人不得是发起人(business 既发起又审的自审缺口)
+        assertNotSelfReview(apply);
         String flowKey = flowKeyOf(apply.getAuthMode());
         if (!flowEngine.canAdvance(flowKey, apply.getStatus())) {
             throw new BusinessException("当前状态不可审批:" + apply.getStatus());
@@ -286,8 +303,9 @@ public class AuthApplyServiceImpl implements AuthApplyService {
     private String applyEffectiveSideEffects(AuthApply apply, String applyId) {
         String certId = authCertService.generateFromApply(apply);
         // P0-① 产权事件回写:授权生效 -> 台账更新授权状态 + 变更留痕
+        // P0(权益动态监测):一并带上授权到期日,台账 validDate 才不会永远为空
         ledgerWriteback.apply(com.csg.prm.common.writeback.RightsEvent.authorized(
-                apply.getAssetId(), apply.getRightType(), apply.getGranteeOrg(), applyId));
+                apply.getAssetId(), apply.getRightType(), apply.getGranteeOrg(), applyId, apply.getValidDate()));
         // 授权生效 -> 触发确权服务把产权/权益结论写回平台资产卡片(非致命,失败不影响授权)
         cardWriteback.writeback(apply.getAssetId());
         return certId;
@@ -299,6 +317,8 @@ public class AuthApplyServiceImpl implements AuthApplyService {
         AuthApply apply = require(applyId);
         // 逐节点角色门禁:仅本节点对应角色(及 all/admin)可驳回
         assertNodeRole(apply.getStatus());
+        // 职责分离:驳回人不得是发起人
+        assertNotSelfReview(apply);
         // 仅审批链中(可推进)的状态可驳回——与引擎判定一致
         if (!flowEngine.canAdvance(flowKeyOf(apply.getAuthMode()), apply.getStatus())) {
             throw new BusinessException("当前状态不可驳回:" + apply.getStatus());
@@ -413,6 +433,29 @@ public class AuthApplyServiceImpl implements AuthApplyService {
     }
 
     /**
+     * 职责分离(SoD)自审门禁:审批/驳回人不得是本单发起人。
+     * 背景:业务管理部门团队(business)既发起一事一议、又占「业务审核」节点,同一 business 账号
+     * 若审自己发起的单即自审自批(35号文本意发起=业务团队、审核=业务经理,应分离)。
+     * 放行条件(与 assertNodeRole/assertApplicant 一致):无用户上下文(内部/未启用认证/单测)、
+     * admin/all 角色、或原单无 creatorId(存量/演示)→ 放行;否则 creatorId==当前用户即拦截。
+     */
+    private void assertNotSelfReview(AuthApply apply) {
+        UserContext ctx = UserContextHolder.get();
+        java.util.Set<String> roles = ctx == null ? null : ctx.getRoles();
+        // 与 assertNodeRole 完全一致的放行口径:无上下文/无角色(内部调用·未启用认证·单测默认上下文)、
+        // 或 all/admin 超级视角 → 放行。仅对"真实审批角色"启用自审拦截。
+        if (roles == null || roles.isEmpty() || roles.contains("all") || roles.contains("admin")) {
+            return;
+        }
+        String me = ctx.getUserId();
+        String creator = apply.getCreatorId();
+        if (StringUtils.hasText(me) && me.equals(creator)) {
+            throw new BusinessException(ResponseCode.FORBIDDEN.getCode(),
+                    "职责分离:不可审批/驳回本人发起的授权申请(发起人与审批人须分离)");
+        }
+    }
+
+    /**
      * 草稿可见性隔离:一事一议草稿=私有,仅创建人可见;批量明细草稿=清单级共享(不隔离);已提交及以上全量供审计。
      * 无用户上下文/未启用认证/单测,或 admin/all 角色:不隔离。
      * 条件:(status != 草稿) OR (authMode = 批量) OR (creatorId = 当前用户)。
@@ -430,6 +473,24 @@ public class AuthApplyServiceImpl implements AuthApplyService {
         w.and(x -> x.ne(AuthApply::getStatus, AuthApply.STATUS_DRAFT)
                 .or().eq(AuthApply::getAuthMode, AuthApply.MODE_BATCH)
                 .or().eq(AuthApply::getCreatorId, me));
+    }
+
+    /**
+     * 「申报单位·分管领导(单位初审)」角色的数据范围收窄:管辖止于本单位,不应看到其它单位的申请历史
+     * (评估结论:该角色在一事一议链条里只是本单位内部的最后一道自检关口,步骤60起才是跨组织的合规/总部审查;
+     * 让它看到全网申请，既超出职责边界，也是不必要的信息暴露——同「草稿归属隔离」P0 修复同一原则)。
+     * 仅当角色含 unit 时生效,按该账号自身 provinceCode 过滤;其余可查看角色(合规/主管/经理/副总/只读等)
+     * 按 AA-10 具备跨组织监督职责,不受此约束。批量清单容器(BatchAuthList)不做此收窄——批量授权本就是
+     * 公司总部数字化管理部门统一发起管理，unit 角色在批量审批链里根本没有节点，不存在"归属单位"这个概念。
+     */
+    private void applyUnitScope(LambdaQueryWrapper<AuthApply> w) {
+        UserContext ctx = UserContextHolder.get();
+        if (ctx == null || ctx.getRoles() == null || !ctx.getRoles().contains("unit")) {
+            return;
+        }
+        if (StringUtils.hasText(ctx.getProvinceCode())) {
+            w.eq(AuthApply::getProvinceCode, ctx.getProvinceCode());
+        }
     }
 
     /** 授权模式 -> 流程定义键 */
@@ -453,6 +514,7 @@ public class AuthApplyServiceImpl implements AuthApplyService {
                 .like(StringUtils.hasText(query.getApplicant()), AuthApply::getApplicantManager, query.getApplicant())
                 .orderByDesc(AuthApply::getCreateTime);
         applyDraftScope(wrapper);
+        applyUnitScope(wrapper);
         IPage<AuthApply> page = mapper.selectPage(query.toPage(), wrapper);
         return PageResult.of(page);
     }

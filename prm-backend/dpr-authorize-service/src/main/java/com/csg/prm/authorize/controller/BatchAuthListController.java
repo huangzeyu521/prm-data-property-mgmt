@@ -92,16 +92,16 @@ public class BatchAuthListController {
         return Result.success();
     }
 
-    /** 删除草案清单(仅草案;级联删草稿明细)。申报人本人操作。 */
-    @com.csg.prm.common.auth.RequiresRole({"apply", "admin"})
+    /** 删除草案清单(仅草案;级联删草稿明细)。申报人本人操作(admin=配置管理员不参与批量业务)。 */
+    @com.csg.prm.common.auth.RequiresRole({"apply"})
     @DeleteMapping("/{batchListId}")
     public Result<Void> delete(@PathVariable String batchListId) {
         service.delete(batchListId);
         return Result.success();
     }
 
-    /** 撤回申报稿清单(申报稿→草案 + 在审明细退回草稿)。申报人本人操作。 */
-    @com.csg.prm.common.auth.RequiresRole({"apply", "admin"})
+    /** 撤回申报稿清单(申报稿→草案 + 在审明细退回草稿)。申报人本人操作(admin 不参与批量业务)。 */
+    @com.csg.prm.common.auth.RequiresRole({"apply"})
     @PostMapping("/{batchListId}/withdraw")
     public Result<Void> withdraw(@PathVariable String batchListId) {
         service.withdraw(batchListId);
@@ -111,8 +111,9 @@ public class BatchAuthListController {
     /**
      * 批准批量清单(申报稿→批准)。BA-03 批量授权 node90:此终批为「领导小组办公室」专属。
      * 数字化部三节点(主管/经理/副总)的审核在明细 AuthApply 链逐项完成(主管=node60),不在清单级终批。
+     * 清单级终批领导小组办公室专属;admin=配置管理员不予终批权(防越权批准 + 误触自动生成协议)。
      */
-    @com.csg.prm.common.auth.RequiresRole({"leadership", "admin"})
+    @com.csg.prm.common.auth.RequiresRole({"leadership"})
     @PostMapping("/{batchListId}/approve")
     public Result<Void> approve(@PathVariable String batchListId) {
         service.approve(batchListId);                          // 事务1:门禁校验 + 置「批准」,提交

@@ -245,8 +245,9 @@ public class EquityCardServiceImpl implements EquityCardService {
                         card.getRightType(), card.getRightOwner() == null ? "" : card.getRightOwner()),
                 jur.provinceCode(), jur.bureauCode());
         // P0-① 产权事件回写:确权制卡 -> 台账更新确权状态/卡片 + 变更留痕(实时一致)
+        // P0(权益动态监测):一并带上卡片到期日,台账 validDate 才不会永远为空(此前到期扫描扫的就是空字段)
         ledgerWriteback.apply(RightsEvent.confirmed(card.getAssetId(), card.getAssetName(),
-                card.getRightType(), card.getRightOwner(), card.getCardNo(), apply.getApplyId()));
+                card.getRightType(), card.getRightOwner(), card.getCardNo(), apply.getApplyId(), card.getValidDate()));
         // 制卡后按权益类型自动签发标准化权益证书(可研 -006 自动生成,与卡片一一对应)
         certService.autoIssueForCard(card);
         return card.getCardId();

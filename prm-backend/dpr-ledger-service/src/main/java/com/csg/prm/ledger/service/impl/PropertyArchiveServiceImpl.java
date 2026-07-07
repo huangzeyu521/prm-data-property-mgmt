@@ -139,6 +139,8 @@ public class PropertyArchiveServiceImpl implements PropertyArchiveService {
             }
             a.setAuthStatus(StringUtils.hasText(e.getAuthStatus()) ? e.getAuthStatus() : "未授权");
             a.setEquityCardId(e.getEquityCardId());
+            // P0(权益动态监测):建档时一并写入到期日,ComplianceCheckServiceImpl 的到期扫描才有真实数据可扫
+            a.setValidDate(e.getValidDate());
             mapper.insert(a);
             changeRecordService.record(e.getAssetId(), e.getEventType(), "建档", null,
                     a.getConfirmStatus() + "/" + a.getAuthStatus(), e.getReason(), src, e.getSourceTicket());
@@ -168,6 +170,12 @@ public class PropertyArchiveServiceImpl implements PropertyArchiveService {
         if (StringUtils.hasText(e.getRightType()) && !StringUtils.hasText(cur.getRightType())) {
             upd.setRightType(e.getRightType());
         }
+        // P0(权益动态监测):到期日随事件刷新(空值不覆盖既有值,如仅状态变更、无到期信息的事件不应把已知到期日冲掉;
+        // 续期/再次授权带来更晚的日期时,以最新事件为准 —— 与 equityCardId 的"最后写入生效"语义一致)。
+        boolean validDateChanged = e.getValidDate() != null && !e.getValidDate().equals(cur.getValidDate());
+        if (validDateChanged) {
+            upd.setValidDate(e.getValidDate());
+        }
         mapper.updateById(upd);
         if (newConfirmStatus != null) {
             changeRecordService.record(e.getAssetId(), e.getEventType(), "确权状态",
@@ -176,6 +184,11 @@ public class PropertyArchiveServiceImpl implements PropertyArchiveService {
         if (StringUtils.hasText(e.getAuthStatus())) {
             changeRecordService.record(e.getAssetId(), e.getEventType(), "授权状态",
                     cur.getAuthStatus(), e.getAuthStatus(), e.getReason(), src, e.getSourceTicket());
+        }
+        if (validDateChanged) {
+            changeRecordService.record(e.getAssetId(), e.getEventType(), "权益到期日",
+                    cur.getValidDate() == null ? "—" : cur.getValidDate().toLocalDate().toString(),
+                    e.getValidDate().toLocalDate().toString(), e.getReason(), src, e.getSourceTicket());
         }
     }
 

@@ -62,8 +62,9 @@ public class AssetCardIntegrationController {
     @GetMapping("/archive")
     public Result<PageResult<AssetArchiveRowVO>> archive(@Valid PageRequest query,
                                                     @RequestParam(required = false) String keyword,
-                                                    @RequestParam(required = false) String state) {
-        return Result.success(archiveService.page(query, keyword, state));
+                                                    @RequestParam(required = false) String state,
+                                                    @RequestParam(required = false, defaultValue = "false") boolean mine) {
+        return Result.success(archiveService.page(query, keyword, state, mine));
     }
 
     /** 写回平台:确权/授权完成后把产权/权益结论单向写回平台卡片(平台接口未接入时为 stub)。 */

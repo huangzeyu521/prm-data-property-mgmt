@@ -1,6 +1,8 @@
 package com.csg.prm.confirm.integration;
 
 import com.csg.prm.common.api.PageResult;
+import com.csg.prm.common.context.UserContext;
+import com.csg.prm.common.context.UserContextHolder;
 import com.csg.prm.common.query.PageRequest;
 import com.csg.prm.confirm.entity.ConfirmApply;
 import com.csg.prm.confirm.entity.EquityCard;
@@ -11,6 +13,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -29,6 +33,10 @@ class AssetCardArchiveWritebackTest {
     @Autowired private EquityCardMapper cardMapper;
 
     private String seedDone(String tag) {
+        return seedDoneOwned(tag, null);
+    }
+
+    private String seedDoneOwned(String tag, String creatorId) {
         String asset = "ARCH-" + tag + "-" + System.nanoTime();
         ConfirmApply a = new ConfirmApply();
         a.setApplyNo("AP-" + System.nanoTime());
@@ -42,6 +50,9 @@ class AssetCardArchiveWritebackTest {
         a.setSourceIdentification("A自行生产数据");
         a.setSourceRef("CHAIN-" + tag);
         a.setCurrentNode(ConfirmApply.NODE_DONE);
+        if (creatorId != null) {
+            a.setCreatorId(creatorId);
+        }
         applyMapper.insert(a);
         EquityCard c = new EquityCard();
         c.setCardNo("EQ-" + System.nanoTime());
@@ -98,6 +109,30 @@ class AssetCardArchiveWritebackTest {
                 .anyMatch(r -> asset.equals(r.assetId())));
         assertFalse(archive.page(q, asset, AssetCardIntegrationService.STATE_NONE).getRecords().stream()
                 .anyMatch(r -> asset.equals(r.assetId())));
+    }
+
+    /** 「只看我负责的」(mine=true):仅返回当前登录用户 creatorId 名下的资产;全量(mine=false)则两者都见。 */
+    @Test
+    void archive_mine_scopes_to_current_user() {
+        String mineAsset = seedDoneOwned("MINE", "USR-ME");
+        String otherAsset = seedDoneOwned("OTHER", "USR-OTHER");
+        PageRequest q = new PageRequest();
+        q.setPageSize(200);
+        try {
+            UserContext ctx = new UserContext();
+            ctx.setUserId("USR-ME");
+            ctx.setRoles(Set.of("apply"));
+            UserContextHolder.set(ctx);
+            // mine=true:仅我负责的
+            var mineRows = archive.page(q, null, null, true).getRecords();
+            assertTrue(mineRows.stream().anyMatch(r -> mineAsset.equals(r.assetId())), "应包含我负责的资产");
+            assertFalse(mineRows.stream().anyMatch(r -> otherAsset.equals(r.assetId())), "不应包含他人资产");
+            // mine=false:全量可见
+            var allRows = archive.page(q, null, null, false).getRecords();
+            assertTrue(allRows.stream().anyMatch(r -> otherAsset.equals(r.assetId())), "全量视图应含他人资产");
+        } finally {
+            UserContextHolder.clear();
+        }
     }
 
     /** 写回:已确权资产构造载荷(stub 未真正外发,accepted=false 但 note 说明已构造载荷)。 */
