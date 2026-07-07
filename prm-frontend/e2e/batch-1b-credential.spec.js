@@ -29,9 +29,9 @@ test('1-B: 涉三方行第三方凭证=确权带出', async ({ page }) => {
   await dlg.getByRole('button', { name: /加入选中资产/ }).click()
   await expect(page.locator('body')).toContainText(/已加入明细\([1-9]/, { timeout: 10000 })
 
-  // 明细表:第三方凭证列存在;市场交易结算表行 涉三方=涉、凭证=确权带出
+  // 明细表:第三方凭证列存在(列名严格对齐表5「第三方许可凭证或说明」);市场交易结算表行 涉三方=涉、凭证=确权带出
   const itemsTable = page.locator('.el-table').last()
-  await expect(itemsTable).toContainText('第三方凭证')
+  await expect(itemsTable).toContainText('第三方许可凭证')
   await expect(itemsTable).toContainText('信息授权协议') // 隐私对称列存在
   const row = itemsTable.locator('tbody tr', { hasText: '市场交易结算表' }).first()
   await expect(row).toContainText('涉')

@@ -133,29 +133,32 @@
             本清单覆盖 {{ crossSystemInfo.systems.length }} 个系统{{ crossSystemInfo.systems.length ? '(' + crossSystemInfo.systems.join('、') + ')' : '' }};表6「是否跨系统域、跨地域」已自动写入各授权项。
           </template>
         </el-alert>
-        <el-table :data="items" border size="small" max-height="420" :row-class-name="itemRowClass">
-          <el-table-column type="index" label="#" width="44" align="center" />
-          <el-table-column prop="assetName" label="数据表" min-width="140" show-overflow-tooltip />
-          <el-table-column prop="systemName" label="所属系统" min-width="120" show-overflow-tooltip>
+        <!-- 列序/列名严格对齐《表5 数据授权申请单》(申请主体名称/申请单位主管/联系方式为批量清单头共享字段,已在步骤1填,不在此逐行重复) -->
+        <el-table :data="pagedItems" border size="small" :row-class-name="itemRowClass">
+          <el-table-column type="index" label="#" width="44" align="center" :index="(i) => (itemsPage - 1) * itemsPageSize + i + 1" />
+          <el-table-column prop="assetName" label="数据表名称" min-width="140" show-overflow-tooltip />
+          <el-table-column prop="systemName" label="所属系统" min-width="120" show-overflow-tooltip
+            :filters="sysFilterOpts" :filter-method="(v, row) => row.systemName === v">
             <template #default="{ row }">{{ row.systemName || '—' }}</template>
           </el-table-column>
           <el-table-column prop="schemaName" label="模式名称" min-width="110" show-overflow-tooltip>
             <template #default="{ row }">{{ row.schemaName || '—' }}</template>
           </el-table-column>
-          <el-table-column prop="businessDomain" label="业务域" min-width="100" show-overflow-tooltip>
+          <el-table-column prop="businessDomain" label="所属业务域" min-width="100" show-overflow-tooltip>
             <template #default="{ row }">{{ row.businessDomain || '—' }}</template>
           </el-table-column>
-          <el-table-column prop="rightType" label="权益" width="140" />
+          <el-table-column prop="rightType" label="申请权益类型" width="140"
+            :filters="[{ text: '使用权', value: '使用权' }, { text: '经营权', value: '经营权' }]" :filter-method="(v, row) => row.rightType === v" />
           <el-table-column prop="equityCardId" label="生效卡片" min-width="120" show-overflow-tooltip>
             <template #default="{ row }">{{ row.equityCardId || '—' }}</template>
           </el-table-column>
           <!-- 2-A 逐项可选微调:场景/时效默认沿用清单头,可逐行改(改后即存草稿);权益按选取确定不在此改 -->
-          <el-table-column label="使用场景" min-width="150">
+          <el-table-column label="使用场景及目的摘要" min-width="150">
             <template #default="{ row }">
               <el-input v-model="row.scenario" size="small" placeholder="(沿用清单头默认)" @change="persistItem(row)" />
             </template>
           </el-table-column>
-          <el-table-column label="授权时效" width="110" align="center">
+          <el-table-column label="权益时效" width="110" align="center">
             <template #default="{ row }">
               <el-select v-model="row.validTerm" size="small" style="width:94px" @change="onTermChange(row)">
                 <el-option v-for="t in validTerms" :key="t" :label="t" :value="t" />
@@ -163,15 +166,25 @@
             </template>
           </el-table-column>
           <!-- 表6 合规判定列:第三方/隐私商密 由确权事实带出(只读,堵人工低报);跨域按全清单系统并集判定 -->
-          <el-table-column label="涉第三方" width="78" align="center">
+          <el-table-column label="是否跨区域、跨域" width="130" align="center"
+            :filters="[{ text: '是', value: true }, { text: '否', value: false }]" :filter-method="(v, row) => (crossSystemInfo.isCross || crossGeo) === v">
+            <template #default>
+              <el-tooltip :content="`跨系统域:${crossSystemInfo.isCross ? '是' : '否'};跨地域:${crossGeo ? '是' : '否'}`" placement="top">
+                <span :class="'prm-c-' + ((crossSystemInfo.isCross || crossGeo ? 'warning' : 'info') || 'primary')">{{ crossSystemInfo.isCross || crossGeo ? '是' : '否' }}</span>
+              </el-tooltip>
+            </template>
+          </el-table-column>
+          <!-- 涉及第三方来源方式:显示确权带出的实际来源方式文字(不是单纯是/否),筛选按"是否涉及"分组 -->
+          <el-table-column label="涉及第三方来源方式" width="140"
+            :filters="[{ text: '涉及', value: true }, { text: '不涉及', value: false }]"
+            :filter-method="(v, row) => !!(row.thirdPartySource && String(row.thirdPartySource).trim()) === v">
             <template #default="{ row }">
-              <span :class="'prm-c-' + ((row.thirdPartySource && String(row.thirdPartySource).trim() ? 'warning' : 'info') || 'primary')">
-                {{ row.thirdPartySource && String(row.thirdPartySource).trim() ? '涉' : '否' }}
-              </span>
+              <span v-if="row.thirdPartySource && String(row.thirdPartySource).trim()" class="prm-c-warning">{{ row.thirdPartySource }}</span>
+              <span v-else style="color:var(--prm-color-text-disabled)">不涉及</span>
             </template>
           </el-table-column>
           <!-- 1-B 第三方凭证逐表对应:涉三方→确权带出(只读·免重传)或待补传(确权缺时行级补);审核可逐表核对 -->
-          <el-table-column label="第三方凭证" width="118" align="center">
+          <el-table-column label="第三方许可凭证或说明" width="140" align="center">
             <template #default="{ row }">
               <span v-if="!(row.thirdPartySource && String(row.thirdPartySource).trim())" style="color:var(--prm-color-text-weak)">—</span>
               <el-tooltip v-else-if="row.thirdPartyLicense && String(row.thirdPartyLicense).trim()" :content="`确权带出:${row.thirdPartyLicense}`" placement="top">
@@ -183,10 +196,12 @@
               </el-upload>
             </template>
           </el-table-column>
-          <el-table-column label="涉隐私/商密" width="104" align="center">
+          <el-table-column label="涉及个人隐私/商业秘密" width="150" align="center"
+            :filters="[{ text: '涉及', value: true }, { text: '不涉及', value: false }]"
+            :filter-method="(v, row) => !!(row.sensitiveType && String(row.sensitiveType).trim() && row.sensitiveType !== '无') === v">
             <template #default="{ row }">
               <span :class="'prm-c-' + ((row.sensitiveType && String(row.sensitiveType).trim() && row.sensitiveType !== '无' ? 'danger' : 'info') || 'primary')">
-                {{ row.sensitiveType && String(row.sensitiveType).trim() && row.sensitiveType !== '无' ? row.sensitiveType : '否' }}
+                {{ row.sensitiveType && String(row.sensitiveType).trim() && row.sensitiveType !== '无' ? row.sensitiveType : '不涉及' }}
               </span>
             </template>
           </el-table-column>
@@ -203,19 +218,16 @@
               </el-upload>
             </template>
           </el-table-column>
-          <el-table-column label="跨域" width="72" align="center">
-            <template #default>
-              <el-tooltip :content="`跨系统域:${crossSystemInfo.isCross ? '是' : '否'};跨地域:${crossGeo ? '是' : '否'}`" placement="top">
-                <span :class="'prm-c-' + ((crossSystemInfo.isCross || crossGeo ? 'warning' : 'info') || 'primary')">{{ crossSystemInfo.isCross || crossGeo ? '是' : '否' }}</span>
-              </el-tooltip>
-            </template>
-          </el-table-column>
           <el-table-column label="操作" width="70" align="center" fixed="right">
-            <template #default="{ row, $index }">
-              <el-button link type="danger" size="small" @click="removeItem(row, $index)">删除</el-button>
+            <template #default="{ row }">
+              <el-button link type="danger" size="small" @click="removeItem(row, items.indexOf(row))">删除</el-button>
             </template>
           </el-table-column>
         </el-table>
+        <el-pagination v-if="items.length" style="margin-top:12px;justify-content:flex-end" background
+          layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
+          :total="items.length" :current-page="itemsPage" :page-size="itemsPageSize"
+          @current-change="p => itemsPage = p" @size-change="s => { itemsPageSize = s; itemsPage = 1 }" />
         <el-empty v-if="items.length===0" :image-size="60" description="尚未添加授权项 — 点上方「① 从确权目录批量选取数据资产」" />
       </el-card>
 
@@ -362,6 +374,15 @@ function onStepClick(idx) { if (stepJumpable(idx)) step.value = idx }
 const creating = ref(false); const submitting = ref(false)
 const batchListId = ref(''); const listNo = ref('')
 const items = ref([])
+// 已加入明细分页(纯前端,10行/页;数据全在内存 items,无需改接口)
+const itemsPage = ref(1); const itemsPageSize = ref(10)
+const pagedItems = computed(() => {
+  const start = (itemsPage.value - 1) * itemsPageSize.value
+  return items.value.slice(start, start + itemsPageSize.value)
+})
+watch(items, () => { if (itemsPage.value > 1 && (itemsPage.value - 1) * itemsPageSize.value >= items.value.length) itemsPage.value = 1 })
+// 所属系统筛选选项(去重,随已加入明细动态变化)
+const sysFilterOpts = computed(() => [...new Set(items.value.map(i => i.systemName).filter(Boolean))].map(name => ({ text: name, value: name })))
 // 清单头(批量级):被授权方为批量共享;权益类型/场景/时效为整批默认,加项时带入(资源池按权益类型过滤)
 const listForm = reactive({ listYear: '', granteeOrg: '', contactPerson: '', contactInfo: '', rightType: '', scenario: '', validTerm: '两年', geoScope: GEO_HOME, remark: '' })
 // 跨地域(表6):数据使用地理范围超出授权方属地(广东省行政区域内)即判「是」

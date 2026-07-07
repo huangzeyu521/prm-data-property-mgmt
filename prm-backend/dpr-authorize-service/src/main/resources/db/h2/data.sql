@@ -113,3 +113,7 @@ INSERT INTO IM_AUTH_SCENARIO (CEC_SCENARIO_ID,CEC_SCENARIO_NAME,CEC_CATEGORY,CEC
 INSERT INTO IM_AUTH_AGREEMENT_TEMPLATE (CEC_TEMPLATE_ID,CEC_TEMPLATE_NAME,CEC_AUTH_TYPE,CEC_PURPOSE,CEC_TEMPLATE_CONTENT,CEC_TEMPLATE_VERSION,CEC_TEMPLATE_STATUS,CEC_CREATE_TIME,CEC_DEL_FLAG) VALUES
 ('AGT-001','专项数据授权运营协议(附录D·一事一议)','一事一议','对外服务','《南方电网数据授权运营协议》(附录D)。授权方(甲方)/被授权方(乙方);授权方式:一事一议;授权权益类型。一、数据范围:授权数据表(系统/模式/库表)及字段范围,不得超出确权边界。二、使用场景及目的:仅限约定场景使用,不得超范围、不得再授权。三、授权期限:默认两年,不超确权有效期,到期销毁。四、利益分配:双方约定(免费内部共享/按次计费/收益分成)。五、安全保障:加密传输、最小授权访问控制、操作留痕审计、数据脱敏。六、合规与备案:经营权对外提供须备案(附录G),范围仅限对外开放目录。七、违约责任/争议解决。','v1','生效中',CURRENT_TIMESTAMP,0),
 ('AGT-002','数据批量授权运营协议(附录D·批量)','批量','对外服务','《南方电网数据授权运营协议》(附录D)。授权方(甲方)/被授权方(乙方);授权方式:批量(一清单一协议)。一、数据范围:以本协议附件《数据授权清单》逐表列明为准。二、使用场景及目的:各授权项按清单约定场景使用,不得超范围、不得再授权。三、授权期限:默认两年,不超确权有效期,到期销毁。四、利益分配:本清单整体约定(免费内部共享/按次计费/收益分成)。五、安全保障:加密传输、最小授权访问控制、操作留痕审计、数据脱敏。六、合规与备案:经营权对外提供须备案(附录G),范围仅限对外开放目录。七、违约责任/争议解决。','v1','生效中',CURRENT_TIMESTAMP,0);
+
+
+-- 演示归属:把种子授权申请挂到申报人 USR-APPLY(梁晶晶),使其「我的申请」发件箱(批量授权/一事一议授权 Tab)有数据。
+UPDATE IM_AUTH_APPLY SET CEC_CREATOR_ID = 'USR-APPLY' WHERE CEC_CREATOR_ID IS NULL;

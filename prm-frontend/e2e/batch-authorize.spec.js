@@ -46,10 +46,10 @@ test('batch authorize: 建清单 → 资源池选取 → 加入明细', async ({
   await expect(materialTable).toContainText('表5 数据授权申请单')
   await expect(materialTable).not.toContainText('第三方许可凭证或说明')
 
-  // 1-B 第三方凭证逐表列 + 2-A 逐行场景/时效编辑(明细表)
+  // 1-B 第三方凭证逐表列 + 2-A 逐行场景/时效编辑(明细表);列名严格对齐表5
   const itemsTable = page.locator('.el-table').last()
-  await expect(itemsTable).toContainText('第三方凭证') // 1-B 逐表凭证列存在
-  await expect(itemsTable).toContainText('授权时效')   // 2-A 时效列存在
+  await expect(itemsTable).toContainText('第三方许可凭证') // 1-B 逐表凭证列存在
+  await expect(itemsTable).toContainText('权益时效')   // 2-A 时效列存在(表5 列名)
   // 2-A:使用场景为可编辑输入(逐行微调),改后不报错
   const scInput = itemsTable.locator('tbody tr').first().locator('input').first()
   await scInput.fill('台区降损分析(逐项微调)')
