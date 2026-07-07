@@ -14,7 +14,13 @@
     <div class="prm-toolbar">
       <h3 style="margin:0 12px 0 0">我的申请</h3>
       <span class="my-sub">我提交的确权 / 授权申请进度(发件箱)。<b>待我审批别人的单</b>请见「统一待办中心」。</span>
-      <el-checkbox v-model="onlyMine" style="margin-left:auto" @change="load">仅看我提交的</el-checkbox>
+      <el-button v-if="canDraftBox" link type="primary" style="margin-left:auto" @click="$router.push('/dpr/confirm/draft-box')">
+        确权草稿箱<span v-if="confirmDraftCount > 0">（{{ confirmDraftCount }}）</span> →
+      </el-button>
+      <el-button v-if="canAuthDraftBox" link type="primary" :style="canDraftBox ? 'margin-left:12px' : 'margin-left:auto'" @click="$router.push('/dpr/auth/draft-box')">
+        授权草稿箱<span v-if="authDraftCount > 0">（{{ authDraftCount }}）</span> →
+      </el-button>
+      <el-checkbox v-model="onlyMine" :style="(canDraftBox || canAuthDraftBox) ? 'margin-left:12px' : 'margin-left:auto'" @change="load">仅看我提交的</el-checkbox>
       <el-button :loading="loading" @click="load" style="margin-left:12px">刷新</el-button>
     </div>
 
@@ -59,6 +65,26 @@
         <el-button :icon="maximized ? ScaleToOriginal : FullScreen" circle size="small" :title="maximized ? '退出最大化' : '最大化'" @click="toggleMaximize" />
       </div>
       <el-table :key="activeTab" :data="pageRows" v-loading="loading" border stripe>
+        <!-- 授权申请:展开看该申请下多系统 × 多库表逐项(表6/表5) -->
+        <el-table-column v-if="isAuthTab" type="expand">
+          <template #default="{ row }">
+            <div class="ma-expand">
+              <el-alert v-if="row.crossSystem" type="warning" :closable="false" show-icon style="margin-bottom:8px"
+                :title="`本申请为跨系统域授权:覆盖 ${row.systemCount} 个系统(${row.systems.join('、')})、${row.tableCount} 张库表。`" />
+              <div v-else class="my-sub" style="margin-bottom:8px">本申请覆盖 {{ row.systemCount }} 个系统、{{ row.tableCount }} 张库表(单系统)。</div>
+              <el-table :data="row.items" border size="small">
+                <el-table-column type="index" label="序号" width="52" align="center" />
+                <el-table-column label="所属系统" min-width="130" show-overflow-tooltip><template #default="{ row: it }">{{ authSysName(it) }}</template></el-table-column>
+                <el-table-column prop="assetName" label="数据表" min-width="130" show-overflow-tooltip />
+                <el-table-column prop="rightType" label="权益类型" width="110" show-overflow-tooltip><template #default="{ row: it }">{{ it.rightType || '—' }}</template></el-table-column>
+                <el-table-column prop="scenario" label="使用场景" min-width="120" show-overflow-tooltip><template #default="{ row: it }">{{ it.scenario || '—' }}</template></el-table-column>
+                <el-table-column prop="equityCardId" label="生效卡片" width="120" show-overflow-tooltip><template #default="{ row: it }">{{ it.equityCardId || '—' }}</template></el-table-column>
+                <el-table-column prop="status" label="项状态" width="104" align="center"><template #default="{ row: it }"><span :class="'prm-c-' + (reviewTag(it.status) || 'primary')">{{ it.status }}</span></template></el-table-column>
+              </el-table>
+              <el-empty v-if="!row.items.length" :image-size="60" description="该申请暂无明细项" />
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column type="index" label="序号" width="56" align="center" :index="(i) => (page - 1) * pageSize + i + 1" />
         <el-table-column prop="no" label="申请编号" min-width="160" show-overflow-tooltip />
 
@@ -149,17 +175,24 @@
           <el-table-column v-if="colVis.isVisible('duration')" label="处理时效" width="124"><template #default="{ row }">{{ duration(row.raw) }}</template></el-table-column>
         </template>
 
-        <!-- 批量授权 / 一事一议授权:改造自「授权申请历史查询管理」(去申请人/模式列) -->
+        <!-- 批量授权 / 一事一议授权:一行 = 一个申请(批量→清单、一事一议→申请单);展开看多系统多库表明细 -->
         <template v-else>
-          <el-table-column v-if="colVis.isVisible('sysName')" label="所属系统" min-width="120" show-overflow-tooltip>
-            <template #default="{ row }">{{ authSysName(row.raw) }}</template>
+          <el-table-column v-if="activeTab === '批量授权' && colVis.isVisible('listYear')" label="年度" width="88" align="center">
+            <template #default="{ row }">{{ row.listYear || '—' }}</template>
           </el-table-column>
-          <el-table-column v-if="colVis.isVisible('assetName')" prop="assetName" label="数据表" min-width="130" show-overflow-tooltip />
-          <el-table-column v-if="colVis.isVisible('rightType')" label="权益类型" width="120" show-overflow-tooltip>
-            <template #default="{ row }">{{ row.raw.rightType || '—' }}</template>
-          </el-table-column>
-          <el-table-column v-if="colVis.isVisible('granteeOrg')" label="被授权方" min-width="120" show-overflow-tooltip>
+          <el-table-column v-if="colVis.isVisible('granteeOrg')" label="被授权方" min-width="130" show-overflow-tooltip>
             <template #default="{ row }">{{ row.raw.granteeOrg || '—' }}</template>
+          </el-table-column>
+          <el-table-column label="系统数" width="80" align="center">
+            <template #default="{ row }">
+              <el-tooltip :disabled="!row.systems.length" :content="row.systems.join('、')" placement="top">
+                <span :class="'prm-c-' + (row.crossSystem ? 'warning' : 'primary')">{{ row.systemCount }}</span>
+              </el-tooltip>
+            </template>
+          </el-table-column>
+          <el-table-column label="库表数" width="80" align="center"><template #default="{ row }">{{ row.tableCount }}</template></el-table-column>
+          <el-table-column v-if="colVis.isVisible('crossSystem')" label="跨系统域" width="88" align="center">
+            <template #default="{ row }"><span :class="'prm-c-' + (row.crossSystem ? 'warning' : 'info')">{{ row.crossSystem ? '是' : '否' }}</span></template>
           </el-table-column>
           <el-table-column v-if="colVis.isVisible('reviewResult')" label="审核结果" width="92" align="center">
             <template #default="{ row }"><span :class="'prm-c-' + (reviewTag(row.status) || 'primary')">{{ reviewResult(row.status) }}</span></template>
@@ -167,7 +200,7 @@
           <el-table-column v-if="colVis.isVisible('authStatus')" label="授权状态" width="92" align="center">
             <template #default="{ row }"><span :class="'prm-c-' + (authTag(row.status) || 'primary')">{{ authStatus(row.status) }}</span></template>
           </el-table-column>
-          <el-table-column v-if="colVis.isVisible('processOpinion')" label="处理意见" min-width="130" show-overflow-tooltip>
+          <el-table-column v-if="colVis.isVisible('processOpinion')" label="处理意见" min-width="120" show-overflow-tooltip>
             <template #default="{ row }">{{ row.rejectReason || '—' }}</template>
           </el-table-column>
           <el-table-column v-if="colVis.isVisible('createTime')" prop="createTime" label="申请时间" width="155" />
@@ -227,8 +260,10 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { FullScreen, ScaleToOriginal } from '@element-plus/icons-vue'
 import { pageConfirmApply, getConfirmFlowLog, deleteConfirmApply, withdrawConfirm } from '@/api/confirm'
-import { pageAuthApply, getAuthFlowLog, deleteAuthApply, withdrawAuth, withdrawBatchList } from '@/api/authorize'
+import { pageAuthApply, pageBatchList, getAuthFlowLog, deleteAuthApply, withdrawAuthForm, withdrawBatchList, deleteBatchList } from '@/api/authorize'
 import { currentUser } from '@/api/auth'
+import { canJumpTo, currentRole } from '@/lib/roles'
+import { confirmDraftCount, refreshConfirmDraftCount, authDraftCount, refreshAuthDraftCount } from '@/lib/draftCount'
 import { SOURCE_CODES, RELATION_CODES, SOURCE_MAP, RELATION_MAP, identText } from '@/lib/identCodes'
 import ColumnSettings from '@/components/ColumnSettings.vue'
 import { useColumnVisibility } from '@/composables/useColumnVisibility'
@@ -236,6 +271,13 @@ import { useMaximize } from '@/composables/useMaximize'
 
 const router = useRouter()
 const route = useRoute()
+// 深链:确权/授权草稿的权威管理面在各自「申请草稿箱」;本页仅作跨域概览透视
+const canDraftBox = computed(() => canJumpTo(currentRole(), '/dpr/confirm/draft-box'))
+const canAuthDraftBox = computed(() => canJumpTo(currentRole(), '/dpr/auth/draft-box'))
+onMounted(() => {
+  if (canDraftBox.value) refreshConfirmDraftCount()
+  if (canAuthDraftBox.value) refreshAuthDraftCount()
+})
 const TABS = ['初始确权', '确权变更', '批量授权', '一事一议授权']
 const STORAGE_KEY = 'prm-list-query:' + route.path
 const saved = (() => { try { return JSON.parse(sessionStorage.getItem(STORAGE_KEY) || 'null') } catch (e) { return null } })() || {}
@@ -288,12 +330,14 @@ async function load() {
   try {
     // 发件箱=本人全部提交;后端 page 暂无 creatorId 过滤参数,取满页后客户端严格过滤(本人量通常远小于此)。
     // size 上限=后端 PageRequest 单页最大 100(超 100 后端拒 400「每页大小最大为 100」);本人申请量通常 <100。
-    const [c, a] = await Promise.all([
+    const [c, a, bl] = await Promise.all([
       pageConfirmApply({ current: 1, size: 100 }),
-      pageAuthApply({ current: 1, size: 100 })
+      pageAuthApply({ current: 1, size: 100 }),
+      pageBatchList({ current: 1, size: 100 })
     ])
     const cf = (c.records || []).map((r) => ({ domain: '确权', mode: '', no: r.applyNo, assetName: r.assetName, status: r.status, rejectReason: r.rejectReason, createTime: r.createTime, creatorId: r.creatorId, raw: r }))
-    const af = (a.records || []).map((r) => ({ domain: '授权', mode: r.authMode, no: r.applyNo, assetName: r.assetName, status: r.status, rejectReason: r.rejectReason, createTime: r.createTime, creatorId: r.creatorId, raw: r }))
+    // 授权:一行 = 一个申请(批量按 batchListId 聚清单、一事一议按 formNo 聚申请单),非单库表项
+    const af = buildAuthAppRows(a.records || [], bl.records || [])
     let all = [...cf, ...af]
     if (onlyMine.value && me()) all = all.filter((r) => r.creatorId === me())
     all.sort((x, y) => String(y.createTime || '').localeCompare(String(x.createTime || '')))
@@ -301,8 +345,67 @@ async function load() {
   } finally { loading.value = false }
 }
 
+// ===== 授权申请级聚合(批量→清单/batchListId、一事一议→申请单/formNo)=====
+const isAuthTab = computed(() => activeTab.value === '批量授权' || activeTab.value === '一事一议授权')
+function systemsOf(its) { return [...new Set(its.map((i) => authSysName(i)).filter((s) => s && s !== '-' && s !== '—'))] }
+const STATUS_RANK = { 草稿: 0, 单位初审中: 1, 合规审核中: 2, 业务审核中: 3, 主管审核中: 4, 经理审核中: 5, 副总审批中: 6, 领导小组审批中: 7, 批准: 8, 已生效: 9 }
+function groupStatus(its, listStatus, mode) {
+  if (mode === '批量') {
+    if (listStatus === '草案') return '草稿'
+    if (its.length && its.every((i) => i.status === '已生效')) return '已生效'
+    if (its.some((i) => i.status === '已驳回')) return '已驳回'
+    if (listStatus === '批准') return '批准'
+  }
+  const sts = its.map((i) => i.status).filter(Boolean)
+  if (!sts.length) return '草稿'
+  if (sts.every((s) => s === '已生效')) return '已生效'
+  if (sts.some((s) => s === '已驳回')) return '已驳回'
+  if (sts.every((s) => s === '已撤回')) return '已撤回'
+  if (sts.every((s) => s === '草稿')) return '草稿'
+  const active = sts.filter((s) => STATUS_RANK[s] != null && !['草稿', '已生效', '已撤回'].includes(s))
+  if (active.length) return active.reduce((x, y) => (STATUS_RANK[y] < STATUS_RANK[x] ? y : x))
+  return sts[0]
+}
+function authAppRow(mode, no, its, extra) {
+  const first = its[0] || {}
+  return {
+    domain: '授权', mode, no: no || first.applyNo || '—',
+    assetName: its.map((i) => i.assetName).filter(Boolean).join('、'),
+    status: extra.status, rejectReason: its.map((i) => i.rejectReason).filter(Boolean)[0] || '',
+    createTime: extra.createTime, creatorId: extra.creatorId,
+    systems: extra.systems, systemCount: extra.systems.length, tableCount: extra.tableCount, crossSystem: extra.systems.length > 1,
+    items: its, batchListId: extra.batchListId, formNo: extra.formNo, listYear: extra.listYear, listStatus: extra.listStatus,
+    raw: { ...first, batchListId: extra.batchListId, formNo: extra.formNo, listYear: extra.listYear }
+  }
+}
+function buildAuthAppRows(items, heads) {
+  const out = []
+  const byList = {}
+  items.filter((i) => i.authMode === '批量' && i.batchListId).forEach((i) => { (byList[i.batchListId] = byList[i.batchListId] || []).push(i) })
+  ;(heads || []).forEach((h) => {
+    const its = byList[h.batchListId] || []
+    out.push(authAppRow('批量', h.listNo, its, {
+      batchListId: h.batchListId, listYear: h.listYear, listStatus: h.listStatus,
+      creatorId: h.creatorId, createTime: h.createTime, systems: systemsOf(its),
+      tableCount: h.itemCount != null ? h.itemCount : its.length, status: groupStatus(its, h.listStatus, '批量')
+    }))
+  })
+  const byForm = {}
+  items.filter((i) => i.authMode !== '批量').forEach((i) => { const k = i.formNo || i.applyId; (byForm[k] = byForm[k] || []).push(i) })
+  Object.entries(byForm).forEach(([formNo, its]) => {
+    out.push(authAppRow('一事一议', formNo, its, {
+      formNo, creatorId: its[0] && its[0].creatorId, createTime: its[0] && its[0].createTime,
+      systems: systemsOf(its), tableCount: its.length, status: groupStatus(its, null, '一事一议')
+    }))
+  })
+  return out
+}
+
 // ===== 筛选 / 分组 / 分页 =====
-function rowSys(r) { return r.domain === '确权' ? confirmSysName(r.raw) : authSysName(r.raw) }
+function rowSys(r) {
+  if (r.domain === '确权') return confirmSysName(r.raw)
+  return (r.systems && r.systems.length) ? r.systems.join(' ') : authSysName(r.raw) // 授权申请级:跨系统关键字匹配全部系统
+}
 const mineInTab = computed(() => rows.value.filter((r) => tabOf(r) === activeTab.value))
 const filteredNoStatus = computed(() => mineInTab.value.filter((r) => {
   if (kw.value && !rowSys(r).includes(kw.value) && !(r.assetName || '').includes(kw.value)) return false
@@ -360,8 +463,8 @@ const COL_CHANGE = [
   { prop: 'baselineRef', label: '基线引用' }, { prop: 'changeSummary', label: '变更摘要' }, { prop: 'status', label: '状态' }, { prop: 'duration', label: '处理时效' }
 ]
 const COL_AUTH = [
-  { prop: 'sysName', label: '所属系统' }, { prop: 'assetName', label: '数据表' }, { prop: 'rightType', label: '权益类型' },
-  { prop: 'granteeOrg', label: '被授权方' }, { prop: 'reviewResult', label: '审核结果' }, { prop: 'authStatus', label: '授权状态' },
+  { prop: 'listYear', label: '年度' }, { prop: 'granteeOrg', label: '被授权方' },
+  { prop: 'crossSystem', label: '跨系统域' }, { prop: 'reviewResult', label: '审核结果' }, { prop: 'authStatus', label: '授权状态' },
   { prop: 'processOpinion', label: '处理意见' }, { prop: 'createTime', label: '申请时间' }
 ]
 const colDefs = computed(() => activeTab.value === '初始确权' ? COL_INITIAL : activeTab.value === '确权变更' ? COL_CHANGE : COL_AUTH)
@@ -403,7 +506,7 @@ function onExport() {
     ? (activeTab.value === '初始确权'
       ? [['申请编号', (r) => r.no], ['系统名称', (r) => confirmSysName(r.raw)], ['权属类型', (r) => r.raw.rightType], ['来源识别', (r) => r.raw.sourceIdentification], ['信息关联', (r) => r.raw.relationIdentification], ['涉第三方', (r) => r.raw.involvesThirdParty ? '涉' : '否'], ['状态', (r) => r.status], ['提交时间', (r) => r.createTime]]
       : [['申请编号', (r) => r.no], ['系统名称', (r) => confirmSysName(r.raw)], ['变更触发', (r) => r.raw.changeTrigger], ['版本', (r) => r.raw.changeVersion], ['基线引用', (r) => r.raw.baselineRef], ['变更摘要', (r) => r.raw.changeSummary], ['状态', (r) => r.status], ['提交时间', (r) => r.createTime]])
-    : [['申请编号', (r) => r.no], ['所属系统', (r) => authSysName(r.raw)], ['数据表', (r) => r.assetName], ['权益类型', (r) => r.raw.rightType], ['被授权方', (r) => r.raw.granteeOrg], ['审核结果', (r) => reviewResult(r.status)], ['授权状态', (r) => authStatus(r.status)], ['处理意见', (r) => r.rejectReason], ['申请时间', (r) => r.createTime]]
+    : [['申请编号', (r) => r.no], ['年度', (r) => r.listYear], ['被授权方', (r) => r.raw.granteeOrg], ['系统数', (r) => r.systemCount], ['覆盖系统', (r) => (r.systems || []).join('、')], ['库表数', (r) => r.tableCount], ['跨系统域', (r) => (r.crossSystem ? '是' : '否')], ['审核结果', (r) => reviewResult(r.status)], ['授权状态', (r) => authStatus(r.status)], ['申请时间', (r) => r.createTime]]
   const lines = [cols.map((c) => c[0]).join(',')]
   filtered.value.forEach((r) => lines.push(cols.map((c) => csvCell(c[1](r))).join(',')))
   const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' })
@@ -429,20 +532,27 @@ const AUTH_IN_REVIEW = ['单位初审中', '合规审核中', '业务审核中',
 function isAuthDraft(row) { return row.domain === '授权' && row.status === '草稿' }
 function isAuthInReview(row) { return row.domain === '授权' && AUTH_IN_REVIEW.includes(row.status) }
 function goEditAuthDraft(row) {
-  const r = row.raw || {}
-  if (row.mode === '批量') router.push({ path: '/dpr/auth/batch-wizard', query: { batchListId: r.batchListId } })
-  else router.push({ path: '/dpr/auth/wizard', query: { formNo: r.formNo } })
+  if (row.mode === '批量') router.push({ path: '/dpr/auth/batch-wizard', query: { batchListId: row.batchListId } })
+  else router.push({ path: '/dpr/auth/wizard', query: { formNo: row.formNo } })
 }
+// 删除=申请级:批量删整份清单(级联明细);一事一议删整份申请单(逐项删)
 function onDeleteAuth(row) {
-  const label = row.mode === '批量' ? '批量授权项' : '数据表'
-  ElMessageBox.confirm(`确认删除草稿${label}「${row.assetName || row.no}」?删除后不可恢复。`, '删除草稿', { type: 'warning' })
-    .then(async () => { try { await deleteAuthApply(row.raw?.applyId); ElMessage.success('草稿已删除'); load() } catch (e) { /* 拦截器已 toast */ } }).catch(() => {})
+  const label = row.mode === '批量' ? `批量清单「${row.no}」(${row.tableCount} 张库表)` : `一事一议申请单「${row.no}」(${row.tableCount} 张库表)`
+  ElMessageBox.confirm(`确认删除草稿${label}?删除后不可恢复。`, '删除草稿', { type: 'warning' })
+    .then(async () => {
+      try {
+        if (row.mode === '批量') await deleteBatchList(row.batchListId)
+        else { for (const it of (row.items || [])) { try { await deleteAuthApply(it.applyId) } catch (e) { /* 跳过失败项 */ } } }
+        ElMessage.success('草稿已删除'); load()
+      } catch (e) { /* 拦截器已 toast */ }
+    }).catch(() => {})
 }
+// 撤回=申请级:批量退回整份清单;一事一议撤回整份申请单(formNo 级)
 function onWithdrawAuth(row) {
   const isBatch = row.mode === '批量'
-  const msg = isBatch ? '撤回将把整份批量清单退回草案、其下明细退回草稿,可继续编辑后重新提交。确认撤回?' : '撤回该数据表授权申请(退回后可修改重提)。确认撤回?'
+  const msg = isBatch ? '撤回将把整份批量清单退回草案、其下明细退回草稿,可继续编辑后重新提交。确认撤回?' : '撤回将把整份一事一议申请单退回草稿(含其下全部库表),可继续编辑后重新提交。确认撤回?'
   ElMessageBox.confirm(msg, '撤回申请', { type: 'warning' })
-    .then(async () => { try { if (isBatch) await withdrawBatchList(row.raw?.batchListId); else await withdrawAuth(row.raw?.applyId, ''); ElMessage.success('已撤回,可修改后重提'); load() } catch (e) { /* 拦截器已 toast */ } }).catch(() => {})
+    .then(async () => { try { if (isBatch) await withdrawBatchList(row.batchListId); else await withdrawAuthForm(row.formNo); ElMessage.success('已撤回,可修改后重提'); load() } catch (e) { /* 拦截器已 toast */ } }).catch(() => {})
 }
 function goReopen(row) {
   sessionStorage.setItem('prm-reopen', JSON.stringify({ domain: row.domain, raw: row.raw || {} }))
@@ -489,6 +599,7 @@ onMounted(load)
 .c-done { border-left-color: var(--prm-color-success); }
 .c-reject { border-left-color: var(--prm-color-danger); }
 .c-init { border-left-color: var(--prm-color-primary); }
+.ma-expand { padding: 10px 18px 12px 56px; background: var(--prm-color-bg); }
 .filter-row { display: flex; flex-wrap: wrap; align-items: center; }
 .filter-row :deep(.el-form-item) { margin-bottom: 8px; }
 .filter-row .actions { margin-left: auto; }

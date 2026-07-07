@@ -812,6 +812,8 @@
       <el-button v-if="step > 0 && step < 3" @click="step--">上一步</el-button>
       <!-- PDD 8.1 状态机·独立「保存草稿」:step 0/1/2 均可主动暂存(宽进,不校验完成度、不前进),中途离开不丢 -->
       <el-button v-if="step < 3" :loading="saving" @click="saveDraft">保存草稿</el-button>
+      <!-- 自动保存指示(防丢):本地即时 + 达底线后服务端同步,静默呈现 -->
+      <span v-if="step < 3 && autoTip" style="margin-left:8px;color:var(--prm-color-text-weak);font-size:12px">{{ autoTip }}</span>
       <el-button v-if="step === 0" type="primary" :loading="saving" @click="next0">下一步</el-button>
       <el-button v-if="step === 1" type="primary" @click="next1">下一步</el-button>
       <el-tooltip v-if="step === 2 && !canSubmit" content="请先通过材料校验(全部应交项完整且合规)" placement="top">
@@ -826,8 +828,13 @@
 import PageNote from '@/components/PageNote.vue'
 import { computed, reactive, ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { confirmAsync } from '@/utils/confirmAsync'
+import { currentUser } from '@/api/auth'
+import { useDraftAutosave, localDraftKey, readLocalDraft, removeLocalDraft } from '@/composables/useDraftAutosave'
+import { filterRequiredRules } from '@/lib/confirmChecklist'
+import { notifyDraftChanged } from '@/lib/draftCount'
+import { markDraftSource, clearDraftSource } from '@/lib/draftSource'
 import { autofillConfirm, saveConfirmDraft, uploadMaterial, uploadMaterialFile, materialFileUrl, listMaterialByApply, checkMaterial, runMaterialCheck, syncPlatformMaterials, pushMaterialReview, materialExportUrl, saveAiSnapshot, saveTableItems, listTableItems, getConfirmApply, getConsolidation, aiMaterialCheck, listMaterialRules, aiParseConfirm, aiDecisionConfirm, aiConflictConfirm } from '@/api/confirm'
 import AiThinking from '@/components/AiThinking.vue'
 import PageActions from '@/components/PageActions.vue'
@@ -1482,17 +1489,19 @@ const keepValidityCluster = computed(() => changeTriggers.value.some(t => t.incl
 onMounted(async () => {
   loadMaterialRules()
   form.registerType = changeMode.value ? '确权变更' : '初始确权'
-  // 草稿就地续填(PDD 8.1):从「我的申请」草稿「编辑」带 applyId 进入,按 id 回填并保留 applyId(后续保存/下一步 UPDATE 同单,不复制新单)
-  if (route.query.applyId) {
-    await loadDraft(String(route.query.applyId))
-    return
+  try {
+    // 草稿就地续填(PDD 8.1):从草稿箱/我的申请「继续填写」带 applyId 进入,按 id 回填并保留 applyId(后续保存/下一步 UPDATE 同单,不复制新单)
+    if (route.query.applyId) { await loadDraft(String(route.query.applyId)); return }
+    // 主动入口「发起变更」(P1):列表页带 assetId 进入,预选资产并按确权状态自动定登记类型(已确权→确权变更+基线对照)
+    if (route.query.assetId && !applyId.value) { await initAssetEntry(String(route.query.assetId)); return }
+    if (!route.query.reopen) { await maybeRecoverLocalDraft(); return } // 全新进入:找回本地未提交草稿
+    reopenFromRejected()
+  } finally {
+    autosaveReady.value = true // 回填/找回完成后再开启自动保存,避免载入即回写
   }
-  // 主动入口「发起变更」(P1):列表页带 assetId 进入,预选资产并按确权状态自动定登记类型(已确权→确权变更+基线对照)
-  if (route.query.assetId && !applyId.value) {
-    await initAssetEntry(String(route.query.assetId))
-    return
-  }
-  if (!route.query.reopen) return
+})
+// 基于原单修改重提:从被驳回确权单带入字段(sessionStorage 'prm-reopen')
+function reopenFromRejected() {
   try {
     const o = JSON.parse(sessionStorage.getItem('prm-reopen') || '{}')
     if (o.domain === '确权' && o.raw) {
@@ -1516,7 +1525,7 @@ onMounted(async () => {
     }
   } catch (e) { /* ignore */ }
   sessionStorage.removeItem('prm-reopen')
-})
+}
 // 草稿就地续填:按 id 回填 表单 + 表2逐表清单 + 已传材料,保留 applyId(后续保存走 UPDATE,不复制)
 async function loadDraft(id) {
   try {
@@ -1963,8 +1972,66 @@ async function saveDraft() {
   try {
     applyId.value = await saveConfirmDraft(buildPayload())
     if (tableItems.value.length) await persistTableItems()
-    ElMessage.success(`草稿已保存(编号 ${applyNo.value || applyId.value})，可随时离开后在「我的申请」→ 草稿「编辑」继续`)
+    removeLocalDraft(localDraftKey(draftScope.value, 'new', meId())) // 已服务端落库:清本地 'new' 键,转由草稿箱管理
+    markDraftSource(applyId.value, 'manual') // 主动「保存草稿」= 手动来源
+    notifyDraftChanged()
+    ElMessage.success(`草稿已保存(编号 ${applyNo.value || applyId.value})，可随时离开后在「申请草稿箱」或「我的申请」继续`)
   } catch (e) { /* 请求拦截器已 toast 错误 */ } finally { saving.value = false }
+}
+
+// ===== 申请草稿·自动保存(防丢:中断/关页/崩溃不丢半成品)=====
+// 本地即时写入 + 达"系统+库表"底线后 debounce 服务端同步(复用 saveDraft 去重);静默宽进,不校验、不前进。
+const autosaveReady = ref(false)     // 初始回填期间不触发,避免"载入即回写 / 空存"
+const draftScope = computed(() => (changeMode.value ? 'confirm-change' : 'confirm-initial'))
+const meId = () => (currentUser() && currentUser().userId) || ''
+const draftKey = () => localDraftKey(draftScope.value, applyId.value || 'new', meId())
+const canServerAutosave = () => !!form.systemName && tableItems.value.length > 0 && !saving.value && !submitting.value
+async function serverAutosave() {
+  const first = !applyId.value
+  applyId.value = await saveConfirmDraft(buildPayload())
+  if (tableItems.value.length) await persistTableItems()
+  markDraftSource(applyId.value, 'auto') // 自动保存来源
+  if (first && applyId.value) { removeLocalDraft(localDraftKey(draftScope.value, 'new', meId())); notifyDraftChanged() }
+}
+const autosave = useDraftAutosave({
+  getKey: draftKey,
+  getSnapshot: () => {
+    // 有实质内容才存:至少选了系统/库表 或 填了权属主体
+    if (!form.systemName && !tableItems.value.length && !form.rightHolder) return { __skip: true }
+    return {
+      form: JSON.parse(JSON.stringify(form)),
+      tableItems: JSON.parse(JSON.stringify(tableItems.value)),
+      changeTriggers: [...changeTriggers.value],
+      applyId: applyId.value, applyNo: applyNo.value, step: step.value,
+      registerType: form.registerType,
+      title: form.systemName ? `${form.systemName} · ${tableItems.value.length} 表` : '(未选系统)'
+    }
+  },
+  serverSync: serverAutosave,
+  canServer: canServerAutosave
+})
+const autoTip = computed(() => (autosave.syncing.value ? '正在自动保存…' : (autosave.lastSavedAt.value ? `已自动保存 ${autosave.lastSavedAt.value}` : '')))
+// 表单/表2/触发动因变化 → 计划自动保存(composable 内部:本地即时 + 服务端 debounce)
+watch([form, tableItems, changeTriggers], () => { if (autosaveReady.value) autosave.schedule() }, { deep: true })
+// 切步即刻本地落一笔(仅本地,不打后端)
+watch(step, () => { if (autosaveReady.value) autosave.schedule({ server: false }) })
+
+// 找回:全新进入(无 applyId/assetId/reopen)时,提示恢复本地未提交草稿
+async function maybeRecoverLocalDraft() {
+  const snap = readLocalDraft(localDraftKey(draftScope.value, 'new', meId()))
+  const hasContent = snap && (snap.form?.systemName || (snap.tableItems || []).length || snap.form?.rightHolder)
+  if (!hasContent) return
+  const when = snap.__ts ? new Date(snap.__ts).toLocaleString() : ''
+  try {
+    await ElMessageBox.confirm(
+      `检测到一份未提交的${changeMode.value ? '确权变更' : '初始确权'}草稿${when ? `(最后编辑 ${when})` : ''},是否恢复继续填写?`,
+      '恢复未完成的草稿', { confirmButtonText: '恢复', cancelButtonText: '丢弃', type: 'info' }
+    )
+    Object.assign(form, snap.form || {})
+    tableItems.value = snap.tableItems || []
+    changeTriggers.value = snap.changeTriggers || []
+    ElMessage.success('已恢复本地草稿,可继续填写')
+  } catch { removeLocalDraft(localDraftKey(draftScope.value, 'new', meId())) } // 丢弃
 }
 
 // 步骤1 -> 2:暂存草稿,生成 A–J 应交材料清单
@@ -2016,6 +2083,7 @@ async function next0() {
   try {
     const firstSave = !applyId.value
     applyId.value = await saveConfirmDraft(buildPayload())
+    markDraftSource(applyId.value, 'manual') // 「下一步」为申报人主动推进 = 手动来源
     // 表级清单全量同步(后端按 applyId 删后插),复用 persistTableItems(逐表凭证附件/materialId 已落库·单一真源)
     if (tableItems.value.length) {
       const n = await persistTableItems()
@@ -2088,19 +2156,11 @@ async function doSyncPlatform(silent = false) {
 // 触发判定与后端 ConfirmMaterialRuleService 一致:ALWAYS 常交 / TABLE2 涉三方 / SOURCE-RELATION 选中码。
 function buildChecklist() {
   if (!materialRules.value.length) { buildChecklistFallback(); return }
-  const t2 = needTable2.value
-  const hit = (r) => {
-    if (r.triggerType === 'ALWAYS') return true
-    if (r.triggerType === 'TABLE2') return t2
-    if (r.triggerType === 'SOURCE') return form.sourceIdent.includes(r.triggerCode)
-    if (r.triggerType === 'RELATION') return form.relationIdent.includes(r.triggerCode)
-    return false
-  }
-  let rules = materialRules.value.filter(hit)
-  // P3:B–F来源(非A)+ G–J关联 已逐表化(step2 逐表凭证区·写回 ConfirmTableItem),系统级清单只留 表1/表2/权属凭证 + A 自行生产说明
-  rules = rules.filter(r => !isPerTableRule(r))
-  // 确权变更:按变更触发类型收敛为差异项(与后端 narrowForChange 一致),不必重复提交全套
-  if (form.registerType === '确权变更' && form.changeTrigger) rules = narrowForChange(rules, form.changeTrigger)
+  // 规则过滤收敛至共享单一真源(lib/confirmChecklist),向导与草稿箱缺口计算同源
+  const rules = filterRequiredRules(materialRules.value, {
+    sourceIdent: form.sourceIdent, relationIdent: form.relationIdent,
+    needTable2: needTable2.value, registerType: form.registerType, changeTrigger: form.changeTrigger
+  })
   checklist.value = rules.map((r, i) => ({
     code: r.triggerCode || (r.triggerType === 'TABLE2' ? '表2' : '核心'),
     name: r.materialName,
@@ -2109,29 +2169,9 @@ function buildChecklist() {
     id: 'ck' + i, done: false
   }))
 }
-// 确权变更应交材料收敛(镜像后端 ConfirmMaterialRuleService.narrowForChange):核心表单/凭证(ALWAYS)始终保留;
-// 来源类仅当触发涉来源、关联类仅当触发涉管理要求时保留;表2仅当仍保留来源/关联差异材料时保留。
-function narrowForChange(rules, trigger) {
-  // 容错匹配(与后端一致):触发可组合表述,按关键词判定;未识别触发→保守不收敛返回全集
-  const known = ['来源', '新增', '管理', '监管', '到期'].some(k => trigger.includes(k)) || trigger === '其他'
-  if (!known) return rules
-  const keepSrc = trigger.includes('来源') || trigger.includes('新增') || trigger === '其他'
-  const keepRel = trigger.includes('管理') || trigger.includes('监管') || trigger === '其他'
-  const out = []; let anyDiff = false
-  for (const r of rules) {
-    if (r.triggerType === 'ALWAYS') out.push(r)
-    else if (r.triggerType === 'SOURCE') { if (keepSrc) { out.push(r); anyDiff = true } }
-    else if (r.triggerType === 'RELATION') { if (keepRel) { out.push(r); anyDiff = true } }
-  }
-  if (anyDiff) out.push(...rules.filter(r => r.triggerType === 'TABLE2'))
-  return out
-}
 
 // 规则接口不可用时的内置兜底(与默认规则一致),保证向导可离线生成清单
 // P3:系统级清单只含 表1/表2/权属凭证 + A 自行生产说明;B–F(非A)/G–J 已逐表化(step2 逐表凭证区)
-function isPerTableRule(r) {
-  return r.triggerType === 'RELATION' || (r.triggerType === 'SOURCE' && r.triggerCode !== 'A')
-}
 function buildChecklistFallback() {
   const base = [{ code: '表1', name: '《表1 数据确权信息清单(系统级)》', m: '表1' }, { code: '证明', name: '数据确权证明材料(权属/来源凭证)', m: '证明材料' }]
   if (needTable2.value) base.push({ code: '表2', name: '《表2 数据确权信息清单(涉及第三方权益)》', m: '表2' })
@@ -2265,6 +2305,10 @@ async function next2() {
     } catch (e) { /* 快照失败不阻断提交 */ }
     await pushMaterialReview(applyId.value) // 后端门禁:校验全通过才提交审核,否则抛错(拦截器toast缺失/不合规)
     step.value = 3
+    autosave.clear() // 已提交:清本地自动保存缓存(applyId 键 + 'new' 键)
+    removeLocalDraft(localDraftKey(draftScope.value, 'new', meId()))
+    clearDraftSource(applyId.value) // 已提交:清来源记录
+    notifyDraftChanged() // 草稿转在审 → 草稿数减一
   } finally { submitting.value = false }
 }
 

@@ -31,8 +31,9 @@ const MENU_GROUP = {}
 export const MENU = [
   { top: true, path: '/dpr/guidance', title: '指引中心', icon: 'Reading' },
   { top: true, path: '/dpr/workbench/my', title: '我的申请', icon: 'Tickets', roles: ['apply', 'business'] },
-  // 待办中心:所有承担审批/审核/归集节点的角色(BA-03)
-  { top: true, path: '/dpr/workbench/todo', title: '统一待办中心', icon: 'Compass', roles: ['unit', 'review', 'business', 'precheck', 'manager', 'director', 'gm', 'leadership'] },
+  // 待办中心:所有承担审批/审核/归集节点的角色(BA-03);apply 无审批节点，但有"本人被驳回待修改重提"的
+  // 申报人视角待办(见 TodoCenter.vue「我的待办」tab)，故一并开放入口，否则页面对申报人永远打不开/空白。
+  { top: true, path: '/dpr/workbench/todo', title: '统一待办中心', icon: 'Compass', roles: ['apply', 'unit', 'review', 'business', 'precheck', 'manager', 'director', 'gm', 'leadership'] },
   {
     // P0:按 AA-10 给 副总gm/经理director/主管manager/合规review 补「产权信息管理」访问(原仅 view/admin/apply)
     group: '产权信息管理', icon: 'Document', index: '01', items: [
@@ -55,7 +56,7 @@ export const MENU = [
     group: '数据确权管理', icon: 'Stamp', index: '03', items: [
       { path: '/dpr/confirm/wizard', title: '⭐ 初始确权申请', roles: ['apply'] },
       { path: '/dpr/confirm/change', title: '确权变更申请', roles: ['apply'] },
-      { path: '/dpr/confirm/catalog', title: '确权目录管理', roles: ['apply', 'admin'] },
+      { path: '/dpr/confirm/draft-box', title: '申请草稿箱', roles: ['apply'] },
       { path: '/dpr/confirm/history', title: '申请查询', roles: ['review', 'view', 'manager', 'director', 'precheck'] },
       { path: '/dpr/confirm/review', title: '审核申请提交', roles: ['review', 'precheck', 'manager', 'director'] },
       { path: '/dpr/confirm/card', title: '权益卡片生成', roles: ['admin', 'apply', 'manager'] },
@@ -68,12 +69,14 @@ export const MENU = [
       // 35号文 一事一议流程步骤10:发起人=分子公司「业务管理部门」团队 → business 须有发起入口(角色评估 MEDIUM#1)
       { path: '/dpr/auth/wizard', title: '⭐ 一事一议授权申请', roles: ['apply', 'business'] },
       { path: '/dpr/auth/batch-wizard', title: '⭐ 批量授权申请', roles: ['apply'] },
-      { path: '/dpr/auth/batch-list', title: '批量授权清单', roles: ['apply', 'review', 'manager', 'director', 'gm', 'leadership'] },
+      { path: '/dpr/auth/draft-box', title: '申请草稿箱', roles: ['apply', 'business'] },
+      { path: '/dpr/auth/batch-list', title: '批量授权清单', roles: ['review', 'manager', 'director', 'gm', 'leadership'] },
       { path: '/dpr/auth/compliance', title: '合规校验管理', roles: ['review', 'admin'] },
       { path: '/dpr/auth/history', title: '申请历史查询', roles: ['unit', 'review', 'view', 'manager', 'director', 'gm'] },
       { path: '/dpr/auth/review', title: '授权审核提交', roles: ['unit', 'review', 'business', 'manager', 'director', 'gm'] },
-      // 协议工作台(P1-4 签章/审核/存档合一);旧三路由保留兼容
-      { path: '/dpr/auth/agreement', title: '协议工作台', roles: ['review', 'apply', 'gm'] },
+      // 协议工作台(签章上传/存档;35号文:协议环节无独立人工审核,双签自动核验归档)。
+      // review=合规管控小组在此无审核动作(协议不设人工审核环节),故移除;仅保留发起方 apply / gm。
+      { path: '/dpr/auth/agreement', title: '协议工作台', roles: ['apply', 'gm'] },
       { path: '/dpr/auth/cert', title: '授权生效记录管理', roles: ['admin'] },
       { path: '/dpr/auth/filing', title: '对外经营权授权备案', roles: ['admin', 'apply'] },
     ],
@@ -124,6 +127,12 @@ export const ROLE_HOME = {
 export function currentRole() {
   return localStorage.getItem('prm-role') || 'all'
 }
+
+// 治理红线(软护栏):真实登录账号不得为超级视角 'all'。
+// 'all' = 看全量菜单 + 后端 RbacInterceptor/assertNodeRole 对其一律放行(等于关闭全部 RBAC);
+// 它只应作「未登录兜底 + 顶栏演示切换」使用,绝不应从登录返回。若登录返回 all/空角色 → 判为误配置,降级为只读 view。
+export function isForbiddenLoginRole(role) { return !role || role === 'all' }
+export function sanitizeLoginRole(role) { return isForbiddenLoginRole(role) ? 'view' : role }
 
 // 审批节点(状态名)→ 处理角色:镜像后端 AuthApplyServiceImpl.NODE_ROLE / ConfirmApplyServiceImpl.NODE_ROLE。
 // 用途:把「授权审核台 / 统一待办中心」收敛到「本角色·本节点」,让每个审批人只见自己队列。

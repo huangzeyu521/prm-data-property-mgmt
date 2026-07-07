@@ -1,6 +1,6 @@
 // 角色菜单可见域守卫测试(对齐 AA-10 角色功能矩阵 + BA-03 节点责任人)。
 // 纯函数 visibleMenu() 断言;无需浏览器/框架。运行:node scripts/test-roles.mjs
-import { visibleMenu, handledStatuses, AUTH_NODE_ROLE, CONFIRM_NODE_ROLE } from '../src/lib/roles.js'
+import { visibleMenu, handledStatuses, AUTH_NODE_ROLE, CONFIRM_NODE_ROLE, sanitizeLoginRole, isForbiddenLoginRole } from '../src/lib/roles.js'
 
 // 展平某角色可见的全部路径(顶层项 + 各分组子项)
 function pathsOf(role) {
@@ -91,6 +91,14 @@ setEq(handledStatuses('director', CONFIRM_NODE_ROLE), ['经理终审中'], 'dire
 // 管理员/超级视角:不过滤(null = 看全部队列)
 if (handledStatuses('admin', AUTH_NODE_ROLE) !== null) { console.error('✗ admin 应不过滤审批队列(null)'); fails++ }
 if (handledStatuses('all', CONFIRM_NODE_ROLE) !== null) { console.error('✗ all 应不过滤审批队列(null)'); fails++ }
+
+// 治理红线(软护栏):登录角色净化——真实账号不得为 'all'(超级视角=关闭全部 RBAC)。
+if (!isForbiddenLoginRole('all')) { console.error("✗ 软护栏:'all' 应判为禁用登录角色"); fails++ }
+if (!isForbiddenLoginRole('')) { console.error('✗ 软护栏:空角色应判为禁用登录角色'); fails++ }
+if (isForbiddenLoginRole('manager')) { console.error('✗ 软护栏:正常业务角色不应被判禁用'); fails++ }
+if (sanitizeLoginRole('all') !== 'view') { console.error("✗ 软护栏:登录角色 'all' 应降级为只读 view"); fails++ }
+if (sanitizeLoginRole('') !== 'view') { console.error('✗ 软护栏:空角色应降级为只读 view'); fails++ }
+if (sanitizeLoginRole('apply') !== 'apply') { console.error('✗ 软护栏:正常角色应原样保留'); fails++ }
 
 if (fails) {
   console.error(`\n角色守卫测试失败:${fails} 处不符 AA-10`)

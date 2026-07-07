@@ -50,10 +50,10 @@ const routes = [
   { path: '/dpr/confirm/wizard', name: 'ConfirmWizard', component: () => import('@/views/confirm/ConfirmWizard.vue'), meta: { title: '初始确权申请(一站式)', goal: '系统级初始确权:左树选一个系统(整系统纳入,不下钻库表)→ 表1+A–J → 材料 → 校验 → 提交', mode: 'initial' } },
   // 确权变更与初始确权分菜单(对齐附录F §3.3.2 重新确权):载入已确权系统、聚焦变更维度
   { path: '/dpr/confirm/change', name: 'ConfirmChange', component: () => import('@/views/confirm/ConfirmWizard.vue'), meta: { title: '确权变更申请', goal: '对已确权系统的修订:选触发动因 → 基线对照 → 只改变动维度 → 提交', mode: 'change' } },
+  { path: '/dpr/confirm/draft-box', name: 'ConfirmDraftBox', component: () => import('@/views/confirm/ConfirmDraftBox.vue'), meta: { title: '申请草稿箱', goal: '汇聚本人未提交的确权草稿(自动暂存),继续填写或删除' } },
   // 季度重确权工单池(35号文§二(三)2 闭环:到期扫描/监测联动/变更生效联动 → 派生变更或复核无变化销号)
   // 确权指引管理已并入「指引中心」,旧路径重定向(保旧书签/深链)
   { path: '/dpr/confirm/guidance', redirect: '/dpr/guidance?tab=confirm' },
-  { path: '/dpr/confirm/catalog', name: 'ConfirmCatalog', component: () => import('@/views/confirm/ConfirmCatalog.vue'), meta: { title: '数据资产确权目录管理', goal: '管理数据资产确权目录结构,明确应确权范围' } },
   { path: '/dpr/confirm/history', name: 'ConfirmHistory', component: () => import('@/views/confirm/ConfirmHistory.vue'), meta: { title: '确权申请查询(进度/历史)', goal: '查询确权申请审批进度与历史记录' } },
   { path: '/dpr/confirm/review', name: 'ConfirmReviewDesk', component: () => import('@/views/confirm/ConfirmReviewDesk.vue'), meta: { title: '审核申请提交管理', goal: '受理并审核确权申请,出具认定意见(表3/表4)' } },
   { path: '/dpr/confirm/card', name: 'EquityCard', component: () => import('@/views/confirm/EquityCardList.vue'), meta: { title: '权益卡片生成管理', goal: '确权通过后生成与管理权益卡片(先确后授前提)' } },
@@ -61,6 +61,7 @@ const routes = [
   // F-03 数据授权管理
   { path: '/dpr/auth/wizard', name: 'AuthWizard', component: () => import('@/views/authorize/AuthWizard.vue'), meta: { title: '一事一议授权申请(一站式)', goal: '一站式发起一事一议授权申请并跟踪流转' } },
   { path: '/dpr/auth/batch-wizard', name: 'BatchAuthWizard', component: () => import('@/views/authorize/BatchAuthWizard.vue'), meta: { title: '批量授权申请(一站式)', goal: '一站式发起批量授权申请并跟踪流转' } },
+  { path: '/dpr/auth/draft-box', name: 'AuthDraftBox', component: () => import('@/views/authorize/AuthDraftBox.vue'), meta: { title: '申请草稿箱', goal: '汇聚本人未提交的授权草稿(一事一议/批量,自动暂存),继续填写或删除' } },
   { path: '/dpr/auth/filing', name: 'AuthFiling', component: () => import('@/views/authorize/AuthFiling.vue'), meta: { title: '对外经营权授权备案(附录G)', goal: '办理对外经营权授权备案,留存备案记录' } },
   // 授权指引管理已并入「指引中心」,旧路径重定向(保旧书签/深链)
   { path: '/dpr/auth/guidance', redirect: '/dpr/guidance?tab=auth' },

@@ -134,11 +134,11 @@
           </template>
         </el-alert>
         <!-- 列序/列名严格对齐《表5 数据授权申请单》(申请主体名称/申请单位主管/联系方式为批量清单头共享字段,已在步骤1填,不在此逐行重复) -->
-        <el-table :data="pagedItems" border size="small" :row-class-name="itemRowClass">
+        <el-table :data="pagedItems" border size="small" :row-class-name="itemRowClass" @filter-change="onItemsFilterChange">
           <el-table-column type="index" label="#" width="44" align="center" :index="(i) => (itemsPage - 1) * itemsPageSize + i + 1" />
           <el-table-column prop="assetName" label="数据表名称" min-width="140" show-overflow-tooltip />
-          <el-table-column prop="systemName" label="所属系统" min-width="120" show-overflow-tooltip
-            :filters="sysFilterOpts" :filter-method="(v, row) => row.systemName === v">
+          <el-table-column prop="systemName" label="所属系统" min-width="120" show-overflow-tooltip column-key="sys"
+            :filters="sysFilterOpts" :filter-method="matchSystemFilter">
             <template #default="{ row }">{{ row.systemName || '—' }}</template>
           </el-table-column>
           <el-table-column prop="schemaName" label="模式名称" min-width="110" show-overflow-tooltip>
@@ -147,8 +147,8 @@
           <el-table-column prop="businessDomain" label="所属业务域" min-width="100" show-overflow-tooltip>
             <template #default="{ row }">{{ row.businessDomain || '—' }}</template>
           </el-table-column>
-          <el-table-column prop="rightType" label="申请权益类型" width="140"
-            :filters="[{ text: '使用权', value: '使用权' }, { text: '经营权', value: '经营权' }]" :filter-method="(v, row) => row.rightType === v" />
+          <el-table-column prop="rightType" label="申请权益类型" width="140" column-key="rightType"
+            :filters="[{ text: '使用权', value: '使用权' }, { text: '经营权', value: '经营权' }]" :filter-method="matchRightTypeFilter" />
           <el-table-column prop="equityCardId" label="生效卡片" min-width="120" show-overflow-tooltip>
             <template #default="{ row }">{{ row.equityCardId || '—' }}</template>
           </el-table-column>
@@ -166,8 +166,8 @@
             </template>
           </el-table-column>
           <!-- 表6 合规判定列:第三方/隐私商密 由确权事实带出(只读,堵人工低报);跨域按全清单系统并集判定 -->
-          <el-table-column label="是否跨区域、跨域" width="130" align="center"
-            :filters="[{ text: '是', value: true }, { text: '否', value: false }]" :filter-method="(v, row) => (crossSystemInfo.isCross || crossGeo) === v">
+          <el-table-column label="是否跨区域、跨域" width="130" align="center" column-key="cross"
+            :filters="[{ text: '是', value: true }, { text: '否', value: false }]" :filter-method="matchCrossFilter">
             <template #default>
               <el-tooltip :content="`跨系统域:${crossSystemInfo.isCross ? '是' : '否'};跨地域:${crossGeo ? '是' : '否'}`" placement="top">
                 <span :class="'prm-c-' + ((crossSystemInfo.isCross || crossGeo ? 'warning' : 'info') || 'primary')">{{ crossSystemInfo.isCross || crossGeo ? '是' : '否' }}</span>
@@ -175,9 +175,9 @@
             </template>
           </el-table-column>
           <!-- 涉及第三方来源方式:显示确权带出的实际来源方式文字(不是单纯是/否),筛选按"是否涉及"分组 -->
-          <el-table-column label="涉及第三方来源方式" width="140"
+          <el-table-column label="涉及第三方来源方式" width="140" column-key="thirdParty"
             :filters="[{ text: '涉及', value: true }, { text: '不涉及', value: false }]"
-            :filter-method="(v, row) => !!(row.thirdPartySource && String(row.thirdPartySource).trim()) === v">
+            :filter-method="matchThirdPartyFilter">
             <template #default="{ row }">
               <span v-if="row.thirdPartySource && String(row.thirdPartySource).trim()" class="prm-c-warning">{{ row.thirdPartySource }}</span>
               <span v-else style="color:var(--prm-color-text-disabled)">不涉及</span>
@@ -196,9 +196,9 @@
               </el-upload>
             </template>
           </el-table-column>
-          <el-table-column label="涉及个人隐私/商业秘密" width="150" align="center"
+          <el-table-column label="涉及个人隐私/商业秘密" width="150" align="center" column-key="sensitive"
             :filters="[{ text: '涉及', value: true }, { text: '不涉及', value: false }]"
-            :filter-method="(v, row) => !!(row.sensitiveType && String(row.sensitiveType).trim() && row.sensitiveType !== '无') === v">
+            :filter-method="matchSensitiveFilter">
             <template #default="{ row }">
               <span :class="'prm-c-' + ((row.sensitiveType && String(row.sensitiveType).trim() && row.sensitiveType !== '无' ? 'danger' : 'info') || 'primary')">
                 {{ row.sensitiveType && String(row.sensitiveType).trim() && row.sensitiveType !== '无' ? row.sensitiveType : '不涉及' }}
@@ -226,7 +226,7 @@
         </el-table>
         <el-pagination v-if="items.length" style="margin-top:12px;justify-content:flex-end" background
           layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
-          :total="items.length" :current-page="itemsPage" :page-size="itemsPageSize"
+          :total="filteredItems.length" :current-page="itemsPage" :page-size="itemsPageSize"
           @current-change="p => itemsPage = p" @size-change="s => { itemsPageSize = s; itemsPage = 1 }" />
         <el-empty v-if="items.length===0" :image-size="60" description="尚未添加授权项 — 点上方「① 从确权目录批量选取数据资产」" />
       </el-card>
@@ -289,11 +289,11 @@
         <el-result icon="success" title="批量授权清单申报稿已提交" :sub-title="`清单 ${listNo}（${items.length} 项）已进入审批链,当前待「合规管控小组审核」`">
           <template #extra>
             <div class="wz-progress">
-              <div class="wz-progress-t">后续流转进度(实时以「清单管理」为准)</div>
+              <div class="wz-progress-t">后续流转进度(实时以「我的申请」为准)</div>
               <AuthFlowProgress mode="batch" current="compliance" />
             </div>
             <div style="margin-top:6px">
-              <el-button type="primary" @click="go('/dpr/auth/batch-list')">去清单管理查看进度</el-button>
+              <el-button type="primary" @click="go('/dpr/workbench/my')">去「我的申请」查看进度</el-button>
               <el-button @click="go('/dpr/auth/filing')">对外经营权备案(附录G)</el-button>
               <el-button @click="reset">再建一份清单</el-button>
             </div>
@@ -306,7 +306,8 @@
     <PageActions v-if="!submitted">
       <el-button v-if="step > 0" @click="step--">上一步</el-button>
       <!-- PDD 8.1 独立「保存草稿」:宽进(仅需授权年度建清单草案,不校验其余、不前进);中途离开可续填 -->
-      <el-button :loading="savingDraft" @click="saveDraftBatch">保存草稿</el-button>
+      <el-button :loading="savingDraft" @click="saveDraftBatch()">保存草稿</el-button>
+      <span v-if="autoTip" class="prm-c-weak" style="margin-left:8px;font-size:12px">{{ autoTip }}</span>
       <el-button v-if="step === 0" type="primary" :loading="creating" @click="next0">下一步</el-button>
       <el-button v-if="step === 1" type="primary" :disabled="items.length===0" @click="step = 2">下一步</el-button>
     </PageActions>
@@ -331,9 +332,13 @@
 import PageNote from '@/components/PageNote.vue'
 import { reactive, ref, computed, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { confirmAsync } from '@/utils/confirmAsync'
 import { createBatchList, saveAuthDraft, deleteAuthApply, submitBatchList, getBatchList, listAuthByBatch, aiBatchPreReview, listAuthMaterialRules, checkBatchCompliance, uploadAuthMaterialFile, listAuthMaterial, authMaterialFileUrl } from '@/api/authorize'
+import { currentUser } from '@/api/auth'
+import { useDraftAutosave, localDraftKey, readLocalDraft, removeLocalDraft } from '@/composables/useDraftAutosave'
+import { notifyDraftChanged } from '@/lib/draftCount'
+import { markDraftSource, clearDraftSource } from '@/lib/draftSource'
 import { openFilePreview } from '@/composables/useFilePreview'
 import AiThinking from '@/components/AiThinking.vue'
 import PageActions from '@/components/PageActions.vue'
@@ -374,14 +379,36 @@ function onStepClick(idx) { if (stepJumpable(idx)) step.value = idx }
 const creating = ref(false); const submitting = ref(false)
 const batchListId = ref(''); const listNo = ref('')
 const items = ref([])
-// 已加入明细分页(纯前端,10行/页;数据全在内存 items,无需改接口)
+// 已加入明细分页 + 筛选(纯前端,10行/页;数据全在内存 items,无需改接口)
+// 注意:el-table 的 :filter-method 只对送入 :data 的数组生效——若直接把已分页的 pagedItems 喂给 :data,
+// 筛选就只能筛当前页(且分页 total 仍是全量),跨页数据会被"看似筛没了"。故筛选状态(itemFilters)与全量 items
+// 一起算出 filteredItems,分页只在 filteredItems 之上切片,total 也绑 filteredItems.length。
 const itemsPage = ref(1); const itemsPageSize = ref(10)
+const itemFilters = reactive({})
+function matchSystemFilter(v, row) { return row.systemName === v }
+function matchRightTypeFilter(v, row) { return row.rightType === v }
+function matchCrossFilter(v, row) { return (crossSystemInfo.value.isCross || crossGeo.value) === v }
+function matchThirdPartyFilter(v, row) { return !!(row.thirdPartySource && String(row.thirdPartySource).trim()) === v }
+function matchSensitiveFilter(v, row) { return !!(row.sensitiveType && String(row.sensitiveType).trim() && row.sensitiveType !== '无') === v }
+const ITEM_FILTER_PREDICATES = { sys: matchSystemFilter, rightType: matchRightTypeFilter, cross: matchCrossFilter, thirdParty: matchThirdPartyFilter, sensitive: matchSensitiveFilter }
+function onItemsFilterChange(filters) { Object.assign(itemFilters, filters); itemsPage.value = 1 }
+const filteredItems = computed(() => {
+  let list = items.value
+  for (const key of Object.keys(itemFilters)) {
+    const vals = itemFilters[key]
+    if (!vals || !vals.length) continue
+    const pred = ITEM_FILTER_PREDICATES[key]
+    if (!pred) continue
+    list = list.filter(row => vals.some(v => pred(v, row)))
+  }
+  return list
+})
 const pagedItems = computed(() => {
   const start = (itemsPage.value - 1) * itemsPageSize.value
-  return items.value.slice(start, start + itemsPageSize.value)
+  return filteredItems.value.slice(start, start + itemsPageSize.value)
 })
-watch(items, () => { if (itemsPage.value > 1 && (itemsPage.value - 1) * itemsPageSize.value >= items.value.length) itemsPage.value = 1 })
-// 所属系统筛选选项(去重,随已加入明细动态变化)
+watch(items, () => { if (itemsPage.value > 1 && (itemsPage.value - 1) * itemsPageSize.value >= filteredItems.value.length) itemsPage.value = 1 })
+// 所属系统筛选选项(去重,随已加入明细动态变化;基于全量 items,不受当前筛选/分页影响)
 const sysFilterOpts = computed(() => [...new Set(items.value.map(i => i.systemName).filter(Boolean))].map(name => ({ text: name, value: name })))
 // 清单头(批量级):被授权方为批量共享;权益类型/场景/时效为整批默认,加项时带入(资源池按权益类型过滤)
 const listForm = reactive({ listYear: '', granteeOrg: '', contactPerson: '', contactInfo: '', rightType: '', scenario: '', validTerm: '两年', geoScope: GEO_HOME, remark: '' })
@@ -465,13 +492,14 @@ onMounted(async () => {
   try {
     orgOptions.value = (await listOrg()) || []
   } catch (e) { /* 组织接口不可用 → 选择器降级为可输入(allow-create),不阻断申报 */ }
-  applyRoutePrefill()
+  try { await applyRoutePrefill() } finally { autosaveReady.value = true }
 })
 
 // 路由预填:① ?batchListId 草稿就地续填(保 batchListId 续存同一清单)② ?reopen 修改重提(复制清单头,新清单)
-function applyRoutePrefill() {
+async function applyRoutePrefill() {
   const q = route.query
-  if (q.batchListId) { loadBatchDraft(String(q.batchListId)); return }
+  if (q.batchListId) { await loadBatchDraft(String(q.batchListId)); return }
+  if (!q.reopen) { await maybeRecoverLocalDraft(); return } // 全新进入:找回本地未提交草稿
   if (q.reopen) {
     try {
       const o = JSON.parse(sessionStorage.getItem('prm-reopen') || '{}')
@@ -503,20 +531,65 @@ async function persistAllItems() {
 
 // 主动保存草稿(PDD 8.1 独立存草稿):宽进——落库底线=已填授权年度(据此建清单草案);不校验其余、不前进。
 // 建清单(如未建)→刷新全部明细。可离开后在「我的申请」草稿续填(或「批量授权清单」页找草案)。
-async function saveDraftBatch() {
+async function saveDraftBatch(silent = false) {
   if (!batchListId.value && !listForm.listYear) {
-    ElMessage.warning('请先填写授权年度以建立清单草案,方可暂存草稿')
+    if (!silent) ElMessage.warning('请先填写授权年度以建立清单草案,方可暂存草稿')
     return
   }
   savingDraft.value = true
   try {
+    const first = !batchListId.value
     if (!batchListId.value) {
       batchListId.value = await createBatchList({ listYear: listForm.listYear, remark: listForm.remark, geoScope: listForm.geoScope })
       listNo.value = listForm.listYear + ' 批量授权清单'
     }
     await persistAllItems()
-    ElMessage.success(`草稿已保存(清单 ${listNo.value || batchListId.value})，可随时离开后在「我的申请」→ 草稿「编辑」继续`)
+    markDraftSource(batchListId.value, silent ? 'auto' : 'manual')
+    if (first) { removeLocalDraft(localDraftKey('auth-batch', 'new', meId())); notifyDraftChanged() }
+    if (!silent) {
+      notifyDraftChanged()
+      ElMessage.success(`草稿已保存(清单 ${listNo.value || batchListId.value})，可随时离开后在「申请草稿箱」或「我的申请」继续`)
+    }
   } catch (e) { /* 拦截器已 toast */ } finally { savingDraft.value = false }
+}
+
+// ===== 申请草稿·自动保存(批量:本地即时防丢 + 达底线后静默 server-sync via saveDraftBatch)=====
+const autosaveReady = ref(false)
+const meId = () => (currentUser() && currentUser().userId) || ''
+const draftKey = () => localDraftKey('auth-batch', batchListId.value || 'new', meId())
+// 仅在清单已建(batchListId 存在)后才服务端 UPDATE;绝不由自动保存 CREATE 清单(避免与「下一步」建单竞态、防幽灵草案)。建单前本地快照兜底防丢。
+const canServerAutosave = () => !!batchListId.value && !savingDraft.value && !submitting.value
+const autosave = useDraftAutosave({
+  getKey: draftKey,
+  getSnapshot: () => {
+    if (!listForm.listYear && !listForm.granteeOrg && !items.value.length) return { __skip: true }
+    return {
+      listForm: JSON.parse(JSON.stringify(listForm)),
+      items: JSON.parse(JSON.stringify(items.value)),
+      externalGrantee: externalGrantee.value,
+      batchListId: batchListId.value, step: step.value,
+      title: [listForm.granteeOrg, listForm.listYear && `${listForm.listYear} 年度`].filter(Boolean).join(' · ') || '(未填年度)'
+    }
+  },
+  serverSync: () => saveDraftBatch(true),
+  canServer: canServerAutosave
+})
+const autoTip = computed(() => (autosave.syncing.value ? '正在自动保存…' : (autosave.lastSavedAt.value ? `已自动保存 ${autosave.lastSavedAt.value}` : '')))
+watch([listForm, items], () => { if (autosaveReady.value) autosave.schedule() }, { deep: true })
+watch(step, () => { if (autosaveReady.value) autosave.schedule({ server: false }) })
+
+async function maybeRecoverLocalDraft() {
+  const snap = readLocalDraft(localDraftKey('auth-batch', 'new', meId()))
+  if (!snap || (!snap.listForm?.listYear && !snap.listForm?.granteeOrg && !(snap.items || []).length)) return
+  const when = snap.__ts ? new Date(snap.__ts).toLocaleString() : ''
+  try {
+    await ElMessageBox.confirm(`检测到一份未提交的批量授权草稿${when ? `(最后编辑 ${when})` : ''},是否恢复继续填写?`,
+      '恢复未完成的草稿', { confirmButtonText: '恢复', cancelButtonText: '丢弃', type: 'info' })
+    Object.assign(listForm, snap.listForm || {})
+    externalGrantee.value = !!snap.externalGrantee
+    if ((snap.items || []).length) items.value = snap.items
+    ElMessage.success('已恢复本地草稿,可继续填写')
+  } catch { removeLocalDraft(localDraftKey('auth-batch', 'new', meId())) }
 }
 
 // 草稿就地续填:按 batchListId 回填清单头 + 明细(保各行 applyId,续存同一清单,不复制)
@@ -750,8 +823,10 @@ function removeItem(row, idx) {
 
 async function doSubmit() {
   submitting.value = true
-  try { await submitBatchList(batchListId.value); submitted.value = true }
-  finally { submitting.value = false }
+  try {
+    await submitBatchList(batchListId.value); submitted.value = true
+    autosave.clear(); clearDraftSource(batchListId.value); notifyDraftChanged()
+  } finally { submitting.value = false }
 }
 
 function go(p) { router.push(p) }

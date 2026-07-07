@@ -47,13 +47,12 @@
           </template>
         </el-table-column>
         <el-table-column v-if="action==='archive'" prop="archiveTime" label="归档时间" width="160"><template #default="{ row }">{{ (row.archiveTime||'').replace('T',' ').slice(0,19) || '—' }}</template></el-table-column>
-        <el-table-column label="操作" :width="action==='seal'?760:(action==='archive'?400:340)" fixed="right">
+        <el-table-column label="操作" :width="action==='seal'?380:(action==='archive'?300:300)" fixed="right">
           <template #default="{ row }">
-            <el-button link type="warning" @click="onElements(row)">协议要素核对</el-button>
+            <!-- 签章上传:主操作(要素落定 + 甲/乙签章 + 承诺函,上传触发器须内联)内联;次操作收进「更多」 -->
             <template v-if="action==='seal'">
-              <!-- ① 要素落定(附录D 协商项填空→正式稿锁定):正式稿才开放签章 -->
               <el-button link :type="row.docStatus==='正式稿' ? 'info' : 'danger'" @click="onNegotiation(row)">
-                {{ row.docStatus==='正式稿' ? '要素(已锁定)' : '① 要素落定' }}
+                {{ row.docStatus==='正式稿' ? '要素已锁定' : '① 要素落定' }}
               </el-button>
               <el-tooltip :disabled="row.docStatus==='正式稿'" content="协议要素未落定(草案),请先「① 要素落定」生成正式稿" placement="top">
                 <span>
@@ -69,12 +68,20 @@
               <span v-if="row.confidentialityFile" style="margin-right:6px" class="prm-c-success">承诺函已收口</span>
               <el-upload v-else :show-file-list="false" :http-request="(o)=>doUploadConfidentiality(row,o.file)" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" style="display:inline-block;margin-right:6px">
                 <el-tooltip :disabled="row.docStatus==='正式稿'" content="先要素落定生成正式稿" placement="top">
-                  <span><el-button link type="warning" :disabled="row.docStatus!=='正式稿'">承诺函(附录E)</el-button></span>
+                  <span><el-button link type="warning" :disabled="row.docStatus!=='正式稿'">承诺函</el-button></span>
                 </el-tooltip>
               </el-upload>
-              <el-button link type="success" @click="dlAppendixD(row)">{{ row.docStatus==='正式稿' ? '下载协议正式稿(附录D)' : '下载协议草案(附录D)' }}</el-button>
-              <el-button link type="info" @click="onSealLogs(row)">上传记录</el-button>
-              <el-button link type="info" @click="onReviewLogs(row)">核验记录</el-button>
+              <el-dropdown trigger="click" @command="(c)=>onMore(c,row)">
+                <el-button link type="primary">更多<el-icon class="el-icon--right"><ArrowDown /></el-icon></el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="elements">协议要素核对</el-dropdown-item>
+                    <el-dropdown-item command="dlAppendixD">{{ row.docStatus==='正式稿' ? '下载协议正式稿(附录D)' : '下载协议草案(附录D)' }}</el-dropdown-item>
+                    <el-dropdown-item command="sealLogs" divided>上传记录</el-dropdown-item>
+                    <el-dropdown-item command="reviewLogs">核验记录</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
             </template>
             <template v-else-if="action==='archive'">
               <el-button link type="primary" @click="onPreview(row)">预览</el-button>
@@ -82,10 +89,19 @@
               <!-- 期限管理(动态跟踪):续期(经甲方书面同意,≤今日+5年)/终止(第七章情形,回收数据权限) -->
               <el-button v-if="!row.terminated" link type="warning" @click="onRenew(row)">续期</el-button>
               <el-button v-if="!row.terminated" link type="danger" @click="onTerminate(row)">终止</el-button>
-              <el-button link type="info" @click="onReviewLogs(row)">核验记录</el-button>
-              <el-button link type="info" @click="onArchiveLogs(row)">审计日志</el-button>
+              <el-dropdown trigger="click" @command="(c)=>onMore(c,row)">
+                <el-button link type="primary">更多<el-icon class="el-icon--right"><ArrowDown /></el-icon></el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="elements">协议要素核对</el-dropdown-item>
+                    <el-dropdown-item command="reviewLogs" divided>核验记录</el-dropdown-item>
+                    <el-dropdown-item command="archiveLogs">审计日志</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
             </template>
             <template v-else>
+              <el-button link type="warning" @click="onElements(row)">协议要素核对</el-button>
               <el-button link type="info" @click="onReviewLogs(row)">核验记录</el-button>
               <el-button link type="primary" @click="onPreview(row)">预览</el-button>
               <el-button link type="success" @click="onDownload(row)">下载</el-button>
@@ -278,6 +294,10 @@ async function dlAppendixD(row) {
 }
 const reviewLogDlg = ref(false); const reviewLogs = ref([])
 async function onReviewLogs(row) { curNo.value = row.agreementNo; reviewLogs.value = await getAgreementReviewLogs(row.agreementId) || []; reviewLogDlg.value = true }
+// 「更多」下拉分发:收纳次操作,避免操作列过宽挤掉其他列
+function onMore(cmd, row) {
+  ({ elements: onElements, dlAppendixD, sealLogs: onSealLogs, reviewLogs: onReviewLogs, archiveLogs: onArchiveLogs }[cmd] || (() => {}))(row)
+}
 // 协议要素核对(§3.4.4):取协议来源申请单要素,供审核人对照协议文件
 const elemDlg = ref(false); const elem = ref(null)
 async function onElements(row) {

@@ -8,7 +8,7 @@ const ROUTES = [
   '/dpr/dashboard/overview', '/dpr/dashboard/confirm', '/dpr/dashboard/auth',
   '/dpr/workbench/my', '/dpr/workbench/todo',
   '/dpr/ledger/overview', '/dpr/ledger/dataset', '/dpr/ledger/archive', '/dpr/ledger/change', '/dpr/ledger/statistics',
-  '/dpr/confirm/wizard', '/dpr/confirm/change', '/dpr/confirm/card', '/dpr/confirm/catalog',
+  '/dpr/confirm/wizard', '/dpr/confirm/change', '/dpr/confirm/card',
   '/dpr/confirm/cert', '/dpr/confirm/guidance', '/dpr/confirm/history', '/dpr/confirm/review',
   '/dpr/auth/batch-wizard', '/dpr/auth/wizard', '/dpr/auth/batch-list', '/dpr/auth/cert', '/dpr/auth/compliance',
   '/dpr/auth/filing', '/dpr/auth/guidance', '/dpr/auth/history', '/dpr/auth/review', '/dpr/auth/scenario',

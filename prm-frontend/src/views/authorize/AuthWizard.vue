@@ -144,17 +144,17 @@
           </template>
         </el-alert>
         <!-- 列序/列名严格对齐《表5 数据授权申请单》(申请主体名称/申请单位主管/联系方式为单头共享字段,已在步骤1填,不在此逐行重复) -->
-        <el-table :data="pagedItems" border size="small" :row-class-name="itemRowClass">
+        <el-table :data="pagedItems" border size="small" :row-class-name="itemRowClass" @filter-change="onItemsFilterChange">
           <el-table-column type="index" label="#" width="44" align="center" :index="(i) => (itemsPage - 1) * itemsPageSize + i + 1" />
           <el-table-column prop="assetName" label="数据表名称" min-width="140" show-overflow-tooltip />
-          <el-table-column prop="systemName" label="所属系统" min-width="120" show-overflow-tooltip
-            :filters="sysFilterOpts" :filter-method="(v, row) => row.systemName === v">
+          <el-table-column prop="systemName" label="所属系统" min-width="120" show-overflow-tooltip column-key="sys"
+            :filters="sysFilterOpts" :filter-method="matchSystemFilter">
             <template #default="{ row }">{{ row.systemName || '—' }}</template>
           </el-table-column>
           <el-table-column prop="schemaName" label="模式名称" min-width="110" show-overflow-tooltip><template #default="{ row }">{{ row.schemaName || '—' }}</template></el-table-column>
           <el-table-column prop="businessDomain" label="所属业务域" min-width="100" show-overflow-tooltip><template #default="{ row }">{{ row.businessDomain || '—' }}</template></el-table-column>
-          <el-table-column prop="rightType" label="申请权益类型" width="140"
-            :filters="[{ text: '使用权', value: '使用权' }, { text: '经营权', value: '经营权' }]" :filter-method="(v, row) => row.rightType === v" />
+          <el-table-column prop="rightType" label="申请权益类型" width="140" column-key="rightType"
+            :filters="[{ text: '使用权', value: '使用权' }, { text: '经营权', value: '经营权' }]" :filter-method="matchRightTypeFilter" />
           <el-table-column prop="equityCardId" label="生效卡片" min-width="120" show-overflow-tooltip><template #default="{ row }">{{ row.equityCardId || '—' }}</template></el-table-column>
           <el-table-column label="使用场景及目的摘要" min-width="150">
             <template #default="{ row }"><el-input v-model="row.scenario" size="small" placeholder="(沿用单头默认)" @change="persistItem(row)" /></template>
@@ -166,9 +166,9 @@
               </el-select>
             </template>
           </el-table-column>
-          <el-table-column label="是否跨区域、跨域" width="130" align="center"
+          <el-table-column label="是否跨区域、跨域" width="130" align="center" column-key="cross"
             :filters="[{ text: '是', value: true }, { text: '否', value: false }]"
-            :filter-method="(v, row) => !!(externalGrantee || crossSystemInfo.isCross || row.crossGeo) === v">
+            :filter-method="matchCrossFilter">
             <template #default="{ row }">
               <el-tooltip :content="externalGrantee ? '被授权方为外部主体,省域归属不可解析,请合规审查关注' : (row.crossGeo ? `跨地域:被授权方省 ≠ 归属主体省(${row.ownerOrg || '—'})` : (crossSystemInfo.isCross ? '跨系统域(本单覆盖多系统)' : '单系统·同省'))" placement="top">
                 <span :class="'prm-c-' + ((externalGrantee ? 'danger' : (crossSystemInfo.isCross || row.crossGeo ? 'warning' : 'info')) || 'primary')">
@@ -178,9 +178,9 @@
             </template>
           </el-table-column>
           <!-- 涉及第三方来源方式:显示确权带出的实际来源方式文字(不是单纯是/否),筛选按"是否涉及"分组 -->
-          <el-table-column label="涉及第三方来源方式" width="140"
+          <el-table-column label="涉及第三方来源方式" width="140" column-key="thirdParty"
             :filters="[{ text: '涉及', value: true }, { text: '不涉及', value: false }]"
-            :filter-method="(v, row) => !!(row.thirdPartySource && String(row.thirdPartySource).trim()) === v">
+            :filter-method="matchThirdPartyFilter">
             <template #default="{ row }">
               <span v-if="row.thirdPartySource && String(row.thirdPartySource).trim()" class="prm-c-warning">{{ row.thirdPartySource }}</span>
               <span v-else style="color:var(--prm-color-text-disabled)">不涉及</span>
@@ -197,9 +197,9 @@
               </el-upload>
             </template>
           </el-table-column>
-          <el-table-column label="涉及个人隐私/商业秘密" width="150" align="center"
+          <el-table-column label="涉及个人隐私/商业秘密" width="150" align="center" column-key="sensitive"
             :filters="[{ text: '涉及', value: true }, { text: '不涉及', value: false }]"
-            :filter-method="(v, row) => !!(row.sensitiveType && String(row.sensitiveType).trim() && row.sensitiveType !== '无') === v">
+            :filter-method="matchSensitiveFilter">
             <template #default="{ row }">
               <span :class="'prm-c-' + ((row.sensitiveType && String(row.sensitiveType).trim() && row.sensitiveType !== '无' ? 'danger' : 'info') || 'primary')">
                 {{ row.sensitiveType && String(row.sensitiveType).trim() && row.sensitiveType !== '无' ? row.sensitiveType : '不涉及' }}
@@ -223,7 +223,7 @@
         </el-table>
         <el-pagination v-if="items.length" style="margin-top:12px;justify-content:flex-end" background
           layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
-          :total="items.length" :current-page="itemsPage" :page-size="itemsPageSize"
+          :total="filteredItems.length" :current-page="itemsPage" :page-size="itemsPageSize"
           @current-change="p => itemsPage = p" @size-change="s => { itemsPageSize = s; itemsPage = 1 }" />
         <el-empty v-if="items.length===0" :image-size="60" description="尚未加入数据表 — 点上方「① 从确权目录选取数据资产」" />
       </el-card>
@@ -287,8 +287,9 @@
 
     <PageActions v-if="!submitted">
       <el-button v-if="step > 0" @click="step--">上一步</el-button>
-      <!-- PDD 8.1 独立「保存草稿」:step 0/1/2 均可主动暂存(宽进,不校验单头完整度、不前进);中途离开可在「我的申请」草稿续填 -->
-      <el-button :loading="savingDraft" @click="saveDraftForm">保存草稿</el-button>
+      <!-- PDD 8.1 独立「保存草稿」:step 0/1/2 均可主动暂存(宽进,不校验单头完整度、不前进);中途离开可在草稿箱续填 -->
+      <el-button :loading="savingDraft" @click="saveDraftForm()">保存草稿</el-button>
+      <span v-if="autoTip" class="prm-c-weak" style="margin-left:8px;font-size:12px">{{ autoTip }}</span>
       <el-button v-if="step === 0" type="primary" :loading="creating" @click="next0">下一步</el-button>
       <el-button v-if="step === 1" type="primary" :disabled="items.length===0" @click="step = 2">下一步</el-button>
     </PageActions>
@@ -313,8 +314,12 @@
 import PageNote from '@/components/PageNote.vue'
 import { reactive, ref, computed, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { confirmAsync } from '@/utils/confirmAsync'
+import { currentUser } from '@/api/auth'
+import { useDraftAutosave, localDraftKey, readLocalDraft, removeLocalDraft } from '@/composables/useDraftAutosave'
+import { notifyDraftChanged } from '@/lib/draftCount'
+import { markDraftSource, clearDraftSource } from '@/lib/draftSource'
 import { createAuthForm, saveAuthDraft, deleteAuthApply, submitAuthForm, checkAuthFormCompliance,
   listAuthByForm, listAuthMaterialRules, uploadAuthMaterialFile, pageScenario } from '@/api/authorize'
 import { pageEquityCard, getRightsFacts } from '@/api/confirm'
@@ -346,14 +351,36 @@ function onStepClick(idx) { if (stepJumpable(idx)) step.value = idx }
 const creating = ref(false); const submitting = ref(false)
 const formNo = ref('')
 const items = ref([])
-// 已加入数据表分页(纯前端,10行/页;数据全在内存 items,无需改接口)
+// 已加入数据表分页 + 筛选(纯前端,10行/页;数据全在内存 items,无需改接口)
+// 注意:el-table 的 :filter-method 只对送入 :data 的数组生效——若直接把已分页的 pagedItems 喂给 :data,
+// 筛选就只能筛当前页(且分页 total 仍是全量),跨页数据会被"看似筛没了"。故筛选状态(itemFilters)与全量 items
+// 一起算出 filteredItems,分页只在 filteredItems 之上切片,total 也绑 filteredItems.length。
 const itemsPage = ref(1); const itemsPageSize = ref(10)
+const itemFilters = reactive({})
+function matchSystemFilter(v, row) { return row.systemName === v }
+function matchRightTypeFilter(v, row) { return row.rightType === v }
+function matchCrossFilter(v, row) { return !!(externalGrantee.value || crossSystemInfo.value.isCross || row.crossGeo) === v }
+function matchThirdPartyFilter(v, row) { return !!(row.thirdPartySource && String(row.thirdPartySource).trim()) === v }
+function matchSensitiveFilter(v, row) { return !!(row.sensitiveType && String(row.sensitiveType).trim() && row.sensitiveType !== '无') === v }
+const ITEM_FILTER_PREDICATES = { sys: matchSystemFilter, rightType: matchRightTypeFilter, cross: matchCrossFilter, thirdParty: matchThirdPartyFilter, sensitive: matchSensitiveFilter }
+function onItemsFilterChange(filters) { Object.assign(itemFilters, filters); itemsPage.value = 1 }
+const filteredItems = computed(() => {
+  let list = items.value
+  for (const key of Object.keys(itemFilters)) {
+    const vals = itemFilters[key]
+    if (!vals || !vals.length) continue
+    const pred = ITEM_FILTER_PREDICATES[key]
+    if (!pred) continue
+    list = list.filter(row => vals.some(v => pred(v, row)))
+  }
+  return list
+})
 const pagedItems = computed(() => {
   const start = (itemsPage.value - 1) * itemsPageSize.value
-  return items.value.slice(start, start + itemsPageSize.value)
+  return filteredItems.value.slice(start, start + itemsPageSize.value)
 })
-watch(items, () => { if (itemsPage.value > 1 && (itemsPage.value - 1) * itemsPageSize.value >= items.value.length) itemsPage.value = 1 })
-// 所属系统筛选选项(去重,随已加入数据表动态变化)
+watch(items, () => { if (itemsPage.value > 1 && (itemsPage.value - 1) * itemsPageSize.value >= filteredItems.value.length) itemsPage.value = 1 })
+// 所属系统筛选选项(去重,随已加入数据表动态变化;基于全量 items,不受当前筛选/分页影响)
 const sysFilterOpts = computed(() => [...new Set(items.value.map(i => i.systemName).filter(Boolean))].map(name => ({ text: name, value: name })))
 // 申请单头(共享"一事":同一被授权方 + 同一场景 + 权益/时效/协议要素/联系)
 const listForm = reactive({ rightType: '', granteeOrg: '', scenario: '', purposeNote: '', validTerm: '两年', benefitAllocation: '', securityReq: '', applicantManager: '', contactInfo: '', needConfidentiality: false, confidentialityFile: '' })
@@ -452,15 +479,16 @@ onMounted(async () => {
   try { const rules = await listAuthMaterialRules('一事一议'); if (Array.isArray(rules) && rules.length) materialRules.value = rules } catch (e) { /* 兜底内置 */ }
   try { orgOptions.value = (await listOrg()) || [] } catch (e) { /* 选择器降级为可输入 */ }
   try { const r = await pageScenario({ status: '生效中', size: 100 }); scenarioOpts.value = r.records || [] } catch (e) { scenarioOpts.value = [] }
-  applyRoutePrefill()
+  try { await applyRoutePrefill() } finally { autosaveReady.value = true } // 回填/找回完成后再开启自动保存
 })
 
 // 路由预填:① 权益卡片「发起授权」(query 带 assetId/cardNo/rightType) ② reopen 重提(sessionStorage 原单)
 // 统一暂存为 pendingAsset,落 step0;用户填完单头「下一步」(createForm)后由 addPendingAsset 自动加入明细。
-function applyRoutePrefill() {
+async function applyRoutePrefill() {
   const q = route.query
-  // 草稿就地续填(从「我的申请」草稿「编辑」带 formNo 进入):按 formNo 回填,保留 applyId 续存同一申请单
-  if (q.formNo) { loadFormDraft(String(q.formNo)); return }
+  // 草稿就地续填(从草稿箱/我的申请「继续填写」带 formNo 进入):按 formNo 回填,保留 applyId 续存同一申请单
+  if (q.formNo) { await loadFormDraft(String(q.formNo)); return }
+  if (!q.assetId && !q.reopen) { await maybeRecoverLocalDraft(); return } // 全新进入:找回本地未提交草稿
   if (q.assetId) {
     if (rightTypes.includes(q.rightType)) listForm.rightType = String(q.rightType)
     pendingAsset.value = { assetId: String(q.assetId), assetName: String(q.assetName || ''), equityCardId: String(q.cardNo || ''), rightType: rightTypes.includes(q.rightType) ? String(q.rightType) : '' }
@@ -635,18 +663,64 @@ async function persistAllItems() {
 
 // 主动保存草稿(PDD 8.1 状态机·独立存草稿):宽进——落库底线=至少已选一张授权数据表(申请单否则为空,无意义)。
 // 不校验单头完整度、不推进步骤;建单(如未建)→加入暂存表→用当前单头刷新全部明细。可离开后在「我的申请」草稿续填。
-async function saveDraftForm() {
+async function saveDraftForm(silent = false) {
   if (!formNo.value && !pendingAsset.value && items.value.length === 0) {
-    ElMessage.warning('请先从确权目录选取至少一张授权数据表,方可暂存草稿')
+    if (!silent) ElMessage.warning('请先从确权目录选取至少一张授权数据表,方可暂存草稿')
     return
   }
   savingDraft.value = true
   try {
+    const first = !formNo.value
     if (!formNo.value) formNo.value = await createAuthForm()
     if (pendingAsset.value) await addPendingAsset()
     await persistAllItems()
-    ElMessage.success(`草稿已保存(申请单 ${formNo.value})，可随时离开后在「我的申请」→ 草稿「编辑」继续`)
+    markDraftSource(formNo.value, silent ? 'auto' : 'manual')
+    if (first) { removeLocalDraft(localDraftKey('auth-special', 'new', meId())); notifyDraftChanged() }
+    if (!silent) {
+      notifyDraftChanged()
+      ElMessage.success(`草稿已保存(申请单 ${formNo.value})，可随时离开后在「申请草稿箱」或「我的申请」继续`)
+    }
   } catch (e) { /* 拦截器已 toast */ } finally { savingDraft.value = false }
+}
+
+// ===== 申请草稿·自动保存(一事一议:本地即时防丢 + 达底线后静默 server-sync via saveDraftForm)=====
+const autosaveReady = ref(false)
+const meId = () => (currentUser() && currentUser().userId) || ''
+const draftKey = () => localDraftKey('auth-special', formNo.value || 'new', meId())
+// 仅在申请单已建(formNo 存在)后才服务端 UPDATE;绝不由自动保存 CREATE 申请单(避免与建单竞态、防幽灵草稿)。建单前本地快照兜底防丢。
+const canServerAutosave = () => !!formNo.value && !savingDraft.value && !submitting.value
+const autosave = useDraftAutosave({
+  getKey: draftKey,
+  getSnapshot: () => {
+    if (!listForm.granteeOrg && !pendingAsset.value && !items.value.length) return { __skip: true }
+    return {
+      listForm: JSON.parse(JSON.stringify(listForm)),
+      pendingAsset: pendingAsset.value ? JSON.parse(JSON.stringify(pendingAsset.value)) : null,
+      items: JSON.parse(JSON.stringify(items.value)),
+      formNo: formNo.value, step: step.value,
+      title: [listForm.granteeOrg, listForm.scenario].filter(Boolean).join(' · ') || '(未填被授权方)'
+    }
+  },
+  serverSync: () => saveDraftForm(true),
+  canServer: canServerAutosave
+})
+const autoTip = computed(() => (autosave.syncing.value ? '正在自动保存…' : (autosave.lastSavedAt.value ? `已自动保存 ${autosave.lastSavedAt.value}` : '')))
+watch([listForm, items, pendingAsset], () => { if (autosaveReady.value) autosave.schedule() }, { deep: true })
+watch(step, () => { if (autosaveReady.value) autosave.schedule({ server: false }) })
+
+// 找回:全新进入(无 formNo/assetId/reopen)时提示恢复本地未提交草稿
+async function maybeRecoverLocalDraft() {
+  const snap = readLocalDraft(localDraftKey('auth-special', 'new', meId()))
+  if (!snap || (!snap.listForm?.granteeOrg && !snap.pendingAsset && !(snap.items || []).length)) return
+  const when = snap.__ts ? new Date(snap.__ts).toLocaleString() : ''
+  try {
+    await ElMessageBox.confirm(`检测到一份未提交的一事一议授权草稿${when ? `(最后编辑 ${when})` : ''},是否恢复继续填写?`,
+      '恢复未完成的草稿', { confirmButtonText: '恢复', cancelButtonText: '丢弃', type: 'info' })
+    Object.assign(listForm, snap.listForm || {})
+    pendingAsset.value = snap.pendingAsset || null
+    if ((snap.items || []).length) items.value = snap.items
+    ElMessage.success('已恢复本地草稿,可继续填写')
+  } catch { removeLocalDraft(localDraftKey('auth-special', 'new', meId())) }
 }
 
 // 草稿就地续填:按 formNo 回填单头 + 明细(保留各行 applyId,续存/提交同一申请单,不复制)
@@ -706,8 +780,10 @@ function removeItem(row, idx) {
 
 async function doSubmit() {
   submitting.value = true
-  try { await submitAuthForm(formNo.value); submitted.value = true }
-  finally { submitting.value = false }
+  try {
+    await submitAuthForm(formNo.value); submitted.value = true
+    autosave.clear(); clearDraftSource(formNo.value); notifyDraftChanged() // 已提交:清本地缓存/来源,草稿数减一
+  } finally { submitting.value = false }
 }
 
 // 自动配卡:按资产匹配生效权益卡片(权属可授:卡片权益==所选)。供一键示例。

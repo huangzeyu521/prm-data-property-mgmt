@@ -17,6 +17,9 @@
             <el-option v-for="s in STATES" :key="s" :label="s" :value="s" />
           </el-select>
         </el-form-item>
+        <el-form-item v-if="isApply">
+          <el-switch v-model="q.mine" active-text="只看我负责的" inline-prompt @change="onSearch" />
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="onSearch">查询</el-button>
           <el-button @click="onReset">重置</el-button>
@@ -42,9 +45,18 @@
           <template #default="{ row }">{{ fmtDate(row.validDate) }}</template>
         </el-table-column>
         <el-table-column prop="equityCount" label="权益条目" width="90" align="center" />
-        <el-table-column label="操作" width="150" align="center" fixed="right">
+        <el-table-column label="操作" :width="isApply ? 230 : 150" align="center" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="onView(row)">查看</el-button>
+            <!-- 申报人作战面板:按确权状态驱动下一步动作(仅 apply 角色) -->
+            <template v-if="isApply">
+              <el-button v-if="row.state === '待确权' || row.state === '已驳回'" link type="primary" @click="goConfirm(row)">
+                {{ row.state === '已驳回' ? '重新发起' : '去确权' }}
+              </el-button>
+              <el-button v-if="row.state === '确权中'" link type="primary" @click="goProgress()">看进度</el-button>
+              <el-button v-if="row.state === '已确权'" link type="success" @click="goAuthorize(row)">去授权</el-button>
+            </template>
+            <!-- 发起变更:保持既有(所有角色,已确权可见) -->
             <el-button v-if="row.state === '已确权'" link type="primary" @click="onChange(row)">发起变更</el-button>
           </template>
         </el-table-column>
@@ -117,22 +129,39 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { pageAssetArchive, getAssetProperty, getAssetEquity } from '@/api/assetCard'
+import { currentUser } from '@/api/auth'
 import { useTablePage } from '@/composables/useTablePage'
 import PrmDialog from '@/components/PrmDialog.vue'
 
 const router = useRouter()
+// 申报人作战面板:动作按钮矩阵 + 「只看我负责的」默认开,按登录角色(非视图切换)gate。
+// 其余角色维持既有纯只读台账(查看 + 发起变更),逐字节不变。
+const isApply = currentUser()?.role === 'apply'
+
 // 已确权资产「发起变更」:必须进「确权变更申请」路由(meta.mode='change'),
 // 变更触发勾选/基线对照/授权影响门禁均由该路由 changeMode 门控,推 wizard(initial) 会全部失效
 function onChange(row) {
   router.push({ path: '/dpr/confirm/change', query: { assetId: row.assetId } })
+}
+// 待确权/已驳回 → 去确权/重新发起:复用 ConfirmWizard 的 ?assetId 预填(initAssetEntry 自动定登记类型)
+function goConfirm(row) {
+  router.push({ path: '/dpr/confirm/wizard', query: { assetId: row.assetId } })
+}
+// 确权中 → 看进度:进「我的申请」查看在途单据流转
+function goProgress() {
+  router.push({ path: '/dpr/workbench/my' })
+}
+// 已确权 → 去授权:复用 AuthWizard 的 ?assetId 预填(资产直接预选进清单)
+function goAuthorize(row) {
+  router.push({ path: '/dpr/auth/wizard', query: { assetId: row.assetId } })
 }
 
 const STATES = ['待确权', '确权中', '已确权', '已驳回']
 
 const { query: q, rows, total, loading, load, search: onSearch, reset: onReset, onPage, onSizeChange: onSize } =
   useTablePage(
-    (p) => pageAssetArchive({ ...p, keyword: p.keyword || undefined, state: p.state || undefined }),
-    { keyword: '', state: '' }
+    (p) => pageAssetArchive({ ...p, keyword: p.keyword || undefined, state: p.state || undefined, mine: p.mine ? true : undefined }),
+    { keyword: '', state: '', mine: isApply }
   )
 
 // 明细

@@ -16,7 +16,6 @@ const ROUTES = [
   ['/dpr/ledger/archive', '数据集产权档案管理'],
   ['/dpr/confirm/wizard', '初始确权申请'],
   ['/dpr/confirm/change', '确权变更申请'],
-  ['/dpr/confirm/catalog', '确权目录管理'],
   ['/dpr/confirm/history', '确权申请查询'],
   ['/dpr/confirm/card', '权益卡片生成'],
   ['/dpr/auth/wizard', '一事一议授权申请'],

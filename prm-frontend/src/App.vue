@@ -57,7 +57,10 @@
             </el-menu-item>
             <el-sub-menu v-else :index="node.index">
               <template #title><el-icon><component :is="node.icon" /></el-icon><span>{{ node.group }}</span></template>
-              <el-menu-item v-for="it in node.items" :key="it.path" :index="it.path">{{ it.title }}</el-menu-item>
+              <el-menu-item v-for="it in node.items" :key="it.path" :index="it.path">
+                <span>{{ it.title }}</span>
+                <span v-if="draftBadge(it.path) > 0" class="menu-count">{{ draftBadge(it.path) }}</span>
+              </el-menu-item>
             </el-sub-menu>
           </template>
         </el-menu>
@@ -88,12 +91,13 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import NotificationCenter from '@/components/NotificationCenter.vue'
 import FilePreview from '@/components/FilePreview.vue'
 import { ROLES, ROLE_HOME, currentRole, visibleMenu, canJumpTo } from '@/lib/roles'
 import { currentUser, clearSession } from '@/api/auth'
+import { confirmDraftCount, refreshConfirmDraftCount, authDraftCount, refreshAuthDraftCount } from '@/lib/draftCount'
 
 const route = useRoute()
 const router = useRouter()
@@ -129,6 +133,22 @@ const isAitool = computed(() => route.path.startsWith('/aitool'))
 const pages = computed(() => router.getRoutes()
   .filter((r) => r.meta && r.meta.title && !r.path.startsWith('/aitool') && canJumpTo(role.value, r.path))
   .map((r) => ({ value: r.path, label: r.meta.title })))
+
+// 草稿数徽标(确权/授权两个草稿箱):仅在对应「申请草稿箱」对当前角色可见时统计;路由切换/草稿增删事件刷新。
+function draftBadge(path) {
+  if (path === '/dpr/confirm/draft-box') return confirmDraftCount.value
+  if (path === '/dpr/auth/draft-box') return authDraftCount.value
+  return 0
+}
+function maybeRefreshDraftCount() {
+  if (isLogin.value) return
+  if (canJumpTo(role.value, '/dpr/confirm/draft-box')) refreshConfirmDraftCount()
+  if (canJumpTo(role.value, '/dpr/auth/draft-box')) refreshAuthDraftCount()
+}
+watch(() => route.path, maybeRefreshDraftCount, { immediate: true })
+const onDraftChanged = () => maybeRefreshDraftCount()
+onMounted(() => window.addEventListener('prm-draft-changed', onDraftChanged))
+onUnmounted(() => window.removeEventListener('prm-draft-changed', onDraftChanged))
 
 function onJump(path) {
   if (path) {
@@ -285,6 +305,12 @@ watch(openeds, (idxs) => { idxs.forEach(i => { try { menuRef.value?.open(i) } ca
 }
 .prm-aside :deep(.el-sub-menu__title:hover),
 .prm-aside :deep(.el-menu-item:hover) { background: var(--prm-color-selected-bg); }
+/* 确权草稿数徽标:未完成申请提醒 */
+.menu-count {
+  display: inline-block; min-width: 16px; height: 16px; line-height: 16px; padding: 0 5px;
+  margin-left: 8px; border-radius: 8px; font-size: 11px; text-align: center;
+  background: var(--prm-color-link); color: #fff;
+}
 .prm-main { padding: 0; display: flex; flex-direction: column; }
 .prm-crumb {
   position: sticky;

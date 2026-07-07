@@ -17,7 +17,7 @@ export const cardsBySystem = (sysName, modules, status) =>
   request.get('/dpr/confirm/data-catalog/cards', { params: { sysName, modules: modules && modules.length ? modules.join(',') : undefined, status } })
 // 系统名→业务域映射(授权资源池「所属业务域」按系统逐表带出)
 export const systemDomains = () => request.get('/dpr/confirm/data-catalog/system-domains')
-// 数据资产目录全树(非懒加载):业务域→系统→功能模块→库表卡片(数据资产确权目录管理)
+// 数据资产目录全树(非懒加载):业务域→系统→功能模块→库表卡片(确权范围树/授权资源池同源)
 export const fullCatalogTree = () => request.get('/dpr/confirm/data-catalog/full-tree')
 // 数据资产卡片明细(对齐 TW_DATA_CARD 卡片表结构 + AU_TABLE_META_DATA 产权元数据)
 export const cardDetail = (sysName, tableCode) => request.get('/dpr/confirm/data-catalog/card-detail', { params: { sysName, tableCode } })

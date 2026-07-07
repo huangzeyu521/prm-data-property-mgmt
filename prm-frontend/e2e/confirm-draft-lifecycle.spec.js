@@ -129,10 +129,14 @@ test.describe('初始确权·保存草稿全生命周期(apply)', () => {
     // 取消「仅看我提交的」→ 显示全部(含无 creatorId 的种子在审单;否则前面用例造的 apply 草稿会把种子在审单过滤掉)
     await page.getByText('仅看我提交的').click()
     await page.waitForTimeout(500)
-    // 取一张在审确权单(种子无 creatorId → apply 可撤);无则跳过
-    const reviewRow = page.locator('.el-table__row').filter({ hasText: /人工预审中|合规审核中|主管复核中|经理终审中/ }).first()
+    // 取一张「可撤回」在审确权单(本人 creatorId 才有撤回键;显示全部时非本人在审单无键)。
+    // 必须按「含撤回键」过滤——否则 .first() 可能命中非本人在审行(无键)致点击超时。无可撤回单则跳过。
+    const reviewRow = page.locator('.el-table__row')
+      .filter({ hasText: /人工预审中|合规审核中|主管复核中|经理终审中/ })
+      .filter({ has: page.getByRole('button', { name: '撤回' }) })
+      .first()
     if (!(await reviewRow.isVisible().catch(() => false))) {
-      test.skip(true, '当前无在审确权单(可能已被前次撤回消费);跳过撤回执行验证')
+      test.skip(true, '当前无可撤回的在审确权单(本人在审单已被前次撤回消费);跳过撤回执行验证')
       return
     }
     // 申请编号列(td: 0类型 / 1申请编号 / 2数据资产 / 3状态 …)

@@ -63,7 +63,7 @@ const emptyHint = computed(() => {
 })
 
 // 确权目录全树(业务域→系统→模块→库表「card」叶)递归收集库表叶子,沿途带业务域/系统/模块名。
-// 与「数据资产确权目录管理」同源(fullCatalogTree),叶键 = sysName + tableCode(对齐库表级权益卡片)。
+// 与确权范围树同源(fullCatalogTree),叶键 = sysName + tableCode(对齐库表级权益卡片)。
 function collectLeaves(nodes, domain, sys, mod, out) {
   for (const n of (nodes || [])) {
     if (n.type === 'card' && n.tableCode) {
