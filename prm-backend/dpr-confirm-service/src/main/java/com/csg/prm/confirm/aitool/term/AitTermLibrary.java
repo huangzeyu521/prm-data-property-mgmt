@@ -24,11 +24,14 @@ public final class AitTermLibrary {
     private static final Map<String, Map<String, String>> ALIAS = new LinkedHashMap<>();
 
     static {
-        STANDARD.put(F_RIGHT_TYPE, new LinkedHashSet<>(Set.of("数据持有权", "数据加工使用权", "数据产品经营权")));
+        STANDARD.put(F_RIGHT_TYPE, new LinkedHashSet<>(Set.of("持有权", "使用权", "经营权")));
         ALIAS.put(F_RIGHT_TYPE, ofPairs(
-                "持有权", "数据持有权", "数据所有权", "数据持有权", "所有权", "数据持有权",
-                "加工使用权", "数据加工使用权", "使用权", "数据加工使用权", "授权使用权", "数据加工使用权",
-                "经营权", "数据产品经营权", "产品经营权", "数据产品经营权", "运营权", "数据产品经营权"));
+                "持有权", "持有权", "数据所有权", "持有权", "所有权", "持有权",
+                "加工使用权", "使用权", "使用权", "使用权", "授权使用权", "使用权",
+                "经营权", "经营权", "产品经营权", "经营权", "运营权", "经营权",
+                // 官方长式(35号文/业务指导书原文) → 短式规范值,便于从长式语料抽取后归一
+                "数据资源持有权", "持有权", "数据持有权", "持有权",
+                "数据加工使用权", "使用权", "数据产品经营权", "经营权"));
 
         STANDARD.put(F_AUTH_SCOPE, new LinkedHashSet<>(Set.of("全字段", "约定字段")));
         ALIAS.put(F_AUTH_SCOPE, ofPairs(

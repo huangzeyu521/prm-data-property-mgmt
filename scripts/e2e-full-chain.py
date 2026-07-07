@@ -28,7 +28,7 @@ A = 'http://localhost:9103/api'
 # ============ 1. 确权链 ============
 ts = time.strftime('%H%M%S')
 draft = call('POST', C + '/dpr/confirm/apply/draft', {
-    'assetId': 'AST-002', 'assetName': 'E2E资产-' + ts, 'rightType': '数据资源持有权',
+    'assetId': 'AST-002', 'assetName': 'E2E资产-' + ts, 'rightType': '持有权',
     'subjectOrg': '广东电网有限责任公司', 'deptName': '数字化部', 'sysOwner': 'E2E机器人',
     'contact': '13800000000', 'registerType': '首次登记', 'regulated': '非管制',
     'applyMode': '常规确权', 'purpose': 'E2E全链测试'})
@@ -55,7 +55,7 @@ card_id = card and card.get('cardId'); card_no = card and card.get('cardNo')
 # ============ 2. 授权链(先确后授:用刚制的卡) ============
 adraft = call('POST', A + '/dpr/auth/apply/draft', {
     'assetId': 'AST-002', 'assetName': 'E2E资产-' + ts, 'equityCardId': card_no or card_id,
-    'granteeOrg': '南网数字集团', 'rightType': '数据加工使用权', 'scope': '全字段',
+    'granteeOrg': '南网数字集团', 'rightType': '使用权', 'scope': '全字段',
     'sceneName': '电力金融征信', 'purpose': 'E2E链路验证', 'applyMode': '一事一议',
     'bizDomain': '市场营销', 'supervisor': 'E2E主管', 'contact': '13800000001'})
 check('auth.draft', adraft.get('code') == 0, str(adraft)[:200])
@@ -79,7 +79,7 @@ check('auth.cert-issued', acert is not None, 'certs=%d' % len(acrecs))
 # ============ 3. aitool 链(独立工具,弱关联 applyId) ============
 up = call('POST', C + '/dpr/confirm/aitool/material/upload', {
     'fileName': 'E2E-确权证明-%s.pdf' % ts, 'fileType': 'PDF', 'applyId': apply_id,
-    'content': u'兹证明E2E资产-%s由广东电网有限责任公司自行生产,权利类型为数据资源持有权,有效期3年,范围全字段,已盖章。' % ts})
+    'content': u'兹证明E2E资产-%s由广东电网有限责任公司自行生产,权利类型为持有权,有效期3年,范围全字段,已盖章。' % ts})
 check('aitool.upload', up.get('code') == 0, str(up)[:200])
 ud=up.get('data'); mat_id = ud if isinstance(ud,str) else (ud or {}).get('materialId')
 call('POST', C + '/dpr/confirm/aitool/material/%s/parse' % mat_id)
@@ -98,7 +98,7 @@ cmp_res = call('GET', C + '/dpr/confirm/aitool/material/%s/compares' % mat_id)
 check('aitool.compares', cmp_res.get('code') == 0, str(cmp_res)[:160])
 clm = call('POST', C + '/dpr/confirm/aitool/conflict/claim-from-material', params={'materialId': mat_id})
 check('aitool.claim-from-material', clm.get('code') == 0, str(clm)[:200])
-det = call('POST', C + '/dpr/confirm/aitool/conflict/detect', {'assetId': 'AST-002', 'subject': u'南网数字集团', 'rightType': u'数据加工使用权', 'authScope': u'全字段', 'exclusive': 0})
+det = call('POST', C + '/dpr/confirm/aitool/conflict/detect', {'assetId': 'AST-002', 'subject': u'南网数字集团', 'rightType': u'使用权', 'authScope': u'全字段', 'exclusive': 0})
 check('aitool.detect', det.get('code') == 0, str(det)[:200])
 ana = call('POST', C + '/dpr/confirm/aitool/decision/analyze', params={'applyId': apply_id})
 anad = ana.get('data') or {}

@@ -49,7 +49,7 @@ class ConfirmReviewOpinionTest {
         ConfirmApply a = new ConfirmApply();
         a.setAssetId("DA-REVOP-" + System.nanoTime());
         a.setAssetName("认定意见测试表");
-        a.setRightType("数据资源持有权");
+        a.setRightType("持有权");
         a.setSourceIdentification("A自行生产数据");
         a.setRightHolder("广东电网有限责任公司");
         a.setRespDept("数字化部");

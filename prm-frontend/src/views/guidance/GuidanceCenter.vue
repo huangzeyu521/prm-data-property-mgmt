@@ -12,13 +12,13 @@
         <!-- 当前生效 -->
         <div class="wg-hero">
           <div class="wg-hero-main">
-            <el-tag type="success" size="small" effect="dark">当前生效</el-tag>
+            <span class="prm-c-success">当前生效</span>
             <div class="wg-hero-title">{{ current.title }}</div>
             <div class="wg-hero-meta">
               <span v-if="current.fileName">{{ current.fileName }}</span>
               <template v-if="current.publishDate"> · 上传 {{ fmt(current.publishDate) }}</template>
               <template v-if="current.publisher"> · {{ current.publisher }}</template>
-              <el-tag v-if="current.bundled" size="small" type="info" effect="plain" style="margin-left:8px">系统内置·官方PDF</el-tag>
+              <span v-if="current.bundled" style="margin-left:8px" class="prm-c-info">系统内置·官方PDF</span>
             </div>
           </div>
           <div class="wg-hero-actions">
@@ -44,7 +44,7 @@
             <el-table-column label="上传时间" width="160"><template #default="{ row }">{{ fmt(row.publishDate) }}</template></el-table-column>
             <el-table-column label="操作" :width="canManage ? 210 : 150" fixed="right">
               <template #default="{ row, $index }">
-                <el-tag v-if="$index === 0" size="small" type="success" effect="plain" style="margin-right:6px">生效</el-tag>
+                <span v-if="$index === 0" style="margin-right:6px" class="prm-c-success">生效</span>
                 <el-button link type="primary" :disabled="!row.fileName" @click="onPreview(row)">阅览</el-button>
                 <el-button link type="success" :disabled="!row.fileName" @click="onDownload(row)">下载</el-button>
                 <el-button v-if="canManage" link type="danger" @click="onDelete(row)">删除</el-button>
@@ -95,7 +95,8 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import { confirmAsync } from '@/utils/confirmAsync'
 import { openFilePreview } from '@/composables/useFilePreview'
 import { currentRole } from '@/lib/roles'
 import { pageGuidance, uploadGuidanceFile, deleteGuidance, guidancePreviewUrl, guidanceDownloadUrl } from '@/api/confirm'
@@ -174,8 +175,8 @@ async function doUpload() {
   } finally { uploading.value = false }
 }
 function onDelete(row) {
-  ElMessageBox.confirm(`确认删除存档「${row.title}」吗?`, '提示', { type: 'warning' })
-    .then(async () => { await deleteGuidance(row.guidanceId); ElMessage.success('已删除'); loadWg() }).catch(() => {})
+  confirmAsync(`确认删除存档「${row.title}」吗?`, '提示',
+    async () => { await deleteGuidance(row.guidanceId); ElMessage.success('已删除'); loadWg() }).catch(() => {})
 }
 
 onMounted(loadWg)
@@ -185,7 +186,7 @@ onMounted(loadWg)
 .gc { background: #fff; }
 .gc-tabs { padding: 4px 4px 0; }
 /* 工作指引存档 */
-.wg-hero { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin: 4px 4px 16px; padding: 18px 22px; border-radius: 10px; background: linear-gradient(135deg, #eef4ff, #f7faff); border: 1px solid #e1ebff; }
+.wg-hero { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin: 0 0 20px; padding: 20px; border-radius: 10px; background: linear-gradient(135deg, #eef4ff, #f7faff); border: 1px solid #e1ebff; }
 .wg-hero-title { font-size: 18px; font-weight: 700; color: var(--prm-color-text); margin: 8px 0 4px; }
 .wg-hero-meta { font-size: 12.5px; color: var(--prm-color-text-weak); }
 .wg-hero-actions { display: flex; gap: 8px; flex-wrap: wrap; }

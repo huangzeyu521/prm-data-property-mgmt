@@ -16,7 +16,7 @@
           </div>
         </div>
         <div class="prm-table-card">
-          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:12px">
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:10px">
             <el-select v-model="issueCardId" filterable placeholder="选择待出证权益卡片(正常·未出证)" style="width:380px">
               <el-option v-for="c in pendingCards" :key="c.cardId" :label="`${sysName(c)} · ${rightTag(c.rightType).short} · ${c.cardNo}`" :value="c.cardId" />
               <template #empty><div style="padding:8px;color:var(--prm-color-text-weak)">暂无待出证卡片(正常且未出证)</div></template>
@@ -43,7 +43,7 @@
             <el-table-column label="权属类型" width="96" align="center">
               <template #default="{ row }">
                 <el-tooltip v-if="row._card" :content="rightTag(row._card.rightType).full" placement="top">
-                  <el-tag :type="rightTag(row._card.rightType).type" size="small" effect="plain">{{ rightTag(row._card.rightType).short }}</el-tag>
+                  <span :class="'prm-c-' + ((rightTag(row._card.rightType).type) || 'primary')">{{ rightTag(row._card.rightType).short }}</span>
                 </el-tooltip>
                 <span v-else style="color:var(--prm-color-text-disabled)">—</span>
               </template>
@@ -56,7 +56,7 @@
               <template #default="{ row }">{{ fmtTime(row.issueTime) }}</template>
             </el-table-column>
             <el-table-column prop="certStatus" label="状态" width="90" align="center">
-              <template #default="{ row }"><el-tag :type="row.certStatus==='生效'?'success':'danger'">{{ row.certStatus }}</el-tag></template>
+              <template #default="{ row }"><span :class="'prm-c-' + ((row.certStatus==='生效'?'success':'danger') || 'primary')">{{ row.certStatus }}</span></template>
             </el-table-column>
             <el-table-column label="操作" width="160" fixed="right"><template #default="{ row }">
               <el-button link type="primary" @click="onPreviewCert(row)">预览</el-button>
@@ -67,14 +67,14 @@
       </el-tab-pane>
       <el-tab-pane label="证书模板" name="tpl">
         <div class="prm-table-card">
-          <div style="margin-bottom:12px"><el-button type="primary" @click="onAddTpl">新增模板</el-button></div>
+          <div style="margin-bottom:10px"><el-button type="primary" @click="onAddTpl">新增模板</el-button></div>
           <el-table :data="tpls" v-loading="loading2" border stripe>
             <el-table-column type="index" label="序号" width="64" align="center" />
             <el-table-column prop="templateName" label="模板名称" min-width="180" show-overflow-tooltip />
             <el-table-column prop="rightType" label="适用权益" width="150" />
             <el-table-column prop="templateVersion" label="版本" width="80" align="center" />
             <el-table-column prop="templateStatus" label="状态" width="90" align="center">
-              <template #default="{ row }"><el-tag :type="row.templateStatus==='生效中'?'success':'warning'">{{ row.templateStatus }}</el-tag></template>
+              <template #default="{ row }"><span :class="'prm-c-' + ((row.templateStatus==='生效中'?'success':'warning') || 'primary')">{{ row.templateStatus }}</span></template>
             </el-table-column>
             <el-table-column label="套版文件" min-width="150">
               <template #default="{ row }">
@@ -119,6 +119,7 @@
         <div class="cert-sub">{{ certVO.issueUnit || '中国南方电网有限责任公司' }}</div>
         <div class="cert-no">证书编号（唯一）：{{ certVO.certNo }}</div>
         <table class="cert-tbl">
+          <tbody>
           <tr><td class="k">所属系统 / 模式</td><td>{{ certSys }}{{ certVO.schemaName ? ' / ' + certVO.schemaName : '' }}</td></tr>
           <tr><td class="k">库表(数据资产卡片)</td><td>{{ certVO.assetName || '全系统' }}</td></tr>
           <tr><td class="k">确权范围</td><td>{{ certVO.scope || '全系统库表' }}</td></tr>
@@ -131,6 +132,7 @@
           <tr><td class="k">确权时间 / 有效期至</td><td>{{ fmtDate(certVO.confirmTime) }} ～ {{ fmtDate(certVO.validDate) }}</td></tr>
           <tr><td class="k">适用模板</td><td>{{ certVO.templateName || '标准权益证书' }}</td></tr>
           <tr><td class="k">签发时间</td><td>{{ fmtTime(certVO.issueTime) }}</td></tr>
+          </tbody>
         </table>
         <div v-if="certVO.templateContent" class="cert-body">{{ certVO.templateContent }}</div>
         <div class="cert-foot">
@@ -147,7 +149,7 @@ import { onMounted, reactive, ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { pageCert, issueCert, revokeCert, getCertRender, pageEquityCard, pageCertTemplate, createCertTemplate, updateCertTemplate, enableCertTemplate, disableCertTemplate, uploadCertTemplateFile, certTemplateFileUrl } from '@/api/confirm'
 import { openFilePreview } from '@/composables/useFilePreview'
-const rightTypes = ['数据资源持有权', '数据加工使用权', '数据产品经营权']
+const rightTypes = ['持有权', '使用权', '经营权']
 const tab = ref('cert')
 const issueCardId = ref('')
 const certs = ref([]); const cards = ref([]); const loading = ref(false)
@@ -157,7 +159,7 @@ const certDlg = ref(false); const certVO = ref({})
 const cq = reactive({ assetName: '', rightType: '', certStatus: '' })
 const activeStat = ref('')
 
-// 系统名(SYS: 派生)+ 单权标签(兼容"数据资源持有权/数据持有权")
+// 系统名(SYS: 派生)+ 单权标签(兼容"持有权/持有权")
 function sysName(o) { const id = (o && o.assetId) || ''; return id.startsWith('SYS:') ? id.slice(4) : ((o && o.assetName) || '-') }
 function rightTag(rt) {
   const s = String(rt || '')

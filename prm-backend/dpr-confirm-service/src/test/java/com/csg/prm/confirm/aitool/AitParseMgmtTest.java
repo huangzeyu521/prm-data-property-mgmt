@@ -51,7 +51,7 @@ class AitParseMgmtTest {
     void parse_records_archived_queryable_exportable() {
         AitMaterial m = new AitMaterial();
         m.setFileName("确权材料-记录.docx");
-        m.setContent("数据加工使用权,自行生产,电网生产数据,有效期3年,已盖章");
+        m.setContent("使用权,自行生产,电网生产数据,有效期3年,已盖章");
         String id = materialService.upload(m);
         materialService.parse(id);
 
@@ -60,22 +60,22 @@ class AitParseMgmtTest {
         AitParseRecord rt = page.getRecords().stream()
                 .filter(r -> "权利类型".equals(r.getField())).findFirst().orElse(null);
         assertNotNull(rt, "应留档权利类型");
-        assertEquals("数据加工使用权", rt.getFieldValue());
+        assertEquals("使用权", rt.getFieldValue());
         assertNotNull(rt.getConfidence(), "应记录置信度");
         assertNotNull(rt.getOperatorId(), "应记录操作人");
 
         byte[] csv = recordService.exportCsv("确权材料-记录", null, null);
         String text = new String(csv, java.nio.charset.StandardCharsets.UTF_8);
         assertTrue(text.contains("解析时间,文档名称,提取字段"), "CSV 应含表头");
-        assertTrue(text.contains("数据加工使用权"), "CSV 应含留档值");
+        assertTrue(text.contains("使用权"), "CSV 应含留档值");
     }
 
     /** #2 批量解析:同批次排队解析,聚合进度可见。 */
     @Test
     void batch_parse_queues_and_aggregates_progress() throws Exception {
         String batch = "BATCH-MGMT-" + System.nanoTime();
-        materialService.uploadBinary("批量A.docx", docx("数据持有权,自行生产,3年,已盖章 A"), null, null, batch);
-        materialService.uploadBinary("批量B.docx", docx("数据加工使用权,交易采购,5年,已盖章 B"), null, null, batch);
+        materialService.uploadBinary("批量A.docx", docx("持有权,自行生产,3年,已盖章 A"), null, null, batch);
+        materialService.uploadBinary("批量B.docx", docx("使用权,交易采购,5年,已盖章 B"), null, null, batch);
 
         int dispatched = materialService.batchParse(batch);
         assertEquals(2, dispatched, "应派发 2 个材料解析");

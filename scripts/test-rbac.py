@@ -47,7 +47,7 @@ ck('/me 无token 401', st == 401 or me2.get('code') == 401, 'st=%s' % st)
 
 # 造一个待审批确权单(用超管token,可approve)
 st, d = call('POST', C + '/dpr/confirm/apply/draft', {
-    'assetId': 'AST-001', 'assetName': 'RBAC测试单', 'rightType': '数据资源持有权',
+    'assetId': 'AST-001', 'assetName': 'RBAC测试单', 'rightType': '持有权',
     'subjectOrg': '广东电网', 'deptName': 'D', 'registerType': '首次登记', 'regulated': '非管制',
     'applyMode': '常规确权', 'purpose': 'rbac'}, token=t_super)
 aid = d.get('data') if isinstance(d.get('data'), str) else (d.get('data') or {}).get('applyId')
@@ -64,7 +64,7 @@ ck('审批·审核员放行(0)', r_rev.get('code') == 0, 'code=%s msg=%s' % (r_r
 # 授权审批端点同样受控
 st, ad = call('POST', A + '/dpr/auth/apply/draft', {
     'assetId': 'AST-001', 'assetName': 'RBAC授权', 'equityCardId': 'EC-PRA-0001',
-    'granteeOrg': '南网数字', 'rightType': '数据加工使用权', 'scope': '全字段', 'applyMode': '一事一议'}, token=t_super)
+    'granteeOrg': '南网数字', 'rightType': '使用权', 'scope': '全字段', 'applyMode': '一事一议'}, token=t_super)
 auth = ad.get('data') if isinstance(ad.get('data'), str) else (ad.get('data') or {}).get('applyId')
 call('POST', A + '/dpr/auth/apply/%s/submit' % auth, token=t_super)
 sa, ra = call('POST', A + '/dpr/auth/apply/%s/approve' % auth, token=t_apply)

@@ -253,7 +253,7 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
     @Transactional
     public MaterialCheckReport runCheck(String applyId) {
         ConfirmApply apply = applyService.getById(applyId);
-        List<String> required = requiredMaterials(apply);
+        List<ConfirmMaterialRule> rules = ruleService.requiredRules(apply);
         List<ConfirmMaterial> mats = mapper.selectList(
                 new LambdaQueryWrapper<ConfirmMaterial>().eq(ConfirmMaterial::getApplyId, applyId));
         Map<String, ConfirmMaterial> byName = mats.stream()
@@ -261,30 +261,71 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
 
         List<String> missing = new ArrayList<>();
         List<String> nonCompliant = new ArrayList<>();
+        int reqCount = 0;
         int pass = 0;
-        for (String r : required) {
-            ConfirmMaterial m = byName.get(r);
+
+        // 系统级:表1/表2/权属凭证 + A 自行生产说明 → 查 ConfirmMaterial
+        for (ConfirmMaterialRule r : rules) {
+            if (isPerTableRule(r)) {
+                continue;
+            }
+            reqCount++;
+            String name = r.getMaterialName();
+            ConfirmMaterial m = byName.get(name);
             if (m == null) {
-                missing.add(r);
+                missing.add(name);
             } else if (StringUtils.hasText(m.getFileName())) {
                 updateCheck(m.getMaterialId(), ConfirmMaterial.CHECK_PASS, "完整性+格式合规");
                 pass++;
             } else {
                 updateCheck(m.getMaterialId(), ConfirmMaterial.CHECK_FAIL, "未上传真实原件(仅占位登记)");
-                nonCompliant.add(r + "(缺真实原件)");
+                nonCompliant.add(name + "(缺真实原件)");
+            }
+        }
+
+        // 逐表:B–F来源凭证 + G–J关联资料 → 查 ConfirmTableItem 逐表附件(P3 单一真源),缺失精确到"表·槽"
+        List<com.csg.prm.confirm.entity.ConfirmTableItem> items = tableItemMapper.selectList(
+                new LambdaQueryWrapper<com.csg.prm.confirm.entity.ConfirmTableItem>()
+                        .eq(com.csg.prm.confirm.entity.ConfirmTableItem::getApplyId, applyId));
+        for (com.csg.prm.confirm.entity.ConfirmTableItem it : items) {
+            String label = StringUtils.hasText(it.getTableName()) ? it.getTableName() : it.getTableCode();
+            char sc = StringUtils.hasText(it.getSourceType()) ? it.getSourceType().charAt(0) : ' ';
+            if ("BCDEF".indexOf(sc) >= 0) {
+                reqCount++;
+                if (StringUtils.hasText(it.getSourceAttachment())) {
+                    pass++;
+                } else {
+                    missing.add(label + "·来源凭证(" + sc + ")");
+                }
+            }
+            if ("是".equals(it.getGFlag())) {
+                reqCount++;
+                if (StringUtils.hasText(it.getCheckAttachment())) { pass++; } else { missing.add(label + "·G行政监管资料"); }
+            }
+            if ("是".equals(it.getHFlag())) {
+                reqCount++;
+                if (StringUtils.hasText(it.getPrivacyAttachment())) { pass++; } else { missing.add(label + "·H个人隐私资料"); }
+            }
+            if ("是".equals(it.getIFlag())) {
+                reqCount++;
+                if (StringUtils.hasText(it.getBusSecretAttachment())) { pass++; } else { missing.add(label + "·I商密资料"); }
+            }
+            if ("是".equals(it.getJFlag())) {
+                reqCount++;
+                if (StringUtils.hasText(it.getEquityAttachment())) { pass++; } else { missing.add(label + "·J协议资料"); }
             }
         }
 
         MaterialCheckReport rep = new MaterialCheckReport();
         rep.setApplyId(applyId);
-        rep.setRequiredCount(required.size());
-        rep.setUploadedCount(mats.size());
+        rep.setRequiredCount(reqCount);
+        rep.setUploadedCount(pass + nonCompliant.size());
         rep.setPassCount(pass);
         rep.setFailCount(nonCompliant.size());
         rep.setMissing(missing);
         rep.setNonCompliant(nonCompliant);
         rep.setAllPass(missing.isEmpty() && nonCompliant.isEmpty());
-        rep.setSummary("应交 " + required.size() + " 项,已交 " + mats.size() + ",通过 " + pass
+        rep.setSummary("应交 " + reqCount + " 项(系统级+逐表),通过 " + pass
                 + ",缺失 " + missing.size() + ",不合规 " + nonCompliant.size()
                 + (rep.isAllPass() ? " — 完整且合规,可推送审核" : " — 存在缺失/不合规,补齐后方可推送审核"));
         return rep;
@@ -303,8 +344,10 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
         String iAtt = firstAttachment(tables, PlatformTableMeta::busSecretAttachment, PlatformTableMeta::iFlag);
         String jAtt = firstAttachment(tables, PlatformTableMeta::equityAttachment, PlatformTableMeta::jFlag);
 
-        // 2) 应交清单(命中本申请的规则,含触发码)+ 已登记材料名(避免重复登记)
-        List<ConfirmMaterialRule> required = ruleService.requiredRules(apply);
+        // 2) 应交清单(命中本申请的规则,含触发码)+ 已登记材料名(避免重复登记)。
+        //    P3:B–F来源(非A)+ G–J关联 已逐表化(逐表凭证落 ConfirmTableItem),系统级同步只处理 表1/表2/权属/A。
+        List<ConfirmMaterialRule> required = ruleService.requiredRules(apply).stream()
+                .filter(r -> !isPerTableRule(r)).collect(Collectors.toList());
         List<ConfirmMaterial> existing = mapper.selectList(
                 new LambdaQueryWrapper<ConfirmMaterial>().eq(ConfirmMaterial::getApplyId, applyId));
         Set<String> present = existing.stream()
@@ -313,7 +356,7 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
         // 3) 逐应交项:平台有对应附件且尚未登记 → 登记为"平台同步"(免上传,材料校验直接通过)
         List<MaterialSyncReport.SyncedItem> synced = new ArrayList<>();
         for (ConfirmMaterialRule r : required) {
-            String att = platformAttachmentFor(r, srcAtt, gAtt, hAtt, iAtt, jAtt);
+            String att = platformAttachmentFor(r, tables, srcAtt, gAtt, hAtt, iAtt, jAtt);
             if (att == null || present.contains(r.getMaterialName())) {
                 continue;
             }
@@ -368,16 +411,36 @@ public class ConfirmMaterialServiceImpl implements ConfirmMaterialService {
                 .orElse(null);
     }
 
-    /** 应交规则 → 平台附件名映射:A–F/证明→来源附件,G→监管,H→隐私,I→商密,J→其他权益;表单(表1/表2)无平台附件。 */
-    private String platformAttachmentFor(ConfirmMaterialRule r, String srcAtt,
+    /** 按来源字母(A–F)取"该来源类型的表"的附件,镜像 G–J 逐 flag 写法,避免把 A–F 拍平成同一个首表附件。 */
+    private String sourceAttachmentForLetter(List<PlatformTableMeta> tables, String letter) {
+        if (!StringUtils.hasText(letter)) {
+            return null;
+        }
+        char target = Character.toUpperCase(letter.charAt(0));
+        return firstAttachment(tables, PlatformTableMeta::sourceAttachment,
+                t -> StringUtils.hasText(t.sourceType())
+                        && Character.toUpperCase(t.sourceType().charAt(0)) == target);
+    }
+
+    /** P3:逐表凭证规则——B–F来源(非A)+ G–J关联,凭证按数据表逐张承载(ConfirmTableItem),不入系统级 ConfirmMaterial。 */
+    private boolean isPerTableRule(ConfirmMaterialRule r) {
+        String t = r.getTriggerType();
+        if (ConfirmMaterialRule.T_RELATION.equals(t)) {
+            return true;
+        }
+        return ConfirmMaterialRule.T_SOURCE.equals(t) && !"A".equals(r.getTriggerCode());
+    }
+
+    /** 应交规则 → 平台附件名映射:A–F→逐字母各自来源附件,证明→通用来源附件,G→监管,H→隐私,I→商密,J→其他权益;表单(表1/表2)无平台附件。 */
+    private String platformAttachmentFor(ConfirmMaterialRule r, List<PlatformTableMeta> tables, String srcAttAny,
                                          String gAtt, String hAtt, String iAtt, String jAtt) {
         String type = r.getTriggerType();
         if (ConfirmMaterialRule.T_SOURCE.equals(type)) {
-            return srcAtt; // A–F 来源说明 ← SOURCE_NAME
+            return sourceAttachmentForLetter(tables, r.getTriggerCode()); // A–F 逐字母:各取其来源类型表的附件
         }
         if (ConfirmMaterialRule.T_ALWAYS.equals(type)
                 && r.getMaterialName() != null && r.getMaterialName().contains("证明材料")) {
-            return srcAtt; // 数据确权证明材料(权属/来源凭证) ← SOURCE_NAME
+            return srcAttAny; // 数据确权证明材料(权属/来源凭证):通用凭证,取任一来源附件
         }
         if (ConfirmMaterialRule.T_RELATION.equals(type)) {
             return switch (r.getTriggerCode() == null ? "" : r.getTriggerCode()) {

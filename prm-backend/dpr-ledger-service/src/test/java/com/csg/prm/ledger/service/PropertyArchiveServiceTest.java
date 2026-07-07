@@ -28,7 +28,7 @@ class PropertyArchiveServiceTest {
         PropertyArchive a = new PropertyArchive();
         a.setAssetId("DA-IM-CARD-0000001");
         a.setAssetName(assetName);
-        a.setRightType("数据资源持有权");
+        a.setRightType("持有权");
         a.setRightSubject("广东电网有限责任公司");
         a.setRespDept("数字化管理部门");
         return a;
@@ -70,12 +70,12 @@ class PropertyArchiveServiceTest {
         String id = service.create(newArchive("待更新表"));
         PropertyArchive upd = service.getById(id);
         upd.setConfirmStatus("已确权");
-        upd.setRightType("数据加工使用权");
+        upd.setRightType("使用权");
         service.update(upd);
 
         PropertyArchive after = service.getById(id);
         assertEquals("已确权", after.getConfirmStatus());
-        assertEquals("数据加工使用权", after.getRightType());
+        assertEquals("使用权", after.getRightType());
         assertNotNull(after.getUpdateTime());
     }
 

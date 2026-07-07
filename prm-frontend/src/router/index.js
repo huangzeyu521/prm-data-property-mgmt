@@ -1,8 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
+// 根路径落点=当前角色首屏(ROLE_HOME):申报人落「我的申请」、审批角色落「统一待办」。
+// 静态 redirect 到 dashboard/overview 会把 apply 等角色带出自己的菜单可见域(综合分析组不含申报人)。
+import { ROLE_HOME, currentRole } from '@/lib/roles'
+const roleHome = () => ROLE_HOME[currentRole()] || '/dpr/dashboard/overview'
+
 const routes = [
-  { path: '/', redirect: '/dpr/dashboard/overview' },
-  { path: '/dpr', redirect: '/dpr/dashboard/overview' },
+  { path: '/', redirect: roleHome },
+  { path: '/dpr', redirect: roleHome },
   // 统一待办中心(eLink 待办的 Web 实现)
   { path: '/dpr/workbench/todo', name: 'TodoCenter', component: () => import('@/views/workbench/TodoCenter.vue'), meta: { title: '统一待办中心', goal: '集中查看并处理确权/授权全流程待办与预警,一处办结' } },
   // 我的申请(申报人首屏:在途确权+授权一处看)
@@ -13,7 +18,7 @@ const routes = [
     path: '/dpr/ledger/overview',
     name: 'LedgerOverview',
     component: () => import('@/views/ledger/LedgerOverview.vue'),
-    meta: { title: '产权台账概览(含产权树)', goal: '总览全网数据产权台账与产权树,快速定位资产权属' }
+    meta: { title: '产权台账概览', goal: '总览全网数据产权台账与产权树,快速定位资产权属' }
   },
   {
     path: '/dpr/ledger/archive',
@@ -42,9 +47,10 @@ const routes = [
   // 指引中心(三合一:工作指引/流程表单/确权指引/授权指引,取代顶栏抽屉+两套分散管理页)
   { path: '/dpr/guidance', name: 'GuidanceCenter', component: () => import('@/views/guidance/GuidanceCenter.vue'), meta: { title: '指引中心', goal: '一处查阅工作指引/流程表单与确权·授权指引材料,管理员在此统一维护' } },
   // F-02 数据确权管理
-  { path: '/dpr/confirm/wizard', name: 'ConfirmWizard', component: () => import('@/views/confirm/ConfirmWizard.vue'), meta: { title: '初始确权申请(一站式)', goal: '系统级初始确权:左树选系统/模块/库表 → 表1+A–J → 材料 → 校验 → 提交', mode: 'initial' } },
+  { path: '/dpr/confirm/wizard', name: 'ConfirmWizard', component: () => import('@/views/confirm/ConfirmWizard.vue'), meta: { title: '初始确权申请(一站式)', goal: '系统级初始确权:左树选一个系统(整系统纳入,不下钻库表)→ 表1+A–J → 材料 → 校验 → 提交', mode: 'initial' } },
   // 确权变更与初始确权分菜单(对齐附录F §3.3.2 重新确权):载入已确权系统、聚焦变更维度
   { path: '/dpr/confirm/change', name: 'ConfirmChange', component: () => import('@/views/confirm/ConfirmWizard.vue'), meta: { title: '确权变更申请', goal: '对已确权系统的修订:选触发动因 → 基线对照 → 只改变动维度 → 提交', mode: 'change' } },
+  // 季度重确权工单池(35号文§二(三)2 闭环:到期扫描/监测联动/变更生效联动 → 派生变更或复核无变化销号)
   // 确权指引管理已并入「指引中心」,旧路径重定向(保旧书签/深链)
   { path: '/dpr/confirm/guidance', redirect: '/dpr/guidance?tab=confirm' },
   { path: '/dpr/confirm/catalog', name: 'ConfirmCatalog', component: () => import('@/views/confirm/ConfirmCatalog.vue'), meta: { title: '数据资产确权目录管理', goal: '管理数据资产确权目录结构,明确应确权范围' } },
@@ -68,8 +74,8 @@ const routes = [
   { path: '/dpr/auth/agreement-seal', name: 'AgreementSeal', component: () => import('@/views/authorize/AgreementManage.vue'), meta: { title: '协议签章上传管理', goal: '上传与管理协议签章件', action: 'seal' } },
   { path: '/dpr/auth/agreement-review', name: 'AgreementReview', component: () => import('@/views/authorize/AgreementManage.vue'), meta: { title: '协议审核申请提交管理', goal: '提交并跟踪协议审核', action: 'review' } },
   { path: '/dpr/auth/agreement-archive', name: 'AgreementArchive', component: () => import('@/views/authorize/AgreementManage.vue'), meta: { title: '协议存档管理', goal: '协议统一归档与检索', action: 'archive' } },
-  { path: '/dpr/auth/cert', name: 'AuthCert', component: () => import('@/views/authorize/AuthCertList.vue'), meta: { title: '授权权益管理', goal: '管理授权权益与证书的签发/注销' } },
-  { path: '/dpr/auth/cert-template', name: 'AuthCertTemplate', component: () => import('@/views/authorize/AuthCertTemplate.vue'), meta: { title: '授权权益证书模板管理', goal: '维护授权权益证书模板(配置化)' } },
+  { path: '/dpr/auth/cert', name: 'AuthCert', component: () => import('@/views/authorize/AuthCertList.vue'), meta: { title: '授权生效记录管理', goal: '管理授权生效记录(内部台账:续签/暂停/撤销;对外凭证=附录D协议)' } },
+  { path: '/dpr/auth/cert-template', name: 'AuthCertTemplate', component: () => import('@/views/authorize/AuthCertTemplate.vue'), meta: { title: '授权生效记录样式模板', goal: '维护授权生效记录样式模板(配置化)' } },
   // F-04 综合分析管理
   { path: '/dpr/dashboard/overview', name: 'DataPropertyOverview', component: () => import('@/views/dashboard/DataPropertyOverview.vue'), meta: { title: '数据产权全景(综合)', goal: '全景洞察数据产权规模/趋势/分布,辅助决策' } },
   { path: '/dpr/dashboard/confirm', name: 'ConfirmDashboard', component: () => import('@/views/dashboard/ConfirmDashboard.vue'), meta: { title: '确权看板', goal: '看板跟踪确权进展与质量' } },

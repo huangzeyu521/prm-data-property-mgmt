@@ -28,7 +28,7 @@ class AuthAgreementElementsTest {
         a.setAssetName("协议要素测试表");
         a.setEquityCardId("EC-PRA-VALID01");
         a.setGranteeOrg("广州供电局");
-        a.setRightType("数据加工使用权");
+        a.setRightType("使用权");
         a.setScenario("电力金融征信");
         a.setScope("全字段");
         return a;

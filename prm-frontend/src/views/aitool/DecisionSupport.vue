@@ -32,15 +32,15 @@
       <el-col :span="8">
         <el-card shadow="hover"><div ref="gauge" style="height:200px"></div>
           <div style="text-align:center;margin-top:-6px">
-            <el-tag :type="predTag(d.prediction)" effect="dark" size="large">{{ d.prediction }}</el-tag>
+            <span :class="'prm-c-' + ((predTag(d.prediction)) || 'primary')">{{ d.prediction }}</span>
           </div>
           <div style="text-align:center;margin-top:8px" class="ai-pred">
             <span class="ai-lbl">AI 预测:</span>
-            <el-tag :type="predTag(d.aiPrediction)" effect="plain">{{ d.aiPrediction || '未生成' }}</el-tag>
-            <el-tag v-if="d.aiPrediction" :type="d.aiPrediction === d.prediction ? 'success' : 'warning'" size="small" style="margin-left:6px">
+            <span :class="'prm-c-' + ((predTag(d.aiPrediction)) || 'primary')">{{ d.aiPrediction || '未生成' }}</span>
+            <span v-if="d.aiPrediction" style="margin-left:6px" :class="'prm-c-' + ((d.aiPrediction === d.prediction ? 'success' : 'warning') || 'primary')">
               {{ d.aiPrediction === d.prediction ? '与规则一致' : '不一致·建议人工复核' }}
-            </el-tag>
-            <el-tag v-else type="info" size="small" style="margin-left:6px">建议人工复核</el-tag>
+            </span>
+            <span v-else style="margin-left:6px" class="prm-c-info">建议人工复核</span>
           </div>
         </el-card>
       </el-col>
@@ -52,18 +52,18 @@
             <el-table-column label="得分" min-width="200">
               <template #default="{ row }">
                 <el-tooltip :content="row.reason || '—'" :disabled="!row.reason" placement="top">
-                  <el-progress :percentage="row.score" :color="row.score>=85?'#36b21d':(row.score<70?'#e21f0c':'#ffc417')" />
+                  <el-progress :percentage="row.score" :color="scoreColor(row.score)" />
                 </el-tooltip>
               </template>
             </el-table-column>
           </el-table>
-          <div class="kv">优势因子:<el-tag type="success" effect="plain">{{ d.strengthFactors }}</el-tag></div>
-          <div class="kv">短板因子:<el-tag type="danger" effect="plain">{{ d.weakFactors }}</el-tag></div>
+          <div class="kv">优势因子:<span class="prm-c-success">{{ d.strengthFactors }}</span></div>
+          <div class="kv">短板因子:<span class="prm-c-danger">{{ d.weakFactors }}</span></div>
         </el-card>
       </el-col>
     </el-row>
 
-    <el-card v-if="d" header="确权决策建议" shadow="hover" style="margin-top:16px">
+    <el-card v-if="d" header="确权决策建议" shadow="hover" style="margin-top:20px">
       <el-descriptions :column="1" border size="small">
         <el-descriptions-item label="决策理由">{{ d.reason }}</el-descriptions-item>
         <el-descriptions-item label="需补充材料">{{ d.supplementMaterials }}</el-descriptions-item>
@@ -85,7 +85,7 @@
         </el-descriptions-item>
         <el-descriptions-item label="RAG 智能建议">{{ d.ragAdvice }}</el-descriptions-item>
         <el-descriptions-item label="法规/知识引用">
-          <el-tag v-for="c in citations" :key="c" type="info" effect="plain" size="small" style="margin-right:6px">{{ c }}</el-tag>
+          <span v-for="c in citations" :key="c" style="margin-right:6px" class="prm-c-info">{{ c }}</span>
           <span v-if="!citations.length">—</span>
         </el-descriptions-item>
         <el-descriptions-item label="证据链(SM3)"><code class="hash">{{ d.evidenceChain }}</code></el-descriptions-item>
@@ -106,7 +106,7 @@
           <el-descriptions-item label="限制条件" :span="2">{{ agent.restrictions }}</el-descriptions-item>
           <el-descriptions-item label="补正建议" :span="2">{{ agent.supplement || '—' }}</el-descriptions-item>
           <el-descriptions-item label="命中依据" :span="2">{{ agent.citations || '—' }}</el-descriptions-item>
-          <el-descriptions-item label="建议动作" :span="2"><el-tag type="primary">{{ agent.action }}</el-tag></el-descriptions-item>
+          <el-descriptions-item label="建议动作" :span="2"><span class="prm-c-primary">{{ agent.action }}</span></el-descriptions-item>
         </el-descriptions>
         <div style="margin-top:12px;font-weight:600">审核阶段链路(Agent 编排)</div>
         <el-steps direction="vertical" :active="agentStages.length" style="margin-top:8px">
@@ -114,7 +114,7 @@
         </el-steps>
         <div style="margin-top:8px;font-weight:600">工具调用链</div>
         <div>
-          <el-tag v-for="(t,i) in agentTools" :key="i" size="small" style="margin:2px">{{ t.tool }}<span v-if="t.model!=='-'"> · {{ t.model }}</span></el-tag>
+          <span v-for="(t,i) in agentTools" :key="i" style="margin:2px" class="prm-c-primary">{{ t.tool }}<span v-if="t.model!=='-'"> · {{ t.model }}</span></span>
         </div>
         <div style="margin-top:12px">
           <el-button size="small" @click="openUrl(reportUrl(agent.applyId))">审核报告</el-button>
@@ -147,7 +147,7 @@
         <el-table-column prop="authAdvice" label="确权结论" width="100" />
         <el-table-column prop="authLevel" label="授权级别" width="140" show-overflow-tooltip />
         <el-table-column prop="riskLevel" label="风险" width="60" align="center">
-          <template #default="{ row }"><el-tag size="small" :type="row.riskLevel==='高'?'danger':(row.riskLevel==='中'?'warning':'success')">{{ row.riskLevel }}</el-tag></template>
+          <template #default="{ row }"><span :class="'prm-c-' + ((row.riskLevel==='高'?'danger':(row.riskLevel==='中'?'warning':'success')) || 'primary')">{{ row.riskLevel }}</span></template>
         </el-table-column>
         <el-table-column prop="score" label="评分" width="70" align="center" />
       </el-table>
@@ -203,6 +203,8 @@ async function onAgentAudit() {
 }
 // 3.2 审核台账 / 报告 / 证据链
 function openUrl(u) { window.open(u, '_blank') }
+// 决策评分进度条取色(数据驱动,等同 ECharts 取色,置于 script 内;红黄绿对齐规范状态色)
+function scoreColor(s) { return s >= 85 ? '#36b21d' : (s < 70 ? '#e21f0c' : '#ffc417') }
 function reportUrl(id) { return aitAgentReportUrl(id) }
 function registrationUrl(id) { return aitAgentRegistrationUrl(id) }
 function legalUrl(id) { return aitAgentLegalUrl(id) }
@@ -253,10 +255,10 @@ async function runDemo() {
   demoRunning.value = true
   try {
     const id = await saveConfirmDraft({ assetId: 'AST-001', assetName: '客户用电信息表',
-      rightType: '数据资源持有权', rightHolder: '广东电网有限责任公司', regulated: '管制业务',
+      rightType: '持有权', rightHolder: '广东电网有限责任公司', regulated: '管制业务',
       purpose: '决策支持示例' })
     const mid = await uploadAitMaterial({ applyId: id, fileName: 'AST-001-确权证明-盖好.pdf',
-      content: '兹证明客户用电信息表由广东电网有限责任公司自行生产,权利类型为数据资源持有权,有效期3年,范围全字段,已盖章。' })
+      content: '兹证明客户用电信息表由广东电网有限责任公司自行生产,权利类型为持有权,有效期3年,范围全字段,已盖章。' })
     // 解析段绑定真实进度,消灭"一键示例"前置的静默等待
     aiAnalyze.start({ phases: AI_PHASES.materialParse, title: '大模型解析材料中', bound: true })
     await parseAitMaterial(mid)
@@ -300,5 +302,5 @@ function renderGauge(score) {
 .kv { margin-top: 8px; font-size: 13px; }
 .ai-lbl { font-size: 13px; color: var(--prm-color-text-secondary); margin-right: 6px; }
 .plan-desc { font-size: 12px; color: var(--prm-color-text-weak); margin-bottom: 6px; }
-.hash { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: #1e87f0; word-break: break-all; }
+.hash { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: var(--prm-color-link); word-break: break-all; }
 </style>

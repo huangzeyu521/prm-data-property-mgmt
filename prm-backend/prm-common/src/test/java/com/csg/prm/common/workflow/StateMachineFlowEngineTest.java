@@ -36,15 +36,18 @@ class StateMachineFlowEngineTest {
     }
 
     @Test
-    void auth_special_chain_has_five_approvals_then_effective() {
+    void auth_special_chain_starts_at_unit_review_and_ends_at_approved() {
+        // 35号文 表2 20-100:单位初审(20-50合并) -> 合规 -> 业务 -> 主管 -> 经理 -> 副总 -> 批准(待双签);
+        // 「已生效」不在链上,由协议双签+承诺函归档后业务侧收口(表2 110-130 先签约后执行授权)。
         String key = FlowDefinitions.DPR_AUTH_SPECIAL;
-        assertEquals("合规审核中", engine.start(key, "a1"));
+        assertEquals("单位初审中", engine.start(key, "a1"));
+        assertEquals("合规审核中", engine.advance(key, "a1", "单位初审中").nextState());
         assertEquals("业务审核中", engine.advance(key, "a1", "合规审核中").nextState());
         assertEquals("主管审核中", engine.advance(key, "a1", "业务审核中").nextState());
         assertEquals("经理审核中", engine.advance(key, "a1", "主管审核中").nextState());
         assertEquals("副总审批中", engine.advance(key, "a1", "经理审核中").nextState());
         FlowTransition last = engine.advance(key, "a1", "副总审批中");
-        assertEquals("已生效", last.nextState());
+        assertEquals("批准", last.nextState());
         assertTrue(last.terminal());
     }
 
@@ -61,9 +64,9 @@ class StateMachineFlowEngineTest {
 
     @Test
     void step_index_matches_position_in_chain() {
-        // 业务审核中是专项链索引1 -> 推进自合规(0)返回步序1
-        assertEquals(1, engine.advance(FlowDefinitions.DPR_AUTH_SPECIAL, "a1", "合规审核中").stepIndex());
-        assertEquals(5, engine.advance(FlowDefinitions.DPR_AUTH_SPECIAL, "a1", "副总审批中").stepIndex());
+        // 专项链:单位初审(0)->合规(1)->业务(2)->…->副总(5)->批准(6)
+        assertEquals(2, engine.advance(FlowDefinitions.DPR_AUTH_SPECIAL, "a1", "合规审核中").stepIndex());
+        assertEquals(6, engine.advance(FlowDefinitions.DPR_AUTH_SPECIAL, "a1", "副总审批中").stepIndex());
     }
 
     @Test

@@ -34,16 +34,16 @@ class ScenarioRightTypeTest {
         AuthScenario s = new AuthScenario();
         s.setScenarioName("对外征信服务-" + System.nanoTime());
         s.setCategory("对外服务");
-        s.setRightType("数据产品经营权");
+        s.setRightType("经营权");
         s.setReasonTemplate("对外提供征信数据产品服务");
         String id = scenarioService.create(s);
         assertNotNull(id);
 
         // 按 经营权 过滤应命中;按 使用权 过滤不应命中(同名)
-        List<AuthScenario> hitOp = scenarioService.page(1, 500, null, null, null, "数据产品经营权").getRecords();
-        assertTrue(hitOp.stream().anyMatch(x -> id.equals(x.getScenarioId()) && "数据产品经营权".equals(x.getRightType())),
+        List<AuthScenario> hitOp = scenarioService.page(1, 500, null, null, null, "经营权").getRecords();
+        assertTrue(hitOp.stream().anyMatch(x -> id.equals(x.getScenarioId()) && "经营权".equals(x.getRightType())),
                 "经营权过滤应命中且 rightType 往返保留");
-        List<AuthScenario> hitUse = scenarioService.page(1, 500, null, null, null, "数据加工使用权").getRecords();
+        List<AuthScenario> hitUse = scenarioService.page(1, 500, null, null, null, "使用权").getRecords();
         assertTrue(hitUse.stream().noneMatch(x -> id.equals(x.getScenarioId())),
                 "使用权过滤不应命中经营权场景(向导据此过滤,防经营权×内部场景错配)");
     }
@@ -61,7 +61,7 @@ class ScenarioRightTypeTest {
         int j = sql.indexOf("INSERT INTO", i + 20);
         String seg = j > i ? sql.substring(i, j) : sql.substring(i);
         assertTrue(seg.contains("CEC_RIGHT_TYPE"), "场景种子应含适用权益类型列");
-        assertTrue(seg.contains("数据产品经营权"), "应有经营权场景(对外服务)");
-        assertTrue(seg.contains("数据加工使用权"), "应有使用权场景(内部/联合建模)");
+        assertTrue(seg.contains("经营权"), "应有经营权场景(对外服务)");
+        assertTrue(seg.contains("使用权"), "应有使用权场景(内部/联合建模)");
     }
 }

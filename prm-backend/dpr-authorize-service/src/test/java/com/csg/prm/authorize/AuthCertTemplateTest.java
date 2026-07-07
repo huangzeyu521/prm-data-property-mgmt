@@ -27,7 +27,7 @@ class AuthCertTemplateTest {
     void create_defaults_active_v1_and_special_type() {
         AuthCertTemplate t = new AuthCertTemplate();
         t.setTemplateName("专项授权-测试证书模板");
-        t.setRightType("数据加工使用权");
+        t.setRightType("使用权");
         String id = service.create(t);
         assertNotNull(id);
 
@@ -43,7 +43,7 @@ class AuthCertTemplateTest {
         AuthCertTemplate t = new AuthCertTemplate();
         t.setTemplateName("批量授权-版本测试模板");
         t.setCertType(AuthCertTemplate.TYPE_BATCH);
-        t.setRightType("数据产品经营权");
+        t.setRightType("经营权");
         String id = service.create(t);
 
         AuthCertTemplate upd = new AuthCertTemplate();
@@ -70,12 +70,12 @@ class AuthCertTemplateTest {
         AuthCertTemplate s = new AuthCertTemplate();
         s.setTemplateName("过滤测试-专项证书模板");
         s.setCertType(AuthCertTemplate.TYPE_SPECIAL);
-        s.setRightType("数据加工使用权");
+        s.setRightType("使用权");
         service.create(s);
         AuthCertTemplate b = new AuthCertTemplate();
         b.setTemplateName("过滤测试-批量证书模板");
         b.setCertType(AuthCertTemplate.TYPE_BATCH);
-        b.setRightType("数据加工使用权");
+        b.setRightType("使用权");
         service.create(b);
 
         PageResult<AuthCertTemplate> batch = service.page(1, 50, null, AuthCertTemplate.TYPE_BATCH, null);

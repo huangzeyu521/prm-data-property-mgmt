@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class AiToolNormalizeTest {
 
     private static ParsedElements of(String subject) {
-        return new ParsedElements(subject, "obj", "数据持有权", "3年", "约定字段",
+        return new ParsedElements(subject, "obj", "持有权", "3年", "约定字段",
                 "自行生产", "电网生产数据", "未检出", "", 0.95);
     }
 
@@ -18,7 +18,7 @@ class AiToolNormalizeTest {
     @DisplayName("正文标注'权利主体:X' → 以标注覆盖模型主体")
     void labeledSubjectOverrides() {
         ParsedElements e = AiToolParseGateway.normalize(of("中国南方电网有限责任公司"),
-                "权利主体:广州供电局。数据加工使用权授权材料。");
+                "权利主体:广州供电局。使用权授权材料。");
         assertEquals("广州供电局", e.rightSubject());
     }
 
@@ -39,7 +39,7 @@ class AiToolNormalizeTest {
     @Test
     @DisplayName("无标注且模型主体正常 → 原样保留")
     void cleanSubjectKept() {
-        ParsedElements e = AiToolParseGateway.normalize(of("广东电网有限责任公司"), "数据持有权证明,自行生产。");
+        ParsedElements e = AiToolParseGateway.normalize(of("广东电网有限责任公司"), "持有权证明,自行生产。");
         assertEquals("广东电网有限责任公司", e.rightSubject());
     }
 }

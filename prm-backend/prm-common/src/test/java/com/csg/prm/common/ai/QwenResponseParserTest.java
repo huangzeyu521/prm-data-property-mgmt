@@ -17,7 +17,7 @@ class QwenResponseParserTest {
                 + "\"rightType\":\"产品经营权\",\"respDept\":\"数字化部\",\"confidence\":0.91,\"rawText\":\"ok\"}\n```";
         DawatAiGateway.OcrOwnership r = QwenResponseParser.ownership(content);
         assertEquals("客户用电信息表", r.assetName());
-        assertEquals("数据产品经营权", r.rightType(), "rightType 应归一化为标准权属名");
+        assertEquals("经营权", r.rightType(), "rightType 应归一化为标准权属名");
         assertEquals(0.91, r.confidence(), 0.001);
     }
 
@@ -37,7 +37,7 @@ class QwenResponseParserTest {
                 + "\"scope\":\"全字段\",\"mode\":\"批量\",\"suggestion\":\"按批量授权\",\"confidence\":1.7}";
         DawatAiGateway.AuthIntent r = QwenResponseParser.intent(content);
         assertEquals("广州供电局", r.granteeOrg());
-        assertEquals("数据加工使用权", r.rightType());
+        assertEquals("使用权", r.rightType());
         assertEquals("批量", r.mode());
         assertEquals(1.0, r.confidence(), 0.001, "置信度应被夹到 [0,1]");
     }

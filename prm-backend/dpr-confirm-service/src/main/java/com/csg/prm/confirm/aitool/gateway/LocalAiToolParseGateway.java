@@ -17,7 +17,7 @@ public class LocalAiToolParseGateway implements AiToolParseGateway {
         // 规则桩:按冲突类型给出结构化处置方案(生产环境由 qwen3-max @Primary 覆盖生成)
         String plan;
         if (c.contains("主体冲突")) {
-            plan = "①由确权管理方组织争议主体补充权属证明材料;②依三权分置协商划分权利主体(数据持有权归唯一主体);③划分结论存证后再确权。";
+            plan = "①由确权管理方组织争议主体补充权属证明材料;②依三权分置协商划分权利主体(持有权归唯一主体);③划分结论存证后再确权。";
         } else if (c.contains("范围冲突")) {
             plan = "①核对排他授权的具体范围;②将当前授权范围修订为与排他范围不重叠的字段;③留存范围调整记录。";
         } else if (c.contains("时效冲突")) {
@@ -117,10 +117,10 @@ public class LocalAiToolParseGateway implements AiToolParseGateway {
     @Override
     public ParsedElements parse(String fileName, String content) {
         String t = (fileName == null ? "" : fileName) + " " + (content == null ? "" : content);
-        String rightType = t.contains("经营") ? "数据产品经营权"
+        String rightType = t.contains("经营") ? "经营权"
                 : (t.contains("授权使用") ? "授权使用权"
-                : (t.contains("使用") || t.contains("加工") ? "数据加工使用权"
-                : (t.contains("所有") ? "所有权" : "数据持有权")));
+                : (t.contains("使用") || t.contains("加工") ? "使用权"
+                : (t.contains("所有") ? "所有权" : "持有权")));
         String dataSource = t.contains("采购") || t.contains("交易") ? "交易采购"
                 : (t.contains("公开采集") ? "公开采集"
                 : (t.contains("公共") ? "公共数据授权"

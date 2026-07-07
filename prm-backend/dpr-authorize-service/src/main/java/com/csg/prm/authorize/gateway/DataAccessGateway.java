@@ -12,4 +12,10 @@ public interface DataAccessGateway {
      * @return 开通凭据/工单号(本地桩返回模拟号)
      */
     String grant(String applyId, String granteeOrg, String scope);
+
+    /**
+     * 回收数据访问权限(协议终止——附录D 第七章,动态跟踪要求)。
+     * @return 回收工单号(本地桩返回模拟号)
+     */
+    String revoke(String applyId, String granteeOrg, String reason);
 }

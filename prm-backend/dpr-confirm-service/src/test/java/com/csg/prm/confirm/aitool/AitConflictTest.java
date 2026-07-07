@@ -44,7 +44,7 @@ class AitConflictTest {
         ConfirmApply apply = new ConfirmApply();
         apply.setAssetId("DA-KG-1");
         apply.setAssetName("线路资产数据");
-        apply.setRightType("数据持有权");
+        apply.setRightType("持有权");
         apply.setRightHolder("广东电网");
         apply.setValidDate(LocalDateTime.now().plusYears(3));
         String applyId = applyService.saveDraft(apply);
@@ -52,7 +52,7 @@ class AitConflictTest {
         AitMaterial m = new AitMaterial();
         m.setFileName("授权证明.pdf");
         m.setApplyId(applyId);
-        m.setContent("数据持有权,授权范围约定字段,已加盖公章,有效期3年");
+        m.setContent("持有权,授权范围约定字段,已加盖公章,有效期3年");
         String mid = materialService.upload(m);
         materialService.parse(mid);
 
@@ -78,7 +78,7 @@ class AitConflictTest {
     @Test
     void claim_update_delete_and_history_sync() {
         // 人工修改节点:add → updateClaim(改授权范围)
-        String cid = conflictService.addClaim(claim("DA-UPD-1", "广东电网", "数据持有权", "全字段", null, false, "当前申请"));
+        String cid = conflictService.addClaim(claim("DA-UPD-1", "广东电网", "持有权", "全字段", null, false, "当前申请"));
         AitKgClaim upd = new AitKgClaim();
         upd.setClaimId(cid);
         upd.setAuthScope("约定字段");
@@ -92,7 +92,7 @@ class AitConflictTest {
         com.csg.prm.confirm.entity.EquityCard card = new com.csg.prm.confirm.entity.EquityCard();
         card.setAssetId("DA-HIST-1");
         card.setCardNo("EC-HIST-1");
-        card.setRightType("数据加工使用权");
+        card.setRightType("使用权");
         card.setRightOwner("南网科研院");
         card.setValidDate(LocalDateTime.now().plusYears(2));
         cardMapper.insert(card);
@@ -102,12 +102,12 @@ class AitConflictTest {
                 .anyMatch(c -> AitKgClaim.SRC_HISTORY.equals(c.getSourceType())), "应生成历史确权主张");
     }
 
-    /** #11 主体冲突:同一客体被多主体声明数据持有权(非经营、非排他)→ 应判主体冲突,描述含客体+双方主体。 */
+    /** #11 主体冲突:同一客体被多主体声明持有权(非经营、非排他)→ 应判主体冲突,描述含客体+双方主体。 */
     @Test
     void subjectConflict_for_multi_holder_holding_right() {
         String asset = "DA-HOLD-1";
-        conflictService.addClaim(claim(asset, "广东电网", "数据持有权", "全字段", null, false, "历史确权"));
-        AitKgClaim cur = claim(asset, "南网科研院", "数据持有权", "全字段", null, false, "当前申请");
+        conflictService.addClaim(claim(asset, "广东电网", "持有权", "全字段", null, false, "历史确权"));
+        AitKgClaim cur = claim(asset, "南网科研院", "持有权", "全字段", null, false, "当前申请");
         List<AitConflict> found = conflictService.detect(cur);
 
         assertTrue(found.stream().anyMatch(c -> AitConflict.TYPE_SUBJECT.equals(c.getConflictType())),
@@ -124,9 +124,9 @@ class AitConflictTest {
     void scopeConflict_identifies_specific_overlap_fields() {
         String asset = "DA-SCOPE-1";
         // 历史排他授权:字段 用电量、电压、负荷
-        conflictService.addClaim(claim(asset, "广东电网", "数据加工使用权", "用电量、电压、负荷", null, true, "历史确权"));
+        conflictService.addClaim(claim(asset, "广东电网", "使用权", "用电量、电压、负荷", null, true, "历史确权"));
         // 当前申请:用电量、负荷、地址 → 与历史重叠 用电量、负荷(不含电压/地址)
-        AitKgClaim cur = claim(asset, "南网科研院", "数据加工使用权", "用电量、负荷、地址", null, false, "当前申请");
+        AitKgClaim cur = claim(asset, "南网科研院", "使用权", "用电量、负荷、地址", null, false, "当前申请");
         AitConflict sc = conflictService.detect(cur).stream()
                 .filter(c -> AitConflict.TYPE_SCOPE.equals(c.getConflictType())).findFirst().orElseThrow();
 
@@ -142,9 +142,9 @@ class AitConflictTest {
     void validityConflict_computes_overrun_range_and_days() {
         String asset = "DA-VALID-1";
         LocalDateTime lifeEnd = LocalDateTime.of(2027, 1, 1, 0, 0); // 数据生命周期到期
-        conflictService.addClaim(claim(asset, "广东电网", "数据持有权", "全字段", lifeEnd, false, "历史确权"));
+        conflictService.addClaim(claim(asset, "广东电网", "持有权", "全字段", lifeEnd, false, "历史确权"));
         // 当前授权:至 2027-02-01(超 31 天)
-        AitKgClaim cur = claim(asset, "广东电网", "数据加工使用权", "全字段", lifeEnd.plusDays(31), false, "当前申请");
+        AitKgClaim cur = claim(asset, "广东电网", "使用权", "全字段", lifeEnd.plusDays(31), false, "当前申请");
         AitConflict vc = conflictService.detect(cur).stream()
                 .filter(c -> AitConflict.TYPE_VALIDITY.equals(c.getConflictType())).findFirst().orElseThrow();
 
@@ -159,9 +159,9 @@ class AitConflictTest {
     void historyConflict_distinguishes_contradiction_vs_change() {
         // (1) 归属矛盾:历史 广东电网 持有权(有效期2027) / 当前 深圳供电局 加工使用权
         String a1 = "DA-HIST-C1";
-        conflictService.addClaim(claim(a1, "广东电网", "数据持有权", "全字段",
+        conflictService.addClaim(claim(a1, "广东电网", "持有权", "全字段",
                 LocalDateTime.of(2027, 1, 1, 0, 0), false, "历史确权"));
-        AitKgClaim cur1 = claim(a1, "深圳供电局", "数据加工使用权", "全字段", null, false, "当前申请");
+        AitKgClaim cur1 = claim(a1, "深圳供电局", "使用权", "全字段", null, false, "当前申请");
         AitConflict c1 = conflictService.detect(cur1).stream()
                 .filter(c -> AitConflict.TYPE_HISTORY.equals(c.getConflictType())).findFirst().orElseThrow();
         assertEquals("高", c1.getRiskLevel(), "不同主体不同权利应为权属归属矛盾(高)");
@@ -170,8 +170,8 @@ class AitConflictTest {
 
         // (2) 权利类型变更:历史 广东电网 持有权 / 当前 广东电网 加工使用权(同主体)→ 中,非误报高
         String a2 = "DA-HIST-C2";
-        conflictService.addClaim(claim(a2, "广东电网", "数据持有权", "全字段", null, false, "历史确权"));
-        AitKgClaim cur2 = claim(a2, "广东电网", "数据加工使用权", "全字段", null, false, "当前申请");
+        conflictService.addClaim(claim(a2, "广东电网", "持有权", "全字段", null, false, "历史确权"));
+        AitKgClaim cur2 = claim(a2, "广东电网", "使用权", "全字段", null, false, "当前申请");
         AitConflict c2 = conflictService.detect(cur2).stream()
                 .filter(c -> AitConflict.TYPE_HISTORY.equals(c.getConflictType())).findFirst().orElseThrow();
         assertEquals("中", c2.getRiskLevel(), "同主体不同权利是变更(中),非误报矛盾(高)");
@@ -183,8 +183,8 @@ class AitConflictTest {
     void report_has_decision_source_impact_and_highrisk_summary() {
         String asset = "DA-RPT-1";
         // 历史确权 广东电网 经营权 排他 + 当前 深圳供电局 经营权 → 主体冲突(高) + 范围冲突
-        conflictService.addClaim(claim(asset, "广东电网", "数据产品经营权", "全字段", null, true, "历史确权"));
-        AitKgClaim cur = claim(asset, "深圳供电局", "数据产品经营权", "全字段", null, false, "当前申请");
+        conflictService.addClaim(claim(asset, "广东电网", "经营权", "全字段", null, true, "历史确权"));
+        AitKgClaim cur = claim(asset, "深圳供电局", "经营权", "全字段", null, false, "当前申请");
         conflictService.addClaim(cur);
         conflictService.detect(cur); // 产生并持久化冲突
 
@@ -202,8 +202,8 @@ class AitConflictTest {
     @Test
     void resolutionAdvice_returns_rule_regulation_and_ai() {
         String asset = "DA-ADV-1";
-        conflictService.addClaim(claim(asset, "广东电网", "数据持有权", "全字段", null, false, "历史确权"));
-        AitKgClaim cur = claim(asset, "深圳供电局", "数据持有权", "全字段", null, false, "当前申请");
+        conflictService.addClaim(claim(asset, "广东电网", "持有权", "全字段", null, false, "历史确权"));
+        AitKgClaim cur = claim(asset, "深圳供电局", "持有权", "全字段", null, false, "当前申请");
         conflictService.addClaim(cur);
         AitConflict sc = conflictService.detect(cur).stream()
                 .filter(c -> AitConflict.TYPE_SUBJECT.equals(c.getConflictType())).findFirst().orElseThrow();
@@ -219,8 +219,8 @@ class AitConflictTest {
     @Test
     void conflicts_filter_by_subject() {
         String asset = "DA-FLT-1";
-        conflictService.addClaim(claim(asset, "广东电网", "数据持有权", "全字段", null, false, "历史确权"));
-        AitKgClaim cur = claim(asset, "深圳供电局", "数据持有权", "全字段", null, false, "当前申请");
+        conflictService.addClaim(claim(asset, "广东电网", "持有权", "全字段", null, false, "历史确权"));
+        AitKgClaim cur = claim(asset, "深圳供电局", "持有权", "全字段", null, false, "当前申请");
         conflictService.addClaim(cur);
         conflictService.detect(cur); // 主体冲突涉及 广东电网+深圳供电局
 
@@ -248,11 +248,11 @@ class AitConflictTest {
     void detect_subject_scope_validity_history_conflicts() {
         String asset = "DA-CONF-1";
         // 历史确权:广东电网 经营权 全字段 排他 有效期至2027
-        conflictService.addClaim(claim(asset, "广东电网", "数据产品经营权", "全字段",
+        conflictService.addClaim(claim(asset, "广东电网", "经营权", "全字段",
                 LocalDateTime.now().plusYears(1), true, AitKgClaim.SRC_HISTORY));
 
         // 当前申请:深圳供电局 经营权 全字段 有效期至2030(不同主体、范围重叠、时效更长)
-        AitKgClaim cur = claim(asset, "深圳供电局", "数据产品经营权", "全字段",
+        AitKgClaim cur = claim(asset, "深圳供电局", "经营权", "全字段",
                 LocalDateTime.now().plusYears(4), false, AitKgClaim.SRC_CURRENT);
         conflictService.addClaim(cur);
         List<AitConflict> found = conflictService.detect(cur);
@@ -269,7 +269,7 @@ class AitConflictTest {
         String asset = "DA-CONF-2";
         conflictService.addClaim(claim(asset, "广东电网", "所有权", "全字段",
                 LocalDateTime.now().plusYears(2), false, AitKgClaim.SRC_HISTORY));
-        AitKgClaim cur = claim(asset, "广东电网", "数据加工使用权", "约定字段",
+        AitKgClaim cur = claim(asset, "广东电网", "使用权", "约定字段",
                 LocalDateTime.now().plusYears(1), false, AitKgClaim.SRC_CURRENT);
         conflictService.addClaim(cur);
         List<AitConflict> found = conflictService.detect(cur);
@@ -280,7 +280,7 @@ class AitConflictTest {
     @Test
     void no_conflict_when_clean() {
         String asset = "DA-CONF-3";
-        AitKgClaim cur = claim(asset, "广东电网", "数据持有权", "约定字段",
+        AitKgClaim cur = claim(asset, "广东电网", "持有权", "约定字段",
                 LocalDateTime.now().plusYears(1), false, AitKgClaim.SRC_CURRENT);
         conflictService.addClaim(cur);
         List<AitConflict> found = conflictService.detect(cur);

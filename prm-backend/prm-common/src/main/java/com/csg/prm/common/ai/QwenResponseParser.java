@@ -13,9 +13,9 @@ import java.util.List;
 final class QwenResponseParser {
 
     private static final ObjectMapper OM = new ObjectMapper();
-    private static final String HOLD = "数据持有权";
-    private static final String USE = "数据加工使用权";
-    private static final String OPERATE = "数据产品经营权";
+    private static final String HOLD = "持有权";
+    private static final String USE = "使用权";
+    private static final String OPERATE = "经营权";
 
     private QwenResponseParser() {
     }

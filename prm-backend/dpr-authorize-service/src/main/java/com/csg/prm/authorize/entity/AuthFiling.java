@@ -18,6 +18,9 @@ public class AuthFiling extends BaseEntity {
 
     public static final String STATUS_PENDING = "待备案";
     public static final String STATUS_FILED = "已备案";
+    /** 备案类型:授权备案(附录G,默认)/产品备案(附录D 附件2 数据产品备案表) */
+    public static final String TYPE_AUTH = "授权备案";
+    public static final String TYPE_PRODUCT = "产品备案";
 
     @TableId(value = "CEC_FILING_ID", type = IdType.ASSIGN_UUID)
     private String filingId;
@@ -60,6 +63,41 @@ public class AuthFiling extends BaseEntity {
 
     @TableField("CEC_REMARK")
     private String remark;
+
+    /** 备案类型:授权备案/产品备案(空按授权备案,兼容存量) */
+    @TableField("CEC_FILING_TYPE")
+    private String filingType;
+
+    // ===== 数据产品备案(附录D 附件2 表2):协议第四章(三)乙方对外提供数据产品/服务须在甲方处备案 =====
+
+    @TableField("CEC_PRODUCT_NAME")
+    private String productName;
+
+    @TableField("CEC_PRODUCT_INTRO")
+    private String productIntro;
+
+    @TableField("CEC_APP_SCENARIO")
+    private String appScenario;
+
+    @TableField("CEC_SERVICE_TARGET")
+    private String serviceTarget;
+
+    /** 涉及授权数据表名称(多选,顿号分隔;须落在协议附件1《数据授权清单》内) */
+    @TableField("CEC_INVOLVED_TABLES")
+    private String involvedTables;
+
+    public String getFilingType() { return filingType; }
+    public void setFilingType(String filingType) { this.filingType = filingType; }
+    public String getProductName() { return productName; }
+    public void setProductName(String productName) { this.productName = productName; }
+    public String getProductIntro() { return productIntro; }
+    public void setProductIntro(String productIntro) { this.productIntro = productIntro; }
+    public String getAppScenario() { return appScenario; }
+    public void setAppScenario(String appScenario) { this.appScenario = appScenario; }
+    public String getServiceTarget() { return serviceTarget; }
+    public void setServiceTarget(String serviceTarget) { this.serviceTarget = serviceTarget; }
+    public String getInvolvedTables() { return involvedTables; }
+    public void setInvolvedTables(String involvedTables) { this.involvedTables = involvedTables; }
 
     public String getFilingId() { return filingId; }
     public void setFilingId(String filingId) { this.filingId = filingId; }

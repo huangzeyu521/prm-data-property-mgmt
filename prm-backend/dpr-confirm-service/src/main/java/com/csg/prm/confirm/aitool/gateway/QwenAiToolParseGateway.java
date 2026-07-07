@@ -60,7 +60,7 @@ public class QwenAiToolParseGateway implements AiToolParseGateway {
             String usr = "材料文件名:" + fileName + "\n材料正文:" + content
                     + "\n仅输出JSON,字段:rightSubject(权利主体,如 电力企业/供电局/供电所/用户单位),"
                     + "rightObject(权利客体,如 电力数据/计量设备/线路资产/数据资源),"
-                    + "rightType(数据持有权/数据加工使用权/数据产品经营权/所有权/使用权/授权使用权),"
+                    + "rightType(持有权/使用权/经营权/所有权/使用权/授权使用权),"
                     + "rightTerm(权利期限,起止或有效期),"
                     + "authScope(授权范围),dataSource(自行生产/公开采集/公共数据授权/共同生产/交易采购/其他),"
                     + "sensitiveType(个人信息/敏感个人信息/商业秘密/监管数据/电网生产数据/内部运营数据),"
@@ -88,7 +88,7 @@ public class QwenAiToolParseGateway implements AiToolParseGateway {
             return new ParsedElements(
                     text(n, "rightSubject", "中国南方电网有限责任公司"),
                     text(n, "rightObject", "数据资源"),
-                    text(n, "rightType", "数据持有权"),
+                    text(n, "rightType", "持有权"),
                     text(n, "rightTerm", "3年"),
                     text(n, "authScope", "约定字段"),
                     text(n, "dataSource", "自行生产"),

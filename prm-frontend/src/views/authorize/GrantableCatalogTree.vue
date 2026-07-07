@@ -38,12 +38,14 @@ import { pageEquityCard } from '@/api/confirm'
 import { grantableOpenFilter } from '@/api/authorize'
 
 const props = defineProps({
-  // 所选授权权益类型:数据加工使用权 / 数据产品经营权(资源池据此做"权属可授"过滤)
-  rightType: { type: String, default: '' }
+  // 所选授权权益类型:使用权 / 经营权(资源池据此做"权属可授"过滤)
+  rightType: { type: String, default: '' },
+  // 选取模式:默认多选(批量可跨系统累加);false=单选(一事一议仅授一张数据表)
+  multiple: { type: Boolean, default: true }
 })
 const emit = defineEmits(['change'])
 
-const RIGHT_OPERATION = '数据产品经营权'
+const RIGHT_OPERATION = '经营权'
 const CARD_OK = ['正常', '生效']
 const UNKNOWN_SYS = '未分类系统'
 const UNKNOWN_MOD = '未分类模块'
@@ -153,8 +155,14 @@ async function build() {
   }
 }
 
-function onCheck() {
-  const leaves = treeRef.value.getCheckedNodes(false).filter(n => n.type === 'table')
+function onCheck(node) {
+  let leaves = treeRef.value.getCheckedNodes(false).filter(n => n.type === 'table')
+  // 单选模式:仅保留刚勾选的那张库表(点父节点则取末张),其余取消勾选 → 一事一议单选语义
+  if (!props.multiple && leaves.length > 1) {
+    const keep = node && node.type === 'table' ? node : leaves[leaves.length - 1]
+    treeRef.value.setCheckedKeys([keep.id])
+    leaves = [keep]
+  }
   emit('change', leaves)
 }
 

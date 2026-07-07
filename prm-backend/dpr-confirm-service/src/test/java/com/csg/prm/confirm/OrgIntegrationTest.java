@@ -71,7 +71,7 @@ class OrgIntegrationTest {
         ConfirmApply a = new ConfirmApply();
         a.setAssetId(assetId);
         a.setAssetName("回填测试-" + assetId);
-        a.setRightType("数据持有权");
+        a.setRightType("持有权");
         a.setRightHolder("广州供电局"); // 申报组织=地市局
 
         String cardId = cardService.generateFromApply(a);

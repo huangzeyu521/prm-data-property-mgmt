@@ -33,7 +33,7 @@ class ConfirmRefinementsTest {
         ConfirmApply a = new ConfirmApply();
         a.setAssetId(assetId);
         a.setAssetName("精化测试表");
-        a.setRightType("数据资源持有权");
+        a.setRightType("持有权");
         a.setSourceIdentification("A自行生产数据");
         a.setRightHolder("广东电网");
         return a;

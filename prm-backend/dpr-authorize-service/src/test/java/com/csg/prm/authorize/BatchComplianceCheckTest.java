@@ -41,7 +41,7 @@ class BatchComplianceCheckTest {
         a.setAssetName(name);
         a.setEquityCardId("EC-PRA-BATCH-" + asset);
         a.setGranteeOrg("广州供电局");
-        a.setRightType("数据加工使用权");
+        a.setRightType("使用权");
         a.setScope("全字段");
         if (thirdParty != null) a.setThirdPartySource(thirdParty);
         return applyService.saveDraft(a);

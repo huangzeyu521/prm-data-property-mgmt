@@ -50,7 +50,7 @@
     </el-header>
     <el-container>
       <el-aside :width="collapse ? '64px' : '220px'" class="prm-aside">
-        <el-menu :default-active="$route.path" :default-openeds="openeds" :collapse="collapse" unique-opened router>
+        <el-menu ref="menuRef" :default-active="$route.path" :default-openeds="openeds" :collapse="collapse" unique-opened router>
           <template v-for="node in menu" :key="node.group || node.path">
             <el-menu-item v-if="node.top" :index="node.path" class="prm-top-item">
               <el-icon><component :is="node.icon" /></el-icon><span>{{ node.title }}</span>
@@ -71,10 +71,10 @@
           </el-breadcrumb>
           <div class="prm-crumb-right">
             <span v-if="pageGoal" class="prm-goal" :title="pageGoal">本页目标:{{ pageGoal }}</span>
-            <!-- 统一页面操作区(右上角):各页主操作按钮经 PageActions 传送至此(规范:操作按钮置于页面右上角) -->
-            <div id="prm-page-actions" class="prm-page-actions"></div>
           </div>
         </div>
+        <!-- 统一页面操作区(UI评审#2:按钮不与面包屑同行,置于其下方右上角);吸顶跟随,空则整行隐藏(:empty) -->
+        <div id="prm-page-actions" class="prm-page-actions"></div>
         <div class="prm-content">
           <router-view :key="$route.fullPath" />
         </div>
@@ -88,7 +88,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import NotificationCenter from '@/components/NotificationCenter.vue'
 import FilePreview from '@/components/FilePreview.vue'
@@ -166,7 +166,12 @@ const PLAT_MENUS = []
 // 手风琴:根据当前路由自动展开所属一级分组(unique-opened 负责切换时互斥折叠)
 const openeds = computed(() => {
   const p = route.path
-  if (p.startsWith('/dpr/workbench')) return []   // 待办为顶层项,不展开任何组
+  // 待办中心跨确权/授权/监测多域聚合,无单一归属组可展开;精确匹配(而非前缀),避免误伤同前缀的「我的申请」
+  if (p === '/dpr/workbench/todo') return []
+  // 我的申请(apply/business 共享主页):横跨确权+授权申请进度,但 unique-opened 下只能展开一组——
+  // 按角色主职责默认展开:apply 以确权为主(先确后授)开 03;business 在 03 组无任何可见项(会
+  // 触发 el-menu.open() 对不存在分组解构报错),故开其唯一可见的授权组 04。两组均一键可点开,不影响可发现性。
+  if (p === '/dpr/workbench/my') return role.value === 'business' ? ['04'] : ['03']
   if (p.startsWith('/dpr/ledger')) return ['01']
   if (p.startsWith('/dpr/monitor')) return ['02']
   if (p.startsWith('/dpr/confirm')) return ['03']
@@ -176,6 +181,12 @@ const openeds = computed(() => {
   if (p.startsWith('/dpr/system')) return ['08']
   return ['01']
 })
+// Element Plus el-menu 的 :default-openeds 只在挂载时读一次(其内部 openedMenus 无 watch 跟随 prop 变化),
+// SPA 内路由跳转(不重新挂载 el-menu)时分组不会随之自动展开 —— 用暴露的 open() 方法接管路由切换后的展开。
+const menuRef = ref()
+// 防御:目标分组若对当前角色不可见(视觉上未渲染 el-sub-menu),Element 内部 open() 解构会抛异常;
+// try/catch 兜底,避免未来新增角色/路由分支时因组合遗漏而炸掉整个路由监听
+watch(openeds, (idxs) => { idxs.forEach(i => { try { menuRef.value?.open(i) } catch (e) { /* 分组对当前角色不可见,忽略 */ } }) }, { flush: 'post' })
 </script>
 
 <style scoped>
@@ -217,7 +228,19 @@ const openeds = computed(() => {
 .prm-crumb-right { margin-left: auto; display: flex; align-items: center; gap: 12px; min-width: 0; }
 .prm-goal { font-size: 12px; color: var(--prm-color-text-weak); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 460px; }
 /* 统一页面操作区:面包屑行右上角,各页主操作按钮传送至此 */
-.prm-page-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+/* UI评审#2:操作区=面包屑下方独立操作带(非同行);sticky 紧贴面包屑(top=其高44px),长页滚动主按钮仍可见。
+   评审追加:带底色与页面浅蓝一致(去白色带与下方撞色),不再压底边线 → 与内容区融为一体 */
+.prm-page-actions {
+  position: sticky;
+  top: 44px;
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--prm-color-page-bg);
+}
 .prm-page-actions:empty { display: none; }
 .prm-spacer { flex: 1; }
 .prm-search { width: 260px; }
@@ -230,7 +253,7 @@ const openeds = computed(() => {
 /* 侧栏:白底菜单(数研院典型界面母版),激活项主色文字+浅蓝底+左主色竖条 */
 .prm-aside {
   background: #fff;
-  border-right: 1px solid #e8e8e8;
+  border-right: 1px solid var(--prm-color-border);
   transition: width 0.25s;
   overflow-x: hidden;
 }
@@ -243,7 +266,7 @@ const openeds = computed(() => {
   --el-menu-bg-color: transparent;
   --el-menu-hover-bg-color: var(--prm-color-selected-bg);
 }
-.prm-aside :deep(.el-sub-menu .el-menu) { background: #fafafa; }
+.prm-aside :deep(.el-sub-menu .el-menu) { background: var(--prm-color-bg); }
 .prm-aside :deep(.el-menu-item.is-active) {
   background: var(--prm-color-selected-bg);
   color: var(--prm-color-primary);

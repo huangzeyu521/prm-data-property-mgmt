@@ -62,11 +62,11 @@ class EquityCardPerRightIssueTest {
     void multiRight_splitsIntoPerRightCards() {
         ArgumentCaptor<EquityCard> cap = ArgumentCaptor.forClass(EquityCard.class);
 
-        svc.generateFromApply(apply("数据资源持有权、数据加工使用权、数据产品经营权"));
+        svc.generateFromApply(apply("持有权、使用权、经营权"));
 
         verify(mapper, times(3)).insert(cap.capture());
         List<String> rights = cap.getAllValues().stream().map(EquityCard::getRightType).toList();
-        assertEquals(List.of("数据资源持有权", "数据加工使用权", "数据产品经营权"), rights, "应逐权拆成三张卡");
+        assertEquals(List.of("持有权", "使用权", "经营权"), rights, "应逐权拆成三张卡");
         assertTrue(rights.stream().noneMatch(r -> r.contains("、")), "单卡 rightType 不应含顿号(可被精确等值命中)");
     }
 
@@ -75,10 +75,10 @@ class EquityCardPerRightIssueTest {
     void singleRight_issuesOneCard() {
         ArgumentCaptor<EquityCard> cap = ArgumentCaptor.forClass(EquityCard.class);
 
-        svc.generateFromApply(apply("数据持有权"));
+        svc.generateFromApply(apply("持有权"));
 
         verify(mapper, times(1)).insert(cap.capture());
-        assertEquals("数据持有权", cap.getValue().getRightType());
+        assertEquals("持有权", cap.getValue().getRightType());
     }
 
     @Test
@@ -86,10 +86,10 @@ class EquityCardPerRightIssueTest {
     void mixedSeparators_dedupAndSplit() {
         ArgumentCaptor<EquityCard> cap = ArgumentCaptor.forClass(EquityCard.class);
 
-        svc.generateFromApply(apply("数据加工使用权,数据加工使用权，数据产品经营权"));
+        svc.generateFromApply(apply("使用权,使用权，经营权"));
 
         verify(mapper, times(2)).insert(cap.capture());
-        assertEquals(List.of("数据加工使用权", "数据产品经营权"),
+        assertEquals(List.of("使用权", "经营权"),
                 cap.getAllValues().stream().map(EquityCard::getRightType).toList(), "重复权益去重、混合分隔符拆分");
     }
 

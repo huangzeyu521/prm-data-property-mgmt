@@ -34,7 +34,7 @@
 
     <!-- 列表卡 -->
     <div class="prm-table-card">
-      <div style="margin-bottom: 12px">
+      <div style="margin-bottom: 10px">
         <el-button type="primary" @click="onCreate">新增用户</el-button>
       </div>
 
@@ -44,7 +44,7 @@
         <el-table-column prop="realName" label="姓名" min-width="100" show-overflow-tooltip />
         <el-table-column label="角色" min-width="130">
           <template #default="{ row }">
-            <el-tag size="small" :type="roleTagType(row.role)">{{ roleLabel(row.role) }}</el-tag>
+            <span :class="'prm-c-' + ((roleTagType(row.role)) || 'primary')">{{ roleLabel(row.role) }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="provinceCode" label="省公司" min-width="90" align="center">
@@ -52,7 +52,7 @@
         </el-table-column>
         <el-table-column label="状态" min-width="90" align="center">
           <template #default="{ row }">
-            <el-tag size="small" :type="row.status === '启用' ? 'success' : 'info'">{{ row.status || '启用' }}</el-tag>
+            <span :class="'prm-c-' + ((row.status === '启用' ? 'success' : 'info') || 'primary')">{{ row.status || '启用' }}</span>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="280" fixed="right">
@@ -118,14 +118,14 @@
 
 <script setup>
 import { reactive, ref, computed, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import { confirmAsync } from '@/utils/confirmAsync'
 import { ROLES } from '@/lib/roles'
 import { pageUser, createUser, updateUser, deleteUser, resetPassword, toggleUserStatus } from '@/api/system'
+import { useTablePage } from '@/composables/useTablePage'
 
-const query = reactive({ current: 1, size: 10, username: '', realName: '', role: '', status: '' })
-const rows = ref([])
-const total = ref(0)
-const loading = ref(false)
+const { query, rows, total, loading, load, search: onSearch, reset: onReset, onPage: onPageChange, onSizeChange } =
+  useTablePage(pageUser, { username: '', realName: '', role: '', status: '' })
 
 const dialogVisible = ref(false)
 const saving = ref(false)
@@ -145,38 +145,6 @@ function roleLabel(code) {
 }
 function roleTagType(code) {
   return { admin: 'danger', all: 'danger', review: 'warning', apply: 'primary', view: 'info' }[code] || ''
-}
-
-async function load() {
-  loading.value = true
-  try {
-    const res = await pageUser({ ...query })
-    rows.value = res.records || []
-    total.value = res.total || 0
-  } finally {
-    loading.value = false
-  }
-}
-
-function onSearch() {
-  query.current = 1
-  load()
-}
-function onReset() {
-  query.username = ''
-  query.realName = ''
-  query.role = ''
-  query.status = ''
-  onSearch()
-}
-function onPageChange(p) {
-  query.current = p
-  load()
-}
-function onSizeChange(s) {
-  query.size = s
-  query.current = 1
-  load()
 }
 
 function onCreate() {
@@ -216,29 +184,17 @@ async function onSubmit() {
 }
 
 function onResetPassword(row) {
-  ElMessageBox.confirm(`确认将「${row.realName}(${row.username})」的密码重置为默认密码 Prm@1234?`, '重置密码', { type: 'warning' })
-    .then(() => resetPassword(row.userId))
-    .then(() => ElMessage.success('已重置为默认密码 Prm@1234'))
-    .catch(() => {})
+  confirmAsync(`确认将「${row.realName}(${row.username})」的密码重置为默认密码 Prm@1234?`, '重置密码',
+    async () => { await resetPassword(row.userId); ElMessage.success('已重置为默认密码 Prm@1234') }).catch(() => {})
 }
 function onToggle(row) {
   const next = row.status === '启用' ? '停用' : '启用'
-  ElMessageBox.confirm(`确认${next}「${row.realName}(${row.username})」?`, `${next}用户`, { type: 'warning' })
-    .then(() => toggleUserStatus(row.userId))
-    .then(() => {
-      ElMessage.success(`已${next}`)
-      load()
-    })
-    .catch(() => {})
+  confirmAsync(`确认${next}「${row.realName}(${row.username})」?`, `${next}用户`,
+    async () => { await toggleUserStatus(row.userId); ElMessage.success(`已${next}`); load() }).catch(() => {})
 }
 function onDelete(row) {
-  ElMessageBox.confirm(`确认删除用户「${row.realName}(${row.username})」?该操作不可恢复。`, '删除用户', { type: 'warning' })
-    .then(() => deleteUser(row.userId))
-    .then(() => {
-      ElMessage.success('已删除')
-      load()
-    })
-    .catch(() => {})
+  confirmAsync(`确认删除用户「${row.realName}(${row.username})」?该操作不可恢复。`, '删除用户',
+    async () => { await deleteUser(row.userId); ElMessage.success('已删除'); load() }).catch(() => {})
 }
 
 onMounted(load)

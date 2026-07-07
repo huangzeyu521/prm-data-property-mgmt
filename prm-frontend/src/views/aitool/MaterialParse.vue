@@ -6,7 +6,7 @@
 <template>
   <div class="prm-page">
     <div class="prm-table-card">
-      <div style="margin-bottom:12px">
+      <div style="margin-bottom:10px">
         <el-button type="primary" @click="dlg = true">上传材料</el-button>
         <el-button @click="onAggregate">归集视图</el-button>
         <el-button @click="onAccuracy">准确度评测</el-button>
@@ -21,13 +21,13 @@
         <el-table-column prop="fileName" label="文件" min-width="180" show-overflow-tooltip>
           <template #default="{ row }">
             {{ row.fileName }}
-            <el-tag v-if="row.ocrUsed === 1" size="small" type="warning" effect="plain" style="margin-left:4px">OCR</el-tag>
-            <el-tag v-if="row.duplicateOf" size="small" type="danger" effect="plain" style="margin-left:4px">重复</el-tag>
+            <span v-if="row.ocrUsed === 1" style="margin-left:4px" class="prm-c-warning">OCR</span>
+            <span v-if="row.duplicateOf" style="margin-left:4px" class="prm-c-danger">重复</span>
           </template>
         </el-table-column>
         <el-table-column prop="fileType" label="类型" width="72" align="center" />
         <el-table-column prop="category" label="资料类型" width="100" align="center">
-          <template #default="{ row }"><el-tag v-if="row.category" size="small" effect="plain">{{ dataTypeLabel(row.category) }}</el-tag><span v-else>—</span></template>
+          <template #default="{ row }"><span v-if="row.category" class="prm-c-primary">{{ dataTypeLabel(row.category) }}</span><span v-else>—</span></template>
         </el-table-column>
         <el-table-column prop="sizeKb" label="大小" width="92" align="right"><template #default="{ row }">{{ fmtSize(row.sizeKb) }}</template></el-table-column>
         <el-table-column prop="batchNo" label="批次" width="120" show-overflow-tooltip />
@@ -35,7 +35,7 @@
           <template #default="{ row }"><code class="hash">{{ row.fileHash ? row.fileHash.slice(0,12)+'…' : '-' }}</code></template>
         </el-table-column>
         <el-table-column prop="parseStatus" label="解析状态" width="100" align="center">
-          <template #default="{ row }"><el-tag :type="stTag(row.parseStatus)">{{ row.parseStatus }}</el-tag></template>
+          <template #default="{ row }"><span :class="'prm-c-' + ((stTag(row.parseStatus)) || 'primary')">{{ row.parseStatus }}</span></template>
         </el-table-column>
         <el-table-column label="解析进度" width="180" align="center">
           <template #default="{ row }">
@@ -58,7 +58,7 @@
           </template>
         </el-table-column>
       </el-table>
-      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
+      <el-pagination style="margin-top:20px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
         :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" @size-change="s=>{q.size=s;q.current=1;load()}" />
     </div>
 
@@ -99,14 +99,14 @@
         <el-descriptions-item label="数据来源">{{ parse.dataSource }}</el-descriptions-item>
         <el-descriptions-item label="敏感类型">{{ parse.sensitiveType }}</el-descriptions-item>
         <el-descriptions-item label="印章识别(CV×OCR交叉校验)" :span="2">
-          <el-tag :type="sealTag(parse.sealValid)">{{ parse.sealValid }}</el-tag> {{ parse.sealDesc }}
+          <span :class="'prm-c-' + ((sealTag(parse.sealValid)) || 'primary')">{{ parse.sealValid }}</span> {{ parse.sealDesc }}
         </el-descriptions-item>
         <el-descriptions-item label="材料可信度">
-          <el-tag :type="trustTag(parse.trustLevel)">{{ parse.trustLevel || '—' }}</el-tag>
+          <span :class="'prm-c-' + ((trustTag(parse.trustLevel)) || 'primary')">{{ parse.trustLevel || '—' }}</span>
           <span v-if="parse.trustScore != null" style="margin-left:6px;color:var(--prm-color-text-weak)">{{ parse.trustScore }}/100</span>
         </el-descriptions-item>
         <el-descriptions-item label="复核标记">
-          <el-tag :type="parse.reviewStatus==='自动通过'?'success':'warning'">{{ parse.reviewStatus || '—' }}</el-tag>
+          <span :class="'prm-c-' + ((parse.reviewStatus==='自动通过'?'success':'warning') || 'primary')">{{ parse.reviewStatus || '—' }}</span>
         </el-descriptions-item>
       </el-descriptions>
       <div style="margin-top:14px;font-weight:600">要素来源定位 · 抽取值在材料中的所在位置（数据来源等来源字段标注定位）</div>
@@ -115,7 +115,7 @@
         <el-table-column prop="value" label="抽取值" width="140" show-overflow-tooltip />
         <el-table-column prop="sourceLocation" label="来源（材料中所在位置）" show-overflow-tooltip />
         <el-table-column label="规范" width="90" align="center">
-          <template #default="{ row }"><el-tag :type="row.standard?'success':'warning'">{{ row.standard?'标准':'建议修正' }}</el-tag></template>
+          <template #default="{ row }"><span :class="'prm-c-' + ((row.standard?'success':'warning') || 'primary')">{{ row.standard?'标准':'建议修正' }}</span></template>
         </el-table-column>
         <el-table-column label="人工确认" width="120" align="center">
           <template #default="{ row }">
@@ -134,7 +134,7 @@
         <el-descriptions-item label="标题" :span="2">{{ (layout.titles && layout.titles.join(' / ')) || '—' }}</el-descriptions-item>
         <el-descriptions-item label="印章区域" :span="2">
           <template v-if="layout.seals && layout.seals.length">
-            <el-tag v-for="(s,i) in layout.seals" :key="i" size="small" style="margin-right:6px">{{ s.type }}<span v-if="s.location"> · {{ s.location }}</span></el-tag>
+            <span v-for="(s,i) in layout.seals" :key="i" style="margin-right:6px" class="prm-c-primary">{{ s.type }}<span v-if="s.location"> · {{ s.location }}</span></span>
           </template>
           <span v-else>未检出印章区域</span>
         </el-descriptions-item>
@@ -172,7 +172,7 @@
         <el-table-column prop="materialValue" label="材料解析值" />
         <el-table-column prop="formValue" label="表单填写值" />
         <el-table-column label="差异" width="84" align="center">
-          <template #default="{ row }"><el-tag :type="diffTag(row.diffType)">{{ row.diffType }}</el-tag></template>
+          <template #default="{ row }"><span :class="'prm-c-' + ((diffTag(row.diffType)) || 'primary')">{{ row.diffType }}</span></template>
         </el-table-column>
         <el-table-column label="定位" width="120" align="center">
           <template #default="{ row }">
@@ -195,14 +195,14 @@
     <el-dialog v-model="aggDlg" title="材料归集 · 按数据表关联(元数据 / 制度 / 授权 / 合同 / 来源 等)" width="760px" align-center>
       <el-empty v-if="!aggGroups.length" description="暂无可归集材料" />
       <div v-for="g in aggGroups" :key="g.dataTableRef" class="agg-group">
-        <div class="agg-title">📄 {{ g.dataTableRef }} <span class="prm-table-note">({{ g.materials.length }} 份)</span></div>
+        <div class="agg-title"><el-icon><Document /></el-icon> {{ g.dataTableRef }} <span class="prm-table-note">({{ g.materials.length }} 份)</span></div>
         <el-table :data="g.materials" border size="small">
           <el-table-column prop="fileName" label="文件" show-overflow-tooltip />
           <el-table-column prop="category" label="资料类型" width="110" align="center">
-            <template #default="{ row }"><el-tag size="small" effect="plain">{{ dataTypeLabel(row.category) || '其他' }}</el-tag></template>
+            <template #default="{ row }"><span class="prm-c-primary">{{ dataTypeLabel(row.category) || '其他' }}</span></template>
           </el-table-column>
           <el-table-column prop="parseStatus" label="状态" width="90" align="center">
-            <template #default="{ row }"><el-tag :type="stTag(row.parseStatus)" size="small">{{ row.parseStatus }}</el-tag></template>
+            <template #default="{ row }"><span :class="'prm-c-' + ((stTag(row.parseStatus)) || 'primary')">{{ row.parseStatus }}</span></template>
           </el-table-column>
         </el-table>
       </div>
@@ -279,16 +279,16 @@
     <!-- 1.4#2 批量解析进度 -->
     <el-dialog v-model="batchDlg" :title="`批量解析进度 · 批次 ${curBatch}`" width="640px" align-center>
       <div v-if="batchStat" style="margin-bottom:10px">
-        <el-tag type="info">共 {{ batchStat.total }}</el-tag>
-        <el-tag type="success" style="margin-left:6px">完成 {{ batchStat.done }}</el-tag>
-        <el-tag type="warning" style="margin-left:6px">进行 {{ batchStat.running }}</el-tag>
-        <el-tag style="margin-left:6px">待解析 {{ batchStat.pending }}</el-tag>
-        <el-tag type="danger" style="margin-left:6px">失败 {{ batchStat.failed }}</el-tag>
+        <span class="prm-c-info">共 {{ batchStat.total }}</span>
+        <span style="margin-left:6px" class="prm-c-success">完成 {{ batchStat.done }}</span>
+        <span style="margin-left:6px" class="prm-c-warning">进行 {{ batchStat.running }}</span>
+        <span style="margin-left:6px" class="prm-c-primary">待解析 {{ batchStat.pending }}</span>
+        <span style="margin-left:6px" class="prm-c-danger">失败 {{ batchStat.failed }}</span>
       </div>
       <el-table :data="batchStat ? batchStat.items : []" border size="small" max-height="320">
         <el-table-column prop="fileName" label="文档" min-width="160" show-overflow-tooltip />
         <el-table-column prop="parseStatus" label="状态" width="90" align="center">
-          <template #default="{ row }"><el-tag size="small" :type="stTag(row.parseStatus)">{{ row.parseStatus }}</el-tag></template>
+          <template #default="{ row }"><span :class="'prm-c-' + ((stTag(row.parseStatus)) || 'primary')">{{ row.parseStatus }}</span></template>
         </el-table-column>
         <el-table-column label="进度" width="160">
           <template #default="{ row }"><el-progress :percentage="row.progress||0" /></template>
@@ -374,11 +374,11 @@
       <template v-if="profile">
         <el-descriptions :column="2" border size="small">
           <el-descriptions-item label="数据来源方式">
-            {{ profile.profile.sourceMethod }} <el-tag size="small" effect="plain">{{ profile.profile.sourceMethodBy }}</el-tag>
+            {{ profile.profile.sourceMethod }} <span class="prm-c-primary">{{ profile.profile.sourceMethodBy }}</span>
           </el-descriptions-item>
           <el-descriptions-item label="层级">{{ profile.profile.level }}</el-descriptions-item>
           <el-descriptions-item label="数据特征" :span="2">
-            <el-tag v-for="f in featureList" :key="f" size="small" type="warning" style="margin-right:6px">{{ f }}</el-tag>
+            <span v-for="f in featureList" :key="f" style="margin-right:6px" class="prm-c-warning">{{ f }}</span>
             <span v-if="!featureList.length">—</span>
           </el-descriptions-item>
         </el-descriptions>
@@ -387,7 +387,7 @@
           <el-table-column prop="subjectRole" label="角色" width="120" />
           <el-table-column prop="subjectName" label="主体名称" show-overflow-tooltip />
           <el-table-column prop="method" label="方式" width="80" align="center">
-            <template #default="{ row }"><el-tag size="small" :type="row.method==='模型'?'warning':'info'">{{ row.method }}</el-tag></template>
+            <template #default="{ row }"><span :class="'prm-c-' + ((row.method==='模型'?'warning':'info') || 'primary')">{{ row.method }}</span></template>
           </el-table-column>
         </el-table>
         <div style="margin-top:12px;font-weight:600">约束信息(授权范围/使用边界/共享限制/保留期限/脱敏要求)</div>
@@ -395,7 +395,7 @@
           <el-table-column prop="constraintType" label="约束类型" width="120" />
           <el-table-column prop="constraintValue" label="约束内容" show-overflow-tooltip />
           <el-table-column prop="method" label="方式" width="80" align="center">
-            <template #default="{ row }"><el-tag size="small" :type="row.method==='模型'?'warning':'info'">{{ row.method }}</el-tag></template>
+            <template #default="{ row }"><span :class="'prm-c-' + ((row.method==='模型'?'warning':'info') || 'primary')">{{ row.method }}</span></template>
           </el-table-column>
         </el-table>
         <div style="margin-top:12px;font-weight:600">下游输入 · 分类分级 / 法律校验 / 授权判断</div>
@@ -430,7 +430,7 @@
             <el-table-column prop="rawValue" label="原始值" show-overflow-tooltip />
             <el-table-column prop="cleanValue" label="清洗后" show-overflow-tooltip />
             <el-table-column label="状态" width="80" align="center">
-              <template #default="{ row }"><el-tag size="small" :type="cleanStTag(row.status)">{{ row.status }}</el-tag></template>
+              <template #default="{ row }"><span :class="'prm-c-' + ((cleanStTag(row.status)) || 'primary')">{{ row.status }}</span></template>
             </el-table-column>
             <el-table-column prop="issue" label="问题" show-overflow-tooltip />
           </el-table>
@@ -440,7 +440,7 @@
             <el-table-column prop="rowNo" label="行" width="50" align="center" />
             <el-table-column prop="fieldLabel" label="字段" width="110" />
             <el-table-column label="状态" width="80" align="center">
-              <template #default="{ row }"><el-tag size="small" :type="cleanStTag(row.status)">{{ row.status }}</el-tag></template>
+              <template #default="{ row }"><span :class="'prm-c-' + ((cleanStTag(row.status)) || 'primary')">{{ row.status }}</span></template>
             </el-table-column>
             <el-table-column prop="issue" label="问题" show-overflow-tooltip />
             <el-table-column prop="suggestion" label="待补正建议" show-overflow-tooltip />
@@ -453,7 +453,7 @@
             <el-table-column prop="rule" label="清洗规则" show-overflow-tooltip />
             <el-table-column prop="cleanedValue" label="转换结果" show-overflow-tooltip />
             <el-table-column label="方式" width="90" align="center">
-              <template #default="{ row }"><el-tag size="small" :type="row.method.includes('模型')?'warning':'info'">{{ row.method }}</el-tag></template>
+              <template #default="{ row }"><span :class="'prm-c-' + ((row.method.includes('模型')?'warning':'info') || 'primary')">{{ row.method }}</span></template>
             </el-table-column>
           </el-table>
         </el-tab-pane>
@@ -469,7 +469,7 @@
             <el-table-column prop="materialValue" label="材料抽取值" show-overflow-tooltip />
             <el-table-column label="一致性" width="84" align="center">
               <template #default="{ row }">
-                <el-tag size="small" :type="row.consistency==='一致'?'success':(row.consistency==='不一致'?'danger':'info')">{{ row.consistency }}</el-tag>
+                <span :class="'prm-c-' + ((row.consistency==='一致'?'success':(row.consistency==='不一致'?'danger':'info')) || 'primary')">{{ row.consistency }}</span>
               </template>
             </el-table-column>
             <el-table-column prop="sourceLocation" label="材料中所在位置" show-overflow-tooltip />
@@ -496,7 +496,8 @@
 <script setup>
 import { onMounted, reactive, ref, computed, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import { confirmAsync } from '@/utils/confirmAsync'
 import { UploadFilled } from '@element-plus/icons-vue'
 import { pageAitMaterial, uploadAitMaterialFile, uploadAitMaterialBatch, parseAitMaterial, getAitParse, aitTermCheck, confirmAitTerm, aitCompares, aitProgress, aitParseExportUrl, aitSegments, aitAggregate, aitAccuracy, aitClean, aitCleanPending, aitCleanLog, aitExtractElements, aitProfile,
   aitRecordPage, aitRecordExportUrl, aitBatchParse, aitBatchProgress, aitTemplatePage, aitTemplateCreate, aitTemplateUpdate, aitTemplateNewVersion, aitTemplateDownloadUrl, aitParseConfigList, aitParseConfigSave, aitParseConfigDelete,
@@ -722,8 +723,8 @@ async function onCfgSave() {
   ElMessage.success('已保存'); cfgEditDlg.value = false; onConfigs()
 }
 function onCfgDelete(row) {
-  ElMessageBox.confirm(`确认删除配置「${row.scene}」?`, '提示', { type: 'warning' })
-    .then(() => aitParseConfigDelete(row.configId)).then(() => { ElMessage.success('已删除'); onConfigs() }).catch(() => {})
+  confirmAsync(`确认删除配置「${row.scene}」?`, '提示',
+    async () => { await aitParseConfigDelete(row.configId); ElMessage.success('已删除'); onConfigs() }).catch(() => {})
 }
 function cleanStTag(s) { return { 正常: 'success', 缺失: 'warning', 冲突: 'danger', 异常: 'danger', 重复: 'info' }[s] || 'info' }
 async function onClean(row) {
@@ -800,7 +801,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.hash { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: #1e87f0; }
+.hash { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: var(--prm-color-link); }
 .locate-doc { max-height: 360px; overflow: auto; white-space: pre-wrap; word-break: break-all; line-height: 1.9; font-size: 13px; padding: 12px 14px; background: var(--prm-color-bg); border: 1px solid var(--prm-color-border); border-radius: 6px; color: var(--prm-color-text); }
 .locate-mark { background: #ffe08a; color: #ad6800; font-weight: 700; padding: 1px 3px; border-radius: 3px; box-shadow: 0 0 0 2px #ffd666; }
 </style>

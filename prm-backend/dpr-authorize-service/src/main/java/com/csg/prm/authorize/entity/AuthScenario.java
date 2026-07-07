@@ -27,7 +27,7 @@ public class AuthScenario extends BaseEntity {
     @TableField("CEC_CATEGORY")
     private String category;
 
-    /** 适用授权权益类型:数据加工使用权/数据产品经营权/通用(供向导按权益类型过滤场景) */
+    /** 适用授权权益类型:使用权/经营权/通用(供向导按权益类型过滤场景) */
     @TableField("CEC_RIGHT_TYPE")
     private String rightType;
 

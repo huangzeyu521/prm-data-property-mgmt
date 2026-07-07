@@ -21,4 +21,12 @@ public class LocalDataAccessGateway implements DataAccessGateway {
                 applyId, granteeOrg, scope, ticket);
         return ticket;
     }
+
+    @Override
+    public String revoke(String applyId, String granteeOrg, String reason) {
+        String ticket = "REVOKE-" + Sm3Util.hashHex(applyId + "|" + granteeOrg).substring(0, 12).toUpperCase();
+        log.info("[数据权限回收-本地桩] 协议终止 -> 回收 申请={} 被授权方={} 原因={} 工单={}",
+                applyId, granteeOrg, reason, ticket);
+        return ticket;
+    }
 }

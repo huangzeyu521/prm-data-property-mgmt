@@ -56,6 +56,10 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
     private final com.csg.prm.confirm.mapper.ConfirmTableItemMapper tableItemMapper;
     // 业务域解析(系统→业务域),供 rightsFacts 带出表5/表6「所属业务域」
     private final com.csg.prm.confirm.integration.DataCatalogService dataCatalogService;
+    // P0 基线乐观锁:提交/终审时校验变更单所引用基线仍是当前最新已确权版本(线性版本链,防丢失更新)
+    private final com.csg.prm.confirm.service.ConfirmChangeBaselineService changeBaselineService;
+    // P1/P2 变更联动工单:派生草稿入池回链、终审生效自动销号、受影响授权生成处置工单
+    private final com.csg.prm.confirm.service.ConfirmRecheckTaskService recheckTaskService;
 
     public ConfirmApplyServiceImpl(ConfirmApplyMapper mapper, EquityCardService equityCardService,
                                    ConfirmSummaryService summaryService, MetadataGateway metadataGateway,
@@ -63,7 +67,9 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
                                    com.csg.prm.confirm.integration.AssetCardWritebackService cardWriteback,
                                    com.csg.prm.confirm.integration.AssetCardArchiveService cardArchive,
                                    com.csg.prm.confirm.mapper.ConfirmTableItemMapper tableItemMapper,
-                                   com.csg.prm.confirm.integration.DataCatalogService dataCatalogService) {
+                                   com.csg.prm.confirm.integration.DataCatalogService dataCatalogService,
+                                   com.csg.prm.confirm.service.ConfirmChangeBaselineService changeBaselineService,
+                                   com.csg.prm.confirm.service.ConfirmRecheckTaskService recheckTaskService) {
         this.mapper = mapper;
         this.equityCardService = equityCardService;
         this.summaryService = summaryService;
@@ -74,6 +80,8 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
         this.cardArchive = cardArchive;
         this.tableItemMapper = tableItemMapper;
         this.dataCatalogService = dataCatalogService;
+        this.changeBaselineService = changeBaselineService;
+        this.recheckTaskService = recheckTaskService;
     }
 
     /** 各审批状态对应的责任人(节点处理人/角色)。 */
@@ -135,6 +143,8 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
         }
         ConfirmApply a = list.get(0);
         vo.setConfirmed(true);
+        // 数据归属主体(表1 公司主体/权利主体):供授权侧跨地域判定(被授权方省 vs 归属主体省)
+        vo.setOwnerOrg(a.getRightHolder() == null ? "" : a.getRightHolder());
         // null 安全:复用既有 containsAny(不做 null 校验),入参先兜底为空串
         String source = a.getSourceIdentification() == null ? "" : a.getSourceIdentification();
         String relation = a.getRelationIdentification() == null ? "" : a.getRelationIdentification();
@@ -143,6 +153,8 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
                 || containsAny(source, "B", "C", "D", "E");
         if (thirdParty) {
             vo.setThirdPartySource(firstNonBlank(a.getSourceSubject(), a.getThirdPartyInfo(), "涉及第三方来源"));
+            // 第三方许可凭证/说明:确权侧表2已留存(thirdPartyInfo)→ 授权逐表引用,免重传(先确后授到凭证级)
+            vo.setThirdPartyLicense(a.getThirdPartyInfo() == null ? "" : a.getThirdPartyInfo());
         }
         // 隐私/商密(表1 信息关联识别 H个人隐私 / I第三方商密)
         StringBuilder sb = new StringBuilder();
@@ -156,6 +168,10 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
             sb.append("商业秘密");
         }
         vo.setSensitiveType(sb.length() > 0 ? sb.toString() : "无");
+        // 信息授权协议/隐私说明:确权侧已留存(privacyInfo)→ 授权涉隐私行逐表引用,免重传(与第三方凭证对称)
+        if (sb.length() > 0) {
+            vo.setInfoAuthAgreement(firstNonBlank(a.getPrivacyInfo(), a.getThirdPartyInfo(), ""));
+        }
         return vo;
     }
 
@@ -195,6 +211,8 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
         if (!ConfirmApply.STATUS_DRAFT.equals(apply.getStatus())) {
             throw new BusinessException("仅草稿状态的确权申请可删除;已提交/审批中请走撤回或驳回");
         }
+        // 草稿为私有未提交资产,仅本人可删除(与 withdraw 门禁一致,杜绝删除他人草稿)
+        assertApplicant(apply);
         mapper.deleteById(applyId);
     }
 
@@ -208,7 +226,7 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
         ConfirmApply apply = new ConfirmApply();
         apply.setAssetId(assetId);
         apply.setAssetName(StringUtils.hasText(assetName) ? assetName : assetId);
-        apply.setRightType(StringUtils.hasText(rightType) ? rightType : "数据持有权");
+        apply.setRightType(StringUtils.hasText(rightType) ? rightType : "持有权");
         apply.setPurpose(StringUtils.hasText(reason) ? reason : "监测联动派生重确权");
         apply.setReConfirm(Boolean.TRUE);
         // 重确权即"确权变更"登记类型(附录F 表1),并归类变更触发动因
@@ -226,6 +244,16 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
         apply.setStatus(ConfirmApply.STATUS_DRAFT);
         apply.setApplyNo(generateApplyNo());
         mapper.insert(apply);
+        // P1.3 路径收敛:非工单派生(监测联动/手工直调)的重确权草稿登记入统一工单池(回链或补建"变更申请中")。
+        // 工单派生(RECHECK: 前缀)由 deriveChange 自己回链,勿重复。
+        if (sourceRef == null || !sourceRef.startsWith("RECHECK:")) {
+            try {
+                recheckTaskService.linkDerivedApply(assetId, apply.getAssetName(), apply.getApplyId(),
+                        apply.getChangeTrigger(), apply.getPurpose(), sourceRef);
+            } catch (RuntimeException e) {
+                log.warn("[重确权工单] 派生草稿入池失败(不影响草稿创建): assetId={}, 原因={}", assetId, e.getMessage());
+            }
+        }
         return apply.getApplyId();
     }
 
@@ -246,6 +274,8 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
         if (!ConfirmApply.STATUS_DRAFT.equals(apply.getStatus())) {
             throw new BusinessException("仅草稿状态可提交");
         }
+        // 提交是申请人本人的动作:草稿为私有未提交资产,仅本人可提交(杜绝代提他人草稿)
+        assertApplicant(apply);
         validate(apply);
         // 引用完整性:关联资产ID 必须能解析到平台真实数据资产卡片(平台未接入则不阻断)。杜绝幽灵资产。
         if (!cardArchive.assetCardResolvable(apply.getAssetId())) {
@@ -253,6 +283,8 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
         }
         // 资料完整性归集审查(节点40,对齐南网补录工单 M01/M02 填报口径:来源方式/来源主体/G–J 逐维说明)
         validateRegistration(apply);
+        // P0 变更单守卫:同资产在途互斥(版本链线性) + 基线乐观锁(引用基线须仍是当前最新)
+        guardChangeSubmit(apply);
         // 元数据质量门禁:质量评分<80 自动驳回确权(需求§5.5 接口③)。
         // 注意:此处"持久化驳回"而非抛异常——抛异常会令本事务回滚,驳回状态无法落库。
         int score = metadataGateway.qualityScore(apply.getAssetId());
@@ -311,6 +343,8 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
         if (!t.terminal()) {
             return null;
         }
+        // P0 基线乐观锁(终审闸口):审批期间基线被其他单取代(如重新初始登记完成)则拦截,防止在过期基线上生效
+        assertBaselineFresh(apply, "终审生效");
         String cardId = equityCardService.generateFromApply(apply);
         // 确权完成 → 把产权信息/权益基本信息写回平台资产卡片(单向 PRM→平台;非致命,失败不回滚确权)
         try {
@@ -318,7 +352,61 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
         } catch (RuntimeException e) {
             log.warn("[资产卡片写回] 确权完成写回失败(不影响确权): assetId={}, 原因={}", apply.getAssetId(), e.getMessage());
         }
+        // P1 工单闭环 + P2.1 变更生效授权联动(均 best-effort,失败不回滚确权生效)
+        onChangeEffective(apply);
         return cardId;
+    }
+
+    /**
+     * 变更生效联动(终审制卡后):
+     * ① 派生本单的重确权工单自动销号(检测→工单→变更→销号闭环);
+     * ② update 型变更 → 按受影响在用授权逐条生成「授权处置」工单(动态跟踪原则:变更生效那一刻,
+     *    下游授权可能立即越出确权边界,须联动处置而非仅申报时告知)。
+     */
+    private void onChangeEffective(ConfirmApply apply) {
+        if (!"确权变更".equals(apply.getRegisterType()) && !Boolean.TRUE.equals(apply.getReConfirm())) {
+            return;
+        }
+        try {
+            recheckTaskService.completeByApply(apply.getApplyId());
+        } catch (RuntimeException e) {
+            log.warn("[变更工单销号] 失败(不影响确权生效): applyId={}, 原因={}", apply.getApplyId(), e.getMessage());
+        }
+        String trigger = apply.getChangeTrigger() == null ? "" : apply.getChangeTrigger();
+        if (trigger.contains("数据新增")) {
+            return; // insert 型:既有结论未动,不冲击在用授权
+        }
+        try {
+            String sysName = apply.getAssetId() != null && apply.getAssetId().startsWith("SYS:")
+                    ? apply.getAssetId().substring(4) : apply.getAssetName();
+            List<String> codes = tableItemMapper.selectList(
+                            new LambdaQueryWrapper<com.csg.prm.confirm.entity.ConfirmTableItem>()
+                                    .eq(com.csg.prm.confirm.entity.ConfirmTableItem::getApplyId, apply.getApplyId()))
+                    .stream().map(com.csg.prm.confirm.entity.ConfirmTableItem::getTableCode)
+                    .filter(StringUtils::hasText).toList();
+            com.csg.prm.confirm.integration.dto.AuthImpact impact =
+                    dataCatalogService.authImpactOf(sysName, codes, apply.getChangeTrigger());
+            if (impact == null || !impact.hasActive()) {
+                return;
+            }
+            int created = 0;
+            for (com.csg.prm.confirm.integration.dto.AuthImpact.Item it : impact.items()) {
+                com.csg.prm.confirm.entity.ConfirmRecheckTask task = new com.csg.prm.confirm.entity.ConfirmRecheckTask();
+                task.setTaskType(com.csg.prm.confirm.entity.ConfirmRecheckTask.TYPE_AUTH_DISPOSAL);
+                task.setAssetId(apply.getAssetId());
+                task.setAssetName(sysName);
+                task.setSource(com.csg.prm.confirm.entity.ConfirmRecheckTask.SOURCE_CHANGE_EFFECT);
+                task.setTriggerType(apply.getChangeTrigger());
+                task.setReason("确权变更生效(" + (apply.getChangeVersion() != null ? "v" + apply.getChangeVersion() : apply.getApplyNo())
+                        + ")影响在用授权 " + it.authId() + "「" + it.tableName() + "」(" + it.authStatus() + "):" + it.suggestion());
+                task.setRefNo(it.authId());
+                recheckTaskService.createTask(task);
+                created++;
+            }
+            log.info("[变更生效授权联动] applyId={} 生成授权处置工单 {} 张", apply.getApplyId(), created);
+        } catch (RuntimeException e) {
+            log.warn("[变更生效授权联动] 失败(不影响确权生效): applyId={}, 原因={}", apply.getApplyId(), e.getMessage());
+        }
     }
 
     /** 确权状态 -> 附录F 节点编号(纯映射,非流程逻辑) */
@@ -447,7 +535,27 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
                 .ge(StringUtils.hasText(query.getCreateTimeStart()), ConfirmApply::getCreateTime, query.getCreateTimeStart())
                 .le(StringUtils.hasText(query.getCreateTimeEnd()), ConfirmApply::getCreateTime, query.getCreateTimeEnd())
                 .orderByDesc(ConfirmApply::getCreateTime);
+        applyDraftScope(w);
         return w;
+    }
+
+    /**
+     * 草稿可见性隔离:草稿=私有未提交资产,仅创建人可见;已提交及以上状态全量供审计。
+     * 无用户上下文(内部/未启用认证/单测)或 admin/all 角色:不隔离(放行全部)。
+     * 条件:(status != 草稿) OR (creatorId = 当前用户) —— 别人的草稿对本人不可见。
+     */
+    private void applyDraftScope(LambdaQueryWrapper<ConfirmApply> w) {
+        UserContext ctx = UserContextHolder.get();
+        if (ctx == null || !StringUtils.hasText(ctx.getUserId())) {
+            return;
+        }
+        Set<String> roles = ctx.getRoles();
+        if (roles != null && (roles.contains("all") || roles.contains("admin"))) {
+            return;
+        }
+        String me = ctx.getUserId();
+        w.and(x -> x.ne(ConfirmApply::getStatus, ConfirmApply.STATUS_DRAFT)
+                .or().eq(ConfirmApply::getCreatorId, me));
     }
 
     @Override
@@ -576,9 +684,9 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
      * ③ 关联识别 G/H/I/J 涉及则对应主体说明逐维必填("填是则后两列必填")。
      */
     private void validateRegistration(ConfirmApply apply) {
-        // 确权变更(附录F §3.3.2 重新确权):须填写变更触发类型(数据新增/来源变更/管理要求变更/权益到期/其他)
+        // 确权变更(附录F §3.3.2 重新确权):须填写变更触发类型(数据新增/来源变更/管理要求变更/权益到期)
         if ("确权变更".equals(apply.getRegisterType()) && !StringUtils.hasText(apply.getChangeTrigger())) {
-            throw new BusinessException("确权变更须选择变更触发类型(数据新增/数据来源变更/管理要求变更/权益到期/其他)");
+            throw new BusinessException("确权变更须选择变更触发类型(数据新增/数据来源变更/管理要求变更/权益到期)");
         }
         String src = apply.getSourceIdentification() == null ? "" : apply.getSourceIdentification().toUpperCase();
         String rel = apply.getRelationIdentification() == null ? "" : apply.getRelationIdentification().toUpperCase();
@@ -614,6 +722,82 @@ public class ConfirmApplyServiceImpl implements ConfirmApplyService {
             if (rel.contains("J") && !StringUtils.hasText(apply.getRelationSubject())) {
                 throw new BusinessException("存在其他数据权益约束协议(J),须填写关联主体说明");
             }
+        }
+    }
+
+    /** 在途审批状态(变更单互斥判定口径):已提交、未到终态/驳回/撤回。 */
+    private static final java.util.List<String> IN_FLIGHT_STATUSES = java.util.List.of(
+            ConfirmApply.STATUS_PRECHECK, ConfirmApply.STATUS_COMPLIANCE,
+            ConfirmApply.STATUS_MANAGER, ConfirmApply.STATUS_DIRECTOR);
+
+    /**
+     * P0 变更单提交守卫(线性版本链不变量):
+     * ① 在途互斥 —— 同资产同一时刻仅允许一张在途确权变更单。两张变更单基于同一基线 diff,
+     *    先批的修改会被后批静默覆盖(丢失更新),必须在提交口拦截;
+     * ② 基线乐观锁 —— 引用基线(baselineRef)须仍是该资产当前最新已确权版本。
+     */
+    private void guardChangeSubmit(ConfirmApply apply) {
+        if (!"确权变更".equals(apply.getRegisterType())) {
+            return;
+        }
+        ConfirmApply inflight = mapper.selectOne(new LambdaQueryWrapper<ConfirmApply>()
+                .eq(ConfirmApply::getAssetId, apply.getAssetId())
+                .eq(ConfirmApply::getRegisterType, "确权变更")
+                .in(ConfirmApply::getStatus, IN_FLIGHT_STATUSES)
+                .ne(ConfirmApply::getApplyId, apply.getApplyId())
+                .last("LIMIT 1"));
+        if (inflight != null) {
+            throw new BusinessException("该资产已有在途确权变更单(编号 " + inflight.getApplyNo()
+                    + ",状态 " + inflight.getStatus() + "),请待其完成或撤回后再提交,避免并发变更相互覆盖");
+        }
+        assertBaselineFresh(apply, "提交");
+    }
+
+    /**
+     * P0 基线乐观锁:校验变更单引用的基线(baselineRef 格式 <系统名>#v<版本>[@<上一版applyId>])
+     * 仍是该资产当前最新「已完成」确权。数据新增(insert,不修订既有结论)与无基线引用(合成桩/旧单)不校验。
+     */
+    private void assertBaselineFresh(ConfirmApply apply, String action) {
+        if (!"确权变更".equals(apply.getRegisterType())) {
+            return;
+        }
+        String trigger = apply.getChangeTrigger() == null ? "" : apply.getChangeTrigger();
+        if (trigger.contains("数据新增")) {
+            return;
+        }
+        String ref = apply.getBaselineRef();
+        if (!StringUtils.hasText(ref)) {
+            return;
+        }
+        String refPriorApplyId = null;
+        int at = ref.lastIndexOf('@');
+        if (at > 0) {
+            refPriorApplyId = ref.substring(at + 1);
+        }
+        Integer refVersion = null;
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("#v(\\d+)").matcher(ref);
+        if (m.find()) {
+            refVersion = Integer.parseInt(m.group(1));
+        }
+        String sysName = apply.getAssetId() != null && apply.getAssetId().startsWith("SYS:")
+                ? apply.getAssetId().substring(4) : apply.getAssetName();
+        com.csg.prm.confirm.integration.dto.ChangeBaselineFull cur =
+                changeBaselineService.baselineOf(apply.getAssetId(), sysName);
+        if (cur == null || !cur.fromRealConfirm()) {
+            return; // 当前无真实基线(合成桩):无冲突对象,不拦截
+        }
+        boolean fresh;
+        if (StringUtils.hasText(refPriorApplyId)) {
+            fresh = refPriorApplyId.equals(cur.priorApplyId());
+        } else if (refVersion != null && cur.base() != null) {
+            fresh = refVersion == cur.base().version();
+        } else {
+            fresh = true;
+        }
+        if (!fresh) {
+            int curVer = cur.base() != null ? cur.base().version() : 1;
+            throw new BusinessException("基线已过期," + action + "被拦截:该资产确权结论已被更新(当前最新 v" + curVer
+                    + ",本单基于 " + ref + ")。请基于最新结论重新对照后再发起/流转变更,避免覆盖他人已生效的修订");
         }
     }
 

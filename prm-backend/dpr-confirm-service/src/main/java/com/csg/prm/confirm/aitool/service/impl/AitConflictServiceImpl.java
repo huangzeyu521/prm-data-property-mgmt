@@ -87,7 +87,7 @@ public class AitConflictServiceImpl implements AitConflictService {
     /** 各类冲突的法规/政策依据(规则映射,基于法规为建议提供依据)。 */
     private String regulationBasis(String conflictType) {
         if (AitConflict.TYPE_SUBJECT.equals(conflictType)) {
-            return "《关于构建数据基础制度更好发挥数据要素作用的意见》(数据二十条)数据三权分置:数据持有权应归属单一主体;"
+            return "《关于构建数据基础制度更好发挥数据要素作用的意见》(数据二十条)数据三权分置:持有权应归属单一主体;"
                     + "权属争议须补充权属证明并协商划分。";
         }
         if (AitConflict.TYPE_SCOPE.equals(conflictType)) {
@@ -279,7 +279,7 @@ public class AitConflictServiceImpl implements AitConflictService {
                                 + ex.getSubject() + "」(" + claimContent(ex) + ") 与 主体「"
                                 + cur.getSubject() + "」(" + claimContent(cur) + ")",
                         "客体:" + cur.getAssetId() + ";冲突主体:" + ex.getSubject() + "、" + cur.getSubject(), "高",
-                        "建议补充权属证明,协商划分权利主体后再确权(数据持有权应归属单一主体)"));
+                        "建议补充权属证明,协商划分权利主体后再确权(持有权应归属单一主体)"));
             }
             // 范围冲突:对比当前授权范围与历史排他授权范围,识别 覆盖/重叠 的具体区域与影响范围
             ScopeOverlap so = (ruleService.enabled(AitConflict.TYPE_SCOPE)
@@ -703,7 +703,7 @@ public class AitConflictServiceImpl implements AitConflictService {
         return sb.toString();
     }
 
-    /** 天然单一主体的权利:数据持有权/所有权(同一客体不应被多主体声明)。 */
+    /** 天然单一主体的权利:持有权/所有权(同一客体不应被多主体声明)。 */
     private boolean isHolding(String rt) {
         return rt != null && (rt.contains("持有") || rt.contains("所有"));
     }

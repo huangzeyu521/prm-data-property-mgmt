@@ -30,7 +30,7 @@ class ConfirmDashboardTest {
         ConfirmApply a = new ConfirmApply();
         a.setAssetId("DA-DASH-001");
         a.setAssetName("看板测试表");
-        a.setRightType("数据资源持有权");
+        a.setRightType("持有权");
         a.setSourceIdentification("A自行生产数据");
         a.setRightHolder("广东电网有限责任公司");
         String id = applyService.saveDraft(a);
@@ -44,7 +44,7 @@ class ConfirmDashboardTest {
         ConfirmApply b = new ConfirmApply();
         b.setAssetId("DA-DASH-002");
         b.setAssetName("人工预审积压表");
-        b.setRightType("数据资源持有权");
+        b.setRightType("持有权");
         b.setSourceIdentification("A自行生产数据");
         b.setRightHolder("广东电网有限责任公司");
         String pid = applyService.saveDraft(b);
@@ -57,7 +57,7 @@ class ConfirmDashboardTest {
         assertTrue(vo.getCardCount() >= 1, "应统计到权益卡片");
         assertTrue(vo.getPassRate() > 0);
         assertNotNull(vo.getStatusDistribution());
-        assertTrue(vo.getRightTypeDistribution().containsKey("数据资源持有权"));
+        assertTrue(vo.getRightTypeDistribution().containsKey("持有权"));
         assertTrue(vo.getNodeBacklog().containsKey(ConfirmApply.STATUS_PRECHECK),
                 "人工预审中应纳入审批节点积压统计(修复漏统计新节点)");
     }

@@ -25,12 +25,12 @@ public class LocalMetadataGateway implements MetadataGateway {
         // 已知演示卡片:回放平台卡片字段(对齐 test/确权申请 手册 AST-001)
         if ("AST-001".equalsIgnoreCase(id)) {
             return new MetadataInfo("AST-001数据集", "营销业务应用系统", "广东电网有限责任公司", "数字化部",
-                    "张工", "020-88886666", "敏感信息", "广东", "数据持有权", qualityScore(assetId));
+                    "张工", "020-88886666", "敏感信息", "广东", "持有权", qualityScore(assetId));
         }
         // 通用:按卡片字段口径合成(平台接入后由 Feign 实现返回真值,DTO/前端不变)
         String name = StringUtils.hasText(id) ? id.replaceAll(".*[:/]", "") + "数据集" : "未知数据集";
         String base = StringUtils.hasText(id) ? id.replaceAll(".*[:/]", "") : "未知";
         return new MetadataInfo(name, base + "业务系统", "中国南方电网有限责任公司", "数字化部",
-                "数据认责岗", "020-00000000", "普通商密", "", "数据持有权", qualityScore(assetId));
+                "数据认责岗", "020-00000000", "普通商密", "", "持有权", qualityScore(assetId));
     }
 }

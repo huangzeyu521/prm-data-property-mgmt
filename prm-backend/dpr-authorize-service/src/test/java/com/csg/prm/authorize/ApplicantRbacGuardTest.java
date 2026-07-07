@@ -79,7 +79,7 @@ class ApplicantRbacGuardTest {
     @Test
     void enforcement_applyBlocked_reviewAllowed_onBatchApprove() throws Exception {
         Method m = AuthApplyController.class.getMethod("batchApprove", java.util.List.class);
-        HandlerMethod hm = new HandlerMethod(new AuthApplyController(null, null), m);
+        HandlerMethod hm = new HandlerMethod(new AuthApplyController(null, null, null), m);
         RbacInterceptor it = new RbacInterceptor(true);
         try {
             UserContextHolder.set(ctxWithRoles("apply"));
@@ -124,7 +124,7 @@ class ApplicantRbacGuardTest {
     @Test
     void enforcement_gmReachesApprove_applyStillBlocked() throws Exception {
         Method m = AuthApplyController.class.getMethod("approve", String.class, String.class);
-        HandlerMethod hm = new HandlerMethod(new AuthApplyController(null, null), m);
+        HandlerMethod hm = new HandlerMethod(new AuthApplyController(null, null, null), m);
         RbacInterceptor it = new RbacInterceptor(true);
         try {
             UserContextHolder.set(ctxWithRoles("gm"));

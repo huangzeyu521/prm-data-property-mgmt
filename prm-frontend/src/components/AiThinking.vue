@@ -115,14 +115,14 @@ function phaseClass(i) {
   color: var(--prm-color-text-secondary);
 }
 .ai-phases li.passed .ai-dot {
-  background: #36b21d;
+  background: var(--prm-color-success);
 }
 @keyframes ai-pulse {
   50% { box-shadow: 0 0 0 5px rgba(18, 108, 253, 0.08); }
 }
 .ai-ok {
   margin-left: auto;
-  color: #36b21d;
+  color: var(--prm-color-success);
   font-size: 12px;
 }
 .ai-running {

@@ -7,10 +7,10 @@
   <div class="prm-page">
     <el-row :gutter="16" style="margin-bottom: 16px">
       <el-col :span="5"><el-card shadow="hover"><div class="st"><b>{{ stats.total }}</b><span>预警总数</span></div></el-card></el-col>
-      <el-col :span="5"><el-card shadow="hover"><div class="st"><b class="red">{{ stats.pending }}</b><span>待处理</span></div></el-card></el-col>
-      <el-col :span="5"><el-card shadow="hover"><div class="st"><b class="orange">{{ stats.processing }}</b><span>处理中</span></div></el-card></el-col>
-      <el-col :span="5"><el-card shadow="hover"><div class="st"><b class="green">{{ stats.closed }}</b><span>已关闭</span></div></el-card></el-col>
-      <el-col :span="4"><el-card shadow="hover"><div class="st"><b class="blue">{{ stats.closureRate }}%</b><span>整改闭环率</span></div></el-card></el-col>
+      <el-col :span="5"><el-card shadow="hover"><div class="st"><b class="prm-c-danger">{{ stats.pending }}</b><span>待处理</span></div></el-card></el-col>
+      <el-col :span="5"><el-card shadow="hover"><div class="st"><b class="prm-c-warning">{{ stats.processing }}</b><span>处理中</span></div></el-card></el-col>
+      <el-col :span="5"><el-card shadow="hover"><div class="st"><b class="prm-c-success">{{ stats.closed }}</b><span>已关闭</span></div></el-card></el-col>
+      <el-col :span="4"><el-card shadow="hover"><div class="st"><b class="prm-c-primary">{{ stats.closureRate }}%</b><span>整改闭环率</span></div></el-card></el-col>
     </el-row>
 
     <div class="prm-query-bar">
@@ -36,7 +36,7 @@
     </div>
 
     <el-dialog v-model="rcDlg" title="权属变动 · 联动派生重确权" width="500px" align-center>
-      <el-alert type="info" :closable="false" show-icon style="margin-bottom:12px"
+      <el-alert type="info" :closable="false" show-icon style="margin-bottom:10px"
         title="附录F §3.3.2 四触发:数据新增/数据来源变更/管理要求变更/权益到期 将生成重要预警并派生重确权工单(草稿)进入确权变更流程(按季度重确权)。" />
       <el-form :model="rc" label-width="100px">
         <el-form-item label="资产ID" required><el-input v-model="rc.assetId" placeholder="发生权属变动的资产ID" /></el-form-item>
@@ -48,7 +48,7 @@
         </el-form-item>
         <el-form-item label="权属类型">
           <el-select v-model="rc.rightType" style="width:100%">
-            <el-option label="数据资源持有权" value="数据资源持有权" /><el-option label="数据加工使用权" value="数据加工使用权" /><el-option label="数据产品经营权" value="数据产品经营权" />
+            <el-option label="持有权" value="持有权" /><el-option label="使用权" value="使用权" /><el-option label="经营权" value="经营权" />
           </el-select>
         </el-form-item>
         <el-form-item label="说明"><el-input v-model="rc.desc" type="textarea" maxlength="500" show-word-limit :rows="2" /></el-form-item>
@@ -57,7 +57,7 @@
     </el-dialog>
 
     <el-dialog v-model="vioDlg" title="违规上报 · 联动熔断授权" width="500px" align-center>
-      <el-alert type="error" :closable="false" show-icon style="margin-bottom:12px"
+      <el-alert type="error" :closable="false" show-icon style="margin-bottom:10px"
         title="附录F 3.4.5:确认后将生成紧急预警,并联动暂停该资产下全部生效授权证书 + 自动建追责。" />
       <el-form :model="vio" label-width="100px">
         <el-form-item label="资产ID" required><el-input v-model="vio.assetId" placeholder="涉事数据资产ID" /></el-form-item>
@@ -76,14 +76,14 @@
       <el-table :data="rows" v-loading="loading" border stripe>
         <el-table-column type="index" label="序号" width="64" align="center" />
         <el-table-column prop="alertLevel" label="级别" width="90" align="center">
-          <template #default="{ row }"><el-tag :type="levelTag(row.alertLevel)">{{ row.alertLevel }}</el-tag></template>
+          <template #default="{ row }"><span :class="'prm-c-' + ((levelTag(row.alertLevel)) || 'primary')">{{ row.alertLevel }}</span></template>
         </el-table-column>
         <el-table-column prop="source" label="来源" width="100" />
         <el-table-column label="所属系统" min-width="120" show-overflow-tooltip><template #default="{ row }">{{ sysName(row) }}</template></el-table-column>
         <el-table-column prop="assetName" label="数据表" min-width="120" show-overflow-tooltip><template #default="{ row }">{{ row.assetName || '—' }}</template></el-table-column>
         <el-table-column prop="abnormalDesc" label="异常描述" min-width="180" show-overflow-tooltip />
         <el-table-column prop="disposeStatus" label="处置状态" width="100" align="center">
-          <template #default="{ row }"><el-tag :type="statusTag(row.disposeStatus)">{{ row.disposeStatus }}</el-tag></template>
+          <template #default="{ row }"><span :class="'prm-c-' + ((statusTag(row.disposeStatus)) || 'primary')">{{ row.disposeStatus }}</span></template>
         </el-table-column>
         <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
@@ -94,7 +94,7 @@
         </el-table-column>
       </el-table>
       <el-pagination
-        style="margin-top: 16px; justify-content: flex-end"
+        style="margin-top: 20px; justify-content: flex-end"
         background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]" :total="total"
         :current-page="query.current" :page-size="query.size" @current-change="onPage" @size-change="s=>{query.size=s;query.current=1;load()}" />
     </div>
@@ -104,7 +104,9 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { confirmAsync } from '@/utils/confirmAsync'
 import { pageAlert, disposeAlert, closeAlert, getAlertStats, runComplianceCheck, reportViolation, triggerReConfirm, pushAlert } from '@/api/monitor'
+import { useTablePage } from '@/composables/useTablePage'
 
 const levels = ['紧急', '重要', '普通']
 const statuses = ['待处理', '处理中', '已关闭']
@@ -114,14 +116,14 @@ const triggerTypes = ['数据新增', '数据来源变更', '管理要求变更'
 const vioDlg = ref(false)
 const vio = reactive({ assetId: '', violationType: '越权调用', ruleId: '', desc: '' })
 const rcDlg = ref(false)
-const rc = reactive({ assetId: '', assetName: '', triggerType: '数据来源变更', rightType: '数据资源持有权', desc: '' })
+const rc = reactive({ assetId: '', assetName: '', triggerType: '数据来源变更', rightType: '持有权', desc: '' })
 // 库表级:assetId=SYS:系统名 → 所属系统;非 SYS: 原样(兼容旧告警 assetId)
 function sysName(row) { const a = (row && row.assetId) || ''; return a.startsWith('SYS:') ? a.slice(4) : (a || '—') }
-const query = reactive({ current: 1, size: 10, alertLevel: '', disposeStatus: '' })
-const rows = ref([])
-const total = ref(0)
-const loading = ref(false)
 const stats = reactive({ total: 0, pending: 0, processing: 0, closed: 0, closureRate: 0 })
+// 每次拉取后刷新顶部统计卡片(onLoaded 钩子:search/reset/onPage/受理处置后均覆盖)
+const { query, rows, total, loading, load, search: onSearch, reset: onReset, onPage } = useTablePage(
+  pageAlert, { alertLevel: '', disposeStatus: '' }, { onLoaded: loadStats }
+)
 
 function levelTag(l) {
   return { 紧急: 'danger', 重要: 'warning', 普通: 'info' }[l] || 'info'
@@ -133,20 +135,6 @@ function statusTag(s) {
 async function loadStats() {
   Object.assign(stats, await getAlertStats())
 }
-async function load() {
-  loading.value = true
-  try {
-    const res = await pageAlert({ ...query })
-    rows.value = res.records || []
-    total.value = res.total || 0
-  } finally {
-    loading.value = false
-  }
-  loadStats()
-}
-function onSearch() { query.current = 1; load() }
-function onReset() { query.alertLevel = ''; query.disposeStatus = ''; onSearch() }
-function onPage(p) { query.current = p; load() }
 
 function onDispose(row) {
   ElMessageBox.prompt('请输入处置说明', '受理处置', { confirmButtonText: '确定', cancelButtonText: '取消' })
@@ -163,9 +151,7 @@ async function onPush(row) {
   ElMessage.success('已按规则通知方式定向推送责任人')
 }
 function onRunCheck() {
-  ElMessageBox.confirm('将对已确权档案执行到期合规巡检并生成预警,是否继续', '提示', {
-    confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
-  }).then(async () => {
+  confirmAsync('将对已确权档案执行到期合规巡检并生成预警,是否继续', '提示', async () => {
     const n = await runComplianceCheck(30)
     ElMessage.success(`巡检完成,发现 ${n} 条到期风险`)
     load()
@@ -188,7 +174,7 @@ async function confirmReConfirm() {
   const r = await triggerReConfirm(rc.assetId, rc.assetName, rc.rightType, rc.triggerType, rc.desc)
   ElMessage.success(r.reConfirmId ? `已派生重确权工单 ${r.reConfirmId}` : '已生成预警,重确权工单已联动派生(本地桩)')
   rcDlg.value = false
-  Object.assign(rc, { assetId: '', assetName: '', triggerType: '数据来源变更', rightType: '数据资源持有权', desc: '' })
+  Object.assign(rc, { assetId: '', assetName: '', triggerType: '数据来源变更', rightType: '持有权', desc: '' })
   load()
 }
 
@@ -199,5 +185,4 @@ onMounted(load)
 .st { text-align: center; }
 .st b { display: block; font-size: 26px; }
 .st span { color: var(--prm-color-text-secondary); font-size: 12px; }
-.red { color: #e21f0c; } .orange { color: #ffc417; } .green { color: #36b21d; } .blue { color: #1e87f0; }
 </style>

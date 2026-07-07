@@ -118,7 +118,7 @@ public class ComplianceCheckServiceImpl implements ComplianceCheckService {
                         expired ? AlertRecord.LEVEL_URGENT : AlertRecord.LEVEL_IMPORTANT, byDim, wf);
             }
             // ② 权限范围:对外开放/经营权 但未取得对外授权 -> 越权
-            boolean openScope = "对外开放".equals(a.getUseScope()) || "数据产品经营权".equals(a.getRightType());
+            boolean openScope = "对外开放".equals(a.getUseScope()) || "经营权".equals(a.getRightType());
             if (openScope && !STATUS_AUTHORIZED.equals(a.getAuthStatus())) {
                 record(reportId, DIM_SCOPE, a.getAssetId(), a.getAssetName(), ComplianceResult.RESULT_FAIL,
                         "对外经营/开放使用但未取得对外授权,超出权限范围(越权风险)",

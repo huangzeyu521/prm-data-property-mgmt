@@ -7,6 +7,7 @@ import com.csg.prm.common.api.Result;
 import com.csg.prm.common.query.PageRequest;
 import jakarta.validation.Valid;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -91,6 +92,22 @@ public class BatchAuthListController {
         return Result.success();
     }
 
+    /** 删除草案清单(仅草案;级联删草稿明细)。申报人本人操作。 */
+    @com.csg.prm.common.auth.RequiresRole({"apply", "admin"})
+    @DeleteMapping("/{batchListId}")
+    public Result<Void> delete(@PathVariable String batchListId) {
+        service.delete(batchListId);
+        return Result.success();
+    }
+
+    /** 撤回申报稿清单(申报稿→草案 + 在审明细退回草稿)。申报人本人操作。 */
+    @com.csg.prm.common.auth.RequiresRole({"apply", "admin"})
+    @PostMapping("/{batchListId}/withdraw")
+    public Result<Void> withdraw(@PathVariable String batchListId) {
+        service.withdraw(batchListId);
+        return Result.success();
+    }
+
     /**
      * 批准批量清单(申报稿→批准)。BA-03 批量授权 node90:此终批为「领导小组办公室」专属。
      * 数字化部三节点(主管/经理/副总)的审核在明细 AuthApply 链逐项完成(主管=node60),不在清单级终批。
@@ -98,7 +115,8 @@ public class BatchAuthListController {
     @com.csg.prm.common.auth.RequiresRole({"leadership", "admin"})
     @PostMapping("/{batchListId}/approve")
     public Result<Void> approve(@PathVariable String batchListId) {
-        service.approve(batchListId);
+        service.approve(batchListId);                          // 事务1:门禁校验 + 置「批准」,提交
+        service.autoGenerateAgreementAfterApprove(batchListId); // 事务2:best-effort 自动生成协议(失败不回滚批准)
         return Result.success();
     }
 

@@ -26,39 +26,39 @@
       </div>
     </div>
 
+    <!-- 查询区:筛选项少(初始3/变更4)→ 全部常显单行(数研院规范 §10:字段少用内联单行,「更多/展开」仅为条件溢出);窄屏 flex-wrap 优雅换行;查询/重置右置。若未来筛选项回增到 ≥5,恢复「更多/展开」分层。 -->
     <div class="prm-query-bar">
-      <el-form :inline="true" @submit.prevent>
+      <el-form :inline="true" @submit.prevent class="filter-row">
         <el-form-item label="系统名称"><el-input v-model="q.assetName" placeholder="系统名称" clearable style="width:160px" /></el-form-item>
-        <el-form-item label="权属人"><el-input v-model="q.rightHolder" placeholder="人员/单位" clearable style="width:140px" /></el-form-item>
-        <el-form-item v-if="activeTab === '确权变更'" label="变更触发">
-          <el-select v-model="q.changeTrigger" placeholder="全部触发" clearable style="width:130px">
-            <el-option v-for="t in triggerOpts" :key="t" :label="t" :value="t" />
+        <el-form-item label="状态">
+          <el-select v-model="q.status" placeholder="全部" clearable style="width:120px" @change="onSearch">
+            <el-option v-for="s in statuses" :key="s" :label="s" :value="s" />
           </el-select>
         </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="q.status" placeholder="全部" clearable style="width:120px">
-            <el-option v-for="s in statuses" :key="s" :label="s" :value="s" />
+        <el-form-item v-if="activeTab === '确权变更'" label="变更触发">
+          <el-select v-model="q.changeTrigger" placeholder="全部触发" clearable style="width:130px" @change="onSearch">
+            <el-option v-for="t in triggerOpts" :key="t" :label="t" :value="t" />
           </el-select>
         </el-form-item>
         <el-form-item label="申请时间">
           <el-date-picker v-model="dateRange" type="daterange" value-format="YYYY-MM-DD" range-separator="至"
-            start-placeholder="开始" end-placeholder="结束" style="width:230px" />
+            start-placeholder="开始" end-placeholder="结束" style="width:230px" @change="onSearch" />
         </el-form-item>
-        <el-form-item>
+        <el-form-item class="actions">
           <el-button type="primary" @click="onSearch">查询</el-button>
           <el-button @click="onReset">重置</el-button>
-          <el-button @click="onExport">导出</el-button>
-          <el-button type="success" plain @click="onExportSummary">导出《数据确权信息汇总表》</el-button>
-          <el-button type="success" plain @click="onExportEquity">导出《权益内部管理汇总表》</el-button>
         </el-form-item>
       </el-form>
     </div>
 
-    <div class="prm-table-card">
-      <div style="margin-bottom:12px">
-        <el-button type="primary" :disabled="!draftSel.length" @click="onBatchSubmit">批量提交审核（{{ draftSel.length }} 份草稿）</el-button>
+    <div class="prm-table-card" :class="{ 'prm-maximized': maximized }">
+      <!-- 列自定义 + 列表最大化(高压线:每个列表须支持) -->
+      <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;margin-bottom:8px">
+        <el-button size="small" @click="onExport">导出</el-button>
+        <ColumnSettings :columns="colDefs" :visible="colVis.visible" @toggle="(p, v) => colVis.setVisible(p, v)" @reset="colVis.reset" />
+        <el-button :icon="maximized ? ScaleToOriginal : FullScreen" circle size="small" :title="maximized ? '退出最大化' : '最大化'" @click="toggleMaximize" />
       </div>
-      <el-table :data="rows" v-loading="loading" border stripe @selection-change="onSel" row-key="applyId">
+      <el-table :data="rows" v-loading="loading" border stripe>
         <el-table-column type="expand">
           <template #default="{ row }">
             <div class="expand-detail">
@@ -70,11 +70,11 @@
                 <div class="ed-item ed-wide"><span class="ed-k">变更摘要</span><span class="ed-v">{{ row.changeSummary || '-' }}</span></div>
               </template>
               <div class="ed-item"><span class="ed-k">权属类型</span><span class="ed-v">
-                <el-tag v-for="r in rightTags(row.rightType)" :key="r.full" :type="r.type" size="small" effect="plain" style="margin-right:4px">{{ r.short }}</el-tag>
+                <span v-for="r in rightTags(row.rightType)" :key="r.full" style="margin-right:4px" :class="'prm-c-' + ((r.type) || 'primary')">{{ r.short }}</span>
                 <span v-if="!rightTags(row.rightType).length">-</span>
               </span></div>
-              <div class="ed-item"><span class="ed-k">来源识别</span><span class="ed-v">{{ row.sourceIdentification || '-' }}</span></div>
-              <div class="ed-item"><span class="ed-k">信息关联</span><span class="ed-v">{{ row.relationIdentification || '-' }}</span></div>
+              <div class="ed-item"><span class="ed-k">来源识别</span><span class="ed-v">{{ identFull(row.sourceIdentification, SOURCE_MAP) }}</span></div>
+              <div class="ed-item"><span class="ed-k">信息关联</span><span class="ed-v">{{ identFull(row.relationIdentification, RELATION_MAP) }}</span></div>
               <div class="ed-item"><span class="ed-k">涉第三方/敏感</span><span class="ed-v">{{ row.involvesThirdParty ? '是' : '否' }}</span></div>
               <div class="ed-item"><span class="ed-k">申请模式</span><span class="ed-v">{{ row.applyMode || '常规' }}</span></div>
               <div class="ed-item"><span class="ed-k">主体层级</span><span class="ed-v">{{ row.subjectLevel || '-' }}</span></div>
@@ -85,7 +85,6 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column type="selection" width="46" :selectable="r => r.status === '草稿'" />
         <el-table-column type="index" label="序号" width="52" align="center" />
         <el-table-column prop="applyNo" label="申请编号" width="158" show-overflow-tooltip />
         <el-table-column label="系统名称" min-width="150" show-overflow-tooltip>
@@ -94,29 +93,53 @@
 
         <!-- 初始确权:关注识别完整性 -->
         <template v-if="activeTab === '初始确权'">
-          <el-table-column label="权属类型(三权)" width="172">
+          <el-table-column v-if="colVis.isVisible('rightType')" label="权属类型(三权)" width="172">
             <template #default="{ row }">
               <el-tooltip v-for="r in rightTags(row.rightType)" :key="r.full" :content="r.full" placement="top">
-                <el-tag :type="r.type" size="small" effect="plain" style="margin:1px">{{ r.short }}</el-tag>
+                <span style="margin:1px" :class="'prm-c-' + ((r.type) || 'primary')">{{ r.short }}</span>
               </el-tooltip>
               <span v-if="!rightTags(row.rightType).length" style="color:var(--prm-color-text-disabled)">—</span>
             </template>
           </el-table-column>
-          <el-table-column label="来源识别(A–F)" width="120">
+          <el-table-column v-if="colVis.isVisible('sourceIdent')" width="120">
+            <template #header>
+              <span>来源识别(A–F)</span>
+              <el-tooltip placement="top">
+                <template #content>
+                  <div style="font-weight:600;margin-bottom:2px">数据来源权益识别(对齐表1)</div>
+                  <div v-for="o in SOURCE_CODES" :key="o.v" style="line-height:1.7">{{ o.v }} {{ o.label }}</div>
+                </template>
+                <el-icon class="col-help"><QuestionFilled /></el-icon>
+              </el-tooltip>
+            </template>
             <template #default="{ row }">
-              <el-tag v-for="c in codeList(row.sourceIdentification)" :key="c" size="small" type="primary" effect="plain" style="margin:1px">{{ c }}</el-tag>
+              <el-tooltip v-for="c in codeList(row.sourceIdentification)" :key="c" :content="identText(c, SOURCE_MAP)" placement="top">
+                <span style="margin:1px;cursor:help" class="prm-c-primary">{{ c }}</span>
+              </el-tooltip>
               <span v-if="!codeList(row.sourceIdentification).length" style="color:var(--prm-color-text-disabled)">—</span>
             </template>
           </el-table-column>
-          <el-table-column label="信息关联(G–J)" width="120">
+          <el-table-column v-if="colVis.isVisible('relationIdent')" width="120">
+            <template #header>
+              <span>信息关联(G–J)</span>
+              <el-tooltip placement="top">
+                <template #content>
+                  <div style="font-weight:600;margin-bottom:2px">信息关联权益识别(对齐表1)</div>
+                  <div v-for="o in RELATION_CODES" :key="o.v" style="line-height:1.7">{{ o.v }} {{ o.label }}</div>
+                </template>
+                <el-icon class="col-help"><QuestionFilled /></el-icon>
+              </el-tooltip>
+            </template>
             <template #default="{ row }">
-              <el-tag v-for="c in codeList(row.relationIdentification)" :key="c" size="small" :type="c === 'H' ? 'danger' : 'warning'" effect="plain" style="margin:1px">{{ c }}</el-tag>
+              <el-tooltip v-for="c in codeList(row.relationIdentification)" :key="c" :content="identText(c, RELATION_MAP)" placement="top">
+                <span style="margin:1px;cursor:help" :class="'prm-c-' + ((c === 'H' ? 'danger' : 'warning') || 'primary')">{{ c }}</span>
+              </el-tooltip>
               <span v-if="!codeList(row.relationIdentification).length" style="color:var(--prm-color-text-disabled)">—</span>
             </template>
           </el-table-column>
-          <el-table-column label="涉第三方" width="84" align="center">
+          <el-table-column v-if="colVis.isVisible('thirdParty')" label="涉第三方" width="84" align="center">
             <template #default="{ row }">
-              <el-tag v-if="row.involvesThirdParty" type="warning" size="small" effect="plain">涉</el-tag>
+              <span v-if="row.involvesThirdParty" class="prm-c-warning">涉</span>
               <span v-else style="color:var(--prm-color-text-disabled)">—</span>
             </template>
           </el-table-column>
@@ -124,30 +147,30 @@
 
         <!-- 确权变更:关注改了什么 + 影响 -->
         <template v-else>
-          <el-table-column label="变更触发" min-width="160">
+          <el-table-column v-if="colVis.isVisible('changeTrigger')" label="变更触发" min-width="160">
             <template #default="{ row }">
-              <el-tag v-for="t in triggerTags(row)" :key="t" :type="t === '数据新增' ? 'success' : 'warning'" size="small" effect="plain" style="margin:1px">{{ t }}</el-tag>
+              <span v-for="t in triggerTags(row)" :key="t" style="margin:1px" :class="'prm-c-' + ((t === '数据新增' ? 'success' : 'warning') || 'primary')">{{ t }}</span>
               <span v-if="!triggerTags(row).length" style="color:var(--prm-color-text-disabled)">—</span>
             </template>
           </el-table-column>
-          <el-table-column label="版本" width="72" align="center">
+          <el-table-column v-if="colVis.isVisible('version')" label="版本" width="72" align="center">
             <template #default="{ row }">
-              <el-tag v-if="row.changeVersion" type="info" size="small" effect="plain">v{{ row.changeVersion }}</el-tag>
+              <span v-if="row.changeVersion" class="prm-c-info">v{{ row.changeVersion }}</span>
               <span v-else style="color:var(--prm-color-text-disabled)">—</span>
             </template>
           </el-table-column>
-          <el-table-column prop="baselineRef" label="基线引用" width="148" show-overflow-tooltip>
+          <el-table-column v-if="colVis.isVisible('baselineRef')" prop="baselineRef" label="基线引用" width="148" show-overflow-tooltip>
             <template #default="{ row }">{{ row.baselineRef || '—' }}</template>
           </el-table-column>
-          <el-table-column prop="changeSummary" label="变更摘要" min-width="220" show-overflow-tooltip>
+          <el-table-column v-if="colVis.isVisible('changeSummary')" prop="changeSummary" label="变更摘要" min-width="220" show-overflow-tooltip>
             <template #default="{ row }">{{ row.changeSummary || '—' }}</template>
           </el-table-column>
         </template>
 
         <el-table-column prop="status" label="状态" width="104" align="center">
-          <template #default="{ row }"><el-tag :type="tag(row.status)">{{ row.status }}</el-tag></template>
+          <template #default="{ row }"><span :class="'prm-c-' + ((tag(row.status)) || 'primary')">{{ row.status }}</span></template>
         </el-table-column>
-        <el-table-column label="流转进度" min-width="300">
+        <el-table-column v-if="colVis.isVisible('flowProgress')" label="流转进度" min-width="300">
           <template #default="{ row }">
             <el-steps :active="stepOf(row)" align-center finish-status="success"
               :process-status="row.status === '已驳回' ? 'error' : 'process'" simple style="margin:0" class="flow-mini">
@@ -155,19 +178,17 @@
             </el-steps>
           </template>
         </el-table-column>
-        <el-table-column label="处理时效" width="124">
+        <el-table-column v-if="colVis.isVisible('duration')" label="处理时效" width="124">
           <template #default="{ row }">{{ duration(row) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="158" fixed="right">
+        <!-- 查询页=纯只读审计视图:草稿的编辑/删除、在审撤回、撤回后重提 均收敛到「我的申请」发件箱,此处只看不改 -->
+        <el-table-column label="操作" width="96" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="onProgress(row)">进度详情</el-button>
-            <el-button v-if="row.status === '草稿'" link type="danger" @click="onDelete(row)">删除</el-button>
-            <el-button v-if="IN_REVIEW.includes(row.status)" link type="warning" @click="onWithdraw(row)">撤回</el-button>
-            <el-button v-if="row.status === '已撤回'" link type="primary" @click="onReopen(row)">重新编辑提交</el-button>
           </template>
         </el-table-column>
       </el-table>
-      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
+      <el-pagination style="margin-top:20px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
         :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" @size-change="s=>{q.size=s;q.current=1;load()}" />
     </div>
 
@@ -179,7 +200,7 @@
           <div style="font-weight:600">{{ l.nodeName }}{{ l.node ? '（节点' + l.node + '）' : '' }}：{{ l.fromStatus }} → {{ l.toStatus }}</div>
           <div style="font-size:12px;color:var(--prm-color-text-secondary);margin-top:2px">责任人：{{ l.responder || '-' }}</div>
           <div v-if="l.opinion" style="font-size:12px;color:var(--prm-color-text-secondary);margin-top:2px">意见：{{ l.opinion }}</div>
-          <div style="font-size:12px;color:#1e87f0;margin-top:4px"><el-icon style="vertical-align:-2px"><Bell /></el-icon> {{ l.pushChannel }}：{{ l.notifyContent }}</div>
+          <div class="prm-c-primary" style="font-size:12px;margin-top:4px"><el-icon style="vertical-align:-2px"><Bell /></el-icon> {{ l.pushChannel }}：{{ l.notifyContent }}</div>
         </el-timeline-item>
       </el-timeline>
     </el-drawer>
@@ -187,14 +208,34 @@
 </template>
 <script setup>
 import { onMounted, reactive, ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { pageConfirmApply, statsConfirmApply, deleteConfirmApply, withdrawConfirm, getConfirmFlowLog, confirmHistoryExportUrl, batchSubmitConfirm, confirmSummaryExportUrl, equityConsolidationExportUrl } from '@/api/confirm'
+import { FullScreen, ScaleToOriginal } from '@element-plus/icons-vue'
+import { SOURCE_CODES, RELATION_CODES, SOURCE_MAP, RELATION_MAP, identText } from '@/lib/identCodes'
+import ColumnSettings from '@/components/ColumnSettings.vue'
+import { useColumnVisibility } from '@/composables/useColumnVisibility'
+import { useMaximize } from '@/composables/useMaximize'
+import { useTablePage } from '@/composables/useTablePage'
+import { pageConfirmApply, statsConfirmApply, getConfirmFlowLog, confirmHistoryExportUrl } from '@/api/confirm'
 
-const router = useRouter()
-const IN_REVIEW = ['人工预审中', '合规审核中', '主管复核中', '经理终审中']
 const statuses = ['草稿', '人工预审中', '合规审核中', '主管复核中', '经理终审中', '已完成', '已驳回', '已撤回']
-const triggerOpts = ['数据新增', '数据来源变更', '管理要求变更', '权益到期', '其他']
+const triggerOpts = ['数据新增', '数据来源变更', '管理要求变更', '权益到期']
+
+
+// 列自定义(高压线):两个 Tab 的可选列不同,colDefs 随 activeTab 切换
+const COL_DEFS_INITIAL = [
+  { prop: 'rightType', label: '权属类型(三权)' }, { prop: 'sourceIdent', label: '来源识别(A–F)' },
+  { prop: 'relationIdent', label: '信息关联(G–J)' }, { prop: 'thirdParty', label: '涉第三方' },
+  { prop: 'flowProgress', label: '流转进度' }, { prop: 'duration', label: '处理时效' }
+]
+const COL_DEFS_CHANGE = [
+  { prop: 'changeTrigger', label: '变更触发' }, { prop: 'version', label: '版本' },
+  { prop: 'baselineRef', label: '基线引用' }, { prop: 'changeSummary', label: '变更摘要' },
+  { prop: 'flowProgress', label: '流转进度' }, { prop: 'duration', label: '处理时效' }
+]
+const colDefs = computed(() => activeTab.value === '初始确权' ? COL_DEFS_INITIAL : COL_DEFS_CHANGE)
+const colVis = useColumnVisibility('main', [...COL_DEFS_INITIAL, ...COL_DEFS_CHANGE])
+
+// 列表最大化(高压线§11)
+const { maximized, toggle: toggleMaximize } = useMaximize()
 
 // ===== 登记类型 Tab(2 个:初始确权 / 确权变更)=====
 const activeTab = ref('初始确权')
@@ -211,11 +252,13 @@ function sysName(row) {
 function isChange(row) { return row.registerType === '确权变更' || row.reConfirm === true }
 function triggerTags(row) { return String(row.changeTrigger || '').split(/[、,，]/).map(s => s.trim()).filter(Boolean) }
 function codeList(s) { return String(s || '').split(/[、,，]/).map(x => x.trim()).filter(Boolean) }
+// 展开详情:代码串 "A、B" → "A 自行生产数据、B 公开采集数据"(带释义)
+function identFull(s, map) { const l = codeList(s); return l.length ? l.map(c => identText(c, map)).join('、') : '-' }
 // 权属类型 = 三权多选(持有/使用/经营权可并存):rightType 为「、」拼接串,拆成多标签(短名+全名悬浮)
 const RIGHT_MAP = {
-  数据资源持有权: { short: '持有权', type: 'primary' },
-  数据加工使用权: { short: '使用权', type: 'success' },
-  数据产品经营权: { short: '经营权', type: 'warning' }
+  持有权: { short: '持有权', type: 'primary' },
+  使用权: { short: '使用权', type: 'success' },
+  经营权: { short: '经营权', type: 'warning' }
 }
 function rightTags(rightType) {
   return String(rightType || '').split(/[、,，]/).map(s => s.trim()).filter(Boolean)
@@ -253,20 +296,18 @@ function duration(row) {
 // 当前 Tab 的过滤(含 registerType=当前类型);全量过滤(供 Tab 标签计数,不含 registerType)
 function tabParams() {
   return {
-    assetName: q.assetName, status: q.status, rightHolder: q.rightHolder,
+    assetName: q.assetName, status: q.status,
     registerType: activeTab.value, changeTrigger: activeTab.value === '确权变更' ? q.changeTrigger : '',
     createTimeStart: dateRange.value?.[0] || '', createTimeEnd: dateRange.value?.[1] ? dateRange.value[1] + ' 23:59:59' : ''
   }
 }
 function globalParams() {
   return {
-    assetName: q.assetName, rightHolder: q.rightHolder,
+    assetName: q.assetName,
     createTimeStart: dateRange.value?.[0] || '', createTimeEnd: dateRange.value?.[1] ? dateRange.value[1] + ' 23:59:59' : ''
   }
 }
 function onExport() { window.open(confirmHistoryExportUrl(tabParams()), '_blank') }
-function onExportSummary() { window.open(confirmSummaryExportUrl(), '_blank') }
-function onExportEquity() { window.open(equityConsolidationExportUrl(), '_blank') }
 
 const drawer = ref(false); const logs = ref([]); const curNo = ref('')
 function fmt(t) { return t ? String(t).replace('T', ' ').slice(0, 19) : '-' }
@@ -276,35 +317,16 @@ async function onProgress(row) {
   drawer.value = true
 }
 
-const draftSel = ref([])
-function onSel(sel) { draftSel.value = sel.filter(r => r.status === '草稿') }
-async function onBatchSubmit() {
-  const ids = draftSel.value.map(r => r.applyId)
-  const r = await batchSubmitConfirm(ids)
-  ElMessage[r.failed ? 'warning' : 'success'](`批量提交:成功 ${r.success}/${r.total}${r.failed ? '，失败 ' + r.failed : ''}`)
-  load()
-}
-
-async function onWithdraw(row) {
-  try {
-    const { value } = await ElMessageBox.prompt(`确认撤回确权申请「${row.applyNo}」?撤回后可重新编辑提交`, '撤回申请', { inputType: 'textarea', inputPlaceholder: '撤回原因(可空)' })
-    await withdrawConfirm(row.applyId, value || '')
-    ElMessage.success('已撤回,可在「已撤回」项重新编辑提交')
-    load()
-  } catch (e) { /* 取消 */ }
-}
-function onReopen(row) {
-  sessionStorage.setItem('prm-reopen', JSON.stringify({ domain: '确权', raw: row }))
-  const path = isChange(row) ? '/dpr/confirm/change' : '/dpr/confirm/wizard'
-  router.push({ path, query: { reopen: 1 } })
-}
-function onDelete(row) {
-  ElMessageBox.confirm(`确认删除草稿确权申请「${row.applyNo}」?`, '删除草稿', { type: 'warning' })
-    .then(async () => { await deleteConfirmApply(row.applyId); ElMessage.success('已删除'); load() }).catch(() => {})
-}
-
-const q = reactive({ current: 1, size: 10, assetName: '', status: '', rightHolder: '', changeTrigger: '' })
-const rows = ref([]); const total = ref(0); const loading = ref(false)
+const { query: q, rows, total, loading, load, search: doSearch, reset: doReset } = useTablePage(
+  (p) => pageConfirmApply({ ...p, ...tabParams() }),
+  { assetName: '', status: '', changeTrigger: '' },
+  {
+    onLoaded: async () => {
+      const [sg, st] = await Promise.all([statsConfirmApply(globalParams()), statsConfirmApply(tabParams())])
+      Object.assign(statGlobal, sg || {}); Object.assign(stat, st || {})
+    }
+  }
+)
 function tag(s) { return { 已完成: 'success', 已驳回: 'danger', 已撤回: 'info', 草稿: 'info' }[s] || 'warning' }
 const NODE_STEP = { 草稿: 0, 人工预审中: 1, 合规审核中: 2, 主管复核中: 3, 经理终审中: 4, 已完成: 6, 已撤回: 1 }
 function stepOf(row) {
@@ -312,24 +334,8 @@ function stepOf(row) {
   return NODE_STEP[row.status] ?? 0
 }
 
-async function load() {
-  loading.value = true
-  try {
-    const [r, sg, st] = await Promise.all([
-      pageConfirmApply({ ...q, ...tabParams() }),
-      statsConfirmApply(globalParams()),
-      statsConfirmApply(tabParams())
-    ])
-    rows.value = r.records || []; total.value = r.total || 0
-    Object.assign(statGlobal, sg || {})
-    Object.assign(stat, st || {})
-  } finally { loading.value = false }
-}
-function onSearch() { q.current = 1; activeStat.value = ''; load() }
-function onReset() {
-  q.assetName = ''; q.status = ''; q.rightHolder = ''; q.changeTrigger = ''
-  dateRange.value = []; activeStat.value = ''; q.current = 1; load()
-}
+function onSearch() { activeStat.value = ''; doSearch() }
+function onReset() { dateRange.value = []; activeStat.value = ''; doReset() }
 onMounted(load)
 </script>
 
@@ -364,4 +370,12 @@ onMounted(load)
 /* 流转进度列:缩小步骤标题字号 + 收紧行高,去 simple 模式 V 形连接符 */
 .flow-mini :deep(.el-step__title) { font-size: 12px; line-height: 1.2; }
 .flow-mini :deep(.el-step__arrow) { display: none; }
+
+/* 列头释义帮助图标(A–F / G–J 代码含义) */
+.col-help { margin-left: 3px; vertical-align: -2px; cursor: help; color: var(--prm-color-text-weak); font-size: 13px; }
+
+/* 单行筛选:字段左、查询/重置右;窄屏 flex-wrap 优雅换行(数研院规范 §10) */
+.filter-row { display: flex; flex-wrap: wrap; align-items: center; }
+.filter-row :deep(.el-form-item) { margin-bottom: 8px; }
+.filter-row .actions { margin-left: auto; }
 </style>

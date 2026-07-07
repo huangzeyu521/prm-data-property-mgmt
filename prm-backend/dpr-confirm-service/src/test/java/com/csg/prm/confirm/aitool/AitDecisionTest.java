@@ -39,7 +39,7 @@ class AitDecisionTest {
         ConfirmApply a = new ConfirmApply();
         a.setAssetId(asset);
         a.setAssetName(asset + "表");
-        a.setRightType("数据持有权");
+        a.setRightType("持有权");
         a.setRightHolder("广东电网");
         return applyService.saveDraft(a);
     }
@@ -51,7 +51,7 @@ class AitDecisionTest {
         AitMaterial m = new AitMaterial();
         m.setFileName(asset + "-确权证明-盖章.pdf");
         m.setApplyId(applyId);
-        m.setContent("数据持有权,广东电网,有效期3年,自行生产,已盖章");
+        m.setContent("持有权,广东电网,有效期3年,自行生产,已盖章");
         String mid = materialService.upload(m);
         materialService.parse(mid);
 
@@ -73,7 +73,7 @@ class AitDecisionTest {
         AitMaterial m = new AitMaterial();
         m.setFileName(asset + "-确权证明-盖章.pdf");
         m.setApplyId(applyId);
-        m.setContent("数据持有权,广东电网,有效期3年,自行生产,已盖章");
+        m.setContent("持有权,广东电网,有效期3年,自行生产,已盖章");
         materialService.parse(materialService.upload(m));
 
         AitDecision d = decisionService.analyze(applyId);
@@ -102,7 +102,7 @@ class AitDecisionTest {
         AitMaterial m = new AitMaterial();
         m.setFileName(asset + "-权属证明.pdf");
         m.setApplyId(applyId);
-        m.setContent("数据持有权,广东电网,有效期3年,自行生产");
+        m.setContent("持有权,广东电网,有效期3年,自行生产");
         materialService.parse(materialService.upload(m));
 
         AitDecision d = decisionService.analyze(applyId);
@@ -115,12 +115,12 @@ class AitDecisionTest {
         String asset = "DA-DEC-5";
         String applyId = newApply(asset);
         AitKgClaim a = new AitKgClaim();
-        a.setAssetId(asset); a.setSubject("广东电网"); a.setRightType("数据持有权");
+        a.setAssetId(asset); a.setSubject("广东电网"); a.setRightType("持有权");
         a.setAuthScope("用电量、负荷"); a.setValidDate(LocalDateTime.now().plusYears(2));
         a.setSourceType(AitKgClaim.SRC_CURRENT);
         conflictService.addClaim(a);
         AitKgClaim b = new AitKgClaim();
-        b.setAssetId(asset); b.setSubject("深圳供电局"); b.setRightType("数据加工使用权");
+        b.setAssetId(asset); b.setSubject("深圳供电局"); b.setRightType("使用权");
         b.setAuthScope("负荷、电压"); b.setValidDate(LocalDateTime.now().plusYears(1));
         b.setSourceType(AitKgClaim.SRC_HISTORY);
         conflictService.addClaim(b);
@@ -152,7 +152,7 @@ class AitDecisionTest {
         AitMaterial m = new AitMaterial();
         m.setFileName(asset + "-盖章.pdf");
         m.setApplyId(applyId);
-        m.setContent("数据持有权,已盖章");
+        m.setContent("持有权,已盖章");
         materialService.parse(materialService.upload(m));
         // 制造两个高风险冲突(历史所有权 + 当前持有权矛盾 等)
         AitKgClaim hist = new AitKgClaim();
@@ -161,7 +161,7 @@ class AitDecisionTest {
         hist.setValidDate(LocalDateTime.now().plusYears(1)); hist.setSourceType(AitKgClaim.SRC_HISTORY);
         conflictService.addClaim(hist);
         AitKgClaim cur = new AitKgClaim();
-        cur.setAssetId(asset); cur.setSubject("广东电网"); cur.setRightType("数据持有权");
+        cur.setAssetId(asset); cur.setSubject("广东电网"); cur.setRightType("持有权");
         cur.setAuthScope("全字段"); cur.setExclusive(true);
         cur.setValidDate(LocalDateTime.now().plusYears(2)); cur.setSourceType(AitKgClaim.SRC_CURRENT);
         conflictService.addClaim(cur);

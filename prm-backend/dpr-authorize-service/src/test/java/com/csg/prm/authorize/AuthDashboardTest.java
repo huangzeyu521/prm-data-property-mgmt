@@ -32,15 +32,18 @@ class AuthDashboardTest {
         a.setAssetName("授权看板测试表");
         a.setEquityCardId("EC-PRA-DASH01");
         a.setGranteeOrg("广州供电局");
-        a.setRightType("数据加工使用权");
+        a.setRightType("使用权");
         String id = applyService.saveDraft(a);
         applyService.submit(id);
-        // 专项五级审批:合规->业务->主管->经理->副总->已生效
+        // 专项(表2 20-100):单位初审->合规->业务->主管->经理->副总->批准(待双签)
         applyService.approve(id, null);
         applyService.approve(id, null);
         applyService.approve(id, null);
         applyService.approve(id, null);
-        applyService.approve(id, null); // 生效 + 生成证书
+        applyService.approve(id, null);
+        applyService.approve(id, null); // 副总终审 -> 批准(待双签)
+        // 协议双签+《保密承诺函》归档收口:批准 -> 已生效 + 生成证书
+        applyService.markEffectiveAfterAgreement(id);
 
         AuthDashboardVO vo = dashboardService.dashboard(null, null, null, null);
         assertTrue(vo.getTotalApply() >= 1);
@@ -49,6 +52,6 @@ class AuthDashboardTest {
         assertTrue(vo.getEffectiveRate() > 0);
         assertNotNull(vo.getModeDistribution());
         assertTrue(vo.getModeDistribution().containsKey(AuthApply.MODE_SPECIAL));
-        assertTrue(vo.getRightTypeDistribution().containsKey("数据加工使用权"));
+        assertTrue(vo.getRightTypeDistribution().containsKey("使用权"));
     }
 }

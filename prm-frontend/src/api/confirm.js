@@ -23,6 +23,8 @@ export const rejectConfirm = (applyId, reason) =>
 // 申请人主动撤回(审批中 -> 已撤回中间态),撤回后可重新编辑提交
 export const withdrawConfirm = (applyId, reason) =>
   request.post(`/dpr/confirm/apply/${applyId}/withdraw`, null, { params: { reason } })
+// 按 id 取整单(草稿就地续填:从「我的申请」编辑进入,回填表单/表2/材料)
+export const getConfirmApply = (applyId) => request.get(`/dpr/confirm/apply/${applyId}`)
 
 // 确权表单 元数据自动填充(含质量评分,P1)
 export const autofillConfirm = (assetId) => request.get('/dpr/confirm/apply/autofill', { params: { assetId } })

@@ -39,9 +39,9 @@
         <el-table-column label="权益卡片编码" min-width="210" show-overflow-tooltip>
           <template #default="{ row }">
             <span style="font-weight:600">{{ row.cardNo }}</span>
-            <el-tag v-if="row.version && row.version > 1" type="info" size="small" effect="plain" style="margin-left:6px">v{{ row.version }}</el-tag>
+            <span v-if="row.version && row.version > 1" style="margin-left:6px" class="prm-c-info">v{{ row.version }}</span>
             <el-tooltip v-if="row.supersededCardNo" :content="`本卡为变更后新版,取代旧卡 ${row.supersededCardNo}`" placement="top">
-              <el-tag type="success" size="small" effect="plain" style="margin-left:4px">变更新版</el-tag>
+              <span style="margin-left:4px" class="prm-c-success">变更新版</span>
             </el-tooltip>
           </template>
         </el-table-column>
@@ -54,7 +54,7 @@
         <el-table-column label="权属类型" width="100" align="center">
           <template #default="{ row }">
             <el-tooltip :content="rightTag(row.rightType).full" placement="top">
-              <el-tag :type="rightTag(row.rightType).type" size="small" effect="plain">{{ rightTag(row.rightType).short }}</el-tag>
+              <span :class="'prm-c-' + ((rightTag(row.rightType).type) || 'primary')">{{ rightTag(row.rightType).short }}</span>
             </el-tooltip>
           </template>
         </el-table-column>
@@ -65,11 +65,11 @@
         <el-table-column label="有效期至" width="160">
           <template #default="{ row }">
             {{ fmtDate(row.validDate) }}
-            <el-tag v-if="isDueSoon(row)" type="warning" size="small" effect="plain" style="margin-left:4px">{{ daysToExpire(row) }}天到期</el-tag>
+            <span v-if="isDueSoon(row)" style="margin-left:4px" class="prm-c-warning">{{ daysToExpire(row) }}天到期</span>
           </template>
         </el-table-column>
         <el-table-column prop="cardStatus" label="状态" width="84" align="center">
-          <template #default="{ row }"><el-tag :type="statusTag(row.cardStatus)">{{ row.cardStatus }}</el-tag></template>
+          <template #default="{ row }"><span :class="'prm-c-' + ((statusTag(row.cardStatus)) || 'primary')">{{ row.cardStatus }}</span></template>
         </el-table-column>
         <el-table-column label="操作" width="480" fixed="right">
           <template #default="{ row }">
@@ -88,7 +88,7 @@
         注:卡片粒度=系统×库表×权属(三权分置,打在每张数据资产卡片上);制卡由确权终审通过后系统自动生成(工作指引节点80);冻结/失效卡不可用于下游授权(风险熔断);确权变更生成新版卡片(vN)并使旧卡失效;全程留痕(权益可追溯 §6)。
         <br>当前角色「<b>{{ roleLabel }}</b>」:<b>风险处置(冻结/解冻/注销)</b>须「合规管控小组/管理员」(§3.3.3 权益风险处置);<b>发起变更/授权</b>须「申报人/管理员」(§3.3.2 重新确权 / §2 先确后授)。非授权角色按钮已置灰。
       </div>
-      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
+      <el-pagination style="margin-top:20px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
         :total="total" :current-page="query.current" :page-size="query.size" @current-change="onPage" @size-change="s=>{query.size=s;query.current=1;load()}" />
     </div>
 
@@ -98,7 +98,7 @@
           <b>{{ l.action }}</b>　{{ l.fromStatus || '—' }} → {{ l.toStatus }}　<span style="color:var(--prm-color-text-weak)">{{ l.reason }}</span>
         </el-timeline-item>
       </el-timeline>
-      <el-empty v-if="!logs.length" description="暂无变更记录" />
+      <el-empty v-if="!logs.length" description="暂无数据" />
     </el-dialog>
 
     <!-- 结构化凭证详情 -->
@@ -106,8 +106,8 @@
       <el-descriptions title="卡片信息" :column="2" border size="small">
         <el-descriptions-item label="卡片编码">{{ cur.cardNo }}</el-descriptions-item>
         <el-descriptions-item label="版本">v{{ cur.version || 1 }}<span v-if="cur.supersededCardNo" style="color:var(--prm-color-text-weak)"> · 取代 {{ cur.supersededCardNo }}</span></el-descriptions-item>
-        <el-descriptions-item label="状态"><el-tag :type="statusTag(cur.cardStatus)">{{ cur.cardStatus }}</el-tag></el-descriptions-item>
-        <el-descriptions-item label="有效期至">{{ fmtDate(cur.validDate) }}<el-tag v-if="isDueSoon(cur)" type="warning" size="small" effect="plain" style="margin-left:6px">{{ daysToExpire(cur) }}天到期</el-tag></el-descriptions-item>
+        <el-descriptions-item label="状态"><span :class="'prm-c-' + ((statusTag(cur.cardStatus)) || 'primary')">{{ cur.cardStatus }}</span></el-descriptions-item>
+        <el-descriptions-item label="有效期至">{{ fmtDate(cur.validDate) }}<span v-if="isDueSoon(cur)" style="margin-left:6px" class="prm-c-warning">{{ daysToExpire(cur) }}天到期</span></el-descriptions-item>
         <el-descriptions-item label="来源确权单" :span="2">{{ cur.applyId || '-' }}</el-descriptions-item>
       </el-descriptions>
       <el-descriptions title="确权范围(库表级)" :column="2" border size="small" style="margin-top:12px">
@@ -115,7 +115,7 @@
         <el-descriptions-item label="模式名称">{{ cur.schemaName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="库表(数据资产卡片)">{{ cur.tableCode ? cur.assetName : '全系统' }}{{ cur.tableCode ? '（' + cur.tableCode + '）' : '' }}</el-descriptions-item>
         <el-descriptions-item label="权属类型">
-          <el-tag :type="rightTag(cur.rightType).type" size="small" effect="plain">{{ rightTag(cur.rightType).short }}</el-tag>
+          <span :class="'prm-c-' + ((rightTag(cur.rightType).type) || 'primary')">{{ rightTag(cur.rightType).short }}</span>
           <span style="color:var(--prm-color-text-weak);margin-left:6px">{{ rightTag(cur.rightType).full }}</span>
         </el-descriptions-item>
         <el-descriptions-item label="覆盖范围" :span="2">{{ cur.scope || '-' }}</el-descriptions-item>
@@ -139,6 +139,7 @@
         <div class="cert-title">数据资产确权权属凭证</div>
         <div class="cert-sub">中国南方电网有限责任公司 · 数据产权管理平台</div>
         <table class="cert-tbl">
+          <tbody>
           <tr><td class="k">凭证编号</td><td>{{ cur.cardNo }}<span v-if="cur.version && cur.version > 1"> （v{{ cur.version }}）</span></td></tr>
           <tr><td class="k">所属系统 / 模式</td><td>{{ sysName(cur) }}{{ cur.schemaName ? ' / ' + cur.schemaName : '' }}</td></tr>
           <tr><td class="k">确权范围</td><td>{{ cur.scope || '全系统库表' }}</td></tr>
@@ -148,6 +149,7 @@
           <tr><td class="k">权益内容摘要</td><td>{{ cur.rightsContent || rightTag(cur.rightType).full }}</td></tr>
           <tr><td class="k">权益凭证</td><td>{{ cur.rightsCredential || '确权认定资料' }}</td></tr>
           <tr><td class="k">确权时间 / 有效期至</td><td>{{ fmtDate(cur.confirmTime) }} ～ {{ fmtDate(cur.validDate) }}</td></tr>
+          </tbody>
         </table>
         <div class="cert-foot">
           <div class="cert-note">本凭证由数据产权管理平台依"三权分置"确权认定生成，已经区块链 SM3 指纹存证，真伪可溯。</div>
@@ -163,6 +165,8 @@
 import { onMounted, reactive, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { confirmAsync } from '@/utils/confirmAsync'
+import { useTablePage } from '@/composables/useTablePage'
 import { pageEquityCard, statsEquityCard, freezeEquityCard, unfreezeEquityCard, revokeEquityCard, equityCardLogs } from '@/api/confirm'
 import { currentRole, ROLES } from '@/lib/roles'
 
@@ -175,7 +179,7 @@ function canInitiate() { return roleAllowed(['apply', 'business', 'admin']) }   
 const roleLabel = computed(() => (ROLES.find(x => x.key === currentRole()) || {}).label || currentRole())
 // 先确后授一键衔接:正常卡直接发起授权,带资产+卡号到授权向导
 function onAuthorize(row) {
-  router.push({ path: '/dpr/auth/wizard', query: { assetId: row.assetId, assetName: sysName(row), cardNo: row.cardNo } })
+  router.push({ path: '/dpr/auth/wizard', query: { assetId: row.assetId, assetName: sysName(row), cardNo: row.cardNo, rightType: row.rightType } })
 }
 // 已确权系统「发起变更」:跳确权变更申请页(系统级,登记类型=确权变更)
 function onChange(row) {
@@ -187,7 +191,7 @@ function sysName(row) {
   const id = (row && row.assetId) || ''
   return id.startsWith('SYS:') ? id.slice(4) : ((row && row.assetName) || '-')
 }
-// 权属类型(单权)→ 短名标签,兼容"数据资源持有权/数据持有权"等命名
+// 权属类型(单权)→ 短名标签,兼容"持有权/持有权"等命名
 function rightTag(rt) {
   const s = String(rt || '')
   if (s.includes('持有')) return { short: '持有权', type: 'primary', full: s }
@@ -207,10 +211,15 @@ function isDueSoon(row) {
   return d !== null && d > 0 && d <= 90
 }
 
-const query = reactive({ current: 1, size: 10, sysName: '', tableName: '', cardStatus: '', rightType: '' })
-const rows = ref([])
-const total = ref(0)
-const loading = ref(false)
+const { query, rows, total, loading, load, search: doSearch, reset: doReset, onPage } = useTablePage(
+  pageEquityCard,
+  { sysName: '', tableName: '', cardStatus: '', rightType: '' },
+  { onLoaded: refreshStat }
+)
+async function refreshStat() {
+  const s = await statsEquityCard({ sysName: query.sysName, tableName: query.tableName, rightType: query.rightType })
+  Object.assign(stat, s || {})
+}
 const logDlg = ref(false)
 const logs = ref([])
 const detailDlg = ref(false); const certDlg = ref(false)
@@ -237,30 +246,15 @@ function fmtDate(t) { return t ? String(t).replace('T', ' ').slice(0, 10) : '长
 function onDetail(row) { cur.value = row; detailDlg.value = true }
 function onPreview(row) { cur.value = row; certDlg.value = true }
 function printCert() { window.print() }
-async function load() {
-  loading.value = true
-  try {
-    const filters = { sysName: query.sysName, tableName: query.tableName, rightType: query.rightType }
-    const [res, s] = await Promise.all([
-      pageEquityCard({ ...query }),
-      statsEquityCard(filters)
-    ])
-    rows.value = res.records || []
-    total.value = res.total || 0
-    Object.assign(stat, s || {})
-  } finally { loading.value = false }
-}
-function onSearch() { query.current = 1; activeStat.value = ''; load() }
-function onReset() { query.sysName = ''; query.tableName = ''; query.cardStatus = ''; query.rightType = ''; query.current = 1; activeStat.value = ''; load() }
-function onPage(p) { query.current = p; load() }
+function onSearch() { activeStat.value = ''; doSearch() }
+function onReset() { activeStat.value = ''; doReset() }
 function onFreeze(row) {
-  ElMessageBox.confirm(`确认冻结权益卡片"${row.cardNo}"吗,冻结后不可用于授权`, '提示', {
-    confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
-  }).then(async () => { await freezeEquityCard(row.cardId); ElMessage.success('已冻结'); load() }).catch(() => {})
+  confirmAsync(`确认冻结权益卡片"${row.cardNo}"吗,冻结后不可用于授权`, '提示',
+    async () => { await freezeEquityCard(row.cardId); ElMessage.success('已冻结'); load() }).catch(() => {})
 }
 function onUnfreeze(row) {
-  ElMessageBox.confirm(`确认解冻"${row.cardNo}"恢复正常吗`, '提示', { type: 'warning' })
-    .then(async () => { await unfreezeEquityCard(row.cardId); ElMessage.success('已解冻'); load() }).catch(() => {})
+  confirmAsync(`确认解冻"${row.cardNo}"恢复正常吗`, '提示',
+    async () => { await unfreezeEquityCard(row.cardId); ElMessage.success('已解冻'); load() }).catch(() => {})
 }
 function onRevoke(row) {
   ElMessageBox.prompt(`注销不可逆,请输入注销原因`, `注销权益卡片 ${row.cardNo}`, { inputType: 'textarea' })

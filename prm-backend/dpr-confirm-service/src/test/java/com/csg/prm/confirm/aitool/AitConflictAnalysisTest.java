@@ -47,17 +47,17 @@ class AitConflictAnalysisTest {
                 .findFirst().orElseThrow().getRuleId();
 
         String asset = "DA-RULE-" + System.nanoTime();
-        conflictService.addClaim(claim(asset, "广东电网", "数据持有权", false, AitKgClaim.SRC_MATERIAL));
+        conflictService.addClaim(claim(asset, "广东电网", "持有权", false, AitKgClaim.SRC_MATERIAL));
 
         ruleService.toggle(subjRuleId, false);
         try {
-            List<AitConflict> off = conflictService.detect(claim(asset, "深圳供电局", "数据持有权", false, AitKgClaim.SRC_CURRENT));
+            List<AitConflict> off = conflictService.detect(claim(asset, "深圳供电局", "持有权", false, AitKgClaim.SRC_CURRENT));
             assertTrue(off.stream().noneMatch(c -> AitConflict.TYPE_SUBJECT.equals(c.getConflictType())),
                     "停用后不应识别主体冲突");
         } finally {
             ruleService.toggle(subjRuleId, true); // 恢复,避免影响其他用例
         }
-        List<AitConflict> on = conflictService.detect(claim(asset, "南网科研院", "数据持有权", false, AitKgClaim.SRC_CURRENT));
+        List<AitConflict> on = conflictService.detect(claim(asset, "南网科研院", "持有权", false, AitKgClaim.SRC_CURRENT));
         assertTrue(on.stream().anyMatch(c -> AitConflict.TYPE_SUBJECT.equals(c.getConflictType())),
                 "恢复后应识别主体冲突");
     }
@@ -66,8 +66,8 @@ class AitConflictAnalysisTest {
     @Test
     void type_conflict_and_structured_trace() {
         String asset = "DA-TYPE-" + System.nanoTime();
-        conflictService.addClaim(claim(asset, "广东电网", "数据持有权", false, AitKgClaim.SRC_MATERIAL));
-        List<AitConflict> found = conflictService.detect(claim(asset, "广东电网", "数据加工使用权", false, AitKgClaim.SRC_CURRENT));
+        conflictService.addClaim(claim(asset, "广东电网", "持有权", false, AitKgClaim.SRC_MATERIAL));
+        List<AitConflict> found = conflictService.detect(claim(asset, "广东电网", "使用权", false, AitKgClaim.SRC_CURRENT));
 
         AitConflict tc = found.stream().filter(c -> AitConflict.TYPE_RIGHTTYPE.equals(c.getConflictType()))
                 .findFirst().orElseThrow();
@@ -82,10 +82,10 @@ class AitConflictAnalysisTest {
     @Test
     void report_impact_analysis_and_comparison() {
         String asset = "DA-IMPACT-" + System.nanoTime();
-        AitKgClaim hist = claim(asset, "广东电网", "数据持有权", false, AitKgClaim.SRC_HISTORY);
+        AitKgClaim hist = claim(asset, "广东电网", "持有权", false, AitKgClaim.SRC_HISTORY);
         hist.setValidDate(LocalDateTime.of(2027, 1, 1, 0, 0));
         conflictService.addClaim(hist);
-        AitKgClaim cur = claim(asset, "深圳供电局", "数据加工使用权", false, AitKgClaim.SRC_CURRENT);
+        AitKgClaim cur = claim(asset, "深圳供电局", "使用权", false, AitKgClaim.SRC_CURRENT);
         conflictService.addClaim(cur);
         conflictService.detect(cur);
 
@@ -101,8 +101,8 @@ class AitConflictAnalysisTest {
     @Test
     void report_word_and_records_excel_export() {
         String asset = "DA-EXP-" + System.nanoTime();
-        conflictService.addClaim(claim(asset, "广东电网", "数据持有权", false, AitKgClaim.SRC_MATERIAL));
-        conflictService.detect(claim(asset, "深圳供电局", "数据持有权", false, AitKgClaim.SRC_CURRENT));
+        conflictService.addClaim(claim(asset, "广东电网", "持有权", false, AitKgClaim.SRC_MATERIAL));
+        conflictService.detect(claim(asset, "深圳供电局", "持有权", false, AitKgClaim.SRC_CURRENT));
 
         byte[] word = conflictService.exportReportWord(asset, null, null, null, null, null);
         assertTrue(word.length > 0, "Word 报告应可导出");

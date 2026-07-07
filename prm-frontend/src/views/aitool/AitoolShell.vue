@@ -15,7 +15,7 @@
         </el-menu-item>
       </el-menu>
       <div class="ait-spacer"></div>
-      <el-tag v-if="ctx" type="success" effect="dark" class="ait-ctx">调用上下文:{{ ctx }}</el-tag>
+      <span v-if="ctx" class="ait-ctx prm-c-success">调用上下文:{{ ctx }}</span>
       <el-link class="ait-back" :underline="false" @click="backToPlatform">
         <el-icon><Back /></el-icon> 返回数据产权管理
       </el-link>

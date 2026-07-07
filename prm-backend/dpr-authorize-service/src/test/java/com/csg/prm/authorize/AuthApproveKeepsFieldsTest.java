@@ -36,7 +36,7 @@ class AuthApproveKeepsFieldsTest {
         a.setAssetName("用户用电信息表");
         a.setEquityCardId("EC-OK-1");
         a.setGranteeOrg("广州供电局");
-        a.setRightType("数据加工使用权");
+        a.setRightType("使用权");
         a.setScenario("综合能源服务");
         a.setScope("全字段");
         a.setSchemaName("BILLING");
@@ -54,7 +54,7 @@ class AuthApproveKeepsFieldsTest {
         assertNotEquals(beforeStatus, after.getStatus(), "approve 应推进到下一环节");
         // 申请要素不应因审批推进而丢失
         assertEquals("BILLING", after.getSchemaName(), "审批后 模式名称 仍保留");
-        assertEquals("数据加工使用权", after.getRightType(), "审批后 权益类型 仍保留");
+        assertEquals("使用权", after.getRightType(), "审批后 权益类型 仍保留");
         assertEquals("营销域", after.getBusinessDomain(), "审批后 业务域 仍保留");
         assertEquals("综合能源服务", after.getScenario(), "审批后 使用场景 仍保留");
         assertEquals("按调用次数计费,收益 7:3 分成", after.getBenefitAllocation(), "审批后 利益分配 仍保留");

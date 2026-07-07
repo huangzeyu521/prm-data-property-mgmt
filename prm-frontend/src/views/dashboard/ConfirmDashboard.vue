@@ -7,8 +7,8 @@
   <div class="prm-page">
     <div class="prm-query-bar">
       <el-form :inline="true" @submit.prevent>
-        <el-form-item label="责任部门">
-          <el-select v-model="q.deptName" placeholder="组织/部门(真实组织树)" clearable filterable allow-create default-first-option style="width:200px">
+        <el-form-item label="单位">
+          <el-select v-model="q.deptName" placeholder="组织/单位(真实组织树)" clearable filterable allow-create default-first-option style="width:200px">
             <el-option v-for="o in orgOptions" :key="o.id" :label="o.bizOrgName" :value="o.bizOrgName" />
           </el-select>
         </el-form-item>
@@ -21,27 +21,20 @@
 
     <el-row :gutter="16">
       <el-col :span="5"><el-card shadow="hover"><div class="st"><b>{{ d.totalApply }}</b><span>确权申请总量</span></div></el-card></el-col>
-      <el-col :span="5"><el-card shadow="hover"><div class="st"><b class="green">{{ d.done }}</b><span>已完成确权</span></div></el-card></el-col>
-      <el-col :span="5"><el-card shadow="hover"><div class="st"><b class="orange">{{ d.pending }}</b><span>待处理</span></div></el-card></el-col>
-      <el-col :span="5"><el-card shadow="hover"><div class="st"><b class="blue">{{ d.passRate }}%</b><span>确权通过率</span></div></el-card></el-col>
+      <el-col :span="5"><el-card shadow="hover"><div class="st"><b class="prm-c-success">{{ d.done }}</b><span>已完成确权</span></div></el-card></el-col>
+      <el-col :span="5"><el-card shadow="hover"><div class="st"><b class="prm-c-warning">{{ d.pending }}</b><span>待处理</span></div></el-card></el-col>
+      <el-col :span="5"><el-card shadow="hover"><div class="st"><b class="prm-c-primary">{{ d.passRate }}%</b><span>确权通过率</span></div></el-card></el-col>
       <el-col :span="4"><el-card shadow="hover"><div class="st"><b>{{ d.cardCount }}</b><span>权益卡片数</span></div></el-card></el-col>
     </el-row>
 
-    <el-row :gutter="16" style="margin-top:16px">
+    <el-row :gutter="16" style="margin-top:20px">
       <el-col :span="8"><el-card header="确权状态分布"><div ref="statusRef" style="height:300px"></div></el-card></el-col>
       <el-col :span="8"><el-card header="权益类型构成"><div ref="rightRef" style="height:300px"></div></el-card></el-col>
       <el-col :span="8"><el-card header="流程瓶颈（各审批节点积压）"><div ref="backlogRef" style="height:300px"></div></el-card></el-col>
     </el-row>
-    <el-row :gutter="16" style="margin-top:16px">
+    <el-row :gutter="16" style="margin-top:20px">
       <el-col :span="24"><el-card header="确权趋势（月度申请量 + 通过率）"><div ref="trendRef" style="height:320px"></div></el-card></el-col>
     </el-row>
-
-    <el-card style="margin-top:16px" header="风险趋势预警">
-      <div v-if="d.bottleneckNode && d.bottleneckNode!=='无积压'" style="margin-bottom:8px">
-        <el-tag type="danger" effect="dark">流程瓶颈：{{ d.bottleneckNode }}</el-tag>
-      </div>
-      <el-alert v-for="(a,i) in (d.riskAlerts||[])" :key="i" :type="a.includes('正常')?'success':'warning'" :closable="false" :title="a" style="margin-bottom:6px" />
-    </el-card>
   </div>
 </template>
 
@@ -53,7 +46,7 @@ import { padMonthly } from '@/lib/trend'
 import { getConfirmDashboard } from '@/api/confirm'
 import { listOrg } from '@/api/org'
 
-const d = reactive({ totalApply: 0, done: 0, pending: 0, rejected: 0, passRate: 0, cardCount: 0, bottleneckNode: '', riskAlerts: [] })
+const d = reactive({ totalApply: 0, done: 0, pending: 0, rejected: 0, passRate: 0, cardCount: 0 })
 const q = reactive({ deptName: '' })
 const orgOptions = ref([])
 const range = ref([])
@@ -99,5 +92,4 @@ onMounted(() => { loadOrgs(); load() })
 
 <style scoped>
 .st { text-align: center; } .st b { display:block; font-size:26px; } .st span { color: var(--prm-color-text-secondary); font-size:12px; }
-.green { color:#36b21d; } .orange { color:#ffc417; } .blue { color:#1e87f0; }
 </style>

@@ -16,12 +16,12 @@ class QwenParseMapTest {
     @Test
     void map_qwen_json_with_code_fence() {
         String out = "```json\n{\"rightSubject\":\"广东电网\",\"rightObject\":\"客户用电信息\","
-                + "\"rightType\":\"数据持有权\",\"rightTerm\":\"3年\",\"authScope\":\"约定字段\","
+                + "\"rightType\":\"持有权\",\"rightTerm\":\"3年\",\"authScope\":\"约定字段\","
                 + "\"dataSource\":\"自行生产\",\"sensitiveType\":\"个人信息\",\"sealValid\":\"有效\","
                 + "\"sealDesc\":\"检出公章\",\"confidence\":0.95}\n```";
         AiToolParseGateway.ParsedElements e = QwenAiToolParseGateway.mapElements(out);
         assertEquals("广东电网", e.rightSubject());
-        assertEquals("数据持有权", e.rightType());
+        assertEquals("持有权", e.rightType());
         assertEquals("个人信息", e.sensitiveType());
         assertEquals("有效", e.sealValid());
         assertEquals(0.95, e.confidence(), 0.001);
@@ -32,7 +32,7 @@ class QwenParseMapTest {
         AiToolParseGateway.ParsedElements e = QwenAiToolParseGateway.mapElements(
                 "{\"rightSubject\":\"南网\",\"confidence\":1.8}");
         assertEquals(1.0, e.confidence(), 0.001);
-        assertEquals("数据持有权", e.rightType(), "缺省字段应取默认");
+        assertEquals("持有权", e.rightType(), "缺省字段应取默认");
     }
 
     @Test

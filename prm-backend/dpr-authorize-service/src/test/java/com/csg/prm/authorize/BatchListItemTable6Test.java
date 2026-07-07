@@ -36,7 +36,7 @@ class BatchListItemTable6Test {
         a.setAssetName(assetName);                  // 数据表=库表名
         a.setGranteeOrg("南网综合能源股份有限公司"); // 被授权方(saveDraft 必填)
         a.setEquityCardId("EC-PRA-VALID01");        // 先确后授生效卡片
-        a.setRightType("数据加工使用权");
+        a.setRightType("使用权");
         a.setScenario("综合能源服务");
         a.setScope("全字段");
         a.setSchemaName("BILLING");                 // 表6 模式名称

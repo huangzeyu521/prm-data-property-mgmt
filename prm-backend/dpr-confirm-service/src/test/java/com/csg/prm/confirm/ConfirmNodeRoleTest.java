@@ -43,7 +43,7 @@ class ConfirmNodeRoleTest {
         ConfirmApply a = new ConfirmApply();
         a.setAssetId("DA-ROLE-" + System.nanoTime());
         a.setAssetName("角色门禁测试表");
-        a.setRightType("数据资源持有权");
+        a.setRightType("持有权");
         a.setSourceIdentification("A自行生产数据");
         a.setRightHolder("广东电网有限责任公司");
         a.setRespDept("数字化部");

@@ -167,7 +167,7 @@ class RightsLinkageTest {
     @Test
     void re_confirm_trigger_should_derive_work_order_and_alert() {
         LinkageResult r = linkageService.triggerReConfirm("DA-RC-1", "客户用电信息表",
-                "数据持有权", "来源变更", "上游系统更换导致来源变更");
+                "持有权", "来源变更", "上游系统更换导致来源变更");
 
         // 派生重确权工单
         assertEquals("RC-MOCK-1", r.getReConfirmId(), "应回传派生的重确权工单ID");

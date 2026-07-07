@@ -37,7 +37,7 @@
                   <span>{{ timeAgo(n.pushTime) }}</span>
                 </div>
               </div>
-              <el-tag size="small" type="danger" effect="light">未读</el-tag>
+              <span class="prm-c-danger">未读</span>
             </li>
           </ul>
         </el-tab-pane>
@@ -46,12 +46,12 @@
           <div v-if="todos.length === 0" class="nc-empty"><el-empty :image-size="56" description="暂无待办" /></div>
           <ul v-else class="nc-list">
             <li v-for="t in todos" :key="t.domain + t.id" class="nc-item" @click="goTodo(t)">
-              <el-tag size="small" class="nc-domain" :type="t.domain === '授权' ? 'success' : 'primary'" effect="plain">{{ t.domain }}</el-tag>
+              <span :class="'nc-domain prm-c-' + ((t.domain === '授权' ? 'success' : 'primary') || 'primary')">{{ t.domain }}</span>
               <div class="nc-body">
                 <div class="nc-desc">{{ t.assetName || t.no }}</div>
                 <div class="nc-meta"><span>{{ t.no }}</span><span class="nc-dotsep">·</span><span>{{ t.party }}</span></div>
               </div>
-              <el-tag size="small" type="warning" effect="light">{{ t.status }}</el-tag>
+              <span class="prm-c-warning">{{ t.status }}</span>
             </li>
           </ul>
         </el-tab-pane>
@@ -110,7 +110,7 @@ async function reload() {
     notifyUnread.value = cnt || 0
     const t = todoVo || {}
     todos.value = [...(t.confirmTodos || []), ...(t.authTodos || [])].slice(0, 8)
-    todoTotal.value = t.total || 0
+    todoTotal.value = (t.total || 0)
     unread.value = notifyUnread.value + todoTotal.value
   } finally {
     loading.value = false
@@ -172,8 +172,8 @@ onUnmounted(() => timer && clearInterval(timer))
 .nc-dotsep { color: var(--prm-color-border); }
 .nc-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex: none; }
 .lv-urgent { background: var(--prm-color-danger); box-shadow: 0 0 0 3px rgba(245,72,59,0.15); }
-.lv-major { background: #ffc417; box-shadow: 0 0 0 3px rgba(240,160,32,0.15); }
-.lv-normal { background: #1e87f0; box-shadow: 0 0 0 3px rgba(47,107,255,0.15); }
+.lv-major { background: var(--prm-color-warning); box-shadow: 0 0 0 3px rgba(240,160,32,0.15); }
+.lv-normal { background: var(--prm-color-primary); box-shadow: 0 0 0 3px rgba(47,107,255,0.15); }
 .nc-domain { flex: none; margin-top: 2px; }
 .nc-empty { padding: 8px 0 14px; }
 .nc-foot { border-top: 1px solid var(--prm-color-bg); padding: 8px 14px; text-align: center; }

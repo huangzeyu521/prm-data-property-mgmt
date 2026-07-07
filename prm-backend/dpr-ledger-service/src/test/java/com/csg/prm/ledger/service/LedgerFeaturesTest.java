@@ -75,7 +75,7 @@ class LedgerFeaturesTest {
         PropertyArchive archive = new PropertyArchive();
         archive.setAssetId("OV-001");
         archive.setAssetName("概览表");
-        archive.setRightType("数据资源持有权");
+        archive.setRightType("持有权");
         archive.setConfirmStatus("已确权");
         archiveService.create(archive);
 
@@ -83,7 +83,7 @@ class LedgerFeaturesTest {
         assertTrue(vo.getTotalAssets() >= 1);
         assertTrue(vo.getConfirmedAssets() >= 1, "应统计到已确权资产");
         assertTrue(vo.getConfirmRate() > 0 && vo.getConfirmRate() <= 100);
-        assertTrue(vo.getRightTypeDistribution().containsKey("数据资源持有权"));
+        assertTrue(vo.getRightTypeDistribution().containsKey("持有权"));
         assertTrue(vo.getSubsidiaryDistribution().containsKey("概览子公司"));
     }
 

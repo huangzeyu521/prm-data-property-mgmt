@@ -36,7 +36,7 @@ class CertSuspendRenewTest {
         apply.setAssetId(assetId);
         apply.setAssetName(assetId + "-表");
         apply.setGranteeOrg("广州供电局");
-        apply.setRightType("数据加工使用权");
+        apply.setRightType("使用权");
         apply.setScope("全字段");
         apply.setValidDate(validDate);
         return certService.generateFromApply(apply);

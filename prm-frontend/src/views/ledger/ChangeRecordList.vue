@@ -36,10 +36,10 @@
         <el-table-column prop="changeType" label="变更类型" width="100" />
         <el-table-column prop="fieldName" label="变更字段" width="100" />
         <el-table-column prop="beforeValue" label="变更前" min-width="110" show-overflow-tooltip>
-          <template #default="{ row }"><span style="color:#e21f0c">{{ row.beforeValue }}</span></template>
+          <template #default="{ row }"><span class="prm-c-danger">{{ row.beforeValue }}</span></template>
         </el-table-column>
         <el-table-column prop="afterValue" label="变更后" min-width="110" show-overflow-tooltip>
-          <template #default="{ row }"><span style="color:#36b21d">{{ row.afterValue }}</span></template>
+          <template #default="{ row }"><span class="prm-c-success">{{ row.afterValue }}</span></template>
         </el-table-column>
         <el-table-column prop="changeReason" label="变更原因" min-width="130" show-overflow-tooltip />
         <el-table-column prop="sourceFlow" label="来源流程" width="110" show-overflow-tooltip />
@@ -49,47 +49,32 @@
         <el-table-column label="上链凭证" width="96" align="center" fixed="right">
           <template #default="{ row }">
             <el-tooltip v-if="row.chainHash" :content="'SM3指纹/上链:' + row.chainHash" placement="top">
-              <el-tag type="success" effect="plain" size="small">已上链</el-tag>
+              <span class="prm-c-success">已上链</span>
             </el-tooltip>
             <span v-else style="color:var(--prm-color-text-disabled)">-</span>
           </template>
         </el-table-column>
       </el-table>
       <div class="prm-table-note">注:变更记录由确权/授权审批流自动生成,SM3 指纹上链(防篡改),不可人工删改;支持按 资产/类型/来源流程/操作人/时间 多维追溯。</div>
-      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
+      <el-pagination style="margin-top:20px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
         :total="total" :current-page="query.current" :page-size="query.size" @current-change="onPage" @size-change="s=>{query.size=s;query.current=1;load()}" />
     </div>
   </div>
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { pageChangeRecord } from '@/api/ledger'
+import { useTablePage } from '@/composables/useTablePage'
 
 const changeTypes = ['确权', '授权', '权益变更', '重确权', '熔断']
 const sourceFlows = ['确权流程', '授权流程', '重确权', '监测联动']
-const query = reactive({ current: 1, size: 10, assetId: '', changeType: '', sourceFlow: '', operatorId: '', changeTimeStart: '', changeTimeEnd: '' })
 const dateRange = ref([])
-const rows = ref([])
-const total = ref(0)
-const loading = ref(false)
-
-async function load() {
-  loading.value = true
-  query.changeTimeStart = dateRange.value?.[0] || ''
-  query.changeTimeEnd = dateRange.value?.[1] ? dateRange.value[1] + ' 23:59:59' : ''
-  try {
-    const res = await pageChangeRecord({ ...query })
-    rows.value = res.records || []
-    total.value = res.total || 0
-  } finally { loading.value = false }
-}
-function onSearch() { query.current = 1; load() }
-function onReset() {
-  Object.assign(query, { assetId: '', changeType: '', sourceFlow: '', operatorId: '', changeTimeStart: '', changeTimeEnd: '' })
-  dateRange.value = []
-  onSearch()
-}
-function onPage(p) { query.current = p; load() }
+// 日期区间经 loader 包装注入(changeTimeEnd 补 23:59:59 含当日)
+const { query, rows, total, loading, load, search: onSearch, reset: doReset, onPage } = useTablePage(
+  (p) => pageChangeRecord({ ...p, changeTimeStart: dateRange.value?.[0] || '', changeTimeEnd: dateRange.value?.[1] ? dateRange.value[1] + ' 23:59:59' : '' }),
+  { assetId: '', changeType: '', sourceFlow: '', operatorId: '' }
+)
+function onReset() { dateRange.value = []; doReset() }
 onMounted(load)
 </script>

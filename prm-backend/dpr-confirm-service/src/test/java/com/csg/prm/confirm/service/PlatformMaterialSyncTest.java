@@ -4,6 +4,7 @@ import com.csg.prm.confirm.dto.MaterialCheckReport;
 import com.csg.prm.confirm.dto.MaterialSyncReport;
 import com.csg.prm.confirm.entity.ConfirmApply;
 import com.csg.prm.confirm.entity.ConfirmMaterial;
+import com.csg.prm.confirm.entity.ConfirmTableItem;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -29,12 +30,16 @@ class PlatformMaterialSyncTest {
     private com.csg.prm.confirm.service.ConfirmApplyService applyService;
     @Autowired
     private ConfirmMaterialService materialService;
+    @Autowired
+    private com.csg.prm.confirm.service.ConfirmConsolidationService consolidationService;
+    @Autowired
+    private com.csg.prm.confirm.integration.DataCatalogService dataCatalogService;
 
     private String draftAst001() {
         ConfirmApply a = new ConfirmApply();
         a.setAssetId("AST-001");
         a.setAssetName("客户用电信息表");
-        a.setRightType("数据加工使用权");
+        a.setRightType("使用权");
         a.setRightHolder("广东电网有限责任公司");
         a.setRespDept("数字化部");
         a.setSourceIdentification("A");          // A 自行生产 → 平台 SOURCE_NAME
@@ -49,12 +54,12 @@ class PlatformMaterialSyncTest {
         String id = draftAst001();
         MaterialSyncReport rep = materialService.syncFromPlatform(id);
 
-        // AST-001 平台覆盖 4 项(证明材料 + A 来源说明 + G 行政监管 + H 个人隐私)+ 系统据申报自动生成 表1/表2 = 6
-        assertEquals(6, rep.getSyncedCount(), "应同步 4 平台项 + 自动生成 表1/表2,实际 " + rep.getSyncedCount());
+        // P3:系统级同步 = 证明材料 + A 来源说明 + 自动生成 表1/表2 = 4(G/H 已逐表化,不再系统级同步)
+        assertEquals(4, rep.getSyncedCount(), "P3:系统级同步 证明+A + 表1/表2(G/H逐表化),实际 " + rep.getSyncedCount());
         assertTrue(rep.getSynced().stream().anyMatch(s -> s.getMaterialName().contains("证明材料")), "应同步 证明材料");
         assertTrue(rep.getSynced().stream().anyMatch(s -> "A".equals(s.getCode())), "应同步 A 来源说明");
-        assertTrue(rep.getSynced().stream().anyMatch(s -> "G".equals(s.getCode())), "应同步 G 行政监管");
-        assertTrue(rep.getSynced().stream().anyMatch(s -> "H".equals(s.getCode())), "应同步 H 个人隐私");
+        assertFalse(rep.getSynced().stream().anyMatch(s -> "G".equals(s.getCode()) || "H".equals(s.getCode())),
+                "P3:G/H 已逐表化(ConfirmTableItem),系统级不再同步");
         assertTrue(rep.getSynced().stream().anyMatch(s -> "系统生成".equals(s.getCode())), "应自动生成 表1/表2");
 
         // 登记的材料:平台覆盖项=平台同步,表1/表2=系统生成;均带文件名 + 校验通过(免上传)
@@ -85,6 +90,98 @@ class PlatformMaterialSyncTest {
             assertNotNull(bytes, "平台同步材料应可下载原件字节(供预览):" + m.getMaterialName());
             assertTrue(bytes.length > 0, "平台同步材料原件不应为空:" + m.getMaterialName());
         }
+    }
+
+    @Test
+    void source_materials_map_to_their_own_letter_attachment() {
+        // 系统级申请(SYS:客户服务系统):库表来源 A/B/C/F + 关联 H。
+        // 回归:修复前 A–F 会被拍平成"首表(A)附件",B/C/F 张冠李戴 A 的说明。
+        ConfirmApply a = new ConfirmApply();
+        a.setAssetId("SYS:客户服务系统");
+        a.setAssetName("客户服务系统");
+        a.setRightType("持有权");
+        a.setRightHolder("广东电网有限责任公司");
+        a.setRespDept("数字化部");
+        a.setSourceIdentification("A,B,C,F");
+        a.setRelationIdentification("H");
+        a.setInvolvesThirdParty(Boolean.TRUE);
+        String id = applyService.saveDraft(a);
+
+        MaterialSyncReport rep = materialService.syncFromPlatform(id);
+        java.util.Map<String, String> attByCode = new java.util.HashMap<>();
+        for (MaterialSyncReport.SyncedItem s : rep.getSynced()) {
+            if (s.getCode() != null && s.getCode().length() == 1) {
+                attByCode.put(s.getCode(), s.getAttachment());
+            }
+        }
+        // P3:系统级同步只含 A(自行生产·系统级);B/C/F/H 逐表化,不在系统级
+        assertEquals("数据来源与系统建设投入说明.pdf", attByCode.get("A"), "A 系统级说明应同步");
+        assertFalse(attByCode.containsKey("B") || attByCode.containsKey("C")
+                        || attByCode.containsKey("F") || attByCode.containsKey("H"),
+                "P3:B/C/F/H 已逐表化(ConfirmTableItem),系统级不再同步");
+
+        // 逐字母各表专属来源凭证的单一真源现在是 ConfirmTableItem(平台预填自 cardsBySystem):B/C/F 各不相同
+        java.util.List<com.csg.prm.confirm.integration.dto.PlatformTableMeta> cards =
+                dataCatalogService.cardsBySystem("客户服务系统", null, null);
+        java.util.Map<Character, String> bySrc = new java.util.HashMap<>();
+        for (com.csg.prm.confirm.integration.dto.PlatformTableMeta m : cards) {
+            char sc = (m.sourceType() == null || m.sourceType().isEmpty()) ? ' ' : m.sourceType().charAt(0);
+            if ("BCF".indexOf(sc) >= 0) {
+                bySrc.put(sc, m.sourceAttachment());
+            }
+        }
+        assertEquals("公共采集情况说明.pdf", bySrc.get('B'), "B 表来源凭证专属");
+        assertEquals("公共数据授权说明.pdf", bySrc.get('C'), "C 表来源凭证专属");
+        assertEquals("其他来源情况说明.pdf", bySrc.get('F'), "F 表来源凭证专属");
+        assertEquals(3, new java.util.HashSet<>(java.util.List.of(bySrc.get('B'), bySrc.get('C'), bySrc.get('F'))).size(),
+                "B/C/F 来源凭证各不相同");
+    }
+
+    @Test
+    void p3_bj_credentials_are_per_table_not_system_level() {
+        // 客户服务系统:A/C 来源 + H 关联。P3:B–F(非A)/G–J 逐表(ConfirmTableItem),系统级不再建 B–J ConfirmMaterial;
+        //   runCheck 对 B–J 逐表查附件——C 来源凭证齐→不报缺;某表 H 关联资料缺→精确报"表·H个人隐私资料"。
+        ConfirmApply a = new ConfirmApply();
+        a.setAssetId("SYS:客户服务系统");
+        a.setAssetName("客户服务系统");
+        a.setRightType("持有权");
+        a.setRightHolder("广东电网有限责任公司");
+        a.setRespDept("数字化部");
+        a.setSourceIdentification("A,C");
+        a.setRelationIdentification("H");
+        a.setInvolvesThirdParty(Boolean.TRUE);
+        String id = applyService.saveDraft(a);
+
+        // 逐表:C 来源表(来源凭证齐)+ A源但涉H的表(H 关联资料缺)
+        ConfirmTableItem c = perTbl("T_C", "C 公共授权数据", "否");
+        c.setSourceAttachment("公共数据授权说明.pdf");
+        ConfirmTableItem h = perTbl("T_H", "A 自行生产数据", "是"); // A 源无来源凭证槽;H=是 但 privacyAttachment 空
+        consolidationService.saveTableItems(id, java.util.List.of(c, h));
+
+        // 同步:系统级不再含 C/H(逐表化)
+        MaterialSyncReport rep = materialService.syncFromPlatform(id);
+        assertFalse(rep.getSynced().stream().anyMatch(s -> "C".equals(s.getCode()) || "H".equals(s.getCode())),
+                "P3:C/H 应逐表化,系统级同步不含,实际 " + rep.getSynced().stream().map(MaterialSyncReport.SyncedItem::getCode).toList());
+
+        // 校验逐表化:H 表关联资料缺 → 精确报缺;C 来源凭证齐 → 不报缺
+        MaterialCheckReport chk = materialService.runCheck(id);
+        assertTrue(chk.getMissing().stream().anyMatch(x -> x.contains("H个人隐私资料")),
+                "H 关联资料缺应逐表报缺,实际 missing=" + chk.getMissing());
+        assertFalse(chk.getMissing().stream().anyMatch(x -> x.contains("来源凭证(C)")),
+                "C 来源凭证齐不应报缺,实际 missing=" + chk.getMissing());
+    }
+
+    private ConfirmTableItem perTbl(String code, String source, String hFlag) {
+        ConfirmTableItem it = new ConfirmTableItem();
+        it.setTableCode(code);
+        it.setTableName(code);
+        it.setSchemaName("S");
+        it.setSourceType(source);
+        it.setGFlag("否");
+        it.setHFlag(hFlag);
+        it.setIFlag("否");
+        it.setJFlag("否");
+        return it;
     }
 
     @Test

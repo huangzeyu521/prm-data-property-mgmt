@@ -15,6 +15,14 @@ public interface BatchAuthListService {
     BatchComplianceResult complianceCheck(String batchListId);
     /** 申报稿 -> 批准(领导小组办公室) */
     void approve(String batchListId);
+
+    /** 删除草案清单(仅草案态;级联删除其下草稿明细)。 */
+    void delete(String batchListId);
+
+    /** 撤回申报稿 -> 草案:清单回草案 + 其下在审明细退回草稿,便于再编辑/再提交(仅申报稿态)。 */
+    void withdraw(String batchListId);
+    /** 批准提交后,独立事务 best-effort 生成《运营授权协议》草案;返回协议ID(失败返回 null,不抛出)。 */
+    String autoGenerateAgreementAfterApprove(String batchListId);
     BatchAuthList getById(String batchListId);
     PageResult<BatchAuthList> page(long current, long size, String listYear, String listStatus);
 }

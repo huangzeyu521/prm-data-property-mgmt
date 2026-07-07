@@ -16,41 +16,42 @@
     <div class="prm-table-card">
       <el-table :data="rows" v-loading="loading" border stripe>
         <el-table-column type="index" label="序号" width="64" align="center" />
-        <el-table-column prop="certNo" label="授权证书编号" width="200" show-overflow-tooltip />
+        <el-table-column prop="certNo" label="生效记录编号" width="200" show-overflow-tooltip />
         <el-table-column label="所属系统" min-width="130" show-overflow-tooltip><template #default="{ row }">{{ sysName(row) }}</template></el-table-column>
         <el-table-column prop="granteeOrg" label="被授权方" min-width="150" show-overflow-tooltip />
         <el-table-column prop="rightType" label="授权权益" width="120" />
-        <el-table-column prop="templateName" label="出证模板" min-width="160" show-overflow-tooltip><template #default="{ row }">{{ row.templateName || '—' }}</template></el-table-column>
+        <el-table-column prop="templateName" label="记录样式" min-width="160" show-overflow-tooltip><template #default="{ row }">{{ row.templateName || '—' }}</template></el-table-column>
         <el-table-column prop="validDate" label="有效期至" width="150">
           <template #default="{ row }">{{ fmt(row.validDate) }}</template>
         </el-table-column>
         <el-table-column prop="certStatus" label="状态" width="100" align="center">
           <template #default="{ row }">
             <el-tooltip :disabled="!row.suspendReason" :content="row.suspendReason" placement="top">
-              <el-tag :type="statusType(row.certStatus)">{{ row.certStatus }}</el-tag>
+              <span :class="'prm-c-' + ((statusType(row.certStatus)) || 'primary')">{{ row.certStatus }}</span>
             </el-tooltip>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="onPreview(row)">预览证书</el-button>
+            <el-button link type="primary" @click="onPreview(row)">查看记录</el-button>
             <el-button link type="primary" :disabled="row.certStatus === '已撤销'" @click="onRenew(row)">续签</el-button>
             <el-button link type="danger" :disabled="row.certStatus !== '生效'" @click="onRevoke(row)">撤销</el-button>
           </template>
         </el-table-column>
       </el-table>
       <div class="prm-table-note">
-        注:证书撤销后数据资源权限将被回收;<strong>已暂停</strong>为监测联动熔断(违规/越权),整改后可"续签"恢复生效。
+        注:本页为系统<strong>授权生效记录</strong>(内部台账,承载续签/暂停/撤销等动态跟踪);按 35号文,对外授权凭证为《数据运营授权协议(附录D)》。
+        记录撤销后数据资源权限将被回收;<strong>已暂停</strong>为监测联动熔断(违规/越权),整改后可"续签"恢复生效。
       </div>
-      <el-pagination v-if="!expiringMode" style="margin-top:16px;justify-content:flex-end" background
+      <el-pagination v-if="!expiringMode" style="margin-top:20px;justify-content:flex-end" background
         layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]" :total="total" :current-page="query.current" :page-size="query.size"
         @current-change="onPage" @size-change="s=>{query.size=s;query.current=1;load()}" />
     </div>
 
-    <el-dialog v-model="renewDlg" title="授权证书续签" width="460px" align-center>
+    <el-dialog v-model="renewDlg" title="授权生效记录续签" width="460px" align-center>
       <el-form label-width="100px">
-        <el-form-item label="证书编号">{{ current.certNo }}</el-form-item>
-        <el-form-item label="当前状态"><el-tag :type="statusType(current.certStatus)">{{ current.certStatus }}</el-tag></el-form-item>
+        <el-form-item label="记录编号">{{ current.certNo }}</el-form-item>
+        <el-form-item label="当前状态"><span :class="'prm-c-' + ((statusType(current.certStatus)) || 'primary')">{{ current.certStatus }}</span></el-form-item>
         <el-form-item label="新有效期" required>
           <el-date-picker v-model="newValidDate" type="datetime" placeholder="选择续签到期时间"
             value-format="YYYY-MM-DD HH:mm:ss" style="width:100%" />
@@ -62,16 +63,20 @@
       </template>
     </el-dialog>
 
-    <!-- 在线预览授权证书 -->
-    <el-dialog v-model="certDlg" title="授权权益证书 · 在线预览" width="620px" align-center>
-      <el-alert v-if="certVO" :type="certVO.complianceOk ? 'success' : 'error'" :closable="false" style="margin-bottom:12px">
+    <!-- 在线查看授权生效记录 -->
+    <el-dialog v-model="certDlg" title="授权生效记录 · 在线查看" width="620px" align-center>
+      <el-alert v-if="certVO" type="info" :closable="false" style="margin-bottom:6px">
+        本记录为系统台账凭证(生效登记/动态跟踪);对外授权凭证为《数据运营授权协议(附录D)》。
+      </el-alert>
+      <el-alert v-if="certVO" :type="certVO.complianceOk ? 'success' : 'error'" :closable="false" style="margin-bottom:10px">
         合规校验：{{ certVO.complianceResult }}
       </el-alert>
       <div v-if="certVO" class="cert">
-        <div class="cert-title">数据资产授权权益证书</div>
-        <div class="cert-sub">{{ certVO.certType || '授权证书' }}　中国南方电网有限责任公司</div>
-        <div class="cert-no">证书编号：{{ certVO.certNo }}</div>
+        <div class="cert-title">数据授权生效记录</div>
+        <div class="cert-sub">{{ certVO.certType || '授权生效记录' }}　中国南方电网有限责任公司</div>
+        <div class="cert-no">记录编号：{{ certVO.certNo }}</div>
         <table class="cert-tbl">
+          <tbody>
           <tr><td class="k">被授权方</td><td>{{ certVO.granteeOrg }}</td></tr>
           <tr><td class="k">所属系统</td><td>{{ certVO.sysName || certVO.assetId || '—' }}</td></tr>
           <tr><td class="k">数据表</td><td>{{ certVO.assetName || '—' }}<span v-if="certVO.schemaName" style="color:#6a82aa">（模式 {{ certVO.schemaName }}）</span></td></tr>
@@ -79,13 +84,14 @@
           <tr><td class="k">使用场景及目的</td><td>{{ certVO.scenario || '—' }}</td></tr>
           <tr><td class="k">授权范围</td><td>{{ certVO.scope || '—' }}</td></tr>
           <tr><td class="k">有效期至</td><td>{{ fmt(certVO.validDate) }}</td></tr>
-          <tr><td class="k">出证模板</td><td>{{ certVO.templateName || '—' }}</td></tr>
+          <tr><td class="k">记录样式</td><td>{{ certVO.templateName || '—' }}</td></tr>
           <tr><td class="k">状态</td><td>{{ certVO.certStatus }}</td></tr>
+          </tbody>
         </table>
         <div v-if="certVO.templateContent" class="cert-body">{{ certVO.templateContent }}</div>
         <div class="cert-foot">
-          <div class="cert-note">本证书依审核通过的授权协议与确权信息标准化生成,授权范围不超确权边界,已经区块链 SM3 存证。</div>
-          <div class="cert-seal">授权专用章</div>
+          <div class="cert-note">本记录依双签归档的《数据运营授权协议(附录D)》与确权信息标准化登记,授权范围不超确权边界,已经区块链 SM3 存证;对外凭证以协议为准。</div>
+          <div class="cert-seal">系统登记</div>
         </div>
       </div>
       <template #footer><el-button @click="printCert">打印</el-button><el-button @click="certDlg=false">关闭</el-button></template>
@@ -95,13 +101,12 @@
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import { confirmAsync } from '@/utils/confirmAsync'
 import { pageAuthCert, getAuthCertRender, revokeAuthCert, renewAuthCert, expiringAuthCerts } from '@/api/authorize'
+import { useTablePage } from '@/composables/useTablePage'
 
-const query = reactive({ current: 1, size: 10 })
-const rows = ref([])
-const total = ref(0)
-const loading = ref(false)
+const { query, rows, total, loading, load, onPage } = useTablePage(pageAuthCert, {})
 const expiringMode = ref(false)
 
 const renewDlg = ref(false)
@@ -117,14 +122,6 @@ function statusType(s) {
 function sysName(row) { const a = (row && row.assetId) || ''; return a.startsWith('SYS:') ? a.slice(4) : (a || '—') }
 function fmt(v) { return v ? String(v).replace('T', ' ').slice(0, 16) : '-' }
 
-async function load() {
-  loading.value = true
-  try {
-    const res = await pageAuthCert({ ...query })
-    rows.value = res.records || []
-    total.value = res.total || 0
-  } finally { loading.value = false }
-}
 async function loadExpiring() {
   loading.value = true
   try {
@@ -134,12 +131,10 @@ async function loadExpiring() {
   } finally { loading.value = false }
 }
 function exitExpiring() { expiringMode.value = false; query.current = 1; load() }
-function onPage(p) { query.current = p; load() }
 
 function onRevoke(row) {
-  ElMessageBox.confirm(`确认撤销授权证书"${row.certNo}"吗`, '提示', {
-    confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
-  }).then(async () => { await revokeAuthCert(row.certId); ElMessage.success('已撤销'); reload() }).catch(() => {})
+  confirmAsync(`确认撤销授权生效记录"${row.certNo}"吗(数据资源权限将被回收)`, '提示',
+    async () => { await revokeAuthCert(row.certId); ElMessage.success('已撤销'); reload() }).catch(() => {})
 }
 function onRenew(row) {
   Object.assign(current, { certId: row.certId, certNo: row.certNo, certStatus: row.certStatus })

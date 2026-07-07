@@ -69,13 +69,14 @@ public class AuthCertServiceImpl implements AuthCertService {
     @Override
     @Transactional
     public String generateFromApply(AuthApply apply) {
-        // 出证前合规校验:授权范围不超确权边界(确权边界为"全字段"=不限;"约定字段"=须在边界内)
+        // 生效登记前合规校验:授权范围不超确权边界(确权边界为"全字段"=不限;"约定字段"=须在边界内)
+        // 口径(35号文):对外授权凭证=《数据运营授权协议(附录D)》;本记录为系统内部「授权生效记录」(动态跟踪载体),非对外证书
         com.csg.prm.authorize.gateway.EquityCardGateway.CardBoundary b = equityCardGateway.boundary(apply.getEquityCardId());
         if (b != null && StringUtils.hasText(b.scope()) && !"全字段".equals(b.scope())
                 && StringUtils.hasText(apply.getScope()) && !b.scope().equals(apply.getScope())) {
-            throw new BusinessException("授权范围超出确权边界,出证拦截(确权范围:" + b.scope() + ")");
+            throw new BusinessException("授权范围超出确权边界,生效登记拦截(确权范围:" + b.scope() + ")");
         }
-        // 归口网级回填:按被授权方组织解析省/地市码,落到证书与发证存证(补此前的 null)
+        // 归口网级回填:按被授权方组织解析省/地市码,落到生效记录与上链存证(补此前的 null)
         Jurisdiction jur = orgService.resolve(apply.getGranteeOrg());
         AuthCert cert = new AuthCert();
         cert.setCertNo(generateCertNo());
@@ -92,7 +93,7 @@ public class AuthCertServiceImpl implements AuthCertService {
             cert.setTemplateId(tpl.getTemplateId());
             cert.setTemplateName(tpl.getTemplateName());
         } else {
-            cert.setTemplateName("标准授权证书(默认)");
+            cert.setTemplateName("标准授权生效记录(默认)");
         }
         if (StringUtils.hasText(jur.provinceCode())) {
             cert.setProvinceCode(jur.provinceCode());
@@ -101,9 +102,9 @@ public class AuthCertServiceImpl implements AuthCertService {
             cert.setBureauCode(jur.bureauCode());
         }
         mapper.insert(cert);
-        // 关键节点上链存证(授权发证):SM3 指纹锚定上链,防篡改、可追溯;带归口网级省/地市码
-        chainEvidenceService.anchor("授权发证", cert.getCertId(),
-                "授权证书 " + cert.getCertNo() + " / " + cert.getGranteeOrg(),
+        // 关键节点上链存证(授权生效):SM3 指纹锚定上链,防篡改、可追溯;带归口网级省/地市码
+        chainEvidenceService.anchor("授权生效", cert.getCertId(),
+                "授权生效记录 " + cert.getCertNo() + " / " + cert.getGranteeOrg(),
                 String.join("|", cert.getCertNo(), cert.getApplyId(), cert.getAssetId(),
                         cert.getGranteeOrg(), cert.getRightType()),
                 jur.provinceCode(), jur.bureauCode());
@@ -114,7 +115,7 @@ public class AuthCertServiceImpl implements AuthCertService {
     public AuthCert getById(String certId) {
         AuthCert cert = mapper.selectById(certId);
         if (cert == null) {
-            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "授权证书不存在");
+            throw new BusinessException(ResponseCode.NOT_FOUND.getCode(), "授权生效记录不存在");
         }
         return cert;
     }

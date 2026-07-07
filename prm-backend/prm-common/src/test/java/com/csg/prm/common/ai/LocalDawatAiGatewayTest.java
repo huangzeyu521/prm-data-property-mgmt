@@ -19,20 +19,20 @@ class LocalDawatAiGatewayTest {
         DawatAiGateway.OcrOwnership r = ai.recognizeOwnership("https://oss/材料/客户用电信息表-经营.pdf");
         assertNotNull(r.assetName());
         assertNotNull(r.rightHolder());
-        assertEquals("数据产品经营权", r.rightType(), "文件名含'经营'应识别为产品经营权");
+        assertEquals("经营权", r.rightType(), "文件名含'经营'应识别为产品经营权");
         assertTrue(r.confidence() > 0 && r.confidence() <= 1);
     }
 
     @Test
     void conflict_detection_is_deterministic() {
         DawatAiGateway.ConflictResult conflict =
-                ai.detectConflict("CONFLICT-DA-1", "甲公司", "数据持有权");
+                ai.detectConflict("CONFLICT-DA-1", "甲公司", "持有权");
         assertTrue(conflict.hasConflict());
         assertEquals("高", conflict.riskLevel());
         assertFalse(conflict.conflicts().isEmpty());
 
         DawatAiGateway.ConflictResult clean =
-                ai.detectConflict("DA-NORMAL-1", "甲公司", "数据持有权");
+                ai.detectConflict("DA-NORMAL-1", "甲公司", "持有权");
         assertFalse(clean.hasConflict());
         assertEquals("低", clean.riskLevel());
     }
@@ -41,7 +41,7 @@ class LocalDawatAiGatewayTest {
     void auth_intent_extracts_elements() {
         DawatAiGateway.AuthIntent r =
                 ai.recognizeAuthIntent("拟批量向广州供电局开放对外经营,用于电力金融征信全字段");
-        assertEquals("数据产品经营权", r.rightType(), "含'经营/对外'应为产品经营权");
+        assertEquals("经营权", r.rightType(), "含'经营/对外'应为产品经营权");
         assertEquals("批量", r.mode());
         assertEquals("电力金融征信", r.scenario());
         assertEquals("全字段", r.scope());

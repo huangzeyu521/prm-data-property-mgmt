@@ -47,7 +47,7 @@
           <template #default="{ row }">{{ row.userName || '—' }}</template>
         </el-table-column>
         <el-table-column prop="action" label="动作" min-width="110">
-          <template #default="{ row }"><el-tag size="small">{{ row.action }}</el-tag></template>
+          <template #default="{ row }"><span class="prm-c-primary">{{ row.action }}</span></template>
         </el-table-column>
         <el-table-column prop="target" label="对象" min-width="140" show-overflow-tooltip>
           <template #default="{ row }">{{ row.target || '—' }}</template>
@@ -57,7 +57,7 @@
         </el-table-column>
         <el-table-column label="结果" width="90" align="center">
           <template #default="{ row }">
-            <el-tag size="small" :type="row.result === '成功' ? 'success' : 'danger'">{{ row.result || '—' }}</el-tag>
+            <span :class="'prm-c-' + ((row.result === '成功' ? 'success' : 'danger') || 'primary')">{{ row.result || '—' }}</span>
           </template>
         </el-table-column>
       </el-table>
@@ -78,55 +78,23 @@
 </template>
 
 <script setup>
-import { reactive, ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { pageOpLog } from '@/api/system'
+import { useTablePage } from '@/composables/useTablePage'
 
 const ACTIONS = ['登录', '新增用户', '编辑用户', '删除用户', '重置密码', '启用用户', '停用用户']
 
-const query = reactive({ current: 1, size: 10, userName: '', action: '', result: '', createTimeStart: '', createTimeEnd: '' })
 const range = ref([])
-const rows = ref([])
-const total = ref(0)
-const loading = ref(false)
+const { query, rows, total, loading, load, search: onSearch, reset: doReset, onPage: onPageChange, onSizeChange } = useTablePage(
+  pageOpLog, { userName: '', action: '', result: '', createTimeStart: '', createTimeEnd: '' }
+)
 
 watch(range, (v) => {
   query.createTimeStart = v && v[0] ? v[0] : ''
   query.createTimeEnd = v && v[1] ? v[1] : ''
 })
 
-async function load() {
-  loading.value = true
-  try {
-    const res = await pageOpLog({ ...query })
-    rows.value = res.records || []
-    total.value = res.total || 0
-  } finally {
-    loading.value = false
-  }
-}
-
-function onSearch() {
-  query.current = 1
-  load()
-}
-function onReset() {
-  query.userName = ''
-  query.action = ''
-  query.result = ''
-  range.value = []
-  query.createTimeStart = ''
-  query.createTimeEnd = ''
-  onSearch()
-}
-function onPageChange(p) {
-  query.current = p
-  load()
-}
-function onSizeChange(s) {
-  query.size = s
-  query.current = 1
-  load()
-}
+function onReset() { range.value = []; doReset() }
 
 onMounted(load)
 </script>

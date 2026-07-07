@@ -15,11 +15,12 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * 授权审批逐节点角色门禁(对齐架构 AA-10/BA-05 与工作指引授权流程):
- *   合规->review、业务->business、主管->manager、经理->director、副总->gm、领导小组->leadership;
+ *   单位初审->unit、合规->review、业务->business、主管->manager、经理->director、副总->gm、领导小组->leadership;
  *   每节点仅对应角色(及 all/admin)可审批/驳回。无上下文(内部/单测)放行,故其余流程测试不受影响。
  */
 @SpringBootTest
@@ -48,7 +49,7 @@ class AuthNodeRoleTest {
         a.setAssetName("角色门禁授权表");
         a.setEquityCardId("EC-PRA-VALID01");
         a.setGranteeOrg("广州供电局");
-        a.setRightType("数据加工使用权");
+        a.setRightType("使用权");
         a.setScenario("电力金融征信");
         a.setScope("全字段");
         return a;
@@ -57,7 +58,14 @@ class AuthNodeRoleTest {
     @Test
     void special_flow_each_node_gated_by_role() {
         String id = applyService.saveDraft(draft(AuthApply.MODE_SPECIAL, "DA-ROLE-SP-" + System.nanoTime()));
-        applyService.submit(id); // 无上下文 -> 合规审核中
+        applyService.submit(id); // 无上下文 -> 单位初审中
+        assertEquals(AuthApply.STATUS_UNIT, applyService.getById(id).getStatus());
+
+        // 单位初审节点:合规角色越权 -> 拒绝;unit(申报单位分管领导) -> 放行
+        actAs("review");
+        assertThrows(BusinessException.class, () -> applyService.approve(id, null), "review 不应处理单位初审节点");
+        actAs("unit");
+        applyService.approve(id, null);
         assertEquals(AuthApply.STATUS_COMPLIANCE, applyService.getById(id).getStatus());
 
         // 合规节点:业务角色越权 -> 拒绝;review -> 放行
@@ -88,13 +96,13 @@ class AuthNodeRoleTest {
         applyService.approve(id, null);
         assertEquals(AuthApply.STATUS_VP, applyService.getById(id).getStatus());
 
-        // 副总节点:director -> 拒绝;gm -> 放行(终审发证)
+        // 副总节点:director -> 拒绝;gm -> 放行(终审=批准待双签,生效移至协议归档)
         actAs("director");
         assertThrows(BusinessException.class, () -> applyService.approve(id, null), "director 不应处理副总节点");
         actAs("gm");
         String certId = applyService.approve(id, null);
-        assertEquals(AuthApply.STATUS_EFFECTIVE, applyService.getById(id).getStatus());
-        assertNotNull(certId, "gm 副总审批通过应自动发证");
+        assertEquals(AuthApply.STATUS_APPROVED, applyService.getById(id).getStatus());
+        assertNull(certId, "专项终审=批准(待双签),不即时登记生效记录");
     }
 
     @Test

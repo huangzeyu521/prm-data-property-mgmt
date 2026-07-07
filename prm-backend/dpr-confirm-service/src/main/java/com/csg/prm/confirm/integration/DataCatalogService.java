@@ -218,7 +218,16 @@ public class DataCatalogService {
                             t.secret(), t.src(), srcSubject,
                             t.g(), t.h(), t.i(), t.j(), true,
                             // 平台已上传材料附件名(AU_TABLE_META_DATA.*_NAME;正本在"上传材料"步同步)
-                            sc == 'A' ? "数据来源与系统建设投入说明.pdf" : (sc == 'E' ? "数据采购协议.pdf" : "共同生产情况说明.pdf"),
+                            // 逐来源字母各给专属说明文件,避免 B/C/D/F 张冠李戴(对齐 35 号文 表1 各来源应交说明)
+                            switch (sc) {
+                                case 'A' -> "数据来源与系统建设投入说明.pdf";
+                                case 'B' -> "公共采集情况说明.pdf";
+                                case 'C' -> "公共数据授权说明.pdf";
+                                case 'D' -> "共同生产情况说明.pdf";
+                                case 'E' -> "交易采购情况说明.pdf";
+                                case 'F' -> "其他来源情况说明.pdf";
+                                default -> "数据来源情况说明.pdf";
+                            },
                             t.g() ? "行政监管要求说明.pdf" : null,
                             t.h() ? "用户入网协议(个人信息授权).pdf" : null,
                             t.i() ? "第三方保密协议.pdf" : null,
@@ -331,7 +340,7 @@ public class DataCatalogService {
         String relStr = rel.stream().map(String::valueOf).reduce((a, b) -> a + "," + b).orElse("");
         return new com.csg.prm.confirm.integration.dto.ChangeBaseline(
                 sysName, sysUnit(s.code()), sysLevel(s.code()), sysDept(s.code()),
-                "数据资源持有权、数据加工使用权、数据产品经营权", // 现有三权(基线)
+                "持有权、使用权、经营权", // 现有三权(基线)
                 sysLevel(s.code()).contains("总部") ? "非管制" : "非管制",
                 srcStr, relStr, "2025-04-20", 1);
     }

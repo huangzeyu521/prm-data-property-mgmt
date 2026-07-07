@@ -48,7 +48,7 @@ class ConfirmChangeBaselineServiceTest {
         prior.setAssetName("客户用电信息表");
         prior.setStatus(ConfirmApply.STATUS_DONE);
         prior.setRightHolder("广东电网");
-        prior.setRightType("数据持有权");
+        prior.setRightType("持有权");
         prior.setRegulated("非管制");
         when(applyMapper.selectOne(any())).thenReturn(prior);
 
@@ -61,7 +61,7 @@ class ConfirmChangeBaselineServiceTest {
 
         EquityCard card = new EquityCard();
         card.setCardNo("EC-PRA-0001");
-        card.setRightType("数据持有权");
+        card.setRightType("持有权");
         card.setScope("全字段");
         card.setCardStatus(EquityCard.STATUS_NORMAL);
         when(cardMapper.selectList(any())).thenReturn(List.of(card));
@@ -81,7 +81,7 @@ class ConfirmChangeBaselineServiceTest {
         assertEquals("全字段", full.cards().get(0).scope(), "卡片确权边界 scope 作底版");
         assertEquals(1, full.summaries().size(), "应带出表3认定意见");
         assertEquals("广东电网", full.base().rightHolder(), "base 取上一版真实权属主体");
-        assertEquals("数据持有权", full.base().rightType());
+        assertEquals("持有权", full.base().rightType());
     }
 
     @Test
@@ -89,7 +89,7 @@ class ConfirmChangeBaselineServiceTest {
     void baseline_noPrior_fallsBackToStub() {
         when(applyMapper.selectOne(any())).thenReturn(null);
         ChangeBaseline stub = new ChangeBaseline("营销系统", "中国南方电网有限责任公司", "分省公司",
-                "数字化部", "数据资源持有权", "非管制", "A", "H", "2025-04-20", 1);
+                "数字化部", "持有权", "非管制", "A", "H", "2025-04-20", 1);
         when(catalogService.baselineOf("营销系统")).thenReturn(stub);
 
         ChangeBaselineFull full = svc.baselineOf(null, "营销系统");

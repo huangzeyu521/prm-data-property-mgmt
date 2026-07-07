@@ -103,6 +103,42 @@ public class ConfirmTableItem extends BaseEntity {
     @TableField("CEC_RISK")
     private String riskDesc;
 
+    /** 表2·来源凭证附件(逐表·来源 B–F 的证明材料;逐表凭证单一真源。字段名对齐前端 JSON key) */
+    @TableField("CEC_SRC_ATT")
+    private String sourceAttachment;
+
+    /** 表2·G 行政监管关联资料附件(逐表) */
+    @TableField("CEC_G_ATT")
+    private String checkAttachment;
+
+    /** 表2·H 个人/家庭隐私关联资料附件(逐表) */
+    @TableField("CEC_H_ATT")
+    private String privacyAttachment;
+
+    /** 表2·I 第三方商业机密关联资料附件(逐表) */
+    @TableField("CEC_I_ATT")
+    private String busSecretAttachment;
+
+    /** 表2·J 其他第三方机构协议关联资料附件(逐表) */
+    @TableField("CEC_J_ATT")
+    private String equityAttachment;
+
+    /** 逐表上传件 materialId(供在线预览;字节存于 ConfirmMaterial,此处只存引用) */
+    @TableField("CEC_SRC_MID")
+    private String sourceMatId;
+
+    @TableField("CEC_G_MID")
+    private String checkMatId;
+
+    @TableField("CEC_H_MID")
+    private String privacyMatId;
+
+    @TableField("CEC_I_MID")
+    private String busSecretMatId;
+
+    @TableField("CEC_J_MID")
+    private String equityMatId;
+
     public String getItemId() {
         return itemId;
     }
@@ -261,5 +297,85 @@ public class ConfirmTableItem extends BaseEntity {
 
     public void setRiskDesc(String riskDesc) {
         this.riskDesc = riskDesc;
+    }
+
+    public String getSourceAttachment() {
+        return sourceAttachment;
+    }
+
+    public void setSourceAttachment(String sourceAttachment) {
+        this.sourceAttachment = sourceAttachment;
+    }
+
+    public String getCheckAttachment() {
+        return checkAttachment;
+    }
+
+    public void setCheckAttachment(String checkAttachment) {
+        this.checkAttachment = checkAttachment;
+    }
+
+    public String getPrivacyAttachment() {
+        return privacyAttachment;
+    }
+
+    public void setPrivacyAttachment(String privacyAttachment) {
+        this.privacyAttachment = privacyAttachment;
+    }
+
+    public String getBusSecretAttachment() {
+        return busSecretAttachment;
+    }
+
+    public void setBusSecretAttachment(String busSecretAttachment) {
+        this.busSecretAttachment = busSecretAttachment;
+    }
+
+    public String getEquityAttachment() {
+        return equityAttachment;
+    }
+
+    public void setEquityAttachment(String equityAttachment) {
+        this.equityAttachment = equityAttachment;
+    }
+
+    public String getSourceMatId() {
+        return sourceMatId;
+    }
+
+    public void setSourceMatId(String sourceMatId) {
+        this.sourceMatId = sourceMatId;
+    }
+
+    public String getCheckMatId() {
+        return checkMatId;
+    }
+
+    public void setCheckMatId(String checkMatId) {
+        this.checkMatId = checkMatId;
+    }
+
+    public String getPrivacyMatId() {
+        return privacyMatId;
+    }
+
+    public void setPrivacyMatId(String privacyMatId) {
+        this.privacyMatId = privacyMatId;
+    }
+
+    public String getBusSecretMatId() {
+        return busSecretMatId;
+    }
+
+    public void setBusSecretMatId(String busSecretMatId) {
+        this.busSecretMatId = busSecretMatId;
+    }
+
+    public String getEquityMatId() {
+        return equityMatId;
+    }
+
+    public void setEquityMatId(String equityMatId) {
+        this.equityMatId = equityMatId;
     }
 }

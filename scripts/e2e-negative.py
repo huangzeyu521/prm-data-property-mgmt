@@ -22,7 +22,7 @@ def check(name, cond, extra=''):
 C = 'http://localhost:9102/api'; A = 'http://localhost:9103/api'
 ts = time.strftime('%H%M%S')
 
-def auth_draft(card, scope=u'全字段', right=u'数据加工使用权'):
+def auth_draft(card, scope=u'全字段', right=u'使用权'):
     st, res = call('POST', A + '/dpr/auth/apply/draft', {
         'assetId': 'AST-001', 'assetName': u'负面用例资产', 'equityCardId': card,
         'granteeOrg': u'南网数字集团', 'rightType': right, 'scope': scope,

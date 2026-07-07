@@ -35,7 +35,7 @@ class AitOpsTest {
     private String material(String name) {
         AitMaterial m = new AitMaterial();
         m.setFileName(name);
-        m.setContent("数据持有权,广东电网,自行生产,已盖章");
+        m.setContent("持有权,广东电网,自行生产,已盖章");
         return materialService.upload(m);
     }
 

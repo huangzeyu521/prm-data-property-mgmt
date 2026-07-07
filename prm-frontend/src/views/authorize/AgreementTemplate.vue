@@ -29,11 +29,11 @@
       <el-table :data="rows" v-loading="loading" border stripe>
         <el-table-column type="index" label="序号" width="56" align="center" />
         <el-table-column prop="templateName" label="模板名称" min-width="180" show-overflow-tooltip />
-        <el-table-column prop="authType" label="授权类型" width="100" align="center"><template #default="{ row }"><el-tag>{{ row.authType }}</el-tag></template></el-table-column>
+        <el-table-column prop="authType" label="授权类型" width="100" align="center"><template #default="{ row }"><span class="prm-c-primary">{{ row.authType }}</span></template></el-table-column>
         <el-table-column prop="purpose" label="使用目的" width="110" align="center" />
         <el-table-column prop="templateVersion" label="版本" width="70" align="center" />
         <el-table-column prop="templateStatus" label="状态" width="90" align="center">
-          <template #default="{ row }"><el-tag :type="row.templateStatus==='生效中'?'success':'warning'">{{ row.templateStatus }}</el-tag></template>
+          <template #default="{ row }"><span :class="'prm-c-' + ((row.templateStatus==='生效中'?'success':'warning') || 'primary')">{{ row.templateStatus }}</span></template>
         </el-table-column>
         <el-table-column label="套版文件" min-width="150">
           <template #default="{ row }">
@@ -55,7 +55,7 @@
         </el-table-column>
       </el-table>
       <div class="prm-table-note">注:按授权类型/使用目的分类集中管理协议模板;修改保存自动版本自增;申请/签署时按类型选用匹配模板。</div>
-      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
+      <el-pagination style="margin-top:20px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
         :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" @size-change="s=>{q.size=s;q.current=1;load()}" />
     </div>
 
@@ -72,8 +72,8 @@
           <div style="width:100%">
             <div style="margin-bottom:6px">
               <el-button size="small" type="warning" plain @click="loadStdClauses">载入附录D §3.4.4 标准协议条款</el-button>
-              <el-tag v-if="missingElements.length===0" type="success" size="small" effect="plain" style="margin-left:8px">§3.4.4 五要素已覆盖 ✓</el-tag>
-              <el-tag v-else type="danger" size="small" effect="plain" style="margin-left:8px">缺 §3.4.4 要素:{{ missingElements.join('、') }}</el-tag>
+              <span v-if="missingElements.length===0" style="margin-left:8px" class="prm-c-success">§3.4.4 五要素已覆盖 ✓</span>
+              <span v-else style="margin-left:8px" class="prm-c-danger">缺 §3.4.4 要素:{{ missingElements.join('、') }}</span>
             </div>
             <el-input v-model="form.templateContent" type="textarea" :rows="8" placeholder="协议正文/条款(须含 数据范围/使用场景及目的/利益分配/安全保障)" />
           </div>
@@ -97,8 +97,10 @@
 
 <script setup>
 import { openFilePreview } from '@/composables/useFilePreview'
+import { useTablePage } from '@/composables/useTablePage'
 import { onMounted, reactive, ref, computed } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import { confirmAsync } from '@/utils/confirmAsync'
 import {
   pageAgrTemplate, getAgrTemplate, createAgrTemplate, updateAgrTemplate, deleteAgrTemplate,
   enableAgrTemplate, disableAgrTemplate, uploadAgrTemplateFile, agrTemplateFileUrl
@@ -107,8 +109,7 @@ import {
 // 协议=附录D《运营授权协议》,按授权方式(一事一议/批量)分;取代旧 独占/共享/委托/运营 泛化分类
 const authTypes = ['一事一议', '批量']
 const purposes = ['内部分析', '对外服务', '联合建模', '监管报送']
-const q = reactive({ current: 1, size: 10, templateName: '', authType: '', purpose: '' })
-const rows = ref([]); const total = ref(0); const loading = ref(false)
+const { query: q, rows, total, loading, load, search: onSearch, reset: onReset } = useTablePage(pageAgrTemplate, { templateName: '', authType: '', purpose: '' })
 const dlg = ref(false); const form = reactive({ templateId: '', templateName: '', authType: '一事一议', purpose: '对外服务', templateContent: '' })
 
 // 附录D §3.4.4 五要素(协议须约定);用于「要素覆盖」提示
@@ -141,20 +142,12 @@ ${dataRange}
 乙方应落实数据安全保障措施:{{安全保障}}(加密传输、最小授权访问控制、操作留痕审计、数据脱敏);因乙方原因致数据泄露的,承担相应责任。
 
 六、合规与备案
-${isBatch ? '本批量授权依《数据批量授权清单》整体签订一份协议;' : ''}涉数据产品经营权对外提供的,乙方须在甲方处备案(附录G);经营权授权范围仅限对外开放目录。
+${isBatch ? '本批量授权依《数据批量授权清单》整体签订一份协议;' : ''}涉经营权对外提供的,乙方须在甲方处备案(附录G);经营权授权范围仅限对外开放目录。
 
 七、违约责任 / 八、争议解决 / 九、其他
 (略,按公司合同范本补充)`
 }
 const viewDlg = ref(false); const cur = ref(null)
-
-async function load() {
-  loading.value = true
-  try { const r = await pageAgrTemplate({ ...q }); rows.value = r.records || []; total.value = r.total || 0 }
-  finally { loading.value = false }
-}
-function onSearch() { q.current = 1; load() }
-function onReset() { Object.assign(q, { templateName: '', authType: '', purpose: '' }); onSearch() }
 
 function onAdd() { Object.assign(form, { templateId: '', templateName: '', authType: '一事一议', purpose: '对外服务', templateContent: '' }); dlg.value = true }
 function onEdit(row) { Object.assign(form, { templateId: row.templateId, templateName: row.templateName, authType: row.authType, purpose: row.purpose, templateContent: row.templateContent || '' }); dlg.value = true }
@@ -174,8 +167,8 @@ function onDownload(row) { if (row.fileName) openFilePreview(agrTemplateFileUrl(
 async function onEnable(row) { await enableAgrTemplate(row.templateId); ElMessage.success('已启用'); load() }
 async function onDisable(row) { await disableAgrTemplate(row.templateId); ElMessage.success('已停用'); load() }
 function onDel(row) {
-  ElMessageBox.confirm('确认删除该协议模板吗', '提示', { type: 'warning' })
-    .then(async () => { await deleteAgrTemplate(row.templateId); ElMessage.success('已删除'); load() }).catch(() => {})
+  confirmAsync('确认删除该协议模板吗', '提示',
+    async () => { await deleteAgrTemplate(row.templateId); ElMessage.success('已删除'); load() }).catch(() => {})
 }
 onMounted(load)
 </script>

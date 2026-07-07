@@ -55,7 +55,7 @@ public class QwenDawatAiGateway implements DawatAiGateway {
         try {
             String c = chat("你是数据确权权属识别助手。依据权属证明材料名称/URL 推断权属要素。",
                     "材料:" + fileUrl + "\n仅输出JSON,字段:assetName(资产名称),rightHolder(权属人),"
-                            + "rightType(数据持有权/数据加工使用权/数据产品经营权),respDept(责任部门),"
+                            + "rightType(持有权/使用权/经营权),respDept(责任部门),"
                             + "confidence(0-1小数),rawText(简要说明)。不要输出多余文本。");
             return QwenResponseParser.ownership(c);
         } catch (RuntimeException e) {
@@ -83,7 +83,7 @@ public class QwenDawatAiGateway implements DawatAiGateway {
         try {
             String c = chat("你是数据授权意图识别助手,从自然语言申请抽取授权要素。",
                     "申请:" + text + "\n仅输出JSON,字段:granteeOrg(被授权方),"
-                            + "rightType(数据持有权/数据加工使用权/数据产品经营权),scenario(场景),scope(范围),"
+                            + "rightType(持有权/使用权/经营权),scenario(场景),scope(范围),"
                             + "mode(一事一议/批量),suggestion(建议),confidence(0-1小数)。不要输出多余文本。");
             return QwenResponseParser.intent(c);
         } catch (RuntimeException e) {
@@ -136,7 +136,7 @@ public class QwenDawatAiGateway implements DawatAiGateway {
     public String parseBatchIntent(String text) {
         try {
             return chat("你是批量数据授权意图解析助手。从自然语言中解析共享字段与多条明细。"
-                            + "仅输出严格JSON:{\"granteeOrg\":\"被授权方\",\"rightType\":\"数据持有权/数据加工使用权/数据产品经营权\","
+                            + "仅输出严格JSON:{\"granteeOrg\":\"被授权方\",\"rightType\":\"持有权/使用权/经营权\","
                             + "\"scenario\":\"场景\",\"items\":[{\"assetName\":\"数据资产名\"}]},不要输出多余文本。",
                     "申请描述:" + text);
         } catch (RuntimeException e) {

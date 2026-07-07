@@ -40,7 +40,8 @@ public class AuthFilingController {
 
     @GetMapping("/page")
     public Result<PageResult<AuthFiling>> page(@Valid PageRequest page,
-                                          @RequestParam(required = false) String filingStatus) {
-        return Result.success(service.page(page.getCurrent(), page.getSize(), filingStatus));
+                                          @RequestParam(required = false) String filingStatus,
+                                          @RequestParam(required = false) String filingType) {
+        return Result.success(service.page(page.getCurrent(), page.getSize(), filingStatus, filingType));
     }
 }

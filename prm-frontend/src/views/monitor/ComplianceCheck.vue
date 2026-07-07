@@ -25,11 +25,12 @@
         <el-table-column type="index" label="序号" width="56" align="center" />
         <el-table-column label="所属系统" min-width="120" show-overflow-tooltip><template #default="{ row }">{{ sysName(row) }}</template></el-table-column>
         <el-table-column prop="assetName" label="数据表" min-width="120" show-overflow-tooltip><template #default="{ row }">{{ row.assetName || '—' }}</template></el-table-column>
+        <!-- UI评审:去标签外框,状态用纯色文字(.prm-c-* 全局工具类),颜色语义保留 -->
         <el-table-column prop="checkDim" label="检查维度" width="100" align="center">
-          <template #default="{ row }"><el-tag v-if="row.checkDim" effect="plain" :type="dimTag(row.checkDim)">{{ row.checkDim }}</el-tag><span v-else>-</span></template>
+          <template #default="{ row }"><span v-if="row.checkDim" :class="dimCls(row.checkDim)">{{ row.checkDim }}</span><span v-else>-</span></template>
         </el-table-column>
         <el-table-column prop="checkResult" label="检查结果" width="90" align="center">
-          <template #default="{ row }"><el-tag :type="tag(row.checkResult)">{{ row.checkResult }}</el-tag></template>
+          <template #default="{ row }"><span :class="resultCls(row.checkResult)">{{ row.checkResult }}</span></template>
         </el-table-column>
         <el-table-column prop="problemDesc" label="问题描述" min-width="220" show-overflow-tooltip />
         <el-table-column prop="suggestion" label="整改建议" min-width="170" show-overflow-tooltip />
@@ -43,7 +44,7 @@
         </el-table-column>
       </el-table>
       <div class="prm-table-note">注:台账级多维自动巡检——有效期(权益到期) / 权限范围(越权·先确后授·经营权对外开放 §3.4.3) / 申请材料(确权流程) / 协议内容(授权协议到期未续)。命中生成检查结果+预警+报告,定时器周期执行。附录D §3.4.4 协议要素(数据范围/场景/目的/利益分配/安全保障)由「授权合规校验」逐项精检,本巡检不重复。</div>
-      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
+      <el-pagination style="margin-top:20px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
         :total="total" :current-page="query.current" :page-size="query.size" @current-change="onPage" @size-change="s=>{query.size=s;query.current=1;load()}" />
     </div>
 
@@ -69,15 +70,14 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref, computed } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { pageCompliance, runComplianceCheck, getComplianceReport } from '@/api/monitor'
+import { useTablePage } from '@/composables/useTablePage'
 
 const results = ['合规', '警告', '不合规']
-const query = reactive({ current: 1, size: 10, checkResult: '', assetId: '' })
-const rows = ref([])
-const total = ref(0)
-const loading = ref(false)
+const { query, rows, total, loading, load, search: onSearch, reset: onReset, onPage } =
+  useTablePage(pageCompliance, { checkResult: '', assetId: '' })
 const running = ref(false)
 const reportDlg = ref(false)
 const report = ref(null)
@@ -85,21 +85,10 @@ const dimRows = computed(() => Object.entries(report.value?.byDimension || {}).m
 
 // 库表级:assetId=SYS:系统名 → 所属系统;非 SYS: 原样(兼容台账 assetId)
 function sysName(row) { const a = (row && row.assetId) || ''; return a.startsWith('SYS:') ? a.slice(4) : (a || '—') }
-function tag(r) { return { 合规: 'success', 警告: 'warning', 不合规: 'danger' }[r] || 'info' }
-function dimTag(d) { return { 有效期: 'warning', 权限范围: 'danger', 申请材料: 'info', 协议内容: 'danger' }[d] || 'info' }
+// UI评审:状态色改纯文字类(.prm-c-*),不再用 el-tag 外框
+function resultCls(r) { return { 合规: 'prm-c-success', 警告: 'prm-c-warning', 不合规: 'prm-c-danger' }[r] || 'prm-c-weak' }
+function dimCls(d) { return { 有效期: 'prm-c-warning', 权限范围: 'prm-c-danger', 申请材料: 'prm-c-weak', 协议内容: 'prm-c-danger' }[d] || 'prm-c-weak' }
 function fmtTime(t) { return t ? String(t).replace('T', ' ').slice(0, 19) : '-' }
-
-async function load() {
-  loading.value = true
-  try {
-    const res = await pageCompliance({ ...query })
-    rows.value = res.records || []
-    total.value = res.total || 0
-  } finally { loading.value = false }
-}
-function onSearch() { query.current = 1; load() }
-function onReset() { query.checkResult = ''; query.assetId = ''; onSearch() }
-function onPage(p) { query.current = p; load() }
 
 async function onRun() {
   running.value = true

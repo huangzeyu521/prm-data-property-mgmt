@@ -5,9 +5,7 @@
 -->
 <template>
   <div class="prm-page">
-    <div class="prm-table-note" style="margin:0 0 12px 0">
-      注:跨域汇聚确权审批、授权审批待办,一处看全、一键直达办理(对齐工作指引"一次都不跑/主动协同")。
-    </div>
+    <PageNote>注:跨域汇聚确权审批、授权审批待办,一处看全、一键直达办理(对齐工作指引"一次都不跑/主动协同")。</PageNote>
 
     <el-row :gutter="12" class="todo-stats">
       <el-col :span="8"><el-card shadow="never"><el-statistic title="待办合计" :value="view.total" /></el-card></el-col>
@@ -29,6 +27,7 @@
 </template>
 
 <script setup>
+import PageNote from '@/components/PageNote.vue'
 import { computed, h, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElTable, ElTableColumn, ElButton, ElTag, ElEmpty } from 'element-plus'

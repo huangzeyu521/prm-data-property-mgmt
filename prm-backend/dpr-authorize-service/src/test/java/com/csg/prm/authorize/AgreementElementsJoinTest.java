@@ -35,7 +35,7 @@ class AgreementElementsJoinTest {
         a.setAssetName("用户用电信息表");
         a.setEquityCardId("EC-OK-1");
         a.setGranteeOrg("广州供电局");
-        a.setRightType("数据加工使用权");
+        a.setRightType("使用权");
         a.setScenario("综合能源服务");
         a.setScope("全字段");
         a.setSchemaName("BILLING");
@@ -52,7 +52,7 @@ class AgreementElementsJoinTest {
         assertEquals("营销管理系统", vo.sysName(), "所属系统应由 assetId 去 SYS: 前缀派生");
         assertEquals("用户用电信息表", vo.dataTable(), "数据表=库表名");
         assertEquals("BILLING", vo.schemaName(), "模式名称 join 带出");
-        assertEquals("数据加工使用权", vo.rightType(), "权益类型 join 带出");
+        assertEquals("使用权", vo.rightType(), "权益类型 join 带出");
         assertEquals("综合能源服务", vo.scenario(), "§3.4.4 使用场景及目的 join 带出");
         assertEquals("全字段", vo.scope(), "§3.4.4 数据范围 join 带出");
         assertEquals("按调用次数计费,收益 7:3 分成", vo.benefitAllocation(), "§3.4.4 利益分配 join 带出");

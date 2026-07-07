@@ -41,16 +41,29 @@ public record AgreementElementsVO(
                        String rightType, String scenario, String validDate) implements Serializable {
         public static Item of(AuthApply a) {
             String vd = a.getValidDate() != null ? a.getValidDate().toString().substring(0, 10) : null;
-            return new Item(sysOf(a.getAssetId()), a.getAssetName(), a.getSchemaName(),
+            return new Item(systemNameOf(a), a.getAssetName(), a.getSchemaName(),
                     a.getRightType(), a.getScenario(), vd);
         }
+    }
+
+    /** 所属系统:优先 assetId 的 SYS: 前缀;非 SYS: 前缀不外泄内部资产ID,回退业务域。 */
+    private static String systemNameOf(AuthApply a) {
+        if (a == null) {
+            return "";
+        }
+        String s = sysOf(a.getAssetId());
+        if (!s.isEmpty()) {
+            return s;
+        }
+        return a.getBusinessDomain() != null ? a.getBusinessDomain() : "";
     }
 
     private static String sysOf(String assetId) {
         if (assetId == null) {
             return "";
         }
-        return assetId.startsWith("SYS:") ? assetId.substring(4) : assetId;
+        // 仅 SYS:系统名 形态可派生系统名;否则返回空(不把内部资产ID(如 AST-006)当作系统名外泄)
+        return assetId.startsWith("SYS:") ? assetId.substring(4) : "";
     }
 
     /** 专项协议 + 申请单(可能为空,容错)→ 单项核对视图。 */
@@ -61,7 +74,7 @@ public record AgreementElementsVO(
                 ag.getAgreementId(), ag.getAgreementNo(), ag.getApplyId(), ag.getBatchListId(),
                 apply != null ? apply.getAuthMode() : null,
                 ag.getGranteeOrg(),
-                apply != null ? sysOf(apply.getAssetId()) : null,
+                apply != null ? systemNameOf(apply) : null,
                 apply != null ? apply.getAssetName() : null,
                 apply != null ? apply.getSchemaName() : null,
                 apply != null ? apply.getRightType() : null,

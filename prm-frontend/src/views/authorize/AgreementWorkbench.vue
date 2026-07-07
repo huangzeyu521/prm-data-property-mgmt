@@ -6,16 +6,14 @@
 <template>
   <div class="prm-page">
     <div class="prm-table-note" style="margin-bottom:8px">
-      协议工作台:一份协议从「签章上传 → 协议审核 → 协议存档」在此一处流转,无需在多个菜单间切换。
+      协议工作台:协议在授权批准/生效时由系统自动「形成」。用户只需上传双方签章——
+      <b>双签完成即系统自动核验、开通数据权限、归档存证</b>(对齐 35号文:协议环节无独立人工审核)。
     </div>
     <el-tabs v-model="tab" type="border-card">
       <el-tab-pane label="① 签章上传" name="seal">
         <AgreementManage v-if="tab==='seal'" action-prop="seal" :key="'seal'+spin" />
       </el-tab-pane>
-      <el-tab-pane label="② 协议审核" name="review">
-        <AgreementManage v-if="tab==='review'" action-prop="review" :key="'review'+spin" />
-      </el-tab-pane>
-      <el-tab-pane label="③ 协议存档" name="archive">
+      <el-tab-pane label="② 协议存档" name="archive">
         <AgreementManage v-if="tab==='archive'" action-prop="archive" :key="'archive'+spin" />
       </el-tab-pane>
     </el-tabs>

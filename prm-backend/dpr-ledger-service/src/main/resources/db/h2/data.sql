@@ -12,21 +12,21 @@ INSERT INTO IM_DPM_DATA_ASSET_INFO (CEC_ASSET_ID,CEC_ASSET_NAME,CEC_ASSET_TYPE,C
 
 -- 产权档案(8,部分已确权/已授权)
 INSERT INTO IM_PROPERTY_ARCHIVE (CEC_ARCHIVE_ID,CEC_ASSET_ID,CEC_ASSET_NAME,CEC_RIGHT_TYPE,CEC_RIGHT_SUBJECT,CEC_RIGHT_OBJECT,CEC_ACQUIRE_MODE,CEC_USE_SCOPE,CEC_RESP_DEPT,CEC_VALID_DATE,CEC_CONFIRM_STATUS,CEC_AUTH_STATUS,CEC_EQUITY_CARD_ID,CEC_CREATE_TIME,CEC_DEL_FLAG) VALUES
-('ARC-001','AST-001','客户用电信息表','数据持有权','广东电网','客户用电信息','确权认定','全网','数字化部',DATEADD('YEAR',3,CURRENT_TIMESTAMP),'已确权','已授权','EC-PRA-0001',CURRENT_TIMESTAMP,0),
-('ARC-002','AST-002','台区负荷数据','数据产品经营权','广东电网','台区负荷','确权认定','对外开放','数字化部',DATEADD('YEAR',3,CURRENT_TIMESTAMP),'已确权','未授权','EC-PRA-0002',CURRENT_TIMESTAMP,0),
-('ARC-003','AST-003','设备资产台账','数据持有权','深圳供电局','设备台账','确权认定','本单位','设备部',DATEADD('YEAR',2,CURRENT_TIMESTAMP),'已确权','未授权','EC-PRA-0003',DATEADD('MONTH',-1,CURRENT_TIMESTAMP),0),
-('ARC-004','AST-004','停电事件记录','数据加工使用权','深圳供电局','停电记录','确权认定','省内','调度中心',DATEADD('DAY',-5,CURRENT_TIMESTAMP),'已确权','已授权','EC-PRA-0004',DATEADD('MONTH',-2,CURRENT_TIMESTAMP),0),
-('ARC-005','AST-005','电费账单明细','数据持有权','广西电网','电费明细','确权认定','本单位','财务部',DATEADD('YEAR',3,CURRENT_TIMESTAMP),'待确权','未授权',NULL,DATEADD('MONTH',-3,CURRENT_TIMESTAMP),0),
-('ARC-006','AST-006','充电桩运营数据','数据产品经营权','广东电网','充电运营','公司授权','对外开放','综能公司',DATEADD('YEAR',2,CURRENT_TIMESTAMP),'已确权','已授权','EC-PRA-0006',DATEADD('MONTH',-12,CURRENT_TIMESTAMP),0),
-('ARC-007','AST-007','气象环境数据','数据加工使用权','云南电网','气象数据','交易采购','省内','调度中心',DATEADD('DAY',10,CURRENT_TIMESTAMP),'待确权','未授权',NULL,DATEADD('MONTH',-13,CURRENT_TIMESTAMP),0),
-('ARC-008','AST-008','线损分析数据','数据持有权','贵州电网','线损数据','确权认定','本单位','运维部',DATEADD('YEAR',3,CURRENT_TIMESTAMP),'已确权','未授权','EC-PRA-0008',DATEADD('MONTH',-14,CURRENT_TIMESTAMP),0);
+('ARC-001','AST-001','客户用电信息表','持有权','广东电网','客户用电信息','确权认定','全网','数字化部',DATEADD('YEAR',3,CURRENT_TIMESTAMP),'已确权','已授权','EC-PRA-0001',CURRENT_TIMESTAMP,0),
+('ARC-002','AST-002','台区负荷数据','经营权','广东电网','台区负荷','确权认定','对外开放','数字化部',DATEADD('YEAR',3,CURRENT_TIMESTAMP),'已确权','未授权','EC-PRA-0002',CURRENT_TIMESTAMP,0),
+('ARC-003','AST-003','设备资产台账','持有权','深圳供电局','设备台账','确权认定','本单位','设备部',DATEADD('YEAR',2,CURRENT_TIMESTAMP),'已确权','未授权','EC-PRA-0003',DATEADD('MONTH',-1,CURRENT_TIMESTAMP),0),
+('ARC-004','AST-004','停电事件记录','使用权','深圳供电局','停电记录','确权认定','省内','调度中心',DATEADD('DAY',-5,CURRENT_TIMESTAMP),'已确权','已授权','EC-PRA-0004',DATEADD('MONTH',-2,CURRENT_TIMESTAMP),0),
+('ARC-005','AST-005','电费账单明细','持有权','广西电网','电费明细','确权认定','本单位','财务部',DATEADD('YEAR',3,CURRENT_TIMESTAMP),'待确权','未授权',NULL,DATEADD('MONTH',-3,CURRENT_TIMESTAMP),0),
+('ARC-006','AST-006','充电桩运营数据','经营权','广东电网','充电运营','公司授权','对外开放','综能公司',DATEADD('YEAR',2,CURRENT_TIMESTAMP),'已确权','已授权','EC-PRA-0006',DATEADD('MONTH',-12,CURRENT_TIMESTAMP),0),
+('ARC-007','AST-007','气象环境数据','使用权','云南电网','气象数据','交易采购','省内','调度中心',DATEADD('DAY',10,CURRENT_TIMESTAMP),'待确权','未授权',NULL,DATEADD('MONTH',-13,CURRENT_TIMESTAMP),0),
+('ARC-008','AST-008','线损分析数据','持有权','贵州电网','线损数据','确权认定','本单位','运维部',DATEADD('YEAR',3,CURRENT_TIMESTAMP),'已确权','未授权','EC-PRA-0008',DATEADD('MONTH',-14,CURRENT_TIMESTAMP),0);
 
 -- 产权变更记录(5)
 INSERT INTO IM_PROPERTY_CHANGE_RECORD (CEC_CHANGE_ID,CEC_ASSET_ID,CEC_CHANGE_TYPE,CEC_FIELD_NAME,CEC_BEFORE_VALUE,CEC_AFTER_VALUE,CEC_CHANGE_REASON,CEC_SOURCE_FLOW,CEC_SOURCE_TICKET,CEC_OPERATOR_ID,CEC_CHAIN_HASH,CEC_CHANGE_TIME,CEC_CREATE_TIME,CEC_DEL_FLAG) VALUES
 ('CHG-001','AST-001','确权','confirmStatus','待确权','已确权','确权终审通过','确权流程','QQ-0001','admin','a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,0),
 ('CHG-002','AST-001','授权','authStatus','未授权','已授权','授权协议生效','授权流程','SQ-0001','admin','b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,0),
 ('CHG-003','AST-004','授权','authStatus','未授权','已授权','专项授权生效','授权流程','SQ-0004','admin','c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,0),
-('CHG-004','AST-006','确权','rightType','数据持有权','数据产品经营权','经营权确权认定','确权流程','QQ-0006','admin','d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,0),
+('CHG-004','AST-006','确权','rightType','持有权','经营权','经营权确权认定','确权流程','QQ-0006','admin','d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,0),
 ('CHG-005','AST-002','权益变更','validDate','2027','2028','季度重确权延期','重确权','QQ-0002','admin',NULL,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,0);
 
 -- 监测规则(7,含1条联动熔断 + 申请/审核阶段2条 + 1条草稿可删)
@@ -63,8 +63,8 @@ INSERT INTO IM_COMPLIANCE_RESULT (CEC_CHECK_ID,CEC_ASSET_ID,CEC_RULE_ID,CEC_CHEC
 
 -- 数据权益风险(5,含极高)
 INSERT INTO IM_DPR_RISK (CEC_RISK_ID,CEC_RISK_NO,CEC_ASSET_ID,CEC_RIGHT_TYPES,CEC_RISK_TYPE,CEC_RISK_CONTENT,CEC_RISK_LEVEL,CEC_STRATEGY,CEC_ASSESSOR,CEC_HANDLE_STATUS,CEC_CREATE_TIME,CEC_DEL_FLAG) VALUES
-('FX-001','FX-20260601001','AST-001','数据持有权','涉及个人/家庭隐私','客户用电信息涉及个人隐私,授权范围笼统','极高','取得数据主体授权,最小化使用并脱敏','数据产权合规管控小组','待处置',CURRENT_TIMESTAMP,0),
-('FX-002','FX-20260601002','AST-005','数据持有权','交易采购数据','电费账单二次转售条款缺失','高','与提供方补充采购合作条款','数据产权合规管控小组','处置中',CURRENT_TIMESTAMP,0),
-('FX-003','FX-20260601003','AST-007','数据加工使用权','公开采集数据','气象数据可能涉及版权限制','低','排查来源取得许可','数据产权合规管控小组','已处置',CURRENT_TIMESTAMP,0),
-('FX-004','FX-20260601004','AST-002','数据加工使用权','公共数据授权','授权范围模糊存在被追责风险','中','修订补充授权范围','数据产权合规管控小组','待处置',CURRENT_TIMESTAMP,0),
-('FX-005','FX-20260601005','AST-006','数据产品经营权','涉及第三方商业机密','充电运营数据涉合作方商密','高','取得第三方许可并限定用途','数据产权合规管控小组','已规避',CURRENT_TIMESTAMP,0);
+('FX-001','FX-20260601001','AST-001','持有权','涉及个人/家庭隐私','客户用电信息涉及个人隐私,授权范围笼统','极高','取得数据主体授权,最小化使用并脱敏','数据产权合规管控小组','待处置',CURRENT_TIMESTAMP,0),
+('FX-002','FX-20260601002','AST-005','持有权','交易采购数据','电费账单二次转售条款缺失','高','与提供方补充采购合作条款','数据产权合规管控小组','处置中',CURRENT_TIMESTAMP,0),
+('FX-003','FX-20260601003','AST-007','使用权','公开采集数据','气象数据可能涉及版权限制','低','排查来源取得许可','数据产权合规管控小组','已处置',CURRENT_TIMESTAMP,0),
+('FX-004','FX-20260601004','AST-002','使用权','公共数据授权','授权范围模糊存在被追责风险','中','修订补充授权范围','数据产权合规管控小组','待处置',CURRENT_TIMESTAMP,0),
+('FX-005','FX-20260601005','AST-006','经营权','涉及第三方商业机密','充电运营数据涉合作方商密','高','取得第三方许可并限定用途','数据产权合规管控小组','已规避',CURRENT_TIMESTAMP,0);

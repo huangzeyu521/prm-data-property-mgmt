@@ -30,7 +30,7 @@ class AuthComplianceSubmitGateTest {
         a.setAssetName("门禁测试表");
         a.setEquityCardId(cardId);
         a.setGranteeOrg("广州供电局");
-        a.setRightType("数据加工使用权");
+        a.setRightType("使用权");
         a.setScope("全字段");
         return a;
     }

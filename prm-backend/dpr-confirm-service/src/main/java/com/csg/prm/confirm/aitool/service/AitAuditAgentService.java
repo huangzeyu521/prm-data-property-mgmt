@@ -484,7 +484,7 @@ public class AitAuditAgentService {
     // ---- 辅助 ----
 
     private static boolean isStandardRight(String rt) {
-        return rt != null && (rt.contains("数据持有权") || rt.contains("数据加工使用权") || rt.contains("数据产品经营权"));
+        return rt != null && (rt.contains("持有权") || rt.contains("使用权") || rt.contains("经营权"));
     }
 
     /** 数据级别:由数据分类映射(核心/敏感/内部/公开)。 */

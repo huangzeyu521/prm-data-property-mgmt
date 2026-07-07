@@ -41,5 +41,11 @@ test('batch authorize A+C′: 3步向导 + 进度时间轴结构正确', async (
   await expect(body).not.toContainText('自动发证')
   await expect(body).not.toContainText('附录F')
 
+  // ⑥ 被授权方:南网组织选择器 + 外部主体例外切换(对外经营权附录G)
+  const grantee = page.locator('.el-form-item:has-text("申请主体(被授权方)")')
+  await expect(grantee.locator('.el-select')).toBeVisible() // 默认=组织选择器
+  await grantee.getByText('被授权方为外部主体').click()      // 勾选外部例外
+  await expect(grantee.locator('input[placeholder*="外部被授权主体名称"]')).toBeVisible() // 切为自由文本
+
   expect(errs, `批量授权向导运行时错误:\n${errs.join('\n')}`).toEqual([])
 })

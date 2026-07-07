@@ -65,7 +65,7 @@ class AitMaterialAdvancedTest {
     /** #5 Word 段落多粒度切片。 */
     @Test
     void docx_paragraph_segments() throws Exception {
-        byte[] docx = docxBytes("数据持有权确权证明,数据来源自行生产,有效期3年,已加盖公章。");
+        byte[] docx = docxBytes("持有权确权证明,数据来源自行生产,有效期3年,已加盖公章。");
         String id = service.uploadBinary("确权证明.docx", docx, null, null, null);
         service.parse(id);
         List<AitDocSegment> paras = service.segments(id, AitDocSegment.G_PARAGRAPH);
@@ -158,7 +158,7 @@ class AitMaterialAdvancedTest {
             r0.createCell(1).setCellValue("权属类型");
             Row r1 = s.createRow(1);
             r1.createCell(0).setCellValue("电力计量数据");
-            r1.createCell(1).setCellValue("数据持有权");
+            r1.createCell(1).setCellValue("持有权");
             wb.write(bos);
         }
         return bos.toByteArray();

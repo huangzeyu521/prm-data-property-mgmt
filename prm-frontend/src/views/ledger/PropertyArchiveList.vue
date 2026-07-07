@@ -31,7 +31,7 @@
         <el-table-column prop="assetName" label="资产名称" min-width="180" show-overflow-tooltip />
         <el-table-column label="确权状态" width="110" align="center">
           <template #default="{ row }">
-            <el-tag :type="stateTag(row.state)">{{ row.state }}</el-tag>
+            <span :class="'prm-c-' + ((stateTag(row.state)) || 'primary')">{{ row.state }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="rightType" label="权属类型" width="120" />
@@ -67,7 +67,7 @@
     <prm-dialog v-model="dlg" variant="detail" :title="`产权档案 · ${cur?.assetName || cur?.assetId || ''}`" width="760px">
       <el-descriptions title="产权信息" :column="2" size="small" border v-loading="detailLoading">
         <el-descriptions-item label="确权状态">
-          <el-tag size="small" :type="stateTag(prop?.state)">{{ prop?.state || '-' }}</el-tag>
+          <span :class="'prm-c-' + ((stateTag(prop?.state)) || 'primary')">{{ prop?.state || '-' }}</span>
         </el-descriptions-item>
         <el-descriptions-item label="登记类型">{{ prop?.registerType || '-' }}</el-descriptions-item>
         <el-descriptions-item label="权属类型">{{ prop?.rightType || '-' }}</el-descriptions-item>
@@ -76,19 +76,19 @@
         <el-descriptions-item label="来源方式">{{ prop?.sourceMethod || '-' }}</el-descriptions-item>
         <el-descriptions-item label="来源主体">{{ prop?.sourceSubject || '-' }}</el-descriptions-item>
         <el-descriptions-item label="行政监管(G)">
-          <el-tag size="small" :type="prop?.involvesRegulation ? 'warning' : 'info'">{{ prop?.involvesRegulation ? '是' : '否' }}</el-tag>
+          <span :class="'prm-c-' + ((prop?.involvesRegulation ? 'warning' : 'info') || 'primary')">{{ prop?.involvesRegulation ? '是' : '否' }}</span>
           <span v-if="prop?.regulated" class="dim-note">{{ prop.regulated }}</span>
         </el-descriptions-item>
         <el-descriptions-item label="个人隐私(H)">
-          <el-tag size="small" :type="prop?.involvesPrivacy ? 'warning' : 'info'">{{ prop?.involvesPrivacy ? '是' : '否' }}</el-tag>
+          <span :class="'prm-c-' + ((prop?.involvesPrivacy ? 'warning' : 'info') || 'primary')">{{ prop?.involvesPrivacy ? '是' : '否' }}</span>
           <span v-if="prop?.privacyInfo" class="dim-note">{{ prop.privacyInfo }}</span>
         </el-descriptions-item>
         <el-descriptions-item label="第三方商密(I)">
-          <el-tag size="small" :type="prop?.involvesTradeSecret ? 'warning' : 'info'">{{ prop?.involvesTradeSecret ? '是' : '否' }}</el-tag>
+          <span :class="'prm-c-' + ((prop?.involvesTradeSecret ? 'warning' : 'info') || 'primary')">{{ prop?.involvesTradeSecret ? '是' : '否' }}</span>
           <span v-if="prop?.thirdPartyInfo" class="dim-note">{{ prop.thirdPartyInfo }}</span>
         </el-descriptions-item>
         <el-descriptions-item label="第三方协议(J)">
-          <el-tag size="small" :type="prop?.involvesThirdPartyAgreement ? 'warning' : 'info'">{{ prop?.involvesThirdPartyAgreement ? '是' : '否' }}</el-tag>
+          <span :class="'prm-c-' + ((prop?.involvesThirdPartyAgreement ? 'warning' : 'info') || 'primary')">{{ prop?.involvesThirdPartyAgreement ? '是' : '否' }}</span>
           <span v-if="prop?.relationSubject" class="dim-note">{{ prop.relationSubject }}</span>
         </el-descriptions-item>
         <el-descriptions-item label="有效期">{{ fmtDate(prop?.validDate) }}</el-descriptions-item>
@@ -99,7 +99,7 @@
       </el-descriptions>
 
       <div class="eq-title">权益基本信息</div>
-      <el-table :data="equity" border size="small" empty-text="暂无权益条目">
+      <el-table :data="equity" border size="small" empty-text="暂无数据">
         <el-table-column prop="cardNo" label="权益编号" min-width="150" show-overflow-tooltip />
         <el-table-column prop="rightType" label="权益类型" width="120" />
         <el-table-column prop="rightOwner" label="权益主体" min-width="120" show-overflow-tooltip />
@@ -114,42 +114,26 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { pageAssetArchive, getAssetProperty, getAssetEquity } from '@/api/assetCard'
+import { useTablePage } from '@/composables/useTablePage'
 import PrmDialog from '@/components/PrmDialog.vue'
 
 const router = useRouter()
-// 已确权资产「发起变更」:跳一站式确权向导并预选该资产,向导按确权状态自动定为「确权变更」(附录F §3.3.2)
+// 已确权资产「发起变更」:必须进「确权变更申请」路由(meta.mode='change'),
+// 变更触发勾选/基线对照/授权影响门禁均由该路由 changeMode 门控,推 wizard(initial) 会全部失效
 function onChange(row) {
-  router.push({ path: '/dpr/confirm/wizard', query: { assetId: row.assetId } })
+  router.push({ path: '/dpr/confirm/change', query: { assetId: row.assetId } })
 }
 
 const STATES = ['待确权', '确权中', '已确权', '已驳回']
 
-const q = reactive({ keyword: '', state: '', current: 1, size: 10 })
-const rows = ref([])
-const total = ref(0)
-const loading = ref(false)
-
-async function load() {
-  loading.value = true
-  try {
-    const page = await pageAssetArchive({
-      current: q.current, size: q.size,
-      keyword: q.keyword || undefined, state: q.state || undefined
-    })
-    rows.value = page.records || []
-    total.value = page.total || 0
-  } finally {
-    loading.value = false
-  }
-}
-
-function onSearch() { q.current = 1; load() }
-function onReset() { q.keyword = ''; q.state = ''; q.current = 1; load() }
-function onPage(p) { q.current = p; load() }
-function onSize(s) { q.size = s; q.current = 1; load() }
+const { query: q, rows, total, loading, load, search: onSearch, reset: onReset, onPage, onSizeChange: onSize } =
+  useTablePage(
+    (p) => pageAssetArchive({ ...p, keyword: p.keyword || undefined, state: p.state || undefined }),
+    { keyword: '', state: '' }
+  )
 
 // 明细
 const dlg = ref(false)
@@ -184,6 +168,6 @@ load()
 
 <style scoped>
 .prm-pager { margin-top: 12px; justify-content: flex-end; }
-.eq-title { margin: 16px 0 8px; font-size: 14px; font-weight: 600; color: var(--prm-color-text); }
+.eq-title { margin: 20px 0 8px; font-size: 14px; font-weight: 600; color: var(--prm-color-text); }
 .dim-note { margin-left: 6px; font-size: 12px; color: var(--prm-color-text-secondary); }
 </style>

@@ -94,7 +94,7 @@ class GrantableCatalogContractTest {
         assertTrue(Boolean.TRUE.equals(leaves.get(ANCHOR_SYS + "|" + ANCHOR_TABLE)),
                 "确权目录全树应含已确权叶子 " + ANCHOR_SYS + "/" + ANCHOR_TABLE + "(先确后授锚点)");
 
-        EquityCard card = liveTableCard("CTEST-USE-1", ANCHOR_SYS, ANCHOR_TABLE, "数据加工使用权");
+        EquityCard card = liveTableCard("CTEST-USE-1", ANCHOR_SYS, ANCHOR_TABLE, "使用权");
         cardMapper.insert(card);
 
         assertTrue(pickerJoins(card, leaves),
@@ -107,7 +107,7 @@ class GrantableCatalogContractTest {
     @DisplayName("库表代码不在确权目录中的卡片,picker 配对失败(不会误授未确权库表)")
     void cardWithUnknownTableDoesNotJoin() {
         Map<String, Boolean> leaves = leafConfirmed();
-        EquityCard bogus = liveTableCard("CTEST-BOGUS-1", ANCHOR_SYS, "NOT_A_REAL_TABLE", "数据加工使用权");
+        EquityCard bogus = liveTableCard("CTEST-BOGUS-1", ANCHOR_SYS, "NOT_A_REAL_TABLE", "使用权");
         cardMapper.insert(bogus);
         assertFalse(pickerJoins(bogus, leaves),
                 "库表代码不在确权目录的卡片不应被 picker 命中(防止误授未确权库表)");

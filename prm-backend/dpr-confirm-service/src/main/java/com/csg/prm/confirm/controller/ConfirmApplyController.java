@@ -92,7 +92,8 @@ public class ConfirmApplyController {
         return Result.success();
     }
 
-    /** 批量提交草稿至审核。 */
+    /** 批量提交草稿至审核(仅申请人本人的草稿;非本人项在结果中标记失败)。 */
+    @com.csg.prm.common.auth.RequiresRole({"apply", "admin"})
     @PostMapping("/batch-submit")
     public Result<com.csg.prm.confirm.dto.BatchResult> batchSubmit(@RequestBody List<String> applyIds) {
         return Result.success(service.batchSubmit(applyIds));
@@ -137,7 +138,8 @@ public class ConfirmApplyController {
         return Result.success();
     }
 
-    /** 删除草稿确权申请(仅草稿状态;已提交/审批中会被拒绝)。 */
+    /** 删除草稿确权申请(仅草稿状态 + 仅申请人本人;已提交/审批中会被拒绝)。 */
+    @com.csg.prm.common.auth.RequiresRole({"apply", "admin"})
     @DeleteMapping("/{applyId}")
     public Result<Void> delete(@PathVariable String applyId) {
         service.delete(applyId);

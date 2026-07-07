@@ -61,7 +61,7 @@ class AitCleanTest {
 
         assertEquals("用户_表", find(base, "tableName").getCleanValue(), "去空白+命名规范化");
         assertEquals("user_id", find(base, "fieldName").getCleanValue(), "全角→半角");
-        assertEquals("数据持有权", find(base, "rightType").getCleanValue(), "权利类型术语归一");
+        assertEquals("持有权", find(base, "rightType").getCleanValue(), "权利类型术语归一");
         assertEquals("自行生产", find(base, "dataSource").getCleanValue(), "数据来源术语归一");
         assertEquals("是", find(base, "isPersonalInfo").getCleanValue(), "布尔项识别");
         assertEquals(AitAuditBase.ST_MISSING, find(base, "systemName").getStatus(), "空值→缺失");
@@ -122,7 +122,7 @@ class AitCleanTest {
         String id = newMaterial("底表日志.xlsx");
         Map<String, String> row = new LinkedHashMap<>();
         row.put("表名", "CUST");
-        row.put("权利类型", "经营权"); // 归一→数据产品经营权
+        row.put("权利类型", "经营权"); // 归一→经营权
         row.put("敏感类型", "未知敏感"); // 异常
         AitCleanRequest req = new AitCleanRequest();
         req.setRows(List.of(row));
@@ -132,7 +132,7 @@ class AitCleanTest {
         // #4 审核底表
         List<AitAuditBase> base = cleanService.auditBase(id);
         assertFalse(base.isEmpty(), "应生成统一审核底表");
-        assertEquals("数据产品经营权", find(base, "rightType").getCleanValue());
+        assertEquals("经营权", find(base, "rightType").getCleanValue());
         // #5 待补正清单(只含非正常项)
         List<AitAuditBase> pending = cleanService.pending(id);
         assertFalse(pending.isEmpty(), "应有待补正项");
@@ -143,7 +143,7 @@ class AitCleanTest {
         AitCleanLog rtLog = logs.stream().filter(l -> "rightType".equals(l.getField())).findFirst().orElse(null);
         assertNotNull(rtLog, "应有权利类型清洗日志");
         assertEquals("经营权", rtLog.getOriginalValue());
-        assertEquals("数据产品经营权", rtLog.getCleanedValue());
+        assertEquals("经营权", rtLog.getCleanedValue());
         assertNotNull(rtLog.getRule());
         assertEquals(AitCleanLog.METHOD_RULE, rtLog.getMethod());
     }
@@ -153,11 +153,11 @@ class AitCleanTest {
     void template_compare_maps_audits_and_logs() {
         AitMaterial m = new AitMaterial();
         m.setFileName("确权材料-模板对比.docx");
-        m.setContent("权利主体:广东电网有限责任公司,数据持有权,自行生产,电网生产数据,有效期3年,已盖章");
+        m.setContent("权利主体:广东电网有限责任公司,持有权,自行生产,电网生产数据,有效期3年,已盖章");
         String id = materialService.upload(m);
         materialService.parse(id);
 
-        String tpl = "权利类型：数据持有权\n数据来源：自行生产\n敏感类型：电网生产数据\n授权范围：不存在的范围XYZ";
+        String tpl = "权利类型：持有权\n数据来源：自行生产\n敏感类型：电网生产数据\n授权范围：不存在的范围XYZ";
         AitCleanService.TplCompareResult r = cleanService.templateCompare(
                 id, "结构化模板.txt", tpl.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         assertNotNull(r);
@@ -177,7 +177,7 @@ class AitCleanTest {
         byte[] csv = cleanService.exportTemplateCompare(id);
         String text = new String(csv, java.nio.charset.StandardCharsets.UTF_8);
         assertTrue(text.contains("模板名称,模板字段,模板值,材料抽取值,一致性,材料中所在位置"), "CSV 应含表头");
-        assertTrue(text.contains("数据持有权"), "CSV 应含对比值");
+        assertTrue(text.contains("持有权"), "CSV 应含对比值");
     }
 
     /** 1.3#1 来源字段:termCheck 返回值在材料中的定位(sourceLocation)。 */
@@ -185,7 +185,7 @@ class AitCleanTest {
     void term_check_returns_source_location() {
         AitMaterial m = new AitMaterial();
         m.setFileName("来源定位.docx");
-        m.setContent("本材料数据来源为自行生产,涉及电网生产数据,数据持有权,有效期3年。");
+        m.setContent("本材料数据来源为自行生产,涉及电网生产数据,持有权,有效期3年。");
         String id = materialService.upload(m);
         materialService.parse(id);
         List<AitMaterialService.TermSuggestion> terms = materialService.termCheck(id);

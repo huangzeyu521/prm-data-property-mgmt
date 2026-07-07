@@ -39,7 +39,7 @@ class ConfirmChangeLifecycleTest {
         ConfirmApply a = new ConfirmApply();
         a.setAssetId(assetId);
         a.setAssetName("变更测试-" + assetId);
-        a.setRightType("数据持有权");
+        a.setRightType("持有权");
         a.setRightHolder(holder);
         if (change) {
             a.setReConfirm(Boolean.TRUE);
@@ -78,7 +78,7 @@ class ConfirmChangeLifecycleTest {
 
         // 当前有效权益唯一,且 findCurrentValid 命中最新版
         assertEquals(1, normalCardCount(assetId), "同资产+权利仅一张正常卡");
-        EquityCard cur = cardService.findCurrentValid(assetId, "数据持有权");
+        EquityCard cur = cardService.findCurrentValid(assetId, "持有权");
         assertEquals(cardId2, cur.getCardId(), "当前有效卡应为最新版");
 
         // 前序卡留痕"被取代"(防篡改证据链)
@@ -96,7 +96,7 @@ class ConfirmChangeLifecycleTest {
         prior.setCardNo("EC-PRIOR-" + System.nanoTime());
         prior.setAssetId(assetId);
         prior.setAssetName("预填测试");
-        prior.setRightType("数据持有权");
+        prior.setRightType("持有权");
         prior.setRightOwner("贵州电网");
         prior.setCardStatus(EquityCard.STATUS_NORMAL);
         prior.setVersion(1);

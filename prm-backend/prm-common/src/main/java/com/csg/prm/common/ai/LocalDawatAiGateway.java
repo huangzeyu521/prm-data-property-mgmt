@@ -17,9 +17,9 @@ public class LocalDawatAiGateway implements DawatAiGateway {
         return "local-rule-stub";
     }
 
-    private static final String HOLD = "数据持有权";
-    private static final String USE = "数据加工使用权";
-    private static final String OPERATE = "数据产品经营权";
+    private static final String HOLD = "持有权";
+    private static final String USE = "使用权";
+    private static final String OPERATE = "经营权";
 
     @Override
     public OcrOwnership recognizeOwnership(String fileUrl) {
@@ -84,7 +84,7 @@ public class LocalDawatAiGateway implements DawatAiGateway {
         }
         if (q.contains("三权分置") || q.contains("权属")) {
             return new RagAnswer(
-                    "数据三权分置:数据持有权、数据加工使用权、数据产品经营权分置确权;产品经营权对外授权范围仅限对外开放目录。",
+                    "数据三权分置:持有权、使用权、经营权分置确权;产品经营权对外授权范围仅限对外开放目录。",
                     List.of("附录F 3.1 三权分置", "附录F 3.4.3 经营权范围"), 0.9);
         }
         if (q.contains("授权") && (q.contains("流程") || q.contains("审批"))) {

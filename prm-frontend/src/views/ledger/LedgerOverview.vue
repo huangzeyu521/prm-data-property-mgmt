@@ -9,11 +9,11 @@
       <el-tab-pane label="总体概览" name="overview">
         <el-row :gutter="16">
           <el-col :span="6"><el-card shadow="hover"><div class="ov-card"><div class="ov-num">{{ data.totalAssets }}</div><div class="ov-label">资产总数</div></div></el-card></el-col>
-          <el-col :span="6"><el-card shadow="hover"><div class="ov-card"><div class="ov-num ov-green">{{ data.confirmedAssets }}</div><div class="ov-label">已确权资产数</div></div></el-card></el-col>
-          <el-col :span="6"><el-card shadow="hover"><div class="ov-card"><div class="ov-num ov-orange">{{ data.unconfirmedAssets }}</div><div class="ov-label">未确权资产数</div></div></el-card></el-col>
-          <el-col :span="6"><el-card shadow="hover"><div class="ov-card"><div class="ov-num ov-blue">{{ data.confirmRate }}%</div><div class="ov-label">确权覆盖率</div></div></el-card></el-col>
+          <el-col :span="6"><el-card shadow="hover"><div class="ov-card"><div class="ov-num prm-c-success">{{ data.confirmedAssets }}</div><div class="ov-label">已确权资产数</div></div></el-card></el-col>
+          <el-col :span="6"><el-card shadow="hover"><div class="ov-card"><div class="ov-num prm-c-warning">{{ data.unconfirmedAssets }}</div><div class="ov-label">未确权资产数</div></div></el-card></el-col>
+          <el-col :span="6"><el-card shadow="hover"><div class="ov-card"><div class="ov-num prm-c-primary">{{ data.confirmRate }}%</div><div class="ov-label">确权覆盖率</div></div></el-card></el-col>
         </el-row>
-        <el-row :gutter="16" style="margin-top: 16px">
+        <el-row :gutter="16" style="margin-top: 20px">
           <el-col :span="12">
             <el-card shadow="never" header="已确权 · 三权分置结构">
               <div ref="pieRef" style="height: 320px"></div>
@@ -82,7 +82,4 @@ onMounted(load)
 .ov-card { text-align: center; padding: 8px 0; }
 .ov-num { font-size: 30px; font-weight: 700; }
 .ov-label { color: var(--prm-color-text-secondary); margin-top: 4px; }
-.ov-green { color: #36b21d; }
-.ov-orange { color: #ffc417; }
-.ov-blue { color: #1e87f0; }
 </style>

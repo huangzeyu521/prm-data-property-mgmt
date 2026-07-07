@@ -23,7 +23,7 @@
     </div>
 
     <div class="prm-table-card">
-      <div style="margin-bottom: 12px"><el-button type="primary" @click="onCreate">新增</el-button></div>
+      <div style="margin-bottom: 10px"><el-button type="primary" @click="onCreate">新增</el-button></div>
       <el-table :data="rows" v-loading="loading" border stripe>
         <el-table-column type="index" label="序号" width="64" align="center" />
         <el-table-column prop="ruleName" label="规则名称" min-width="180" show-overflow-tooltip />
@@ -31,16 +31,16 @@
         <el-table-column prop="threshold" label="阈值" width="90" />
         <el-table-column prop="notifyChannel" label="通知方式" width="160" show-overflow-tooltip>
           <template #default="{ row }">
-            <el-tag v-for="c in (row.notifyChannel ? row.notifyChannel.split(',') : [])" :key="c" size="small" effect="plain" style="margin-right:4px">{{ c }}</el-tag>
+            <span v-for="c in (row.notifyChannel ? row.notifyChannel.split(',') : [])" :key="c" style="margin-right:4px" class="prm-c-primary">{{ c }}</span>
             <span v-if="!row.notifyChannel">—</span>
           </template>
         </el-table-column>
         <el-table-column prop="ruleVersion" label="版本" width="70" align="center" />
         <el-table-column label="联动熔断" width="100" align="center">
-          <template #default="{ row }"><el-tag v-if="row.circuitBreak" type="danger">熔断</el-tag><span v-else>—</span></template>
+          <template #default="{ row }"><span v-if="row.circuitBreak" class="prm-c-danger">熔断</span><span v-else>—</span></template>
         </el-table-column>
         <el-table-column prop="effectStatus" label="生效状态" width="100" align="center">
-          <template #default="{ row }"><el-tag :type="statusTag(row.effectStatus)">{{ row.effectStatus }}</el-tag></template>
+          <template #default="{ row }"><span :class="'prm-c-' + ((statusTag(row.effectStatus)) || 'primary')">{{ row.effectStatus }}</span></template>
         </el-table-column>
         <el-table-column label="操作" width="250" fixed="right">
           <template #default="{ row }">
@@ -53,7 +53,7 @@
       </el-table>
       <div class="prm-table-note">注:仅"草稿"规则可物理删除;生效中/历史规则不支持物理删除,仅可停用并生成新版本(守可审计红线)。</div>
       <el-pagination
-        style="margin-top: 16px; justify-content: flex-end"
+        style="margin-top: 20px; justify-content: flex-end"
         background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]" :total="total"
         :current-page="query.current" :page-size="query.size" @current-change="onPage" @size-change="s=>{query.size=s;query.current=1;load()}" />
     </div>
@@ -94,8 +94,10 @@
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import { confirmAsync } from '@/utils/confirmAsync'
 import { pageRule, createRule, updateRule, enableRule, disableRule, deleteRule } from '@/api/monitor'
+import { useTablePage } from '@/composables/useTablePage'
 
 const effectStatuses = ['草稿', '生效中', '停用']
 const categories = ['权属变动', '调用异常', '到期提醒', '合规', '申请审核']
@@ -103,10 +105,7 @@ const priorities = ['高', '中', '低']
 const channels = ['站内信', '邮件', '短信', 'eLink']
 const channelArr = ref([])
 
-const query = reactive({ current: 1, size: 10, ruleName: '', effectStatus: '' })
-const rows = ref([])
-const total = ref(0)
-const loading = ref(false)
+const { query, rows, total, loading, load, search: onSearch, reset: onReset, onPage } = useTablePage(pageRule, { ruleName: '', effectStatus: '' })
 
 const dialogVisible = ref(false)
 const dialogTitle = ref('新增规则')
@@ -121,19 +120,6 @@ function statusTag(s) {
   return { 生效中: 'success', 草稿: 'info', 停用: 'warning' }[s] || 'info'
 }
 
-async function load() {
-  loading.value = true
-  try {
-    const res = await pageRule({ ...query })
-    rows.value = res.records || []
-    total.value = res.total || 0
-  } finally {
-    loading.value = false
-  }
-}
-function onSearch() { query.current = 1; load() }
-function onReset() { query.ruleName = ''; query.effectStatus = ''; onSearch() }
-function onPage(p) { query.current = p; load() }
 
 function onCreate() { Object.assign(form, emptyForm()); channelArr.value = []; dialogTitle.value = '新增规则'; dialogVisible.value = true }
 function onEdit(row) { Object.assign(form, row); channelArr.value = row.notifyChannel ? row.notifyChannel.split(',') : []; dialogTitle.value = '修改规则'; dialogVisible.value = true }
@@ -148,11 +134,12 @@ async function onSubmit() {
 }
 async function onEnable(row) { await enableRule(row.ruleId); ElMessage.success('已启用'); load() }
 async function onDisable(row) { await disableRule(row.ruleId); ElMessage.success('已停用'); load() }
-async function onDelete(row) {
-  await ElMessageBox.confirm(`确认物理删除草稿规则「${row.ruleName}」?`, '删除确认', { type: 'warning' })
-  await deleteRule(row.ruleId)
-  ElMessage.success('已删除')
-  load()
+function onDelete(row) {
+  confirmAsync(`确认物理删除草稿规则「${row.ruleName}」?`, '删除确认', async () => {
+    await deleteRule(row.ruleId)
+    ElMessage.success('已删除')
+    load()
+  }).catch(() => {})
 }
 
 onMounted(load)

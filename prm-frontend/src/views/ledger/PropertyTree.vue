@@ -23,18 +23,19 @@
         <template #default="{ data }">
           <span class="tree-node">
             <span>{{ data.label }}</span>
-            <el-tag v-if="data.type === 'DATASET'" size="small" :type="statusTag(data.confirmStatus)" style="margin-left: 8px">
+            <span v-if="data.type === 'DATASET'" style="margin-left: 8px" :class="'prm-c-' + ((statusTag(data.confirmStatus)) || 'primary')">
               {{ data.confirmStatus }}
-            </el-tag>
+            </span>
           </span>
         </template>
       </el-tree>
-      <div class="prm-table-note">注:层级为"子公司—系统—模式—数据集",叶子节点标注确权状态。</div>
+      <PageNote>注:层级为"子公司—系统—模式—数据集",叶子节点标注确权状态。</PageNote>
     </div>
   </div>
 </template>
 
 <script setup>
+import PageNote from '@/components/PageNote.vue'
 import { onMounted, ref, watch } from 'vue'
 import { getPropertyTree } from '@/api/ledger'
 

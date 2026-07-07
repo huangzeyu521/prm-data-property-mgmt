@@ -14,10 +14,14 @@ import path from 'node:path'
 async function preflightBackends() {
   // 用 127.0.0.1(非 localhost):node fetch 会先解析 localhost→IPv6 ::1,而 Docker 端口绑 IPv4 → 误判不可达。
   // 探活 URL 取确定返回 200 的端点(服务"起着但全 404"也应能区分)。
+  // 端口可被环境变量覆盖(默认 9101/9102/9103),与 vite.config.js 一致——本机端口被系统保留时改起其它端口。
+  const pLedger = process.env.PRM_LEDGER_PORT || '9101'
+  const pConfirm = process.env.PRM_CONFIRM_PORT || '9102'
+  const pAuth = process.env.PRM_AUTH_PORT || '9103'
   const probes = [
-    { name: 'dpr-ledger-service(9101)', url: 'http://127.0.0.1:9101/api/dpr/ledger/statistics' },
-    { name: 'dpr-confirm-service(9102)', url: 'http://127.0.0.1:9102/api/dpr/confirm/apply/page' },
-    { name: 'dpr-authorize-service(9103)', url: 'http://127.0.0.1:9103/api/dpr/auth/scenario/list' },
+    { name: `dpr-ledger-service(${pLedger})`, url: `http://127.0.0.1:${pLedger}/api/dpr/ledger/statistics` },
+    { name: `dpr-confirm-service(${pConfirm})`, url: `http://127.0.0.1:${pConfirm}/api/dpr/confirm/apply/page` },
+    { name: `dpr-authorize-service(${pAuth})`, url: `http://127.0.0.1:${pAuth}/api/dpr/auth/scenario/list` },
   ]
   const down = []
   for (const p of probes) {

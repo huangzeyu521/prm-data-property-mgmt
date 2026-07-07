@@ -54,10 +54,15 @@ check('leadership', {
   has: ['/dpr/auth/batch-list', '/dpr/workbench/todo'],
   hasnt: [CONFIRM_REVIEW, LEDGER, SYS, DASH_AUTH],
 })
-// 业务管理部门:授权审核台;不涉系统管理
+// 业务管理部门:一事一议发起(35号文 一事一议步骤10 发起人=业务管理部门团队)+ 授权审核台;不涉确权申报/系统管理
 check('business', {
-  has: [AUTH_REVIEW, '/dpr/workbench/todo'],
-  hasnt: [SYS],
+  has: ['/dpr/auth/wizard', AUTH_REVIEW, '/dpr/workbench/todo'],
+  hasnt: [SYS, '/dpr/confirm/wizard'],
+})
+// 申报单位分管领导(unit):授权单位初审(审核台/待办/历史);不涉确权审核/分析/系统管理
+check('unit', {
+  has: [AUTH_REVIEW, '/dpr/workbench/todo', '/dpr/auth/history'],
+  hasnt: [CONFIRM_REVIEW, DASH_AUTH, SYS],
 })
 // 管理员视图(all):全可见
 check('all', { has: [SYS, LEDGER, CONFIRM_REVIEW, AUTH_REVIEW, DASH_AUTH] })
@@ -72,6 +77,8 @@ function setEq(actual, expected, msg) {
 setEq(handledStatuses('gm', AUTH_NODE_ROLE), ['副总审批中'], 'gm 授权可办节点')
 setEq(handledStatuses('gm', CONFIRM_NODE_ROLE), [], 'gm 确权可办节点(应为空,gm 不涉确权)')
 // 合规/业务/主管/经理/领导小组:各自唯一授权节点
+setEq(handledStatuses('unit', AUTH_NODE_ROLE), ['单位初审中'], 'unit 授权可办节点(表2 20-50 单位初审)')
+setEq(handledStatuses('unit', CONFIRM_NODE_ROLE), [], 'unit 确权可办节点(应为空)')
 setEq(handledStatuses('review', AUTH_NODE_ROLE), ['合规审核中'], 'review 授权可办节点')
 setEq(handledStatuses('business', AUTH_NODE_ROLE), ['业务审核中'], 'business 授权可办节点')
 setEq(handledStatuses('manager', AUTH_NODE_ROLE), ['主管审核中'], 'manager 授权可办节点')

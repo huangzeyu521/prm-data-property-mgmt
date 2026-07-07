@@ -34,7 +34,7 @@ public class AuthCertTemplate extends BaseEntity {
     @TableField("CEC_CERT_TYPE")
     private String certType;
 
-    /** 适用授权权益类型:数据加工使用权 / 数据产品经营权 */
+    /** 适用授权权益类型:使用权 / 经营权 */
     @TableField("CEC_RIGHT_TYPE")
     private String rightType;
 

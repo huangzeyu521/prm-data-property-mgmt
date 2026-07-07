@@ -38,6 +38,18 @@ public class BatchAuthList extends BaseEntity {
     @TableField("CEC_REMARK")
     private String remark;
 
+    /** 数据使用地理范围(表5/表6「跨地域」判定来源 + 协议附录D 表1 地理范围缺省) */
+    @TableField("CEC_GEO_SCOPE")
+    private String geoScope;
+
+    public String getGeoScope() {
+        return geoScope;
+    }
+
+    public void setGeoScope(String geoScope) {
+        this.geoScope = geoScope;
+    }
+
     public String getBatchListId() {
         return batchListId;
     }

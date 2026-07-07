@@ -39,7 +39,7 @@ import java.util.stream.Collectors;
 @Service
 public class AitDecisionServiceImpl implements AitDecisionService {
 
-    private static final Set<String> STD_RIGHT = Set.of("数据持有权", "数据加工使用权", "数据产品经营权");
+    private static final Set<String> STD_RIGHT = Set.of("持有权", "使用权", "经营权");
     // 关键因子权重(SW-007):材料完整性30% / 权属无冲突40% / 合规15% / 历史匹配15%
     private static final double W_MATERIAL = 0.30;
     private static final double W_CONFLICT = 0.40;
@@ -263,14 +263,14 @@ public class AitDecisionServiceImpl implements AitDecisionService {
     /** 现行法规条款库(《数据二十条》/南网制度)按权利类型与冲突情形关键词检索 */
     private List<String> regulationSnippets(String rightType, boolean hasConflict) {
         List<String> snippets = new ArrayList<>();
-        snippets.add("《数据二十条》:建立数据资源持有权、数据加工使用权、数据产品经营权等分置的产权运行机制");
+        snippets.add("《数据二十条》:建立持有权、使用权、经营权等分置的产权运行机制");
         String norm = norm(rightType);
         if ("持有".equals(norm)) {
             snippets.add("《数据二十条》:推进实施公共数据确权授权机制,保障数据持有主体权益");
         } else if ("使用".equals(norm)) {
-            snippets.add("《数据二十条》:保障数据加工使用权,促进数据使用价值复用");
+            snippets.add("《数据二十条》:保障使用权,促进数据使用价值复用");
         } else if ("经营".equals(norm)) {
-            snippets.add("南网制度(附录F 3.4.3):数据产品经营权对外授权范围仅限对外开放目录");
+            snippets.add("南网制度(附录F 3.4.3):经营权对外授权范围仅限对外开放目录");
         }
         if (hasConflict) {
             snippets.add("南网制度(附录F 3.2):先确后授,权属冲突须经合规管控小组裁定后方可确权");

@@ -17,20 +17,21 @@
       <el-table :data="roles" v-loading="loading" border stripe>
         <el-table-column type="index" label="序号" width="64" align="center" />
         <el-table-column prop="code" label="角色编码" width="120">
-          <template #default="{ row }"><el-tag size="small" :type="tagType(row.code)">{{ row.code }}</el-tag></template>
+          <template #default="{ row }"><span :class="'prm-c-' + ((tagType(row.code)) || 'primary')">{{ row.code }}</span></template>
         </el-table-column>
         <el-table-column prop="name" label="角色名称" min-width="140" />
         <el-table-column prop="description" label="权限说明" min-width="320" show-overflow-tooltip />
         <el-table-column prop="userCount" label="用户数" width="100" align="center">
-          <template #default="{ row }"><el-tag size="small" effect="plain">{{ row.userCount }}</el-tag></template>
+          <template #default="{ row }"><span class="prm-c-primary">{{ row.userCount }}</span></template>
         </el-table-column>
       </el-table>
-      <div class="prm-table-note">注:用户数为当前各角色在册启用/停用账号合计。</div>
+      <PageNote>注:用户数为当前各角色在册启用/停用账号合计。</PageNote>
     </div>
   </div>
 </template>
 
 <script setup>
+import PageNote from '@/components/PageNote.vue'
 import { ref, onMounted } from 'vue'
 import { listRoles } from '@/api/system'
 

@@ -12,7 +12,7 @@
           <el-descriptions :column="2" border>
             <el-descriptions-item label="资产名称">{{ a.assetName }}</el-descriptions-item>
             <el-descriptions-item label="资产ID">{{ a.assetId }}</el-descriptions-item>
-            <el-descriptions-item label="确权状态"><el-tag :type="tag(a.confirmStatus)">{{ a.confirmStatus }}</el-tag></el-descriptions-item>
+            <el-descriptions-item label="确权状态"><span :class="'prm-c-' + ((tag(a.confirmStatus)) || 'primary')">{{ a.confirmStatus }}</span></el-descriptions-item>
             <el-descriptions-item label="授权状态">{{ a.authStatus || '-' }}</el-descriptions-item>
           </el-descriptions>
         </el-tab-pane>
@@ -38,7 +38,7 @@
         </el-tab-pane>
         <el-tab-pane label="技术属性" name="tech">
           <el-descriptions :column="2" border>
-            <el-descriptions-item label="使用状态"><el-tag :type="usageTag(asset.assetStatus)">{{ asset.assetStatus || '-' }}</el-tag></el-descriptions-item>
+            <el-descriptions-item label="使用状态"><span :class="'prm-c-' + ((usageTag(asset.assetStatus)) || 'primary')">{{ asset.assetStatus || '-' }}</span></el-descriptions-item>
             <el-descriptions-item label="所属系统">{{ asset.systemName || '-' }}</el-descriptions-item>
             <el-descriptions-item label="模式名称">{{ asset.schemaName || '-' }}</el-descriptions-item>
             <el-descriptions-item label="资产类型">{{ asset.assetType || '-' }}</el-descriptions-item>
@@ -51,9 +51,9 @@
         <el-tab-pane label="变更历史" name="history">
           <el-timeline>
             <el-timeline-item v-for="r in changes" :key="r.changeId" :timestamp="r.changeTime" placement="top">
-              {{ r.changeType }} · {{ r.fieldName }}:<span style="color:#e21f0c">{{ r.beforeValue }}</span> → <span style="color:#36b21d">{{ r.afterValue }}</span>
+              {{ r.changeType }} · {{ r.fieldName }}:<span class="prm-c-danger">{{ r.beforeValue }}</span> → <span class="prm-c-success">{{ r.afterValue }}</span>
             </el-timeline-item>
-            <el-empty v-if="!changes.length" description="暂无变更记录" />
+            <el-empty v-if="!changes.length" description="暂无数据" />
           </el-timeline>
         </el-tab-pane>
       </el-tabs>

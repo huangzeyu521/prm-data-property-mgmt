@@ -5,6 +5,7 @@
 export const ROLES = [
   { key: 'all', label: '全部 · 管理员视图' },
   { key: 'apply', label: '申报人 · 数字化部团队' },
+  { key: 'unit', label: '申报单位 · 分管领导(单位初审)' },
   { key: 'business', label: '业务管理部门团队' },
   { key: 'precheck', label: '归集预审 · 数字化部团队' },
   { key: 'review', label: '合规管控小组' },
@@ -31,7 +32,7 @@ export const MENU = [
   { top: true, path: '/dpr/guidance', title: '指引中心', icon: 'Reading' },
   { top: true, path: '/dpr/workbench/my', title: '我的申请', icon: 'Tickets', roles: ['apply', 'business'] },
   // 待办中心:所有承担审批/审核/归集节点的角色(BA-03)
-  { top: true, path: '/dpr/workbench/todo', title: '统一待办中心', icon: 'Compass', roles: ['review', 'business', 'precheck', 'manager', 'director', 'gm', 'leadership'] },
+  { top: true, path: '/dpr/workbench/todo', title: '统一待办中心', icon: 'Compass', roles: ['unit', 'review', 'business', 'precheck', 'manager', 'director', 'gm', 'leadership'] },
   {
     // P0:按 AA-10 给 副总gm/经理director/主管manager/合规review 补「产权信息管理」访问(原仅 view/admin/apply)
     group: '产权信息管理', icon: 'Document', index: '01', items: [
@@ -64,15 +65,16 @@ export const MENU = [
   {
     // 授权:申报(apply)+审核台(合规review/业务business/主管manager/经理director/副总gm)+批量(含领导小组leadership)
     group: '数据授权管理', icon: 'Connection', index: '04', items: [
-      { path: '/dpr/auth/wizard', title: '⭐ 一事一议授权申请', roles: ['apply'] },
+      // 35号文 一事一议流程步骤10:发起人=分子公司「业务管理部门」团队 → business 须有发起入口(角色评估 MEDIUM#1)
+      { path: '/dpr/auth/wizard', title: '⭐ 一事一议授权申请', roles: ['apply', 'business'] },
       { path: '/dpr/auth/batch-wizard', title: '⭐ 批量授权申请', roles: ['apply'] },
       { path: '/dpr/auth/batch-list', title: '批量授权清单', roles: ['apply', 'review', 'manager', 'director', 'gm', 'leadership'] },
       { path: '/dpr/auth/compliance', title: '合规校验管理', roles: ['review', 'admin'] },
-      { path: '/dpr/auth/history', title: '申请历史查询', roles: ['apply', 'review', 'view', 'manager', 'director', 'gm'] },
-      { path: '/dpr/auth/review', title: '授权审核提交', roles: ['review', 'business', 'manager', 'director', 'gm'] },
+      { path: '/dpr/auth/history', title: '申请历史查询', roles: ['apply', 'unit', 'review', 'view', 'manager', 'director', 'gm'] },
+      { path: '/dpr/auth/review', title: '授权审核提交', roles: ['unit', 'review', 'business', 'manager', 'director', 'gm'] },
       // 协议工作台(P1-4 签章/审核/存档合一);旧三路由保留兼容
       { path: '/dpr/auth/agreement', title: '协议工作台', roles: ['review', 'apply', 'gm'] },
-      { path: '/dpr/auth/cert', title: '授权权益管理', roles: ['admin'] },
+      { path: '/dpr/auth/cert', title: '授权生效记录管理', roles: ['admin'] },
       { path: '/dpr/auth/filing', title: '对外经营权授权备案', roles: ['admin', 'apply'] },
     ],
   },
@@ -82,7 +84,7 @@ export const MENU = [
       { path: '/dpr/auth/form-template', title: '申请表单设计', roles: ['admin'] },
       { path: '/dpr/auth/scenario', title: '应用场景管理', roles: ['admin'] },
       { path: '/dpr/auth/agreement-template', title: '协议模板库', roles: ['admin'] },
-      { path: '/dpr/auth/cert-template', title: '授权权益证书模板管理', roles: ['admin'] },
+      { path: '/dpr/auth/cert-template', title: '授权生效记录样式模板', roles: ['admin'] },
     ],
   },
   {
@@ -107,6 +109,7 @@ export const MENU = [
 export const ROLE_HOME = {
   all: '/dpr/dashboard/overview',
   apply: '/dpr/workbench/my',
+  unit: '/dpr/workbench/todo',
   business: '/dpr/workbench/my',
   review: '/dpr/workbench/todo',
   precheck: '/dpr/workbench/todo',
@@ -126,6 +129,7 @@ export function currentRole() {
 // 用途:把「授权审核台 / 统一待办中心」收敛到「本角色·本节点」,让每个审批人只见自己队列。
 // 后端 assertNodeRole 仍是硬门禁(越节点审批 403);此处是呈现层对齐,杜绝 gm 误见确权待办 / 误点非本节点单据被 403。
 export const AUTH_NODE_ROLE = {
+  单位初审中: 'unit',
   合规审核中: 'review',
   业务审核中: 'business',
   主管审核中: 'manager',

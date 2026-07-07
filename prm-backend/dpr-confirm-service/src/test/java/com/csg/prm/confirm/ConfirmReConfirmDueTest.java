@@ -31,7 +31,7 @@ class ConfirmReConfirmDueTest {
         EquityCard c = new EquityCard();
         c.setCardNo(no);
         c.setAssetId(no);
-        c.setRightType("数据持有权");
+        c.setRightType("持有权");
         c.setCardStatus(status);
         c.setValidDate(valid);
         cardMapper.insert(c);

@@ -90,10 +90,12 @@ public class AuthComplianceServiceImpl implements AuthComplianceService {
         boolean hasFail = false;
         boolean hasWarn = false;
 
-        // ① 材料完整性
-        boolean matOk = matCount >= 1;
-        report.add("材料完整性", "申请材料", matOk, matOk ? "已上传 " + matCount + " 份材料" : "未上传任何申请材料");
-        hasFail |= !matOk;
+        // ① 材料完整性:《表5》系统按申请内容生成(无需上传);第三方许可凭证/信息授权协议在"合规性"维按需校验(内联或上传二选一)。
+        // 故不再因"零上传"硬拦——与批量 checkBatchCompliance 对齐:表5 改系统生成后,纯净申请(不涉第三方/隐私)也应能提交。
+        report.add("材料完整性", "《表5》数据授权申请单", true, "系统按申请内容自动生成,无需上传");
+        if (matCount > 0) {
+            report.add("材料完整性", "补充材料", true, "已上传 " + matCount + " 份");
+        }
 
         // ② 权限合理性
         boolean cardOk = StringUtils.hasText(apply.getEquityCardId());

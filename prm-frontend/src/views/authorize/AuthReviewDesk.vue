@@ -6,8 +6,8 @@
 <template>
   <div class="prm-page">
     <div class="prm-table-card">
-      <div class="prm-table-note" style="margin:0 0 12px 0">注:授权审核工作台,支持单条/批量审批(可录审核意见)、查看详情与处理记录;终审通过自动签发授权证书并开通底层权限。</div>
-      <div style="margin-bottom:12px">
+      <PageNote>注:授权审核工作台,支持单条/批量审批(可录审核意见)、查看详情与处理记录。一事一议终审通过=「批准(待双签)」并自动形成《运营授权协议(附录D)》,双签+承诺函归档后方置已生效并开通底层权限(先签约后执行授权)。</PageNote>
+      <div style="margin-bottom:10px">
         <el-button type="success" :disabled="!sel.length" @click="onBatchApprove">批量通过（{{ sel.length }}）</el-button>
         <el-button type="danger" :disabled="!sel.length" @click="onBatchReject">批量驳回（{{ sel.length }}）</el-button>
       </div>
@@ -23,7 +23,7 @@
         </el-table-column>
         <el-table-column prop="granteeOrg" label="被授权方" min-width="120" show-overflow-tooltip />
         <el-table-column prop="status" label="当前环节" width="130" align="center">
-          <template #default="{ row }"><el-tag type="warning">{{ row.status }}</el-tag></template>
+          <template #default="{ row }"><span class="prm-c-warning">{{ row.status }}</span></template>
         </el-table-column>
         <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
@@ -61,9 +61,9 @@
       <!-- 大模型校验机制完善(南网):快照验真 + 校验规则可视化 + 校验过程回放 -->
       <div class="rv-h">
         大模型校验（人工审核依据）
-        <el-tag v-if="snapVerify" :type="snapVerify.verified ? 'success' : (snapVerify.payloadSm3 ? 'danger' : 'info')" size="small" effect="dark" style="margin-left:8px">
+        <span v-if="snapVerify" style="margin-left:8px" :class="'prm-c-' + ((snapVerify.verified ? 'success' : (snapVerify.payloadSm3 ? 'danger' : 'info')) || 'primary')">
           {{ snapVerify.verified ? '✔ 快照完整·未被篡改' : (snapVerify.payloadSm3 ? '✘ 疑似篡改' : '无防篡改快照') }}
-        </el-tag>
+        </span>
         <span v-if="snapVerify && snapVerify.evidenceId" style="font-size:12px;color:var(--prm-color-text-weak);margin-left:8px">存证 {{ snapVerify.evidenceId.slice(0,12) }}… · 留痕 {{ snapVerify.aiRunCount ?? 0 }} 次</span>
       </div>
       <!-- §1 校验规则可视化:逐应交项 校验逻辑 + 规则明细 + AI 判定依据 -->
@@ -71,11 +71,11 @@
         <el-collapse-item v-for="(it, i) in checkLogic.items" :key="i">
           <template #title>
             <span style="font-weight:600">{{ it.materialName }}</span>
-            <el-tag size="small" :type="it.materialPresent ? 'success' : 'warning'" effect="light" style="margin-left:8px">{{ it.materialPresent ? '已交' : '待补' }}</el-tag>
-            <el-tag v-if="it.aiVerdict" size="small" :type="it.aiVerdict === '通过' ? 'success' : (it.aiVerdict === '不通过' ? 'danger' : 'info')" effect="light" style="margin-left:6px">AI:{{ it.aiVerdict }}</el-tag>
+            <span style="margin-left:8px" :class="'prm-c-' + ((it.materialPresent ? 'success' : 'warning') || 'primary')">{{ it.materialPresent ? '已交' : '待补' }}</span>
+            <span v-if="it.aiVerdict" style="margin-left:6px" :class="'prm-c-' + ((it.aiVerdict === '通过' ? 'success' : (it.aiVerdict === '不通过' ? 'danger' : 'info')) || 'primary')">AI:{{ it.aiVerdict }}</span>
           </template>
           <div style="font-size:13px;line-height:1.8">
-            <div><b>校验逻辑(触发规则):</b>{{ it.triggerLabel }}<el-tag size="small" effect="plain" style="margin-left:6px">{{ it.required }}</el-tag></div>
+            <div><b>校验逻辑(触发规则):</b>{{ it.triggerLabel }}<span style="margin-left:6px" class="prm-c-primary">{{ it.required }}</span></div>
             <div><b>规则明细:</b>{{ it.ruleDetail || '—' }}</div>
             <div><b>判定依据(AI):</b>{{ it.aiIssues || (it.aiVerdict ? ('AI 结论:' + it.aiVerdict) : '该项尚无 AI 判定留痕') }}</div>
           </div>
@@ -86,7 +86,7 @@
       <el-timeline v-if="aiRunlog && aiRunlog.length" style="padding:6px">
         <el-timeline-item v-for="(l, i) in aiRunlog" :key="i" :timestamp="fmt(l.createTime)" placement="top" type="primary">
           <div style="font-size:13px">
-            <el-tag size="small" effect="dark" style="margin-right:6px">{{ l.capability }}</el-tag>
+            <span style="margin-right:6px" class="prm-c-primary">{{ l.capability }}</span>
             <span style="color:var(--prm-color-text-secondary)">模型 {{ l.model }} · 耗时 {{ l.durationMs }}ms · 触发 {{ l.triggerUser }}</span>
             <div style="font-size:12px;color:var(--prm-color-text-weak)">SM3 {{ (l.sm3Hash || '').slice(0,16) }}…(输出防篡改指纹)</div>
           </div>
@@ -103,7 +103,7 @@
           <div v-if="l.opinion" style="font-size:12px;color:var(--prm-color-text-secondary)">审核意见：{{ l.opinion }}</div>
         </el-timeline-item>
       </el-timeline>
-      <el-empty v-else :image-size="50" description="暂无处理记录" />
+      <el-empty v-else :image-size="50" description="暂无数据" />
 
       <template #footer>
         <el-button type="success" @click="onApprove(cur, true)">审批通过</el-button>
@@ -115,6 +115,7 @@
 </template>
 
 <script setup>
+import PageNote from '@/components/PageNote.vue'
 import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { pageAuthApply, approveAuth, rejectAuth, batchApproveAuth, batchRejectAuth, getAuthFlowLog, getAuthAiCheckLogic, getAuthAiRunlog, verifyAuthAiSnapshot } from '@/api/authorize'
@@ -124,15 +125,20 @@ const rows = ref([]); const loading = ref(false); const sel = ref([])
 const drawer = ref(false); const cur = ref({}); const logs = ref([])
 // 大模型校验机制完善(授权侧):校验规则可视化 / 回放 / 快照防篡改验真
 const checkLogic = ref(null); const aiRunlog = ref([]); const snapVerify = ref(null)
-const PENDING = ['合规审核中', '业务审核中', '主管审核中', '经理审核中', '副总审批中', '领导小组审批中']
+const PENDING = ['单位初审中', '合规审核中', '业务审核中', '主管审核中', '经理审核中', '副总审批中', '领导小组审批中']
 // 审核台收敛到「本角色·本节点」:副总(gm)只见「副总审批中」,合规只见「合规审核中」…… admin/all 看全部。
 // 否则 gm 会看到合规/业务等非本节点单据,误点「审批通过」必被后端 assertNodeRole 拦成 403(名为审核台、实为越权点击)。
 const myStatuses = handledStatuses(currentRole(), AUTH_NODE_ROLE)
 const reviewing = computed(() => rows.value.filter(r =>
   PENDING.includes(r.status) && (myStatuses === null || myStatuses.includes(r.status))))
 function fmt(t) { return t ? String(t).replace('T', ' ').slice(0, 19) : '-' }
-// 库表级:assetId=SYS:系统名 → 系统名;数据表名=assetName(库表名)。与向导/历史页/确权目录同一派生。
-function sysName(row) { const a = row.assetId || ''; return a.startsWith('SYS:') ? a.slice(4) : (a || '—') }
+// 授权域:assetId 是库表/卡片级 ID(不含 SYS: 前缀,不同于确权域),所属系统取向导落库的 systemName;
+// 兼容遗留数据(升级前提交、systemName 未落库):回退按 SYS: 前缀解析,仍取不到则显示原始 ID。
+function sysName(row) {
+  if (row.systemName) return row.systemName
+  const a = row.assetId || ''
+  return a.startsWith('SYS:') ? a.slice(4) : (a || '—')
+}
 
 async function load() {
   loading.value = true
@@ -142,7 +148,11 @@ function onApprove(row, fromDrawer) {
   ElMessageBox.prompt('请输入审核意见(可空,默认"同意")', '审批通过', { inputType: 'textarea', inputValue: '' })
     .then(async ({ value }) => {
       const certId = await approveAuth(row.applyId, value || '')
-      ElMessage.success(certId ? '终审通过,已签发授权证书' : '本级审批通过,进入下一环节')
+      // 批量终审返回生效记录ID;一事一议终审=批准(待双签,协议已自动形成),按模式区分提示
+      ElMessage.success(certId ? '终审通过,已生效并登记授权生效记录'
+        : (row.status === '副总审批中' && row.authMode === '一事一议'
+          ? '终审批准,系统已自动形成《运营授权协议(附录D)》,待甲乙双签+承诺函归档后生效'
+          : '本级审批通过,进入下一环节'))
       if (fromDrawer) drawer.value = false
       load()
     }).catch(() => {})
@@ -183,6 +193,6 @@ onMounted(load)
 </script>
 
 <style scoped>
-.rv-h { font-weight: 600; margin: 16px 0 8px; }
+.rv-h { font-weight: 600; margin: 20px 0 8px; }
 :deep(.hl-row) { background: var(--prm-color-selected-bg, #eff7ff) !important; outline: 1px solid var(--prm-color-primary, #1e87f0); }
 </style>

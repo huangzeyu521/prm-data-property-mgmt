@@ -5,7 +5,7 @@
 -->
 <template>
   <div class="prm-page">
-    <div style="margin-bottom:12px">
+    <div style="margin-bottom:10px">
       <el-button type="primary" plain @click="kbDlg = true">产权知识库 · 检索增强(RAG)</el-button>
       <el-button plain @click="onRuleConfig">冲突识别规则配置</el-button>
       <el-button plain @click="openUrl(conflictExcelUrl())">导出冲突记录(Excel)</el-button>
@@ -141,30 +141,30 @@
           <!-- #15 结构化报告:决策建议 + 来源/影响范围汇总 + 高风险摘要 -->
           <el-descriptions v-if="report && report.total>0" :column="2" size="small" border style="margin-bottom:10px">
             <el-descriptions-item label="决策建议">
-              <el-tag :type="report.decision==='建议驳回/暂缓'?'danger':(report.decision==='建议补正后确权'?'warning':'success')">{{ report.decision }}</el-tag>
+              <span :class="'prm-c-' + ((report.decision==='建议驳回/暂缓'?'danger':(report.decision==='建议补正后确权'?'warning':'success')) || 'primary')">{{ report.decision }}</span>
             </el-descriptions-item>
             <el-descriptions-item label="高风险冲突">{{ report.highRiskCount }} 项</el-descriptions-item>
             <el-descriptions-item label="涉及客体">{{ report.involvedObject }}</el-descriptions-item>
             <el-descriptions-item label="涉及主体">{{ (report.involvedSubjects||[]).join('、') || '—' }}</el-descriptions-item>
             <el-descriptions-item label="按来源汇总" :span="2">
-              <el-tag v-for="(v,k) in report.bySource" :key="k" size="small" effect="plain" style="margin-right:6px">{{ k }} · {{ v }}</el-tag>
+              <span v-for="(v,k) in report.bySource" :key="k" style="margin-right:6px" class="prm-c-primary">{{ k }} · {{ v }}</span>
               <span v-if="!report.bySource || !Object.keys(report.bySource).length">—</span>
             </el-descriptions-item>
             <el-descriptions-item v-if="(report.highRiskSummary||[]).length" label="高风险摘要(优先处置)" :span="2">
-              <div v-for="(s,i) in report.highRiskSummary" :key="i" style="color:#e21f0c;font-size:12px">• {{ s }}</div>
+              <div v-for="(s,i) in report.highRiskSummary" :key="i" class="prm-c-danger" style="font-size:12px">• {{ s }}</div>
             </el-descriptions-item>
           </el-descriptions>
           <el-table :data="conflicts" border stripe size="small">
             <el-table-column prop="conflictType" label="冲突类型" width="110">
-              <template #default="{ row }"><el-tag type="danger" effect="plain">{{ row.conflictType }}</el-tag></template>
+              <template #default="{ row }"><span class="prm-c-danger">{{ row.conflictType }}</span></template>
             </el-table-column>
             <el-table-column prop="conflictDesc" label="冲突描述" min-width="220" show-overflow-tooltip />
             <el-table-column prop="riskLevel" label="风险" width="70" align="center">
-              <template #default="{ row }"><el-tag :type="row.riskLevel==='高'?'danger':'warning'">{{ row.riskLevel }}</el-tag></template>
+              <template #default="{ row }"><span :class="'prm-c-' + ((row.riskLevel==='高'?'danger':'warning') || 'primary')">{{ row.riskLevel }}</span></template>
             </el-table-column>
             <el-table-column prop="suggestion" label="处置建议" min-width="200" show-overflow-tooltip />
             <el-table-column prop="status" label="状态" width="84" align="center">
-              <template #default="{ row }"><el-tag :type="row.status==='已处置'?'success':'info'">{{ row.status }}</el-tag></template>
+              <template #default="{ row }"><span :class="'prm-c-' + ((row.status==='已处置'?'success':'info') || 'primary')">{{ row.status }}</span></template>
             </el-table-column>
             <el-table-column label="操作" width="130" fixed="right" class-name="no-print">
               <template #default="{ row }">
@@ -181,7 +181,7 @@
     <prm-dialog v-model="adviceDlg" variant="detail" title="冲突解决方案建议" width="560px">
       <AiThinking v-bind="aiAdvice.state" />
       <template v-if="advice">
-        <el-tag type="danger" effect="plain" style="margin-bottom:10px">{{ advice.conflictType }}</el-tag>
+        <span style="margin-bottom:10px" class="prm-c-danger">{{ advice.conflictType }}</span>
         <el-descriptions :column="1" size="small" border>
           <el-descriptions-item label="规则建议">{{ advice.ruleSuggestion }}</el-descriptions-item>
           <el-descriptions-item label="法规依据">{{ advice.regulationBasis }}</el-descriptions-item>
@@ -193,7 +193,7 @@
     </prm-dialog>
 
     <!-- #9 知识图谱结构化输出:节点(主体/客体/授权事项/有效期) + 关系(授权/归属/有效期/冲突) -->
-    <el-card shadow="hover" style="margin-top:16px">
+    <el-card shadow="hover" style="margin-top:20px">
       <template #header>
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span>电力权属知识图谱 · {{ graphAsset || '请加载' }}</span>
@@ -212,7 +212,7 @@
         <el-table-column prop="rightType" label="权利类型" width="130" />
         <el-table-column prop="authScope" label="授权范围" width="110" />
         <el-table-column prop="sourceType" label="来源" width="100" align="center">
-          <template #default="{ row }"><el-tag size="small" :type="srcTag(row.sourceType)">{{ row.sourceType }}</el-tag></template>
+          <template #default="{ row }"><span :class="'prm-c-' + ((srcTag(row.sourceType)) || 'primary')">{{ row.sourceType }}</span></template>
         </el-table-column>
         <el-table-column label="操作" width="120" align="center">
           <template #default="{ row }">
@@ -242,14 +242,15 @@ import { useRoute } from 'vue-router'
 import * as echarts from 'echarts'
 import { C } from '@/lib/chartPalette'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { confirmAsync } from '@/utils/confirmAsync'
 import { aitAddClaim, aitDetectConflict, aitConflicts, aitResolveConflict, aitConflictReport, aitConflictReportExportUrl, buildAitClaimFromMaterial, aitKgGraph, aitClaims, updateAitClaim, deleteAitClaim, syncAitHistoryClaims, aitConflictAdvice } from '@/api/aitool'
 import AiThinking from '@/components/AiThinking.vue'
 import PrmDialog from '@/components/PrmDialog.vue'
 import { useAiThinking } from '@/composables/useAiThinking'
 import { AI_PHASES } from '@/lib/aiPhases'
 
-const rts = ['数据持有权', '数据加工使用权', '数据产品经营权', '所有权', '使用权']
-const claim = reactive({ assetId: 'DA-DEMO-1', subject: '', rightType: '数据持有权', authScope: '全字段', exclusive: false, sourceType: '当前申请' })
+const rts = ['持有权', '使用权', '经营权', '所有权', '使用权']
+const claim = reactive({ assetId: 'DA-DEMO-1', subject: '', rightType: '持有权', authScope: '全字段', exclusive: false, sourceType: '当前申请' })
 const assetId = ref(''); const qAsset = ref(''); const conflicts = ref([]); const report = ref(null)
 // #17 多维筛选
 const filters = reactive({ conflictType: '', riskLevel: '', startTime: '', endTime: '', subject: '' })
@@ -283,8 +284,8 @@ async function onSaveClaim() {
   ElMessage.success('已修改权属主张'); editDlg.value = false; loadGraph()
 }
 function onDeleteClaim(row) {
-  ElMessageBox.confirm(`确认删除主张「${row.subject} · ${row.rightType}」吗`, '提示', { type: 'warning' })
-    .then(async () => { await deleteAitClaim(row.claimId); ElMessage.success('已删除'); loadGraph() }).catch(() => {})
+  confirmAsync(`确认删除主张「${row.subject} · ${row.rightType}」吗`, '提示',
+    async () => { await deleteAitClaim(row.claimId); ElMessage.success('已删除'); loadGraph() }).catch(() => {})
 }
 
 async function onSemanticClaim() {
@@ -386,7 +387,7 @@ async function runDemo() {
     const asset = claim.assetId || 'AST-001'
     await aitAddClaim({ assetId: asset, subject: '深圳供电局', rightType: '所有权', authScope: '全字段',
       exclusive: true, sourceType: '历史确权', validDate: '2027-06-11 00:00:00' })
-    const found = await aitDetectConflict({ assetId: asset, subject: '广东电网有限责任公司', rightType: '数据持有权',
+    const found = await aitDetectConflict({ assetId: asset, subject: '广东电网有限责任公司', rightType: '持有权',
       authScope: '全字段', exclusive: true, sourceType: '当前申请', validDate: '2028-06-11 00:00:00' })
     assetId.value = asset; qAsset.value = asset; graphAsset.value = asset
     await refresh(asset)

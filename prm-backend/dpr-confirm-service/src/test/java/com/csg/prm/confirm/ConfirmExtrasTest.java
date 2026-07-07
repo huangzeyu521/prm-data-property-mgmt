@@ -36,7 +36,7 @@ class ConfirmExtrasTest {
         ConfirmApply a = new ConfirmApply();
         a.setAssetId("DA-EXT-MODE");
         a.setAssetName("多类型一事一议");
-        a.setRightType("数据资源持有权、数据加工使用权");
+        a.setRightType("持有权、使用权");
         a.setRightHolder("中国南方电网有限责任公司");
         a.setApplyMode("一事一议");
         String id = applyService.saveDraft(a);
@@ -51,7 +51,7 @@ class ConfirmExtrasTest {
         ConfirmApply a = new ConfirmApply();
         a.setAssetId("DA-AICHK-1");
         a.setAssetName("AI校验测试集");
-        a.setRightType("数据资源持有权");
+        a.setRightType("持有权");
         a.setRightHolder("广东电网有限责任公司");
         String applyId = applyService.saveDraft(a);
 
@@ -60,13 +60,13 @@ class ConfirmExtrasTest {
         sealed.setMaterialName("数据确权证明材料(权属/来源凭证)");
         sealed.setMaterialType("证明材料");
         materialService.uploadFile(sealed, "证明-盖好.docx",
-                docxBytes("数据持有权,广东电网有限责任公司,有效期3年,自行生产,已盖章"));
+                docxBytes("持有权,广东电网有限责任公司,有效期3年,自行生产,已盖章"));
 
         ConfirmMaterial unsealed = new ConfirmMaterial();
         unsealed.setApplyId(applyId);
         unsealed.setMaterialName("《表1 数据确权信息清单(系统级)》");
         unsealed.setMaterialType("表1");
-        materialService.uploadFile(unsealed, "表1-清单.docx", docxBytes("资产:AI校验测试集,权属类型:数据资源持有权"));
+        materialService.uploadFile(unsealed, "表1-清单.docx", docxBytes("资产:AI校验测试集,权属类型:持有权"));
 
         String json = materialService.aiCheck(applyId);
         assertTrue(json.contains("\"overall\""), "应输出整体结论");
@@ -142,8 +142,8 @@ class ConfirmExtrasTest {
     @Test
     void template_lifecycle() {
         EquityCertTemplate t = new EquityCertTemplate();
-        t.setTemplateName("数据资源持有权证书");
-        t.setRightType("数据资源持有权");
+        t.setTemplateName("持有权证书");
+        t.setRightType("持有权");
         String id = templateService.create(t);
         assertTrue(templateService.page(1, 10, "持有权", "生效中").getTotal() >= 1);
         templateService.disable(id);

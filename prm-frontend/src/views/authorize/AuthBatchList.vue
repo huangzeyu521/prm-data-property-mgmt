@@ -17,7 +17,7 @@
       </el-form>
     </div>
     <div class="prm-table-card">
-      <div class="prm-table-note" style="margin:0 0 12px 0">注:表6《数据批量授权清单》流转 草案 → 申报稿 → 领导小组办公室批准。</div>
+      <PageNote>注:表6《数据批量授权清单》流转 草案 → 申报稿 → 领导小组办公室批准。</PageNote>
       <el-table :data="rows" v-loading="loading" border stripe>
         <el-table-column type="index" label="序号" width="64" align="center" />
         <el-table-column prop="listNo" label="清单编号" width="180" show-overflow-tooltip />
@@ -25,18 +25,18 @@
         <el-table-column prop="itemCount" label="条目数" width="100" align="center" />
         <el-table-column prop="remark" label="备注" min-width="180" show-overflow-tooltip />
         <el-table-column prop="listStatus" label="状态" width="110" align="center">
-          <template #default="{ row }"><el-tag :type="tag(row.listStatus)">{{ row.listStatus }}</el-tag></template>
+          <template #default="{ row }"><span :class="'prm-c-' + ((tag(row.listStatus)) || 'primary')">{{ row.listStatus }}</span></template>
         </el-table-column>
         <el-table-column label="操作" width="300" fixed="right">
           <template #default="{ row }">
             <el-button link type="info" @click="onDetail(row)">明细(表6)</el-button>
             <el-button v-if="isMaintainer" link type="primary" :disabled="row.listStatus !== '草案'" @click="onSubmit(row)">提交申报稿</el-button>
             <el-button v-if="isApprover" link type="success" :disabled="row.listStatus !== '申报稿'" @click="onApprove(row)">领导小组批准</el-button>
-            <el-button v-if="isMaintainer" link type="warning" :disabled="row.listStatus !== '批准'" @click="onGenAgreement(row)">生成运营授权协议</el-button>
+            <el-button v-if="isMaintainer" link type="warning" :disabled="row.listStatus !== '批准'" @click="onGoAgreement(row)">去协议双签</el-button>
           </template>
         </el-table-column>
       </el-table>
-      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
+      <el-pagination style="margin-top:20px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
         :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" @size-change="s=>{q.size=s;q.current=1;load()}" />
     </div>
     <el-dialog v-model="dlg" title="新增批量授权清单" width="500px" align-center>
@@ -51,7 +51,7 @@
       <!-- 流转进度时间轴(单一真相,对齐 35号文 附录C 表1 批量流程)。创建在向导;此处看「办到哪、卡在谁」 -->
       <el-collapse v-model="flowOpen" style="margin-bottom:10px">
         <el-collapse-item name="flow">
-          <template #title><b>流转进度</b>　<el-tag size="small" :type="curList.listStatus==='批准' ? 'success' : 'info'" effect="plain" style="margin-left:8px">{{ flowHint }}</el-tag></template>
+          <template #title><b>流转进度</b>　<span style="margin-left:8px" :class="'prm-c-' + ((curList.listStatus==='批准' ? 'success' : 'info') || 'primary')">{{ flowHint }}</span></template>
           <AuthFlowProgress mode="batch" :current="flowCurrent" />
         </el-collapse-item>
       </el-collapse>
@@ -60,7 +60,7 @@
       <el-alert v-if="detailRows.length" :type="crossSystemInfo.isCross ? 'warning' : 'info'" :closable="false" style="margin-bottom:10px">
         <template #title>
           <span>是否跨系统域:</span>
-          <el-tag :type="crossSystemInfo.isCross ? 'warning' : 'info'" size="small" effect="dark" style="margin:0 6px">{{ crossSystemInfo.isCross ? '是(跨系统域)' : '否(单系统)' }}</el-tag>
+          <span style="margin:0 6px" :class="'prm-c-' + ((crossSystemInfo.isCross ? 'warning' : 'info') || 'primary')">{{ crossSystemInfo.isCross ? '是(跨系统域)' : '否(单系统)' }}</span>
           本清单覆盖 {{ crossSystemInfo.systems.length }} 个系统{{ crossSystemInfo.systems.length ? '(' + crossSystemInfo.systems.join('、') + ')' : '' }}。
         </template>
       </el-alert>
@@ -69,8 +69,8 @@
           <template #default="{ row }">
             <div style="padding:6px 18px;line-height:1.9;color:var(--prm-color-text)">
               <div><b>业务域:</b>{{ row.businessDomain || '—' }}　<b>授权范围:</b>{{ row.scope || '—' }}　<b>授权时效:</b>{{ (row.validDate||'').slice(0,10) || '—' }}</div>
-              <div><b>利益分配约定(附录D §3.4.4):</b>{{ row.benefitAllocation || '— 未填(协议签订前须补充)' }}</div>
-              <div><b>安全保障要求(附录D §3.4.4):</b>{{ row.securityReq || '— 未填(协议签订前须补充)' }}</div>
+              <div><b>利益分配约定(附录D §3.4.4):</b>{{ row.benefitAllocation || '批量:批准后在《运营授权协议》要素落定环节(清单级)统一约定' }}</div>
+              <div><b>安全保障要求(附录D §3.4.4):</b>{{ row.securityReq || '批量:批准后在《运营授权协议》要素落定环节(表2 三行)统一约定' }}</div>
             </div>
           </template>
         </el-table-column>
@@ -82,17 +82,17 @@
         <el-table-column prop="rightType" label="权益类型" width="130" />
         <el-table-column prop="scenario" label="使用场景" min-width="110" show-overflow-tooltip><template #default="{ row }">{{ row.scenario || '—' }}</template></el-table-column>
         <el-table-column label="涉第三方" width="88" align="center">
-          <template #default="{ row }"><el-tag :type="involvesThird(row) ? 'warning' : 'info'" size="small" effect="plain">{{ involvesThird(row) ? '涉' : '否' }}</el-tag></template>
+          <template #default="{ row }"><span :class="'prm-c-' + ((involvesThird(row) ? 'warning' : 'info') || 'primary')">{{ involvesThird(row) ? '涉' : '否' }}</span></template>
         </el-table-column>
         <el-table-column label="涉隐私/商密" width="104" align="center">
-          <template #default="{ row }"><el-tag :type="involvesSensitive(row) ? 'danger' : 'info'" size="small" effect="plain">{{ involvesSensitive(row) ? row.sensitiveType : '否' }}</el-tag></template>
+          <template #default="{ row }"><span :class="'prm-c-' + ((involvesSensitive(row) ? 'danger' : 'info') || 'primary')">{{ involvesSensitive(row) ? row.sensitiveType : '否' }}</span></template>
         </el-table-column>
         <el-table-column label="跨域" width="68" align="center">
-          <template #default><el-tag :type="crossSystemInfo.isCross ? 'warning' : 'info'" size="small" effect="plain">{{ crossSystemInfo.isCross ? '是' : '否' }}</el-tag></template>
+          <template #default><span :class="'prm-c-' + ((crossSystemInfo.isCross ? 'warning' : 'info') || 'primary')">{{ crossSystemInfo.isCross ? '是' : '否' }}</span></template>
         </el-table-column>
         <el-table-column prop="equityCardId" label="生效卡片" width="120" show-overflow-tooltip><template #default="{ row }">{{ row.equityCardId || '—' }}</template></el-table-column>
         <el-table-column prop="status" label="状态" width="110" align="center">
-          <template #default="{ row }"><el-tag :type="tag(row.status)">{{ row.status }}</el-tag></template>
+          <template #default="{ row }"><span :class="'prm-c-' + ((tag(row.status)) || 'primary')">{{ row.status }}</span></template>
         </el-table-column>
       </el-table>
       <el-empty v-if="!detailLoading && detailRows.length===0" description="该清单暂无明细项(可在'批量授权一站式向导'中逐条添加)" />
@@ -100,11 +100,15 @@
   </div>
 </template>
 <script setup>
+import PageNote from '@/components/PageNote.vue'
 import { onMounted, reactive, ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
+import { confirmAsync } from '@/utils/confirmAsync'
+import { useRouter } from 'vue-router'
 import { pageBatchList, createBatchList, submitBatchList, approveBatchList, listAuthByBatch, generateAgreementForBatch } from '@/api/authorize'
 import { currentRole } from '@/lib/roles'
 import AuthFlowProgress from '@/components/AuthFlowProgress.vue'
+import { useTablePage } from '@/composables/useTablePage'
 // 申报人只做 新增/提交申报稿;批准属审批角色(领导小组办公室),与后端 @RequiresRole 一致,隐藏批准按钮避免误点 403
 // 清单级终批=领导小组办公室专属(BA-03 node90);数字化部主管/经理/副总的审核在明细链逐项完成,不在清单级
 const isApprover = ['leadership', 'admin', 'all'].includes(currentRole())
@@ -112,8 +116,7 @@ const isApprover = ['leadership', 'admin', 'all'].includes(currentRole())
 // 其授权审核在「授权审核台」明细链逐项完成。隐藏维护按钮,避免越职误操作(与 isApprover 同口径分层)。
 const isMaintainer = ['apply', 'admin', 'all'].includes(currentRole())
 const statuses = ['草案', '申报稿', '批准']
-const q = reactive({ current: 1, size: 10, listYear: '', listStatus: '' })
-const rows = ref([]); const total = ref(0); const loading = ref(false)
+const { query: q, rows, total, loading, load } = useTablePage(pageBatchList, { listYear: '', listStatus: '' })
 const dlg = ref(false); const form = reactive({ listYear: '', remark: '' })
 const detailDrawer = ref(false); const detailRows = ref([]); const detailLoading = ref(false); const curList = ref({})
 // 流转进度时间轴(对齐 35号文 表1):清单级状态(草案/申报稿/批准)+ 明细审批链聚合 → 当前节点
@@ -137,8 +140,13 @@ const flowHint = computed(() => {
   return '审批链进行中'
 })
 function tag(s) { return { 批准: 'success', 申报稿: 'warning', 草案: 'info', 已生效: 'success', 已驳回: 'danger' }[s] || 'warning' }
-// 库表级:assetId=SYS:系统名 → 系统名;数据表名=assetName(库表名)。与向导/确权目录同一派生。
-function sysName(row) { const a = row.assetId || ''; return a.startsWith('SYS:') ? a.slice(4) : (a || '—') }
+// 授权域:assetId 是库表/卡片级 ID(不含 SYS: 前缀,不同于确权域),所属系统取向导落库的 systemName;
+// 兼容遗留数据(升级前提交、systemName 未落库):回退按 SYS: 前缀解析,仍取不到则显示原始 ID。
+function sysName(row) {
+  if (row.systemName) return row.systemName
+  const a = row.assetId || ''
+  return a.startsWith('SYS:') ? a.slice(4) : (a || '—')
+}
 // 合规判定(与向导逐项表一致):第三方/隐私商密 由确权事实带出,空/「无」视为不涉。
 function involvesThird(row) { return !!(row.thirdPartySource && String(row.thirdPartySource).trim()) }
 function involvesSensitive(row) { return !!(row.sensitiveType && String(row.sensitiveType).trim() && row.sensitiveType !== '无') }
@@ -152,15 +160,29 @@ async function onDetail(row) {
   curList.value = row; detailDrawer.value = true; detailLoading.value = true
   try { detailRows.value = await listAuthByBatch(row.batchListId) || [] } finally { detailLoading.value = false }
 }
-async function load() { loading.value = true; try { const r = await pageBatchList({ ...q }); rows.value = r.records || []; total.value = r.total || 0 } finally { loading.value = false } }
 function onAdd() { Object.assign(form, { listYear: '', remark: '' }); dlg.value = true }
 async function onSave() { await createBatchList({ ...form }); ElMessage.success('已新增清单(草案)'); dlg.value = false; load() }
+const router = useRouter()
 async function onSubmit(row) { await submitBatchList(row.batchListId); ElMessage.success('已提交为申报稿'); load() }
-async function onApprove(row) { await approveBatchList(row.batchListId); ElMessage.success('领导小组办公室已批准'); load() }
-// 一清单一协议:批准的批量清单 → 生成一份《运营授权协议》(清单各项=协议附件),幂等防重
-async function onGenAgreement(row) {
-  const id = await generateAgreementForBatch(row.batchListId)
-  ElMessage.success(`已生成本清单的《运营授权协议》(${id});请到「协议工作台」签章/审核/存档`)
+// #2 领导小组终批=重决策,加确认弹窗防误点;批准后后端自动「形成」《运营授权协议》草案(35号文 step100)
+function onApprove(row) {
+  confirmAsync(
+    `领导小组办公室终批清单「${row.listNo}」?批准后将自动生成《运营授权协议》草案,进入甲乙双签。`,
+    '领导小组决策批准',
+    async () => {
+      try {
+        await approveBatchList(row.batchListId)
+        ElMessage.success('已批准,《运营授权协议》草案已自动生成,可去协议工作台双签')
+        load()
+      } catch { /* 拦截器已弹出后端原因(链未走完/清单为空),此处不重复提示 */ }
+    },
+    { confirmButtonText: '批准并生成协议', cancelButtonText: '取消' }
+  ).catch(() => {})
+}
+// #1 协议系统自动生成 → 此处不再手动「生成」,改为「去协议双签」;幂等 generate 兜底确保协议存在再跳转
+async function onGoAgreement(row) {
+  try { await generateAgreementForBatch(row.batchListId) } catch { /* 已自动生成则幂等返回;失败也不阻断跳转 */ }
+  router.push('/dpr/auth/agreement')
 }
 onMounted(load)
 </script>

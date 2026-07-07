@@ -141,11 +141,11 @@ public class EquityCardServiceImpl implements EquityCardService {
     private String rightsContentOf(String rightType, String assetName, com.csg.prm.confirm.entity.ConfirmTableItem item) {
         String base;
         if (rightType.contains("持有")) {
-            base = "对「" + assetName + "」享有数据资源持有权(系统建设投入形成,依法持有、管理、处置)";
+            base = "对「" + assetName + "」享有持有权(系统建设投入形成,依法持有、管理、处置)";
         } else if (rightType.contains("使用") || rightType.contains("加工")) {
-            base = "对「" + assetName + "」享有数据加工使用权(在确权约束与授权范围内加工使用)";
+            base = "对「" + assetName + "」享有使用权(在确权约束与授权范围内加工使用)";
         } else if (rightType.contains("经营") || rightType.contains("产品")) {
-            base = "对「" + assetName + "」享有数据产品经营权(对外经营依公司对外开放目录与授权)";
+            base = "对「" + assetName + "」享有经营权(对外经营依公司对外开放目录与授权)";
         } else {
             base = rightType;
         }
@@ -221,7 +221,9 @@ public class EquityCardServiceImpl implements EquityCardService {
         card.setAuthorizingUnit(null);                                       // 认定取得不填授权单位(授权取得才填)
         card.setConfirmTime(java.time.LocalDateTime.now());                  // 确权时间(= 制卡时间)
         card.setScope(scope);
-        card.setValidDate(apply.getValidDate());
+        // 权益期限口径(35号文附录 表3):认定取得→无固定期限(null);授权取得→确权时间起默认两年;
+        // 显式约定(如确权变更「权益到期」续期填入的新期限)优先。制卡恒为「认定」→常态无固定期限。
+        card.setValidDate(resolveValidDate(card.getAcquireMode(), card.getConfirmTime(), apply.getValidDate()));
         card.setCardStatus(EquityCard.STATUS_NORMAL);
         card.setVersion(newVersion);
         card.setSupersededCardNo(supersededNo);
@@ -382,6 +384,26 @@ public class EquityCardServiceImpl implements EquityCardService {
                 .isNotNull(EquityCard::getValidDate)
                 .le(EquityCard::getValidDate, threshold)
                 .orderByAsc(EquityCard::getValidDate));
+    }
+
+    /**
+     * 权益期限(有效期至)口径 —— 严格对齐 35 号文附录 表3《数据确权登记表》「权益期限」列:
+     * <ul>
+     *   <li>认定取得(A) → 无固定期限:返回 {@code null},前端渲染为「长期」;不参与季度到期扫描。</li>
+     *   <li>授权取得(B) → 默认两年:自确权时间起算 {@code confirmTime + 2 年}(表头注释「授权方式取得默认为两年」)。</li>
+     *   <li>显式约定优先:确权变更「权益到期」续期等场景填入的期限({@code explicit})直接生效,覆盖上述默认。</li>
+     * </ul>
+     */
+    private java.time.LocalDateTime resolveValidDate(String acquireMode, java.time.LocalDateTime confirmTime,
+                                                     java.time.LocalDateTime explicit) {
+        if (explicit != null) {
+            return explicit;                                   // 特殊说明 / 续期:显式期限优先
+        }
+        if ("授权".equals(acquireMode)) {                       // 授权取得:默认两年,从确权时间起算
+            java.time.LocalDateTime base = confirmTime != null ? confirmTime : java.time.LocalDateTime.now();
+            return base.plusYears(2);
+        }
+        return null;                                           // 认定取得:无固定期限(长期)
     }
 
     /** 全局唯一权益资产编码(生产可替换为雪花算法) */

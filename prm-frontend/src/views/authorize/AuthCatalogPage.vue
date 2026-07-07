@@ -18,7 +18,7 @@
         <el-table-column prop="itemType" label="类型" width="150" />
         <el-table-column prop="version" label="版本" width="80" align="center" />
         <el-table-column prop="status" label="状态" width="100" align="center">
-          <template #default="{ row }"><el-tag :type="row.status==='生效中'?'success':'warning'">{{ row.status }}</el-tag></template>
+          <template #default="{ row }"><span :class="'prm-c-' + ((row.status==='生效中'?'success':'warning') || 'primary')">{{ row.status }}</span></template>
         </el-table-column>
         <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
@@ -27,7 +27,7 @@
           </template>
         </el-table-column>
       </el-table>
-      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
+      <el-pagination style="margin-top:20px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
         :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" @size-change="s=>{q.size=s;q.current=1;load()}" />
     </div>
     <el-dialog v-model="dlg" :title="'新增'+label" width="520px" align-center>
@@ -45,13 +45,12 @@ import { onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { pageCatalog, saveCatalog, enableCatalog, disableCatalog } from '@/api/authorize'
+import { useTablePage } from '@/composables/useTablePage'
 const route = useRoute()
 const category = ref(route.meta.category)
 const label = ref(route.meta.title || '目录项')
-const q = reactive({ current: 1, size: 10, name: '', category: category.value })
-const rows = ref([]); const total = ref(0); const loading = ref(false)
+const { query: q, rows, total, loading, load } = useTablePage((p) => pageCatalog({ ...p, category: category.value }), { name: '' })
 const dlg = ref(false); const form = reactive({ name: '', itemType: '', content: '' })
-async function load() { loading.value = true; try { const r = await pageCatalog({ ...q, category: category.value }); rows.value = r.records || []; total.value = r.total || 0 } finally { loading.value = false } }
 function onAdd() { Object.assign(form, { name: '', itemType: '', content: '' }); dlg.value = true }
 async function onSave() { await saveCatalog({ category: category.value, ...form }); ElMessage.success('已保存'); dlg.value = false; load() }
 async function onEnable(row) { await enableCatalog(row.itemId); ElMessage.success('已启用'); load() }

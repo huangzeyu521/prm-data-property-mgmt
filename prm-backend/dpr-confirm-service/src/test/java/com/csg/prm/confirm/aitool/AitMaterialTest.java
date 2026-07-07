@@ -41,7 +41,7 @@ class AitMaterialTest {
         ConfirmApply apply = new ConfirmApply();
         apply.setAssetId("DA-AIT-1");
         apply.setAssetName("客户用电信息表");
-        apply.setRightType("数据持有权");
+        apply.setRightType("持有权");
         apply.setRightHolder("广东电网");
         String applyId = applyService.saveDraft(apply);
 
@@ -49,7 +49,7 @@ class AitMaterialTest {
         m.setFileName("客户用电信息表-确权证明-盖章.pdf");
         m.setApplyId(applyId);
         m.setSizeKb(2048L);
-        m.setContent("权利主体广东电网,数据持有权,有效期3年,授权范围约定字段,自行生产,已盖章");
+        m.setContent("权利主体广东电网,持有权,有效期3年,授权范围约定字段,自行生产,已盖章");
         String id = aitService.upload(m);
 
         AitMaterial saved = aitService.page(new com.csg.prm.common.query.PageRequest(), null, null, applyId)
@@ -64,7 +64,7 @@ class AitMaterialTest {
         assertNotNull(r.getRightSubject(), "应抽取权利主体");
         assertNotNull(r.getRightObject(), "应抽取权利客体");
         assertTrue(r.getRightObject().contains("客户用电信息表"), "权利客体应来自文件名,实际:" + r.getRightObject());
-        assertEquals("数据持有权", r.getRightType());
+        assertEquals("持有权", r.getRightType());
         assertEquals("3年", r.getRightTerm());
         assertEquals("约定字段", r.getAuthScope());
         assertTrue(r.getConfidence() > 0.9);
@@ -84,10 +84,10 @@ class AitMaterialTest {
         assertEquals(5, cmp.size());
         AitCompare rtype = cmp.stream().filter(c -> "权利类型".equals(c.getField())).findFirst().orElseThrow();
         assertEquals(AitCompare.DIFF_MATCH, rtype.getDiffType());
-        // #6 标注定位锚点:权利类型"数据持有权"在原文可定位(字符偏移 ≥0 + 上下文片段含该值)
+        // #6 标注定位锚点:权利类型"持有权"在原文可定位(字符偏移 ≥0 + 上下文片段含该值)
         assertNotNull(rtype.getSourceOffset());
         assertTrue(rtype.getSourceOffset() >= 0, "权利类型应在原始正文定位到,offset=" + rtype.getSourceOffset());
-        assertTrue(rtype.getSourceSnippet() != null && rtype.getSourceSnippet().contains("数据持有权"),
+        assertTrue(rtype.getSourceSnippet() != null && rtype.getSourceSnippet().contains("持有权"),
                 "定位片段应含材料值,实际:" + rtype.getSourceSnippet());
         // #7 补比对权利客体:rightObject(文件名) 含 assetName → 一致
         AitCompare obj = cmp.stream().filter(c -> "权利客体".equals(c.getField())).findFirst().orElseThrow();
@@ -103,7 +103,7 @@ class AitMaterialTest {
         ConfirmApply apply = new ConfirmApply();
         apply.setAssetId("DA-TERM-1");
         apply.setAssetName("线路资产数据");
-        apply.setRightType("数据加工使用权");
+        apply.setRightType("使用权");
         apply.setRightHolder("广东电网");
         apply.setValidDate(java.time.LocalDateTime.now().plusYears(3)); // 到期=今+3年
         String applyId = applyService.saveDraft(apply);
@@ -111,7 +111,7 @@ class AitMaterialTest {
         AitMaterial m = new AitMaterial();
         m.setFileName("授权证明.pdf");
         m.setApplyId(applyId);
-        m.setContent("数据加工使用权,有效期3年,授权范围约定字段"); // 材料时长=3年
+        m.setContent("使用权,有效期3年,授权范围约定字段"); // 材料时长=3年
         String id = aitService.upload(m);
         aitService.parse(id);
 
@@ -125,11 +125,11 @@ class AitMaterialTest {
     void parse_extracts_operation_right_and_sensitive() {
         AitMaterial m = new AitMaterial();
         m.setFileName("充电桩运营数据-经营授权.pdf");
-        m.setContent("数据产品经营权,对外经营,涉及个人信息隐私,交易采购");
+        m.setContent("经营权,对外经营,涉及个人信息隐私,交易采购");
         String id = aitService.upload(m);
         aitService.parse(id);
         AitParseResult r = aitService.getParse(id);
-        assertEquals("数据产品经营权", r.getRightType());
+        assertEquals("经营权", r.getRightType());
         assertEquals("个人信息", r.getSensitiveType());
         assertEquals("交易采购", r.getDataSource());
     }
@@ -198,10 +198,10 @@ class AitMaterialTest {
     /** #4 内置术语库:标准命中 + 别名/模糊 → 标准术语建议。 */
     @Test
     void termLibrary_matches_standard_and_suggests() {
-        assertTrue(AitTermLibrary.match(AitTermLibrary.F_RIGHT_TYPE, "数据加工使用权").standard());
-        AitTermLibrary.Match rt = AitTermLibrary.match(AitTermLibrary.F_RIGHT_TYPE, "经营权");
-        assertFalse(rt.standard(), "经营权应判为非标");
-        assertEquals("数据产品经营权", rt.standardTerm());
+        assertTrue(AitTermLibrary.match(AitTermLibrary.F_RIGHT_TYPE, "经营权").standard(), "经营权为标准术语");
+        AitTermLibrary.Match rt = AitTermLibrary.match(AitTermLibrary.F_RIGHT_TYPE, "运营权");
+        assertFalse(rt.standard(), "运营权(别名)应判为非标");
+        assertEquals("经营权", rt.standardTerm());
         assertEquals("全字段", AitTermLibrary.match(AitTermLibrary.F_AUTH_SCOPE, "全网").standardTerm());
         assertEquals("个人信息", AitTermLibrary.match(AitTermLibrary.F_SENSITIVE, "隐私").standardTerm());
     }
@@ -211,7 +211,7 @@ class AitMaterialTest {
     void termCheck_multiField_and_confirm_writeback() {
         AitMaterial m = new AitMaterial();
         m.setFileName("术语测试材料.pdf");
-        m.setContent("数据持有权,授权范围全网,自行生产"); // 桩解析 authScope="全网"(非标)
+        m.setContent("持有权,授权范围全网,自行生产"); // 桩解析 authScope="全网"(非标)
         String id = aitService.upload(m);
         aitService.parse(id);
 
@@ -246,7 +246,7 @@ class AitMaterialTest {
     void exportExcel_three_sheets_with_enrichments() throws Exception {
         AitMaterial m = new AitMaterial();
         m.setFileName("导出测试.pdf");
-        m.setContent("数据持有权,授权范围全网,自行生产,已加盖公章,有效期3年");
+        m.setContent("持有权,授权范围全网,自行生产,已加盖公章,有效期3年");
         String id = aitService.upload(m);
         aitService.parse(id);
 

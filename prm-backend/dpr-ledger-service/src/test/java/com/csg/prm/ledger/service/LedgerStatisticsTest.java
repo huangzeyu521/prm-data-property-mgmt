@@ -36,14 +36,14 @@ class LedgerStatisticsTest {
         PropertyArchive a = new PropertyArchive();
         a.setAssetId("DA-STAT-001");
         a.setAssetName("统计测试表");
-        a.setRightType("数据产品经营权");
+        a.setRightType("经营权");
         a.setConfirmStatus("已确权");
         archiveService.create(a);
 
         LedgerStatisticsVO vo = statisticsService.statistics();
         assertTrue(vo.getTotalArchive() >= 1);
         assertNotNull(vo.getByRightType());
-        assertTrue(vo.getByRightType().containsKey("数据产品经营权"));
+        assertTrue(vo.getByRightType().containsKey("经营权"));
         assertTrue(vo.getByConfirmStatus().containsKey("已确权"));
         assertNotNull(vo.getCoverageBySubsidiary());
     }

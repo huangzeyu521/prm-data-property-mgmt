@@ -63,14 +63,14 @@ class ConfirmConsolidationTest {
 
     @Test
     void apply_no_follows_mdau_format() {
-        String id = newApply("DA-MDAU-1", "数据资源持有权", "非管制", false);
+        String id = newApply("DA-MDAU-1", "持有权", "非管制", false);
         String no = applyService.getById(id).getApplyNo();
         assertTrue(no.matches("MDAU-00-\\d{8}-\\d{5}"), "申请编号应符合 MDAU-00-日期-5位序号:" + no);
     }
 
     @Test
     void table_items_save_and_list() {
-        String id = newApply("DA-M02-1", "数据资源持有权", "非管制", false);
+        String id = newApply("DA-M02-1", "持有权", "非管制", false);
         int n = service.saveTableItems(id, List.of(
                 item("PRPLCASEHANDLEPERMISSION", "线下案件批量处理权限配置表", "不涉密", "A 自行生产数据", "是", "是"),
                 item("PRPLNEGOTIATIONS", "谈判表", "敏感信息", "A 自行生产数据", "是", "是")));
@@ -82,9 +82,34 @@ class ConfirmConsolidationTest {
     }
 
     @Test
+    void per_table_attachments_persist_round_trip() {
+        // P0:逐表凭证附件(来源凭证 B–F + G/H/I/J 关联资料)应落库、可回读——表2 逐表凭证单一真源的地基
+        String id = newApply("DA-ATT-1", "持有权", "非管制", true);
+        ConfirmTableItem it = item("CS_KB_POLICY", "政策法规表", "不涉密", "C 公共授权数据", "是", "是");
+        it.setSourceAttachment("公共数据授权说明.pdf");            // 来源凭证(C)
+        it.setCheckAttachment("行政监管要求说明.pdf");             // G 关联资料
+        it.setPrivacyAttachment("用户入网协议(个人信息授权).pdf"); // H 关联资料
+        it.setBusSecretAttachment("第三方保密协议.pdf");           // I 关联资料
+        it.setEquityAttachment("其他第三方机构协议.pdf");          // J 关联资料
+        it.setSourceMatId("MID-SRC-1");                            // P2:逐表上传件 materialId(供预览)
+        it.setPrivacyMatId("MID-H-1");
+        service.saveTableItems(id, List.of(it));
+
+        ConfirmTableItem back = service.listTableItems(id).stream()
+                .filter(x -> "CS_KB_POLICY".equals(x.getTableCode())).findFirst().orElseThrow();
+        assertEquals("公共数据授权说明.pdf", back.getSourceAttachment(), "来源凭证附件应落库回读");
+        assertEquals("行政监管要求说明.pdf", back.getCheckAttachment(), "G 关联资料应落库回读");
+        assertEquals("用户入网协议(个人信息授权).pdf", back.getPrivacyAttachment(), "H 关联资料应落库回读");
+        assertEquals("第三方保密协议.pdf", back.getBusSecretAttachment(), "I 关联资料应落库回读");
+        assertEquals("其他第三方机构协议.pdf", back.getEquityAttachment(), "J 关联资料应落库回读");
+        assertEquals("MID-SRC-1", back.getSourceMatId(), "P2:来源凭证上传件 materialId 应落库回读");
+        assertEquals("MID-H-1", back.getPrivacyMatId(), "P2:H 上传件 materialId 应落库回读");
+    }
+
+    @Test
     void rule_1_1_self_produced_regulated_consolidates_operate_right() {
         // 黔电小智:自行生产/不涉三方/管制业务 → 经营权调整为有,归集网公司
-        String id = newApply("DA-QXZ-1", "数据资源持有权、数据加工使用权", "管制业务", false);
+        String id = newApply("DA-QXZ-1", "持有权、使用权", "管制业务", false);
         service.saveTableItems(id, List.of(item("MEETING_ROOM_INFO", "日程会议室表", "工作秘密", "A 自行生产数据", "否", "否")));
         ConsolidationResult r = service.judgeConsolidation(id);
         assertEquals("1.1", r.rule());
@@ -97,7 +122,7 @@ class ConfirmConsolidationTest {
 
     @Test
     void rule_1_2_self_produced_unregulated_syncs_rights() {
-        String id = newApply("DA-R12-1", "数据资源持有权、数据产品经营权", "非管制", false);
+        String id = newApply("DA-R12-1", "持有权、经营权", "非管制", false);
         service.saveTableItems(id, List.of(item("T1", "表1", "不涉密", "A 自行生产数据", "否", "否")));
         ConsolidationResult r = service.judgeConsolidation(id);
         assertEquals("1.2", r.rule());
@@ -106,7 +131,7 @@ class ConfirmConsolidationTest {
 
     @Test
     void rule_2_2_third_party_unregulated_no_operate() {
-        String id = newApply("DA-R22-1", "数据资源持有权", "非管制", false);
+        String id = newApply("DA-R22-1", "持有权", "非管制", false);
         service.saveTableItems(id, List.of(item("T2", "表2", "不涉密", "B 公开采集数据", "否", "否")));
         ConsolidationResult r = service.judgeConsolidation(id);
         assertEquals("2.2", r.rule());
@@ -117,7 +142,7 @@ class ConfirmConsolidationTest {
     @Test
     void rule_3_1_third_party_regulated_judges_after_restore() {
         // 非车险理赔:涉监管(G)+个人隐私(H)/管制 → 恢复经营权后依权益判定
-        String id = newApply("DA-FCX-1", "数据资源持有权", "管制业务", false);
+        String id = newApply("DA-FCX-1", "持有权", "管制业务", false);
         service.saveTableItems(id, List.of(item("PRPLDLOSSCONFIG", "人伤费用配置信息表", "不涉密", "A 自行生产数据", "是", "是")));
         ConsolidationResult r = service.judgeConsolidation(id);
         assertEquals("3.1", r.rule());
@@ -126,7 +151,7 @@ class ConfirmConsolidationTest {
 
     @Test
     void exports_produce_official_summary_workbooks() throws Exception {
-        String id = newApply("DA-EXP-1", "数据资源持有权、数据加工使用权", "管制业务", false);
+        String id = newApply("DA-EXP-1", "持有权、使用权", "管制业务", false);
         service.saveTableItems(id, List.of(item("MEETING_ROOM_INFO", "日程会议室表", "工作秘密", "A 自行生产数据", "否", "否")));
 
         try (XSSFWorkbook wb = new XSSFWorkbook(new ByteArrayInputStream(service.exportConfirmSummary()))) {

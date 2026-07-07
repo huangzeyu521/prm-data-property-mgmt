@@ -25,19 +25,18 @@
       </el-form>
     </div>
     <div class="prm-table-card">
-      <div class="prm-table-note" style="margin:0 0 12px 0">
-        注:可研 3.2.2.1.1.3.4.2 —— 授权权益证书模板,支持专项/批量授权证书模板的配置与版本管理;出证时按模板自动填充。已用于出证的模板仅停用不删除。
-      </div>
+      <PageNote>注:可研 3.2.2.1.1.3.4.2 —— 授权生效记录样式模板,支持专项/批量样式的配置与版本管理;生效登记时按模板自动填充。已用于登记的模板仅停用不删除。
+        口径(35号文):生效记录为系统内部台账凭证,对外授权凭证为《数据运营授权协议(附录D)》。</PageNote>
       <el-table :data="rows" v-loading="loading" border stripe>
         <el-table-column type="index" label="序号" width="64" align="center" />
         <el-table-column prop="templateName" label="模板名称" min-width="200" show-overflow-tooltip />
         <el-table-column prop="certType" label="证书类型" width="130" align="center">
-          <template #default="{ row }"><el-tag :type="row.certType==='批量授权证书'?'warning':'primary'">{{ row.certType }}</el-tag></template>
+          <template #default="{ row }"><span :class="'prm-c-' + ((row.certType==='批量授权证书'?'warning':'primary') || 'primary')">{{ row.certType }}</span></template>
         </el-table-column>
         <el-table-column prop="rightType" label="适用权益类型" width="150" />
         <el-table-column prop="templateVersion" label="版本" width="70" align="center" />
         <el-table-column prop="templateStatus" label="状态" width="90" align="center">
-          <template #default="{ row }"><el-tag :type="row.templateStatus==='生效中'?'success':'info'">{{ row.templateStatus }}</el-tag></template>
+          <template #default="{ row }"><span :class="'prm-c-' + ((row.templateStatus==='生效中'?'success':'info') || 'primary')">{{ row.templateStatus }}</span></template>
         </el-table-column>
         <el-table-column label="套版文件" min-width="150">
           <template #default="{ row }">
@@ -57,7 +56,7 @@
           </template>
         </el-table-column>
       </el-table>
-      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
+      <el-pagination style="margin-top:20px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
         :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" @size-change="s=>{q.size=s;q.current=1;load()}" />
     </div>
 
@@ -72,8 +71,8 @@
         </el-form-item>
         <el-form-item label="适用权益类型">
           <el-select v-model="form.rightType" style="width:100%">
-            <el-option label="数据加工使用权" value="数据加工使用权" />
-            <el-option label="数据产品经营权" value="数据产品经营权" />
+            <el-option label="使用权" value="使用权" />
+            <el-option label="经营权" value="经营权" />
           </el-select>
         </el-form-item>
         <el-form-item label="证书正文模板">
@@ -92,20 +91,22 @@
 </template>
 
 <script setup>
+import PageNote from '@/components/PageNote.vue'
 import { openFilePreview } from '@/composables/useFilePreview'
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import { confirmAsync } from '@/utils/confirmAsync'
 import {
   pageAuthCertTemplate, createAuthCertTemplate, updateAuthCertTemplate,
   enableAuthCertTemplate, disableAuthCertTemplate,
   deleteAuthCertTemplate, uploadAuthCertTemplateFile, authCertTemplateFileUrl
 } from '@/api/authorize'
+import { useTablePage } from '@/composables/useTablePage'
 
-const q = reactive({ current: 1, size: 10, certType: '', templateStatus: '' })
-const rows = ref([]); const total = ref(0); const loading = ref(false)
+const { query: q, rows, total, loading, load } = useTablePage(pageAuthCertTemplate, { certType: '', templateStatus: '' })
 const dlg = ref(false); const editing = ref(false)
 const form = reactive(empty())
-function empty() { return { templateId: '', templateName: '', certType: '专项授权证书', rightType: '数据加工使用权', templateContent: '' } }
+function empty() { return { templateId: '', templateName: '', certType: '专项授权证书', rightType: '使用权', templateContent: '' } }
 // 一键载入标准证书占位符正文(对齐证书 render 富化字段;批量证书引用《数据授权清单》)
 function loadStdPlaceholders() {
   const batch = form.certType === '批量授权证书'
@@ -114,11 +115,6 @@ function loadStdPlaceholders() {
     : '兹证明被授权方 {被授权方} 经专项授权,对 {所属系统} / {数据表}(模式 {模式名称})享有 {权益类型}。授权范围:{授权范围};使用场景及目的:{使用场景及目的};授权期限至 {授权期限}。证书编号:{证书编号}。'
 }
 
-async function load() {
-  loading.value = true
-  try { const r = await pageAuthCertTemplate({ ...q }); rows.value = r.records || []; total.value = r.total || 0 }
-  finally { loading.value = false }
-}
 function onAdd() { Object.assign(form, empty()); editing.value = false; dlg.value = true }
 function onEdit(row) { Object.assign(form, { templateId: row.templateId, templateName: row.templateName, certType: row.certType, rightType: row.rightType, templateContent: row.templateContent || '' }); editing.value = true; dlg.value = true }
 async function onSave() {
@@ -136,8 +132,8 @@ async function doUpload(row, file) {
 }
 function onDownload(row) { if (row.fileName) openFilePreview(authCertTemplateFileUrl(row.templateId), row.fileName) }
 function onDel(row) {
-  ElMessageBox.confirm('确认删除该证书模板吗', '提示', { type: 'warning' })
-    .then(async () => { await deleteAuthCertTemplate(row.templateId); ElMessage.success('已删除'); load() }).catch(() => {})
+  confirmAsync('确认删除该证书模板吗', '提示',
+    async () => { await deleteAuthCertTemplate(row.templateId); ElMessage.success('已删除'); load() }).catch(() => {})
 }
 onMounted(load)
 </script>

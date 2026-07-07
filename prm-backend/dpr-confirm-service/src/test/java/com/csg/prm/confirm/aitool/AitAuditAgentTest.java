@@ -35,7 +35,7 @@ class AitAuditAgentTest {
         ConfirmApply a = new ConfirmApply();
         a.setAssetId(asset);
         a.setAssetName(asset + "数据集");
-        a.setRightType("数据持有权");
+        a.setRightType("持有权");
         a.setRightHolder("广东电网");
         return applyService.saveDraft(a);
     }
@@ -44,7 +44,7 @@ class AitAuditAgentTest {
         AitMaterial m = new AitMaterial();
         m.setFileName(name);
         m.setApplyId(applyId);
-        m.setContent("数据持有权,广东电网,自行生产,有效期3年,已盖章");
+        m.setContent("持有权,广东电网,自行生产,有效期3年,已盖章");
         materialService.parse(materialService.upload(m));
     }
 
@@ -83,7 +83,7 @@ class AitAuditAgentTest {
         hist.setValidDate(LocalDateTime.now().plusYears(1)); hist.setSourceType(AitKgClaim.SRC_HISTORY);
         conflictService.addClaim(hist);
         AitKgClaim cur = new AitKgClaim();
-        cur.setAssetId(asset); cur.setSubject("广东电网"); cur.setRightType("数据持有权");
+        cur.setAssetId(asset); cur.setSubject("广东电网"); cur.setRightType("持有权");
         cur.setAuthScope("全字段"); cur.setExclusive(true);
         cur.setValidDate(LocalDateTime.now().plusYears(2)); cur.setSourceType(AitKgClaim.SRC_CURRENT);
         conflictService.addClaim(cur);

@@ -13,6 +13,17 @@ export const rejectAuth = (applyId, reason) =>
 export const batchApproveAuth = (ids) => request.post('/dpr/auth/apply/batch-approve', ids)
 export const batchRejectAuth = (ids, reason) => request.post('/dpr/auth/apply/batch-reject', ids, { params: { reason } })
 export const getAuthFlowLog = (applyId) => request.get(`/dpr/auth/apply/${applyId}/flow-log`)
+// 按 id 取整单(草稿就地续填回填)
+export const getAuthApply = (applyId) => request.get(`/dpr/auth/apply/${applyId}`)
+// 申请人主动撤回(审批中 -> 已撤回);行级 + 一事一议整单级
+export const withdrawAuth = (applyId, reason) => request.post(`/dpr/auth/apply/${applyId}/withdraw`, null, { params: { reason } })
+export const withdrawAuthForm = (formNo) => request.post(`/dpr/auth/apply/form/${formNo}/withdraw`)
+
+// 一事一议「单场景·多表」申请单(同 formNo 多张数据表,对齐表5 多行)
+export const createAuthForm = () => request.post('/dpr/auth/apply/form')
+export const listAuthByForm = (formNo) => request.get(`/dpr/auth/apply/by-form/${formNo}`)
+export const submitAuthForm = (formNo) => request.post(`/dpr/auth/apply/form/${formNo}/submit`)
+export const checkAuthFormCompliance = (formNo) => request.post(`/dpr/auth/apply/form/${formNo}/compliance-check`)
 
 // 授权证书
 export const pageAuthCert = (query) => request.post('/dpr/auth/cert/page', query)
@@ -61,6 +72,18 @@ export const getAgreementElements = (id) => request.get(`/dpr/auth/agreement/${i
 export const uploadAgreementSeal = (id, fd) => request.post(`/dpr/auth/agreement/${id}/upload-seal`, fd)
 export const getAgreementSealLogs = (id) => request.get(`/dpr/auth/agreement/${id}/upload-logs`)
 export const agreementSealFileUrl = (logId) => `/api/dpr/auth/agreement/upload-log/${logId}/file`
+// 协议文档(附录D《南方电网数据授权运营协议》)下载端点;正式稿返回锁定快照
+export const agreementAppendixDUrl = (id) => `/api/dpr/auth/agreement/${id}/appendix-d`
+// 协议要素落定(附录D 协商项:草案填空→正式稿锁定→才可签章)
+export const getAgreementNegotiation = (id) => request.get(`/dpr/auth/agreement/${id}/negotiation`)
+export const saveAgreementNegotiation = (id, data) => request.post(`/dpr/auth/agreement/${id}/negotiation`, data)
+export const finalizeAgreementDoc = (id) => request.post(`/dpr/auth/agreement/${id}/finalize-doc`)
+export const revertAgreementDraft = (id) => request.post(`/dpr/auth/agreement/${id}/revert-draft`)
+// 保密承诺函(附录E,乙方必签):双签✚承诺函齐才自动归档开权限
+export const uploadAgreementConfidentiality = (id, fd) => request.post(`/dpr/auth/agreement/${id}/confidentiality`, fd)
+// 期限管理(动态跟踪):续期/终止
+export const renewAgreement = (id, validUntil) => request.post(`/dpr/auth/agreement/${id}/renew`, null, { params: { validUntil } })
+export const terminateAgreement = (id, reason) => request.post(`/dpr/auth/agreement/${id}/terminate`, null, { params: { reason } })
 
 // 授权权益证书模板(可研 3.2.2.1.1.3.4.2:专项/批量授权证书模板)
 export const pageAuthCertTemplate = (params) => request.get('/dpr/auth/cert-template/page', { params })
@@ -77,6 +100,10 @@ export const pageBatchList = (params) => request.get('/dpr/auth/batch-list/page'
 export const createBatchList = (data) => request.post('/dpr/auth/batch-list', data)
 export const submitBatchList = (id) => request.post(`/dpr/auth/batch-list/${id}/submit`)
 export const approveBatchList = (id) => request.post(`/dpr/auth/batch-list/${id}/approve`)
+export const getBatchList = (id) => request.get(`/dpr/auth/batch-list/${id}`)
+// 草案删除(级联草稿明细) / 申报稿撤回(退回草案 + 明细回草稿)
+export const deleteBatchList = (id) => request.delete(`/dpr/auth/batch-list/${id}`)
+export const withdrawBatchList = (id) => request.post(`/dpr/auth/batch-list/${id}/withdraw`)
 // 批量清单明细(表6 明细行:清单下所有授权项)
 export const listAuthByBatch = (batchListId) => request.get(`/dpr/auth/apply/by-batch/${batchListId}`)
 

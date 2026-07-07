@@ -7,8 +7,8 @@
   <div class="prm-page">
     <div class="prm-query-bar">
       <el-form :inline="true" @submit.prevent>
-        <el-form-item label="责任部门">
-          <el-select v-model="q.deptName" placeholder="组织/部门(真实组织树)" clearable filterable allow-create default-first-option style="width:200px">
+        <el-form-item label="单位">
+          <el-select v-model="q.deptName" placeholder="组织/单位(真实组织树)" clearable filterable allow-create default-first-option style="width:200px">
             <el-option v-for="o in orgOptions" :key="o.id" :label="o.bizOrgName" :value="o.bizOrgName" />
           </el-select>
         </el-form-item>
@@ -21,35 +21,31 @@
 
     <el-row :gutter="16">
       <el-col :span="4"><el-card shadow="hover"><div class="st"><b>{{ d.totalApply }}</b><span>授权申请总量</span></div></el-card></el-col>
-      <el-col :span="4"><el-card shadow="hover"><div class="st"><b class="green">{{ d.effective }}</b><span>已生效</span></div></el-card></el-col>
-      <el-col :span="4"><el-card shadow="hover"><div class="st"><b class="orange">{{ d.inReview }}</b><span>审核中</span></div></el-card></el-col>
-      <el-col :span="4"><el-card shadow="hover"><div class="st"><b class="red">{{ d.rejected }}</b><span>已驳回</span></div></el-card></el-col>
-      <el-col :span="4"><el-card shadow="hover"><div class="st"><b class="blue">{{ d.effectiveRate }}%</b><span>授权生效率</span></div></el-card></el-col>
+      <el-col :span="4"><el-card shadow="hover"><div class="st"><b class="prm-c-success">{{ d.effective }}</b><span>已生效</span></div></el-card></el-col>
+      <el-col :span="4"><el-card shadow="hover"><div class="st"><b class="prm-c-warning">{{ d.inReview }}</b><span>审核中</span></div></el-card></el-col>
+      <el-col :span="4"><el-card shadow="hover"><div class="st"><b class="prm-c-danger">{{ d.rejected }}</b><span>已驳回</span></div></el-card></el-col>
+      <el-col :span="4"><el-card shadow="hover"><div class="st"><b class="prm-c-primary">{{ d.effectiveRate }}%</b><span>授权生效率</span></div></el-card></el-col>
       <el-col :span="4"><el-card shadow="hover"><div class="st"><b>{{ d.certCount }}</b><span>授权证书数</span></div></el-card></el-col>
     </el-row>
 
     <!-- 表5/表6 一站式设计新维度:批量清单(表6) + 合规敏感三字段 -->
-    <el-row :gutter="16" style="margin-top:16px">
-      <el-col :span="6"><el-card shadow="hover"><div class="st"><b class="blue">{{ d.batchListCount }}</b><span>批量授权清单(表6)</span></div></el-card></el-col>
-      <el-col :span="6"><el-card shadow="hover"><div class="st"><b class="orange">{{ d.crossRegionCount }}</b><span>跨域/跨系统授权</span></div></el-card></el-col>
-      <el-col :span="6"><el-card shadow="hover"><div class="st"><b class="orange">{{ d.thirdPartyCount }}</b><span>涉第三方来源(表5)</span></div></el-card></el-col>
-      <el-col :span="6"><el-card shadow="hover"><div class="st"><b class="red">{{ d.sensitiveCount }}</b><span>涉个人隐私·商业秘密(表5)</span></div></el-card></el-col>
+    <el-row :gutter="16" style="margin-top:20px">
+      <el-col :span="6"><el-card shadow="hover"><div class="st"><b class="prm-c-primary">{{ d.batchListCount }}</b><span>批量授权清单(表6)</span></div></el-card></el-col>
+      <el-col :span="6"><el-card shadow="hover"><div class="st"><b class="prm-c-warning">{{ d.crossRegionCount }}</b><span>跨域/跨系统授权</span></div></el-card></el-col>
+      <el-col :span="6"><el-card shadow="hover"><div class="st"><b class="prm-c-warning">{{ d.thirdPartyCount }}</b><span>涉第三方来源(表5)</span></div></el-card></el-col>
+      <el-col :span="6"><el-card shadow="hover"><div class="st"><b class="prm-c-danger">{{ d.sensitiveCount }}</b><span>涉个人隐私·商业秘密(表5)</span></div></el-card></el-col>
     </el-row>
 
-    <el-row :gutter="16" style="margin-top:16px">
+    <el-row :gutter="16" style="margin-top:20px">
       <el-col :span="12"><el-card header="授权方式分布(一事一议/批量)"><div ref="modeRef" style="height:300px"></div></el-card></el-col>
       <el-col :span="12"><el-card header="授权权益类型(使用权/经营权)"><div ref="rightRef" style="height:300px"></div></el-card></el-col>
     </el-row>
-    <el-row :gutter="16" style="margin-top:16px">
+    <el-row :gutter="16" style="margin-top:20px">
       <el-col :span="24"><el-card header="按业务域分布(表5/表6 所属业务域)"><div ref="bizRef" style="height:300px"></div></el-card></el-col>
     </el-row>
-    <el-row :gutter="16" style="margin-top:16px">
+    <el-row :gutter="16" style="margin-top:20px">
       <el-col :span="24"><el-card header="授权趋势（月度申请量 + 生效率）"><div ref="trendRef" style="height:320px"></div></el-card></el-col>
     </el-row>
-
-    <el-card style="margin-top:16px" header="授权风险预警">
-      <el-alert v-for="(a,i) in (d.riskAlerts||[])" :key="i" :type="a.includes('正常')?'success':'warning'" :closable="false" :title="a" style="margin-bottom:6px" />
-    </el-card>
   </div>
 </template>
 
@@ -62,7 +58,7 @@ import { fixedBizDist } from '@/lib/bizDomains'
 import { getAuthDashboard } from '@/api/authorize'
 import { listOrg } from '@/api/org'
 
-const d = reactive({ totalApply: 0, effective: 0, inReview: 0, rejected: 0, effectiveRate: 0, certCount: 0, batchListCount: 0, crossRegionCount: 0, thirdPartyCount: 0, sensitiveCount: 0, riskAlerts: [] })
+const d = reactive({ totalApply: 0, effective: 0, inReview: 0, rejected: 0, effectiveRate: 0, certCount: 0, batchListCount: 0, crossRegionCount: 0, thirdPartyCount: 0, sensitiveCount: 0 })
 const q = reactive({ deptName: '' })
 const orgOptions = ref([])
 const range = ref([])
@@ -104,5 +100,4 @@ onMounted(() => { loadOrgs(); load() })
 
 <style scoped>
 .st { text-align: center; } .st b { display:block; font-size:24px; } .st span { color: var(--prm-color-text-secondary); font-size:12px; }
-.green { color:#36b21d; } .orange { color:#ffc417; } .blue { color:#1e87f0; } .red { color:#e21f0c; }
 </style>

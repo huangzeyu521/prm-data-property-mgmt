@@ -12,8 +12,9 @@ import java.time.LocalDateTime;
  * 数据授权申请单(表5《数据授权申请单》,对应界面 IM-DAM-DPR-03-001-001)。对应物理表 IM_AUTH_APPLY。
  * 强制"先确后授":授权必须引用有效权益卡片(equityCardId);冻结卡片熔断。
  * 多级审批(对齐附录F 4.2/4.3,审批链以 {@link com.csg.prm.common.workflow.FlowDefinitions} 为单一事实来源):
- *   专项一事一议:草稿->合规审核->业务审核->主管审核->经理审核->副总审批->已生效(发证)
- *   批量:草稿->合规审核->主管审核->经理审核->副总审批->领导小组审批->已生效(发证)
+ *   专项一事一议(35号文 附录C表2 10-130):草稿->单位初审->合规审核->业务审核->主管审核->经理审核->副总审批->批准(待双签)
+ *     ->协议双签+承诺函归档后置「已生效」(生效副作用:生效记录/台账/卡片回写,先签约后执行授权)
+ *   批量:草稿->合规审核->主管审核->经理审核->副总审批->领导小组审批->已生效
  *     (数字化部认定细分为主管/经理/副总三节点,与专项同名同粒度;末节点为领导小组决策)
  *   任一环节可驳回。
  */
@@ -21,14 +22,18 @@ import java.time.LocalDateTime;
 public class AuthApply extends BaseEntity {
 
     public static final String STATUS_DRAFT = "草稿";
+    public static final String STATUS_UNIT = "单位初审中";            // 专项:申报单位内部初审(表2 步骤20-50合并节点)
     public static final String STATUS_COMPLIANCE = "合规审核中";      // 合规管控小组
     public static final String STATUS_BUSINESS = "业务审核中";        // 专项:业务部门经理/高级经理
     public static final String STATUS_MANAGER = "主管审核中";         // 专项:数字化部主管
     public static final String STATUS_DIRECTOR = "经理审核中";        // 专项:数字化部经理/高级经理
     public static final String STATUS_VP = "副总审批中";             // 副总经理/总经理(批量复用同节点)
     public static final String STATUS_LEADERSHIP = "领导小组审批中";   // 批量:领导小组办公室批准
+    public static final String STATUS_APPROVED = "批准";              // 专项终审通过(待双签;协议归档后置已生效)
     public static final String STATUS_EFFECTIVE = "已生效";
     public static final String STATUS_REJECTED = "已驳回";
+    /** 申请人主动撤回(审批中 -> 已撤回中间态,可修改重提);与确权域 ConfirmApply.STATUS_WITHDRAWN 对称 */
+    public static final String STATUS_WITHDRAWN = "已撤回";
     /** 兼容旧值 */
     public static final String STATUS_REVIEW = "审核中";
 
@@ -51,6 +56,10 @@ public class AuthApply extends BaseEntity {
     @TableField("CEC_ASSET_NAME")
     private String assetName;
 
+    /** 所属系统名(向导选表时平台带出;assetId 为库表/卡片级 ID,不含 SYS: 前缀,故需单独落库供审核台/历史/清单页显示) */
+    @TableField("CEC_SYSTEM_NAME")
+    private String systemName;
+
     /** 引用的权益卡片(先确后授依据) */
     @TableField("CEC_EQUITY_CARD_ID")
     private String equityCardId;
@@ -66,6 +75,10 @@ public class AuthApply extends BaseEntity {
     /** 使用场景 */
     @TableField("CEC_SCENARIO")
     private String scenario;
+
+    /** 使用目的摘要(表5「使用场景及目的摘要」的目的部分;一事一议自由文本,选场景默认带出模板可改) */
+    @TableField("CEC_PURPOSE_NOTE")
+    private String purposeNote;
 
     /** 授权范围 */
     @TableField("CEC_SCOPE")
@@ -87,6 +100,10 @@ public class AuthApply extends BaseEntity {
     /** 关联的批量授权清单(表6)ID,仅批量模式 */
     @TableField("CEC_BATCH_LIST_ID")
     private String batchListId;
+
+    /** 申请单号(一事一议多表分组;同号=一份表5申请单的多张数据表)。批量模式空。 */
+    @TableField("CEC_FORM_NO")
+    private String formNo;
 
     /** 是否需保密承诺函(附录E:涉敏感/第三方数据授权) */
     @TableField("CEC_NEED_CONFIDENTIALITY")
@@ -272,6 +289,22 @@ public class AuthApply extends BaseEntity {
         this.batchListId = batchListId;
     }
 
+    public String getFormNo() {
+        return formNo;
+    }
+
+    public void setFormNo(String formNo) {
+        this.formNo = formNo;
+    }
+
+    public String getPurposeNote() {
+        return purposeNote;
+    }
+
+    public void setPurposeNote(String purposeNote) {
+        this.purposeNote = purposeNote;
+    }
+
     public String getApplyId() {
         return applyId;
     }
@@ -310,6 +343,14 @@ public class AuthApply extends BaseEntity {
 
     public void setAssetName(String assetName) {
         this.assetName = assetName;
+    }
+
+    public String getSystemName() {
+        return systemName;
+    }
+
+    public void setSystemName(String systemName) {
+        this.systemName = systemName;
     }
 
     public String getEquityCardId() {

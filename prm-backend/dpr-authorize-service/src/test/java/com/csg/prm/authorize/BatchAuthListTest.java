@@ -36,9 +36,18 @@ class BatchAuthListTest {
         a.setAssetName(name);
         a.setEquityCardId("EC-PRA-BATCH-" + assetId);
         a.setGranteeOrg("广州供电局");
-        a.setRightType("数据加工使用权");
+        a.setRightType("使用权");
         a.setScope("全字段");
         return applyService.saveDraft(a);
+    }
+
+    /** 把清单内各明细沿批量链推进至「领导小组审批中」(合规→主管→经理→副总,逐节点 approve 4 次)。 */
+    private void advanceItemsToLeadership(String batchListId) {
+        for (AuthApply a : applyService.byBatch(batchListId)) {
+            for (int i = 0; i < 4; i++) {
+                applyService.approve(a.getApplyId(), "同意");
+            }
+        }
     }
 
     @Test
@@ -60,6 +69,11 @@ class BatchAuthListTest {
         // 明细应已从草稿进入合规审核中(批量链首节点)
         assertTrue(applyService.byBatch(id).stream()
                 .allMatch(a -> AuthApply.STATUS_COMPLIANCE.equals(a.getStatus())), "明细应随提交进入合规审核中");
+
+        // 35号文表1官方链:领导小组终批前,各明细须先在「授权审核台」走完 合规→主管→经理→副总(到达「领导小组审批中」)
+        advanceItemsToLeadership(id);
+        assertTrue(applyService.byBatch(id).stream()
+                .allMatch(a -> AuthApply.STATUS_LEADERSHIP.equals(a.getStatus())), "明细应推进至领导小组审批中");
 
         service.approve(id);
         assertEquals(BatchAuthList.STATUS_APPROVED, service.getById(id).getListStatus());
@@ -89,7 +103,7 @@ class BatchAuthListTest {
         a.setAssetName("涉三方资产");
         a.setEquityCardId("EC-PRA-BATCH-TP");
         a.setGranteeOrg("广州供电局");
-        a.setRightType("数据加工使用权");
+        a.setRightType("使用权");
         a.setScope("全字段");
         a.setThirdPartySource("公开采集");
         applyService.saveDraft(a);

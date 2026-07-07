@@ -34,14 +34,14 @@
       <el-table :data="rows" v-loading="loading" border stripe>
         <el-table-column type="index" label="序号" width="56" align="center" />
         <el-table-column prop="scenarioName" label="场景名称" width="150" show-overflow-tooltip />
-        <el-table-column prop="category" label="分类" width="110" align="center"><template #default="{ row }"><el-tag>{{ row.category }}</el-tag></template></el-table-column>
+        <el-table-column prop="category" label="分类" width="110" align="center"><template #default="{ row }"><span class="prm-c-primary">{{ row.category }}</span></template></el-table-column>
         <el-table-column prop="rightType" label="适用权益类型" width="140" align="center">
-          <template #default="{ row }"><el-tag :type="row.rightType==='数据产品经营权'?'warning':(row.rightType==='数据加工使用权'?'primary':'info')" effect="plain">{{ row.rightType || '通用' }}</el-tag></template>
+          <template #default="{ row }"><span :class="'prm-c-' + ((row.rightType==='经营权'?'warning':(row.rightType==='使用权'?'primary':'info')) || 'primary')">{{ row.rightType || '通用' }}</span></template>
         </el-table-column>
         <el-table-column prop="description" label="描述" min-width="180" show-overflow-tooltip />
         <el-table-column prop="reasonTemplate" label="申请原因模板" min-width="220" show-overflow-tooltip />
         <el-table-column prop="scenarioStatus" label="状态" width="90" align="center">
-          <template #default="{ row }"><el-tag :type="row.scenarioStatus==='生效中'?'success':'warning'">{{ row.scenarioStatus }}</el-tag></template>
+          <template #default="{ row }"><span :class="'prm-c-' + ((row.scenarioStatus==='生效中'?'success':'warning') || 'primary')">{{ row.scenarioStatus }}</span></template>
         </el-table-column>
         <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
@@ -53,7 +53,7 @@
         </el-table-column>
       </el-table>
       <div class="prm-table-note">注:应用场景与申请原因模板供授权申请时"选择/搜索"使用;停用的场景不出现在申请选择列表中。</div>
-      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
+      <el-pagination style="margin-top:20px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
         :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" @size-change="s=>{q.size=s;q.current=1;load()}" />
     </div>
 
@@ -81,24 +81,17 @@
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import { confirmAsync } from '@/utils/confirmAsync'
 import { pageScenario, createScenario, updateScenario, deleteScenario, enableScenario, disableScenario } from '@/api/authorize'
+import { useTablePage } from '@/composables/useTablePage'
 
 const categories = ['内部分析', '对外服务', '联合建模', '监管报送']
 // 适用权益类型:对齐授权权益(使用权/经营权)+ 通用,供一站式向导按权益类型过滤场景
-const rightTypes = ['数据加工使用权', '数据产品经营权', '通用']
-const q = reactive({ current: 1, size: 10, keyword: '', category: '', status: '', rightType: '' })
-const rows = ref([]); const total = ref(0); const loading = ref(false)
+const rightTypes = ['使用权', '经营权', '通用']
+const { query: q, rows, total, loading, load, search: onSearch, reset: onReset } = useTablePage(pageScenario, { keyword: '', category: '', status: '', rightType: '' })
 const dlg = ref(false); const saving = ref(false)
 const form = reactive({ scenarioId: '', scenarioName: '', category: '内部分析', rightType: '通用', description: '', reasonTemplate: '' })
-
-async function load() {
-  loading.value = true
-  try { const r = await pageScenario({ ...q }); rows.value = r.records || []; total.value = r.total || 0 }
-  finally { loading.value = false }
-}
-function onSearch() { q.current = 1; load() }
-function onReset() { q.keyword = ''; q.category = ''; q.status = ''; q.rightType = ''; onSearch() }
 
 function onAdd() { Object.assign(form, { scenarioId: '', scenarioName: '', category: '内部分析', rightType: '通用', description: '', reasonTemplate: '' }); dlg.value = true }
 function onEdit(row) { Object.assign(form, { scenarioId: row.scenarioId, scenarioName: row.scenarioName, category: row.category, rightType: row.rightType || '通用', description: row.description || '', reasonTemplate: row.reasonTemplate || '' }); dlg.value = true }
@@ -114,8 +107,8 @@ async function onSave() {
 async function onEnable(row) { await enableScenario(row.scenarioId); ElMessage.success('已启用'); load() }
 async function onDisable(row) { await disableScenario(row.scenarioId); ElMessage.success('已停用'); load() }
 function onDel(row) {
-  ElMessageBox.confirm('确认删除该应用场景吗', '提示', { type: 'warning' })
-    .then(async () => { await deleteScenario(row.scenarioId); ElMessage.success('已删除'); load() }).catch(() => {})
+  confirmAsync('确认删除该应用场景吗', '提示',
+    async () => { await deleteScenario(row.scenarioId); ElMessage.success('已删除'); load() }).catch(() => {})
 }
 onMounted(load)
 </script>

@@ -45,7 +45,7 @@
         </el-table-column>
       </el-table>
       <div class="prm-table-note">注:列表仅显示各标题最新版本;同标题再次保存/上传将自动版本号自增并保留历史版本(可"版本历史"查看与回设)。</div>
-      <el-pagination style="margin-top:16px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
+      <el-pagination style="margin-top:20px;justify-content:flex-end" background layout="total, sizes, prev, pager, next, jumper" :page-sizes="[10, 20, 50, 100]"
         :total="total" :current-page="q.current" :page-size="q.size" @current-change="p=>{q.current=p;load()}" @size-change="s=>{q.size=s;q.current=1;load()}" />
     </div>
 
@@ -92,7 +92,7 @@
         <el-table-column prop="version" label="版本" width="80" align="center" />
         <el-table-column prop="publisher" label="发布人" width="120" />
         <el-table-column label="发布日期" width="170"><template #default="{ row }">{{ fmt(row.publishDate) }}</template></el-table-column>
-        <el-table-column label="最新" width="70" align="center"><template #default="{ row }"><el-tag v-if="row.isLatest" type="success" size="small">最新</el-tag></template></el-table-column>
+        <el-table-column label="最新" width="70" align="center"><template #default="{ row }"><span v-if="row.isLatest" class="prm-c-success">最新</span></template></el-table-column>
         <el-table-column label="操作" width="170">
           <template #default="{ row }">
             <el-button link type="success" :disabled="!row.fileName" @click="onDownload(row)">下载</el-button>
@@ -111,8 +111,10 @@
 
 <script setup>
 import { openFilePreview } from '@/composables/useFilePreview'
+import { useTablePage } from '@/composables/useTablePage'
 import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import { confirmAsync } from '@/utils/confirmAsync'
 import { currentRole } from '@/lib/roles'
 import {
   pageGuidance, saveGuidance, deleteGuidance, getGuidance,
@@ -141,8 +143,10 @@ const api = isAuth
 
 // 维护权:配置管理员(admin)及"全部·管理员视图"(all,全站约定全权)可新增/修改/版本/删除
 const canManage = computed(() => ['all', 'admin'].includes(currentRole()))
-const q = reactive({ current: 1, size: 10, title: '', guidanceType: '' })
-const rows = ref([]); const total = ref(0); const loading = ref(false)
+const { query: q, rows, total, loading, load, search: onSearch, reset: onReset } = useTablePage(
+  (p) => api.page({ ...p, excludeType: props.excludeType || undefined, latestOnly: true }),
+  { title: '', guidanceType: '' }
+)
 const dlg = ref(false); const saving = ref(false)
 const form = reactive({ guidanceId: '', title: '', guidanceType: '', publisher: '', content: '' })
 let pickedFile = null
@@ -150,14 +154,6 @@ const viewDlg = ref(false); const cur = ref(null)
 const verDlg = ref(false); const verTitle = ref(''); const verRows = ref([])
 
 function fmt(t) { return t ? String(t).replace('T', ' ').slice(0, 19) : '-' }
-
-async function load() {
-  loading.value = true
-  try { const r = await api.page({ ...q, excludeType: props.excludeType || undefined, latestOnly: true }); rows.value = r.records || []; total.value = r.total || 0 }
-  finally { loading.value = false }
-}
-function onSearch() { q.current = 1; load() }
-function onReset() { q.title = ''; q.guidanceType = ''; onSearch() }
 
 function onAdd() { Object.assign(form, { guidanceId: '', title: '', guidanceType: '', publisher: '', content: '' }); pickedFile = null; dlg.value = true }
 function onEdit(row) { Object.assign(form, { guidanceId: row.guidanceId, title: row.title, guidanceType: row.guidanceType, publisher: row.publisher, content: row.content || '' }); pickedFile = null; dlg.value = true }
@@ -210,8 +206,8 @@ async function onSetLatest(row) {
   load()
 }
 function onDel(row) {
-  ElMessageBox.confirm('确认删除该指引版本吗', '提示', { type: 'warning' })
-    .then(async () => { await api.del(row.guidanceId); ElMessage.success('已删除'); load() }).catch(() => {})
+  confirmAsync('确认删除该指引版本吗', '提示',
+    async () => { await api.del(row.guidanceId); ElMessage.success('已删除'); load() }).catch(() => {})
 }
 onMounted(load)
 </script>

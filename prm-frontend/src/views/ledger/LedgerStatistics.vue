@@ -39,7 +39,7 @@ const d = reactive({ totalArchive: 0, mom: null, yoy: null })
 const trendRef = ref(); const rtRef = ref(); const csRef = ref(); const deployRef = ref(); const authRef = ref(); const funnelRef = ref()
 const pairs = (m) => Object.entries(m || {}).map(([name, value]) => ({ name, value }))
 const fmtRate = (r) => (r == null ? '—' : (r > 0 ? '+' : '') + r + '%')
-const rateClass = (r) => (r == null ? '' : r > 0 ? 'up' : r < 0 ? 'down' : '')
+const rateClass = (r) => (r == null ? '' : r > 0 ? 'prm-c-success' : r < 0 ? 'prm-c-danger' : '')
 
 function pieOpt(arr, radius, name = '数量') {
   return { color: CHART_COLORS, tooltip: { trigger: 'item' }, legend: { bottom: 0 }, series: [{ name, type: 'pie', radius, data: arr }] }
@@ -122,5 +122,4 @@ onMounted(load)
 
 <style scoped>
 .st { text-align: center; } .st b { display:block; font-size:30px; font-weight:700; } .st span { color: var(--prm-color-text-secondary); }
-.st b.up { color:#36b21d; } .st b.down { color:#e21f0c; }
 </style>

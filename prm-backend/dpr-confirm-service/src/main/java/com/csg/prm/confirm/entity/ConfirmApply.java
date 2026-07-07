@@ -140,6 +140,10 @@ public class ConfirmApply extends BaseEntity {
     @TableField("CEC_CHANGE_SUMMARY")
     private String changeSummary;
 
+    /** P0 diff 物化随单:申报时刻的变更对照快照 JSON(维度/逐表/表4,三态含移除)。审核/追溯与申报同源,不随基线漂移。 */
+    @TableField("CEC_CHANGE_DIFF")
+    private String changeDiff;
+
     /** 申请模式:常规 / 一事一议(特殊事项单独审议) */
     @TableField("CEC_APPLY_MODE")
     private String applyMode;
@@ -218,6 +222,14 @@ public class ConfirmApply extends BaseEntity {
 
     public void setChangeSummary(String changeSummary) {
         this.changeSummary = changeSummary;
+    }
+
+    public String getChangeDiff() {
+        return changeDiff;
+    }
+
+    public void setChangeDiff(String changeDiff) {
+        this.changeDiff = changeDiff;
     }
 
     public String getApplyMode() {

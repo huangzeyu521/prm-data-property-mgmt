@@ -38,7 +38,7 @@ class CertTemplatePlaceholderFillTest {
         AuthCertTemplate tpl = new AuthCertTemplate();
         tpl.setTemplateName("占位符填充测试模板-" + System.nanoTime());
         tpl.setCertType(AuthCertTemplate.TYPE_SPECIAL);
-        tpl.setRightType("数据加工使用权");
+        tpl.setRightType("使用权");
         tpl.setTemplateContent("被授权方 {被授权方} 对 {所属系统}/{数据表} 享有 {权益类型};场景 {使用场景及目的};编号 {证书编号}。");
         certTemplateService.create(tpl);
 
@@ -49,7 +49,7 @@ class CertTemplatePlaceholderFillTest {
         a.setAssetName("用户用电信息表");
         a.setEquityCardId("EC-OK-1");
         a.setGranteeOrg("广州供电局");
-        a.setRightType("数据加工使用权");
+        a.setRightType("使用权");
         a.setScenario("综合能源服务");
         a.setScope("全字段");
         String applyId = applyService.saveDraft(a);
@@ -62,7 +62,7 @@ class CertTemplatePlaceholderFillTest {
         assertTrue(body.contains("营销管理系统"), "{所属系统} 应替换为 营销管理系统:" + body);
         assertTrue(body.contains("用户用电信息表"), "{数据表} 应替换为 库表名");
         assertTrue(body.contains("综合能源服务"), "{使用场景及目的} 应替换为 场景");
-        assertTrue(body.contains("数据加工使用权"), "{权益类型} 应替换");
+        assertTrue(body.contains("使用权"), "{权益类型} 应替换");
         assertFalse(body.contains("{所属系统}"), "不应残留占位符 {所属系统}");
         assertFalse(body.contains("{使用场景及目的}"), "不应残留占位符 {使用场景及目的}");
     }

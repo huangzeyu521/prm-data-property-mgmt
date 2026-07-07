@@ -3,7 +3,10 @@
    文字 #262626/#595959/#8C8C8C;边框 #D8D8D8;底 #F5F5F6;辅助橙 #F65C09 仅限图标/图表标识。
    栅格/圆角/字体沿用《数据中心工具平台典型界面切图标注 202605》(圆角 4px、选中浅蓝 #E5F4FF、微软雅黑 14px)。
    注1:此前 warning 用切图橙 #FF7800,因与 PDF p6(警告=金黄)冲突且客户投诉,已按客户裁定改回 PDF。
-   注2:正文字号——PDF p11(强管制)为 16px,202605 切图为 14px,经客户裁定以「切图 14px」为准(2026-06),故 --prm-font-size-base 维持 14px。 */
+   注2:正文字号——PDF p11(强管制)为 16px,202605 切图为 14px,经客户裁定以「切图 14px」为准(2026-06),故 --prm-font-size-base 维持 14px。
+   注3:前端治理总纲对齐(2026-06-29)——①间距仅用 10/20/30 整十值(--prm-space-sm/md/lg=10/20/30,覆盖此前 8/16/24);
+       ②页面/板块内外边距统一 20px(=--prm-space-md)。页面背景维持规范 p21「浅蓝 #F0F6FF」(客户裁定保留,不采总纲 #F4F4F4);
+       卡片仍白底;Element 组件母版(弹窗 header/footer 等)内部留白为切图母版值,不在整十约束内。 */
 :root {
   --prm-font-family: "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
   --prm-color-primary: #1e87f0;        /* 规范主色(p6):按钮/控件/导航栏 */
@@ -28,9 +31,9 @@
   --prm-radius: 4px;
   --prm-font-size-base: 14px;        /* 正文:以 202605 切图 14px 为准(客户裁定);PDF p11 强管制为 16px,已覆盖 */
   --prm-font-size-min: 12px;
-  --prm-space-sm: 8px;
-  --prm-space-md: 16px;
-  --prm-space-lg: 24px;
+  --prm-space-sm: 10px;              /* 治理总纲:间距仅用 10/20/30 整十值(注3) */
+  --prm-space-md: 20px;              /* 页面/板块内外边距统一 20px(注3) */
+  --prm-space-lg: 30px;
 
   /* Element Plus 全局变量对齐规范 */
   --el-color-primary: var(--prm-color-primary);
@@ -52,6 +55,7 @@
   --el-color-warning-dark-2: #cc9c12;
   --el-border-radius-base: var(--prm-radius);
   --el-border-radius-small: var(--prm-radius);
+  --el-font-family: var(--prm-font-family);   /* 规范字体:微软雅黑+Arial,统一覆盖 Element 默认系统字体栈 */
   --el-font-size-base: var(--prm-font-size-base);
   --el-text-color-primary: var(--prm-color-text);
   --el-text-color-regular: var(--prm-color-text);
@@ -90,9 +94,9 @@ body {
 }
 .prm-query-bar {
   background: #fff;
-  padding: 12px var(--prm-space-md) 4px;
+  padding: var(--prm-space-sm) var(--prm-space-md) 0;
   border-radius: var(--prm-radius);
-  margin-bottom: 12px;
+  margin-bottom: var(--prm-space-sm);
   border: 1px solid #efefef;
 }
 /* 顶部工具条:控件横排、垂直居中、间距统一(修复按钮组与搜索框/复选框基线错位) */
@@ -108,6 +112,26 @@ body {
   border-radius: var(--prm-radius);
   border: 1px solid #efefef;
 }
+/* 列表最大化(高压线§11):.prm-maximized 加在 .prm-table-card 上,铺满视口盖住侧栏/面包屑,
+   工作区放大且不产生页面级多余滚动条(自身 overflow:auto 兜底表格内容)。见 useMaximize.js。 */
+.prm-table-card.prm-maximized {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  border-radius: 0;
+  overflow: auto;
+}
+/* 全局状态色工具类(治理总纲·冗余清零):收编各页重复拷贝的 .red/.green/.orange/.blue/.up/.down 等
+   语义即色,模板直接用 class,严禁在页面 <style scoped> 内再复制同义色值定义。 */
+.prm-c-primary { color: var(--prm-color-primary); }
+.prm-c-success { color: var(--prm-color-success); }
+.prm-c-warning { color: var(--prm-color-warning); }
+.prm-c-danger  { color: var(--prm-color-danger); }
+.prm-c-link    { color: var(--prm-color-link); }
+.prm-c-weak    { color: var(--prm-color-text-weak); }
+/* UI评审·去标签外框:el-tag 全量转纯色文字;动态 type 表达式可产出 'info',映射弱文字色 */
+.prm-c-info    { color: var(--prm-color-text-weak); }
+
 /* 列表下方注释,左对齐、非红色、以"注:"开头(高压线第十条) */
 .prm-table-note {
   margin-top: var(--prm-space-sm);
@@ -115,16 +139,61 @@ body {
   font-size: var(--prm-font-size-min);
 }
 
-/* 表格(规范 p98):表头浅灰蓝 #F5F8FA、选中/悬停行 #EFF7FF、边框 #EFEFEF */
+/* 表格(规范 p98):表头浅灰蓝 #F5F8FA、选中/悬停行 #EFF7FF、边框 #EFEFEF、斑马纹 #FCFCFC/#FFFFFF 交替。
+   --el-fill-color-lighter 是 Element 斑马行(tr--striped)取色变量,此处仅在 .el-table 内覆盖,不影响其它组件同名变量。 */
 .el-table {
   --el-table-header-bg-color: #f5f8fa;
   --el-table-header-text-color: var(--prm-color-text);
   --el-table-row-hover-bg-color: #eff7ff;
   --el-table-current-row-bg-color: #eff7ff;
   --el-table-border-color: #efefef;
+  --el-table-tr-bg-color: #fff;
+  --el-fill-color-lighter: #fcfcfc;
 }
+/* 表头字号 16px、不加粗;内容维持全局正文 14px(p98 表头/内容两级字号,不改动 p11 正文字号裁定) */
 .el-table th.el-table__cell {
-  font-weight: 600;
+  font-weight: 400;
+  font-size: 16px;
+}
+
+/* size="small" 表格补齐规范值(p98 行高40px/单元格留白≥10px/内容14px):
+   Element small 预设(12px字号、4px/8px内外边距)实测明显小于规范,此处对齐到与默认尺寸相同的间距与正文字号,
+   使小尺寸表格的行高/留白与默认尺寸表格一致地达标,不必逐个组件文件摘掉 size="small"。 */
+.el-table--small {
+  font-size: var(--prm-font-size-base);
+}
+.el-table--small .el-table__cell {
+  padding: 8px 0;
+}
+.el-table--small .cell {
+  padding: 0 12px;
+}
+
+/* 高压线:单元格内容最多换行3行,超出显示"…"+悬浮全文(2026版,推翻旧稿"2行")。
+   Element show-overflow-tooltip 的单元格会带 .cell.el-tooltip 类且默认 white-space:nowrap(单行截断);
+   这里改成 3 行 line-clamp。Element 自身的悬浮判定(util.js createTablePopper)按 Range 同时量宽高,
+   clamp 后单元格可视高度变矮,真实文字超出 3 行时会被判定溢出,自动触发原有的悬浮全文气泡,不需要另写指令/JS。 */
+.el-table .cell.el-tooltip {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+/* 系统常规提示规范:加载中态强制文案"加载中…"。全站 v-loading 用法均未传 element-loading-text,
+   Element 加载指令默认只显示转圈图标、无文字节点(.el-loading-text 是条件渲染,不传 text 就不存在于DOM)。
+   用伪元素补文案而非逐个组件加 element-loading-text(35 处),复刻 .el-loading-text 原有配色/间距;
+   若某处将来确实传了自定义 text(真实 .el-loading-text 节点存在),伪元素让位,不叠两行文案。 */
+.el-loading-spinner::after {
+  content: "加载中…";
+  display: block;
+  color: var(--el-color-primary);
+  margin: 3px 0;
+  font-size: 14px;
+}
+.el-loading-spinner:has(.el-loading-text)::after {
+  display: none;
 }
 
 /* 分页:紧凑(典型界面右下分页) */
@@ -152,7 +221,7 @@ body {
   font-size: 16px;
   font-weight: 600;
   color: var(--prm-color-text);
-  padding: 12px 16px;
+  padding: var(--prm-space-sm) var(--prm-space-md);
   position: relative;
 }
 .el-card__header::before {

@@ -17,7 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 数据授权全流程集成测试:草稿 -> 提交(先确后授校验) -> 审批通过 -> 自动生成授权证书;
+ * 数据授权全流程集成测试:草稿 -> 提交(先确后授校验) -> 审批链推进 ->
+ * 专项:批准(待双签)-> 协议归档收口生效;批量:终审即生效并登记生效记录。
  * 以及冻结熔断、必填(必须引用权益卡片)、驳回等路径。
  */
 @SpringBootTest
@@ -36,17 +37,19 @@ class AuthFlowTest {
         a.setAssetName(name);
         a.setEquityCardId(cardId);
         a.setGranteeOrg("广州供电局");
-        a.setRightType("数据加工使用权");
+        a.setRightType("使用权");
         a.setScenario("电力金融征信");
         a.setScope("全字段");
         return a;
     }
 
     @Test
-    void special_flow_five_level_should_generate_cert() {
+    void special_flow_should_approve_then_effective_after_agreement() {
         String id = applyService.saveDraft(draft("DA-AUTH-001", "客户用电信息表", "EC-PRA-VALID01"));
         applyService.submit(id);
-        // 专项五级:合规->业务->主管->经理->副总->已生效
+        // 专项(表2 20-100):单位初审->合规->业务->主管->经理->副总->批准(待双签)
+        assertEquals(AuthApply.STATUS_UNIT, applyService.getById(id).getStatus());
+        assertNull(applyService.approve(id, null)); // 单位初审->合规
         assertEquals(AuthApply.STATUS_COMPLIANCE, applyService.getById(id).getStatus());
         assertNull(applyService.approve(id, null)); // 合规->业务
         assertEquals(AuthApply.STATUS_BUSINESS, applyService.getById(id).getStatus());
@@ -56,14 +59,22 @@ class AuthFlowTest {
         assertEquals(AuthApply.STATUS_DIRECTOR, applyService.getById(id).getStatus());
         assertNull(applyService.approve(id, null)); // 经理->副总
         assertEquals(AuthApply.STATUS_VP, applyService.getById(id).getStatus());
-        String certId = applyService.approve(id, null); // 副总->已生效(发证)
-        assertNotNull(certId, "终审通过应自动生成授权证书");
+        // 副总终审=批准(待双签):不生效、不出生效记录(先签约后执行授权)
+        assertNull(applyService.approve(id, null), "专项终审应为批准(待双签),不即时生效");
+        assertEquals(AuthApply.STATUS_APPROVED, applyService.getById(id).getStatus());
+
+        // 协议双签+《保密承诺函》归档收口:批准->已生效并登记授权生效记录
+        String certId = applyService.markEffectiveAfterAgreement(id);
+        assertNotNull(certId, "协议归档收口应登记授权生效记录");
         assertEquals(AuthApply.STATUS_EFFECTIVE, applyService.getById(id).getStatus());
 
         AuthCert cert = certService.getById(certId);
         assertNotNull(cert.getCertNo());
         assertEquals("DA-AUTH-001", cert.getAssetId());
         assertEquals(AuthCert.STATUS_EFFECTIVE, cert.getCertStatus());
+
+        // 幂等:已生效再收口应跳过
+        assertNull(applyService.markEffectiveAfterAgreement(id), "非批准态收口应幂等跳过");
     }
 
     @Test
@@ -116,17 +127,17 @@ class AuthFlowTest {
     void operation_right_must_be_in_open_catalog() {
         // 经营权 + 资产不在对外开放目录(NONOPEN 前缀)-> 提交被拦截
         AuthApply bad = draft("NONOPEN-OP-1", "未开放经营资产", "EC-OK-OP");
-        bad.setRightType("数据产品经营权");
+        bad.setRightType("经营权");
         String id = applyService.saveDraft(bad);
         BusinessException ex = assertThrows(BusinessException.class, () -> applyService.submit(id));
         assertTrue(ex.getMessage().contains("对外开放目录"), "经营权应受对外开放目录约束");
 
-        // 经营权 + 资产在对外开放目录 -> 正常进入合规审核
+        // 经营权 + 资产在对外开放目录 -> 正常进入审批链(首环节:单位初审)
         AuthApply ok = draft("DA-OP-OK", "已开放经营资产", "EC-OK-OP2");
-        ok.setRightType("数据产品经营权");
+        ok.setRightType("经营权");
         String id2 = applyService.saveDraft(ok);
         applyService.submit(id2);
-        assertEquals(AuthApply.STATUS_COMPLIANCE, applyService.getById(id2).getStatus());
+        assertEquals(AuthApply.STATUS_UNIT, applyService.getById(id2).getStatus());
     }
 
     @Test

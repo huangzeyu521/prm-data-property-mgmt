@@ -59,8 +59,10 @@ const SINGLE_NODES = [
 ]
 
 // 产品状态串(AuthApply.status / BatchAuthList.listStatus)→ 节点 key
+// 一事一议:单位初审中(表2 20-50 真实节点)→…→批准(待双签)→已生效(双签+承诺函归档后)
 const STATUS_TO_KEY = {
   草案: 'submit', 草稿: 'submit', 申报稿: 'compliance',
+  单位初审中: 'unit',
   合规审核中: 'compliance', 业务审核中: 'business', 主管审核中: 'manager',
   经理审核中: 'director', 副总审批中: 'gm', 领导小组审批中: 'leadership',
   批准: 'sign', 已生效: 'execute'

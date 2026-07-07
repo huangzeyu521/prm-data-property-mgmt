@@ -12,10 +12,10 @@
           <template #header><span>确权 · 权益卡片状态</span><el-link type="primary" style="float:right;font-size:12px" @click="go('/dpr/confirm/card')">去权益卡片</el-link></template>
           <div class="life">
             <div class="li" @click="go('/dpr/confirm/card')"><b>{{ cardStat.total || 0 }}</b><span>卡片总数</span></div>
-            <div class="li"><b class="green">{{ cardStat.normal || 0 }}</b><span>正常</span></div>
-            <div class="li"><b class="orange">{{ cardStat.dueSoon || 0 }}</b><span>即将到期</span></div>
-            <div class="li"><b class="red">{{ cardStat.frozen || 0 }}</b><span>冻结</span></div>
-            <div class="li"><b class="gray">{{ cardStat.expired || 0 }}</b><span>失效</span></div>
+            <div class="li"><b class="prm-c-success">{{ cardStat.normal || 0 }}</b><span>正常</span></div>
+            <div class="li"><b class="prm-c-warning">{{ cardStat.dueSoon || 0 }}</b><span>即将到期</span></div>
+            <div class="li"><b class="prm-c-danger">{{ cardStat.frozen || 0 }}</b><span>冻结</span></div>
+            <div class="li"><b class="prm-c-weak">{{ cardStat.expired || 0 }}</b><span>失效</span></div>
           </div>
         </el-card>
       </el-col>
@@ -24,10 +24,10 @@
           <template #header><span>授权 · 授权证书状态</span><el-link type="primary" style="float:right;font-size:12px" @click="go('/dpr/auth/cert')">去授权权益</el-link></template>
           <div class="life">
             <div class="li" @click="go('/dpr/auth/cert')"><b>{{ certStat.total || 0 }}</b><span>证书总数</span></div>
-            <div class="li"><b class="green">{{ certStat.effective || 0 }}</b><span>生效</span></div>
-            <div class="li"><b class="orange">{{ certStat.expiring || 0 }}</b><span>即将到期</span></div>
-            <div class="li"><b class="red">{{ certStat.suspended || 0 }}</b><span>已暂停</span></div>
-            <div class="li"><b class="gray">{{ certStat.revoked || 0 }}</b><span>已撤销</span></div>
+            <div class="li"><b class="prm-c-success">{{ certStat.effective || 0 }}</b><span>生效</span></div>
+            <div class="li"><b class="prm-c-warning">{{ certStat.expiring || 0 }}</b><span>即将到期</span></div>
+            <div class="li"><b class="prm-c-danger">{{ certStat.suspended || 0 }}</b><span>已暂停</span></div>
+            <div class="li"><b class="prm-c-weak">{{ certStat.revoked || 0 }}</b><span>已撤销</span></div>
           </div>
         </el-card>
       </el-col>
@@ -36,9 +36,9 @@
     <!-- 风险告警概览 -->
     <el-row :gutter="16" style="margin-bottom:16px">
       <el-col :span="6"><el-card shadow="hover"><div class="st"><b>{{ stats.total }}</b><span>权益事件总数</span></div></el-card></el-col>
-      <el-col :span="6"><el-card shadow="hover"><div class="st"><b class="red">{{ stats.pending }}</b><span>待处理</span></div></el-card></el-col>
-      <el-col :span="6"><el-card shadow="hover"><div class="st"><b class="orange">{{ stats.processing }}</b><span>处理中</span></div></el-card></el-col>
-      <el-col :span="6"><el-card shadow="hover"><div class="st"><b class="green">{{ stats.closureRate }}%</b><span>闭环率</span></div></el-card></el-col>
+      <el-col :span="6"><el-card shadow="hover"><div class="st"><b class="prm-c-danger">{{ stats.pending }}</b><span>待处理</span></div></el-card></el-col>
+      <el-col :span="6"><el-card shadow="hover"><div class="st"><b class="prm-c-warning">{{ stats.processing }}</b><span>处理中</span></div></el-card></el-col>
+      <el-col :span="6"><el-card shadow="hover"><div class="st"><b class="prm-c-success">{{ stats.closureRate }}%</b><span>闭环率</span></div></el-card></el-col>
     </el-row>
     <el-row :gutter="16">
       <el-col :span="10"><el-card header="风险等级分布"><div ref="levelRef" style="height:300px"></div></el-card></el-col>
@@ -47,7 +47,7 @@
           <el-table :data="rows" v-loading="loading" border stripe height="300">
             <el-table-column type="index" label="序号" width="56" align="center" />
             <el-table-column prop="alertLevel" label="级别" width="76" align="center">
-              <template #default="{ row }"><el-tag :type="levelTag(row.alertLevel)">{{ row.alertLevel }}</el-tag></template>
+              <template #default="{ row }"><span :class="'prm-c-' + ((levelTag(row.alertLevel)) || 'primary')">{{ row.alertLevel }}</span></template>
             </el-table-column>
             <el-table-column label="所属系统" min-width="120" show-overflow-tooltip><template #default="{ row }">{{ sysName(row) }}</template></el-table-column>
             <el-table-column prop="assetName" label="数据表" min-width="120" show-overflow-tooltip><template #default="{ row }">{{ row.assetName || '—' }}</template></el-table-column>
@@ -120,5 +120,4 @@ onMounted(load)
 .st { text-align: center; } .st b { display:block; font-size:26px; } .st span { color: var(--prm-color-text-secondary); font-size:12px; }
 .life { display:flex; justify-content:space-around; text-align:center; }
 .life .li { cursor:default; } .life .li b { display:block; font-size:24px; } .life .li span { color: var(--prm-color-text-secondary); font-size:12px; }
-.red { color:#e21f0c; } .orange { color:#ffc417; } .green { color:#36b21d; } .gray { color: var(--prm-color-text-weak); }
 </style>

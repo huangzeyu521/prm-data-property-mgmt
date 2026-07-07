@@ -39,7 +39,7 @@ class AuthApplyHistoryFieldsTest {
         a.setAssetName("用户用电信息表");          // 数据表(库表名)
         a.setEquityCardId("EC-OK-1");
         a.setGranteeOrg(grantee);
-        a.setRightType("数据加工使用权");          // 主表「权益类型」列
+        a.setRightType("使用权");          // 主表「权益类型」列
         a.setScenario("综合能源服务");
         a.setScope("全字段");
         a.setSchemaName("BILLING");                // 表5/表6 模式名称
@@ -57,7 +57,7 @@ class AuthApplyHistoryFieldsTest {
         assertNotNull(got, "分页应查回刚建的一事一议申请");
         assertTrue(got.getAssetId().startsWith("SYS:"), "assetId 须为 SYS:系统名(历史页派生所属系统)");
         assertEquals("营销管理系统", got.getAssetId().substring(4), "所属系统应可派生");
-        assertEquals("数据加工使用权", got.getRightType(), "主表权益类型列字段");
+        assertEquals("使用权", got.getRightType(), "主表权益类型列字段");
         assertEquals("BILLING", got.getSchemaName(), "模式名称应往返保留");
         assertEquals("综合能源服务", got.getScenario(), "使用场景应往返保留");
         assertEquals("营销域", got.getBusinessDomain(), "业务域应往返保留");

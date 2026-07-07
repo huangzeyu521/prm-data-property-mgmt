@@ -22,20 +22,20 @@
       <el-button @click="expandAll(false)">折叠全部</el-button>
       <el-button type="primary" :loading="loading" @click="load">刷新</el-button>
       <span class="cat-legend">
-        <el-tag size="small" effect="plain">库表 {{ counts.card }}</el-tag>
-        <el-tag size="small" type="warning" effect="plain">未确权 {{ counts.pending }}</el-tag>
-        <el-tag size="small" effect="plain">申请中 {{ counts.applying }}</el-tag>
-        <el-tag size="small" type="success" effect="plain">已确权 {{ counts.confirmed }}</el-tag>
+        <span class="prm-c-primary">库表 {{ counts.card }}</span>
+        <span class="prm-c-warning">未确权 {{ counts.pending }}</span>
+        <span class="prm-c-primary">申请中 {{ counts.applying }}</span>
+        <span class="prm-c-success">已确权 {{ counts.confirmed }}</span>
       </span>
     </div>
 
     <div class="prm-table-card">
-      <div class="prm-table-note" style="margin:0 0 12px 0">
+      <div class="prm-table-note" style="margin:0 0 10px 0">
         树形展示用户权限下"业务域—系统—功能模块—库表"全量确权范围及各级确权状态(口径对齐初始确权/确权变更申请)。
-        库表:<el-tag size="small" type="warning" effect="plain">未确权</el-tag> 可发起确权,
-        <el-tag size="small" effect="plain">申请中</el-tag> /
-        <el-tag size="small" type="success" effect="plain">已确权</el-tag> 可查看确权申请;
-        <el-tag size="small" type="danger" effect="plain">已授权</el-tag> 表示该库表已对外授权。
+        库表:<span class="prm-c-warning">未确权</span> 可发起确权,
+        <span class="prm-c-primary">申请中</span> /
+        <span class="prm-c-success">已确权</span> 可查看确权申请;
+        <span class="prm-c-danger">已授权</span> 表示该库表已对外授权。
       </div>
       <el-tree
         ref="treeRef" :data="tree" :props="treeProps" node-key="id"
@@ -50,8 +50,8 @@
 
             <!-- 库表:确权状态 + 已授权 + 表代码 + 操作 -->
             <template v-if="data.type === 'card'">
-              <el-tag size="small" :type="statusTag(cardStatus(data))" effect="plain" class="cat-badge">{{ cardStatus(data) }}</el-tag>
-              <el-tag v-if="data.authorized" size="small" type="danger" effect="plain" class="cat-badge">已授权</el-tag>
+              <span :class="'cat-badge prm-c-' + ((statusTag(cardStatus(data))) || 'primary')">{{ cardStatus(data) }}</span>
+              <span v-if="data.authorized" class="cat-badge prm-c-danger">已授权</span>
               <span class="cat-code">{{ data.tableCode }}</span>
               <el-button v-if="cardStatus(data) === '未确权'" link type="primary" size="small" @click.stop="onConfirm(data)">发起确权</el-button>
               <el-button v-else link type="primary" size="small" @click.stop="goHistory">查看申请</el-button>
@@ -59,7 +59,7 @@
 
             <!-- 系统/功能模块:确权进度(已确权 N/M)-->
             <template v-else-if="data.type === 'system' || data.type === 'module'">
-              <el-tag size="small" :type="progBadge(data).type" effect="plain" class="cat-badge">{{ progBadge(data).text }}</el-tag>
+              <span :class="'cat-badge prm-c-' + ((progBadge(data).type) || 'primary')">{{ progBadge(data).text }}</span>
             </template>
             <span v-else class="cat-cnt">{{ progress(data).total }} 张库表</span>
           </span>
@@ -72,7 +72,7 @@
 <script setup>
 import { onMounted, reactive, ref, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessageBox } from 'element-plus'
+import { confirmAsync } from '@/utils/confirmAsync'
 import { Grid, Monitor, Folder, Document } from '@element-plus/icons-vue'
 import { fullCatalogTree } from '@/api/assetCard'
 import { pageConfirmApply } from '@/api/confirm'
@@ -160,8 +160,9 @@ function expandAll(on) {
 }
 
 function onConfirm(data) {
-  ElMessageBox.confirm(`数据确权以「系统」为单元(一份确权申请 = 一个系统)。是否前往「初始确权申请」,在确权范围树中选择「${data.sysName}」及库表发起确权?`, '发起确权', { type: 'info', confirmButtonText: '前往初始确权' })
-    .then(() => router.push({ path: '/dpr/confirm/wizard' })).catch(() => {})
+  confirmAsync(`数据确权以「系统」为单元(一份确权申请 = 一个系统)。是否前往「初始确权申请」,在确权范围树中选择「${data.sysName}」及库表发起确权?`, '发起确权',
+    async () => { await router.push({ path: '/dpr/confirm/wizard' }) },
+    { type: 'info', confirmButtonText: '前往初始确权' }).catch(() => {})
 }
 function goHistory() { router.push({ path: '/dpr/confirm/history' }) }
 

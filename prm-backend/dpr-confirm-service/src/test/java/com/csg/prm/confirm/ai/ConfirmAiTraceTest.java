@@ -42,7 +42,7 @@ class ConfirmAiTraceTest {
         ConfirmApply a = new ConfirmApply();
         a.setAssetId("AST-TRACE-1");
         a.setAssetName("留痕测试资产");
-        a.setRightType("数据加工使用权");
+        a.setRightType("使用权");
         a.setRightHolder("广东电网有限责任公司");
         a.setSourceIdentification("A");
         a.setRelationIdentification("G,H");

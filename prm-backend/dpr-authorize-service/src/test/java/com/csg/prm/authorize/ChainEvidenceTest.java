@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 区块链存证集成测试(⑧):授权发证关键节点自动上链 + SM3 防篡改验真。
+ * 区块链存证集成测试(⑧):授权生效登记关键节点自动上链 + SM3 防篡改验真。
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -36,15 +36,15 @@ class ChainEvidenceTest {
         apply.setAssetId("DA-EVID-1");
         apply.setAssetName("存证测试表");
         apply.setGranteeOrg("广州供电局");
-        apply.setRightType("数据加工使用权");
+        apply.setRightType("使用权");
         apply.setScope("全字段");
         String certId = certService.generateFromApply(apply);
         AuthCert cert = certService.getById(certId);
 
         List<ChainEvidence> list = evidenceService.listByBiz(certId);
-        assertEquals(1, list.size(), "发证应自动产生一条上链存证");
+        assertEquals(1, list.size(), "生效登记应自动产生一条上链存证");
         ChainEvidence ev = list.get(0);
-        assertEquals("授权发证", ev.getBizType());
+        assertEquals("授权生效", ev.getBizType());
         assertEquals(ChainEvidence.STATUS_ANCHORED, ev.getAnchorStatus());
         assertEquals(64, ev.getSm3Hash().length(), "SM3 摘要应为 64 位十六进制");
         assertTrue(ev.getChainTxHash().startsWith("0x"), "应有上链交易哈希");

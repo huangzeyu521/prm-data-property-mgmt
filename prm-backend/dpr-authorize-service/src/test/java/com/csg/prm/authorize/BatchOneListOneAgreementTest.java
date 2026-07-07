@@ -39,7 +39,7 @@ class BatchOneListOneAgreementTest {
         a.setAssetName(assetName);
         a.setEquityCardId("EC-OK-1");
         a.setGranteeOrg("南网综合能源股份有限公司");
-        a.setRightType("数据加工使用权");
+        a.setRightType("使用权");
         a.setScenario("综合能源服务");
         a.setScope("全字段");
         applyService.saveDraft(a);
@@ -53,6 +53,12 @@ class BatchOneListOneAgreementTest {
         item(batchListId, "用户用电信息表");
         item(batchListId, "电费账单表");
         batchListService.submit(batchListId);   // 草案→申报稿(逐项合规+入链)
+        // 35号文表1官方链:领导小组终批前,各明细须先走完 合规→主管→经理→副总(到达「领导小组审批中」)
+        for (AuthApply a : applyService.byBatch(batchListId)) {
+            for (int i = 0; i < 4; i++) {
+                applyService.approve(a.getApplyId(), "同意");
+            }
+        }
         batchListService.approve(batchListId);  // 申报稿→批准(领导小组)
         return batchListId;
     }

@@ -23,7 +23,7 @@ test('batch authorize: 建清单 → 资源池选取 → 加入明细', async ({
   await page.locator('input[placeholder*="联络人"]').first().fill('张三')
   await page.locator('input[placeholder*="联系方式"]').first().fill('020-31000000')
   await page.locator('.el-form-item:has-text("默认权益类型") .el-select__wrapper').first().click()
-  await page.locator('.el-select-dropdown__item:has-text("数据加工使用权")').first().click()
+  await page.locator('.el-select-dropdown__item:has-text("使用权")').first().click()
   await page.getByRole('button', { name: /下一步/ }).click()
 
   // 步骤2:打开资源池 picker
@@ -40,5 +40,30 @@ test('batch authorize: 建清单 → 资源池选取 → 加入明细', async ({
   // 校验:已加入明细 ≥ 1 项 + 跨系统域横幅出现
   await expect(page.locator('body')).toContainText(/已加入明细\([1-9]\d* 项\)/, { timeout: 10000 })
   await expect(page.locator('body')).toContainText('是否跨系统域')
+
+  // 去重(方案A):应交材料表(首个 el-table)只剩《表5》,不再有全单级「第三方许可凭证或说明」(改逐表)
+  const materialTable = page.locator('.el-table').first()
+  await expect(materialTable).toContainText('表5 数据授权申请单')
+  await expect(materialTable).not.toContainText('第三方许可凭证或说明')
+
+  // 1-B 第三方凭证逐表列 + 2-A 逐行场景/时效编辑(明细表)
+  const itemsTable = page.locator('.el-table').last()
+  await expect(itemsTable).toContainText('第三方凭证') // 1-B 逐表凭证列存在
+  await expect(itemsTable).toContainText('授权时效')   // 2-A 时效列存在
+  // 2-A:使用场景为可编辑输入(逐行微调),改后不报错
+  const scInput = itemsTable.locator('tbody tr').first().locator('input').first()
+  await scInput.fill('台区降损分析(逐项微调)')
+  await page.waitForTimeout(300)
+
+  // 《表5》= 系统生成(非上传):应交材料表里表5 行状态「系统生成」+「生成《表5》并下载」按钮,点击触发下载
+  const t5row = page.locator('tr', { hasText: '表5 数据授权申请单' })
+  await expect(t5row).toContainText('系统生成')
+  const genBtn = t5row.getByRole('button', { name: /生成《表5》并下载/ })
+  await expect(genBtn).toBeEnabled()
+  const dl = page.waitForEvent('download')
+  await genBtn.click()
+  const file = await dl
+  expect(file.suggestedFilename()).toMatch(/表5_数据授权申请单.*\.xls/)
+
   expect(errs, `批量授权流程运行时错误:\n${errs.join('\n')}`).toEqual([])
 })
