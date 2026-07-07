@@ -7,8 +7,9 @@
 
 | 文件 | 内容 |
 |---|---|
-| `01_schema.sql` | 建库 + 41 张业务表 DDL（utf8mb4、InnoDB、注释、索引） |
-| `02_data.sql` | 测试数据（34 张表有数据，含存证/智能工具表补充数据；日志/记录类表运行态生成不预置） |
+| `01_schema.sql` | 建库 + 业务表 DDL（utf8mb4、InnoDB、注释、索引） |
+| `07_sync_h2_baseline.sql` | **必需**：补齐 `01_schema.sql` 相对 H2 基线漂移的列/表（`IM_CONFIRM_APPLY.CEC_CHANGE_DIFF`、`IM_BATCH_AUTH_LIST.CEC_GEO_SCOPE` 等列 + `IM_CONFIRM_RECHECK_TASK`/`IM_DPR_RISK`/`IM_SENSITIVE_VAULT`/`SYS_ORGANIZATION` 等表）。全新与存量库均在 `01_schema` 后执行；`CREATE TABLE IF NOT EXISTS` + 仅缺列 ADD，幂等安全 |
+| `02_data.sql` | 测试数据（含存证/智能工具表补充数据；日志/记录类表运行态生成不预置） |
 | `03_seata_undo_log.sql` | **(prod 可选)** Seata AT 模式 `undo_log` 表，仅分布式事务需要 |
 | `06_sys_organization.sql` | 组织主数据只读镜像表 `SYS_ORGANIZATION`（部门/归口下拉、Dashboard 筛选、制卡/发证省地市编码回填消费；数据由平台/4A 同步，PRM 不写；`CREATE TABLE IF NOT EXISTS` 幂等可重跑） |
 
@@ -19,13 +20,15 @@
 ```bash
 # 方式一：本机 mysql 客户端
 mysql -u root -p < 01_schema.sql
+mysql -u root -p prm_dpr < 07_sync_h2_baseline.sql   # 必需：补齐基线漂移列/表
 mysql -u root -p prm_dpr < 02_data.sql
 
 # 方式二：Docker（无需本机装 MySQL）
 docker run -d --name prm-mysql -e MYSQL_ROOT_PASSWORD=root -p 3306:3306 \
   -v D:/MyProject/PRM/mysql:/sql mysql:8 --character-set-server=utf8mb4
 docker exec prm-mysql sh -c 'mysql -uroot -proot < /sql/01_schema.sql'
-docker exec prm-mysql sh -c 'mysql -uroot -proot < /sql/02_data.sql'
+docker exec prm-mysql sh -c 'mysql -uroot -proot prm_dpr < /sql/07_sync_h2_baseline.sql'
+docker exec prm-mysql sh -c 'mysql -uroot -proot prm_dpr < /sql/02_data.sql'
 ```
 
 ## 后端对接 MySQL（从 H2/达梦切换）

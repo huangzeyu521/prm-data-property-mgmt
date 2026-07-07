@@ -12,12 +12,17 @@
 | 顺序 | 文件 | 说明 | 是否必需 |
 |---|---|---|---|
 | 1 | `01_create_tablespace.sql` | 表空间 + 用户 + 字符集初始化 | 必需 |
-| 2 | `02_schema_dm.sql` | 全量库表 DDL(**已含全部最新列/表**,无需再跑 04) | 必需 |
-| 3 | `03_data_dm.sql` | 演示/测试数据 | 生产可跳过 |
-| 4 | `05_seed_aitool_dm.sql` | 智能确权辅助工具演示种子 | 可选,生产跳过 |
-| 5 | `06_seata_undo_log_dm.sql` | Seata AT 回滚日志表 | 仅 prod 分布式事务需要 |
+| 2 | `02_schema_dm.sql` | 全量库表 DDL | 必需 |
+| 3 | `09_sync_h2_baseline_dm.sql` | **补齐 02 相对 H2 基线漂移的列/表(见下「基线漂移」)** | **必需** |
+| 4 | `03_data_dm.sql` | 演示/测试数据 | 生产可跳过 |
+| 5 | `05_seed_aitool_dm.sql` | 智能确权辅助工具演示种子 | 可选,生产跳过 |
+| 6 | `06_seata_undo_log_dm.sql` | Seata AT 回滚日志表 | 仅 prod 分布式事务需要 |
 
-> 全新部署**不要执行** `04_alter_*`——`02_schema_dm.sql` 已含其全部列/表。
+> ⚠️ 全新部署**必须**在 `02` 之后执行 `09`。历史上 `02_schema_dm.sql` 未随实体/H2 演进同步,
+> 缺 `IM_CONFIRM_APPLY.CEC_CHANGE_DIFF`、`IM_BATCH_AUTH_LIST.CEC_GEO_SCOPE` 等列及
+> `IM_CONFIRM_RECHECK_TASK`/`IM_DPR_RISK`/`IM_SENSITIVE_VAULT`/`SYS_ORGANIZATION` 等表,
+> 仅跑 `02` 会导致 `ConfirmApplyMapper/BatchAuthListMapper.selectList` 报「Invalid column name」。
+> 全新部署**不要执行** `04_alter_*`(其列已在 `02` 中);`09` 与 `04` 互不重叠。
 
 ## 二、存量生产库升级(已上线、表里已有数据)——只执行增量
 
@@ -26,6 +31,16 @@
 | 1 | `04_alter_change_lifecycle_dm.sql` | 补齐近期新增列/表(见下) |
 | 2 | `07_normalize_material_datatype_dm.sql` | 资料类型 `CEC_CATEGORY`(CEC_DATA_TYPE)中文→编码 01–07,**幂等可重跑** |
 | 3 | `08_sys_organization_dm.sql` | 组织主数据只读镜像表 `SYS_ORGANIZATION`(部门/归口下拉、Dashboard 筛选、制卡/发证省地市编码回填消费;数据由平台/4A 同步,PRM 不写)。达梦不支持 `IF NOT EXISTS`,对象已存在则忽略本段继续 |
+| 4 | `09_sync_h2_baseline_dm.sql` | **补齐 H2 基线漂移的列/表(见「基线漂移」)。存量库同样必需;列/表已存在则报错忽略该条继续** |
+
+### 基线漂移(09 补齐的列/表)
+
+`09_sync_h2_baseline_dm.sql` 以 H2 schema 为准,补齐 `02`/`04` 未同步的历史漂移:
+- 补列:`IM_CONFIRM_APPLY`(CEC_CHANGE_DIFF/CEC_CHANGE_SUMMARY/CEC_CHANGE_VERSION/CEC_BASELINE_REF/CEC_SUBJECT_LEVEL)、
+  `IM_BATCH_AUTH_LIST`(CEC_GEO_SCOPE)、`IM_AUTH_AGREEMENT`/`IM_AUTH_APPLY`/`IM_AUTH_FILING`/`IM_AUTH_SCENARIO`/
+  `IM_CONFIRM_TABLE_ITEM`/`IM_EQUITY_CARD_INFO` 等多列。
+- 补表:`IM_CONFIRM_RECHECK_TASK`(重确权工单)、`IM_DPR_RISK`(数据权益风险)、`IM_SENSITIVE_VAULT`(国密保险箱)、
+  `SYS_ORGANIZATION`(组织镜像,若已跑 `08` 则该建表语句报"对象已存在",忽略即可)。
 
 `04_alter_change_lifecycle_dm.sql` 覆盖的增量项:
 1. 确权变更生命周期:`IM_CONFIRM_APPLY.CEC_CHANGE_TRIGGER`、`IM_EQUITY_CARD_INFO.CEC_VERSION` / `CEC_SUPERSEDED_NO`(+ 存量版本号回填)
