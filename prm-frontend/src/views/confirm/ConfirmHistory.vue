@@ -8,7 +8,7 @@
   两类申请关注重点不同,表头列按类型定制——
     初始:权属类型 / 来源识别 A–F / 信息关联 G–J / 涉第三方(关注识别完整性);
     变更:变更触发 / 版本 vN / 基线引用 / 变更摘要(关注改了什么 + 影响)。
-  共用列:系统名称 / 状态 / 流转进度 / 处理时效 / 操作。统计条按当前 Tab 作用域。
+  共用列:系统名称 / 状态 / 处理时效 / 操作(进度详情抽屉看流转时间线)。统计条按当前 Tab 作用域。
 -->
 <template>
   <div class="prm-page">
@@ -170,14 +170,6 @@
         <el-table-column prop="status" label="状态" width="104" align="center">
           <template #default="{ row }"><span :class="'prm-c-' + ((tag(row.status)) || 'primary')">{{ row.status }}</span></template>
         </el-table-column>
-        <el-table-column v-if="colVis.isVisible('flowProgress')" label="流转进度" min-width="300">
-          <template #default="{ row }">
-            <el-steps :active="stepOf(row)" align-center finish-status="success"
-              :process-status="row.status === '已驳回' ? 'error' : 'process'" simple style="margin:0" class="flow-mini">
-              <el-step title="提交" /><el-step title="人工预审" /><el-step title="合规" /><el-step title="主管" /><el-step title="终审" /><el-step title="制卡" />
-            </el-steps>
-          </template>
-        </el-table-column>
         <el-table-column v-if="colVis.isVisible('duration')" label="处理时效" width="124">
           <template #default="{ row }">{{ duration(row) }}</template>
         </el-table-column>
@@ -224,12 +216,12 @@ const triggerOpts = ['数据新增', '数据来源变更', '管理要求变更',
 const COL_DEFS_INITIAL = [
   { prop: 'rightType', label: '权属类型(三权)' }, { prop: 'sourceIdent', label: '来源识别(A–F)' },
   { prop: 'relationIdent', label: '信息关联(G–J)' }, { prop: 'thirdParty', label: '涉第三方' },
-  { prop: 'flowProgress', label: '流转进度' }, { prop: 'duration', label: '处理时效' }
+  { prop: 'duration', label: '处理时效' }
 ]
 const COL_DEFS_CHANGE = [
   { prop: 'changeTrigger', label: '变更触发' }, { prop: 'version', label: '版本' },
   { prop: 'baselineRef', label: '基线引用' }, { prop: 'changeSummary', label: '变更摘要' },
-  { prop: 'flowProgress', label: '流转进度' }, { prop: 'duration', label: '处理时效' }
+  { prop: 'duration', label: '处理时效' }
 ]
 const colDefs = computed(() => activeTab.value === '初始确权' ? COL_DEFS_INITIAL : COL_DEFS_CHANGE)
 const colVis = useColumnVisibility('main', [...COL_DEFS_INITIAL, ...COL_DEFS_CHANGE])
@@ -328,12 +320,6 @@ const { query: q, rows, total, loading, load, search: doSearch, reset: doReset }
   }
 )
 function tag(s) { return { 已完成: 'success', 已驳回: 'danger', 已撤回: 'info', 草稿: 'info' }[s] || 'warning' }
-const NODE_STEP = { 草稿: 0, 人工预审中: 1, 合规审核中: 2, 主管复核中: 3, 经理终审中: 4, 已完成: 6, 已撤回: 1 }
-function stepOf(row) {
-  if (row.status === '已驳回') { return ({ 40: 1, 50: 2, 60: 3, 70: 4 }[row.currentNode]) || 1 }
-  return NODE_STEP[row.status] ?? 0
-}
-
 function onSearch() { activeStat.value = ''; doSearch() }
 function onReset() { dateRange.value = []; activeStat.value = ''; doReset() }
 onMounted(load)
@@ -366,10 +352,6 @@ onMounted(load)
 .ed-item.ed-wide { flex-basis: 100%; }
 .ed-k { color: var(--prm-color-text-weak); min-width: 78px; }
 .ed-v { color: var(--prm-color-text-secondary); }
-
-/* 流转进度列:缩小步骤标题字号 + 收紧行高,去 simple 模式 V 形连接符 */
-.flow-mini :deep(.el-step__title) { font-size: 12px; line-height: 1.2; }
-.flow-mini :deep(.el-step__arrow) { display: none; }
 
 /* 列头释义帮助图标(A–F / G–J 代码含义) */
 .col-help { margin-left: 3px; vertical-align: -2px; cursor: help; color: var(--prm-color-text-weak); font-size: 13px; }

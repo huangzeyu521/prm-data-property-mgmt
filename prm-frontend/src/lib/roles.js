@@ -56,7 +56,7 @@ export const MENU = [
       { path: '/dpr/confirm/wizard', title: '⭐ 初始确权申请', roles: ['apply'] },
       { path: '/dpr/confirm/change', title: '确权变更申请', roles: ['apply'] },
       { path: '/dpr/confirm/catalog', title: '确权目录管理', roles: ['apply', 'admin'] },
-      { path: '/dpr/confirm/history', title: '申请查询', roles: ['apply', 'review', 'view', 'manager', 'director', 'precheck'] },
+      { path: '/dpr/confirm/history', title: '申请查询', roles: ['review', 'view', 'manager', 'director', 'precheck'] },
       { path: '/dpr/confirm/review', title: '审核申请提交', roles: ['review', 'precheck', 'manager', 'director'] },
       { path: '/dpr/confirm/card', title: '权益卡片生成', roles: ['admin', 'apply', 'manager'] },
       { path: '/dpr/confirm/cert', title: '权益证书管理', roles: ['admin', 'manager'] },
@@ -70,7 +70,7 @@ export const MENU = [
       { path: '/dpr/auth/batch-wizard', title: '⭐ 批量授权申请', roles: ['apply'] },
       { path: '/dpr/auth/batch-list', title: '批量授权清单', roles: ['apply', 'review', 'manager', 'director', 'gm', 'leadership'] },
       { path: '/dpr/auth/compliance', title: '合规校验管理', roles: ['review', 'admin'] },
-      { path: '/dpr/auth/history', title: '申请历史查询', roles: ['apply', 'unit', 'review', 'view', 'manager', 'director', 'gm'] },
+      { path: '/dpr/auth/history', title: '申请历史查询', roles: ['unit', 'review', 'view', 'manager', 'director', 'gm'] },
       { path: '/dpr/auth/review', title: '授权审核提交', roles: ['unit', 'review', 'business', 'manager', 'director', 'gm'] },
       // 协议工作台(P1-4 签章/审核/存档合一);旧三路由保留兼容
       { path: '/dpr/auth/agreement', title: '协议工作台', roles: ['review', 'apply', 'gm'] },
@@ -171,4 +171,23 @@ export function visibleMenu(role) {
     }
   }
   return out
+}
+
+// 菜单受控页 path → 菜单项(用于"页面快速跳转"按角色裁剪)。
+const MENU_PATHS = (() => {
+  const m = {}
+  for (const node of MENU) {
+    if (node.top) m[node.path] = node
+    else for (const it of node.items) m[it.path] = it
+  }
+  return m
+})()
+
+/**
+ * 当前角色是否可通过"搜索/快速跳转"到达该路径。
+ * 菜单受控页:按菜单角色判定(与侧栏一致);非菜单深层页(如协议签章、配置模板):放行,不拦截跳转。
+ */
+export function canJumpTo(role, path) {
+  const item = MENU_PATHS[path]
+  return item ? itemVisible(item, role) : true
 }

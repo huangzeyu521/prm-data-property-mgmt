@@ -92,7 +92,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import NotificationCenter from '@/components/NotificationCenter.vue'
 import FilePreview from '@/components/FilePreview.vue'
-import { ROLES, ROLE_HOME, currentRole, visibleMenu } from '@/lib/roles'
+import { ROLES, ROLE_HOME, currentRole, visibleMenu, canJumpTo } from '@/lib/roles'
 import { currentUser, clearSession } from '@/api/auth'
 
 const route = useRoute()
@@ -125,9 +125,10 @@ function onUserCmd(cmd) {
 const isAitool = computed(() => route.path.startsWith('/aitool'))
 
 // 全部可跳转页面(供顶部搜索),取自路由表 meta.title;排除独立 aitool 页面(顶栏不再暴露其入口)
-const pages = router.getRoutes()
-  .filter((r) => r.meta && r.meta.title && !r.path.startsWith('/aitool'))
-  .map((r) => ({ value: r.path, label: r.meta.title }))
+// 页面快速跳转:按当前角色裁剪(菜单受控页与侧栏一致;非菜单深层页放行),随角色切换而变。
+const pages = computed(() => router.getRoutes()
+  .filter((r) => r.meta && r.meta.title && !r.path.startsWith('/aitool') && canJumpTo(role.value, r.path))
+  .map((r) => ({ value: r.path, label: r.meta.title })))
 
 function onJump(path) {
   if (path) {
