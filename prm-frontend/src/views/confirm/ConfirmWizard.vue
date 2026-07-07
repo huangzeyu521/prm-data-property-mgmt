@@ -162,17 +162,21 @@
               </el-table-column>
             </el-table>
             <div class="prm-c-success" style="font-size:12px;margin-top:4px">另有 {{ changeUnchanged }} 项维持原值(无需改动)。</div>
-            <!-- 逐表来源/关联改动明细(数据表名称级):让申报人看清"哪张库表改了什么";系统级并集不再对照以免误报(如 A→B 被并成 A、B) -->
+            <!-- 逐表来源/关联对照(选中库表·数据表名称级):系统级并集不再对照(避免子集选择的幻象删减 A、E→A / 并集掺旧 A→A、B);
+                 来源簇下每张选中表恒显示「来源类型」基线→当前+状态(未改=A→A 维持),改动标已修订。 -->
             <div v-if="changedTableDetail.length" style="margin-top:8px">
-              <div style="font-size:12px;color:var(--prm-color-text-weak);margin-bottom:4px">逐表来源/关联改动明细(可在下方库表清单「编辑表2」继续修订):</div>
-              <el-table :data="changedTableDetail" border size="small" style="max-width:840px">
+              <div style="font-size:12px;color:var(--prm-color-text-weak);margin-bottom:4px">逐表来源/关联对照(选中库表·可在下方库表清单「编辑表2」修订):</div>
+              <el-table :data="changedTableDetail" border size="small" style="max-width:900px">
                 <el-table-column prop="tableName" label="数据表名称" min-width="150" show-overflow-tooltip />
                 <el-table-column prop="dim" label="变更项" width="130" />
-                <el-table-column label="原值(平台原值)" min-width="150">
-                  <template #default="{ row }"><span style="color:var(--prm-color-text-weak);text-decoration:line-through">{{ row.before || '空' }}</span></template>
+                <el-table-column label="原值(已有确权)" min-width="150">
+                  <template #default="{ row }"><span :style="row.changed ? 'color:var(--prm-color-text-weak);text-decoration:line-through' : 'color:var(--prm-color-text-secondary)'">{{ row.before }}</span></template>
                 </el-table-column>
-                <el-table-column label="新值(本次修订)" min-width="150">
-                  <template #default="{ row }"><span class="prm-c-warning" style="font-weight:600">{{ row.after || '空' }}</span></template>
+                <el-table-column label="新值(本次变更)" min-width="150">
+                  <template #default="{ row }"><span :class="row.changed ? 'prm-c-warning' : ''" :style="row.changed ? 'font-weight:600' : 'color:var(--prm-color-text-secondary)'">{{ row.after }}</span></template>
+                </el-table-column>
+                <el-table-column label="状态" width="92" align="center">
+                  <template #default="{ row }"><span :class="'prm-c-' + (row.changed ? 'warning' : 'success')">{{ row.changed ? '已修订' : '维持原值' }}</span></template>
                 </el-table-column>
               </el-table>
             </div>
@@ -1194,7 +1198,9 @@ function rowFromBaseline(t) {
   }
   row._pf = {
     sourceType: row.sourceType, sourceSubject: row.sourceSubject, sourceDesc: row.sourceDesc,
-    gSubject: row.gSubject, hSubject: row.hSubject, iSubject: row.iSubject, jSubject: row.jSubject
+    gSubject: row.gSubject, hSubject: row.hSubject, iSubject: row.iSubject, jSubject: row.jSubject,
+    // G–J 标志纳入基线快照(与 1054 平台构造对齐):否则变更基线拿不到 G–J 原值,关联对照/标志改动检测失效
+    gFlag: row.gFlag, hFlag: row.hFlag, iFlag: row.iFlag, jFlag: row.jFlag
   }
   return row
 }
@@ -1645,13 +1651,12 @@ const CHANGE_DIMS = [
 ]
 const norm = (v) => (v == null ? '' : String(v).trim())
 // 生效对照维度:簇维仅当对应触发被勾选才纳入(分簇 diff)
-// 簇维门控:触发勾选 且「无逐表改动」时才把系统级 A–F/G–J 并集当变更维度。
-// 逐表来源/关联已改(tableSourceChanged/Changed)→ 由 changedTableRows + 编辑表2 逐表前后留痕呈现,
-// 系统级不再做并集对照(否则目录合成底版走 基线∪本次,会把"替换旧值"误显示成"新增",如 A→B 变 A、B)。
+// 系统级来源/关联簇「始终」退出变更对照:form.sourceIdent 恒从选中的子集表派生,拿子集聚合去和全量基线对照
+// 两头都错——未改误报删减(选1表 A,基线 A、E → 幻象 A、E→A)、已改并集掺旧码(A→B 变 A、B)。
+// 来源/关联的真实对照一律走下方「逐表来源/关联对照(选中表)」明细(带数据表名称,基线→当前+状态)。
+// 仅保留权益期限簇(validity)与非簇系统级维度(权属主体/层级/类型/责任部门/管制属性)。
 const activeDims = computed(() => CHANGE_DIMS.filter(d =>
   !d.cluster
-  || (d.cluster === 'source' && keepSourceCluster.value && !tableSourceChanged.value)
-  || (d.cluster === 'relation' && keepRelationCluster.value && !tableRelationChanged.value)
   || (d.cluster === 'validity' && keepValidityCluster.value)))
 const changeDiff = computed(() => {
   if (form.registerType !== '确权变更' || !changeBaseline.value || isDataAdd.value) return []
@@ -1676,13 +1681,27 @@ const PF_LABELS = {
   gSubject: 'G 关联主体说明', hSubject: 'H 关联主体说明', iSubject: 'I 关联主体说明', jSubject: 'J 关联主体说明',
   gFlag: 'G 信息关联', hFlag: 'H 信息关联', iFlag: 'I 信息关联', jFlag: 'J 信息关联'
 }
+// 逐表来源/关联对照(选中库表):按触发簇,对每张选中表显示 基线值→当前值 + 状态(维持原值/已修订)。
+// 来源簇:每张表恒显示「来源类型」(哪怕未改,原值→新值=A→A 标维持)——满足申报人"选了表就看到它来源现状";
+// 关联簇:仅列改动的 G–J 关联主体(4 标志×N 表全列过噪)。其余改动字段(来源主体/说明)改动时补行。
 const changedTableDetail = computed(() => {
   if (form.registerType !== '确权变更' || isDataAdd.value) return []
   const out = []
-  for (const row of changedTableRows.value) {
-    for (const k of PF_KEYS) {
-      if (row._pf && row._pf[k] !== undefined && (row[k] || '') !== (row._pf[k] || '')) {
-        out.push({ tableName: row.tableName || row.tableCode, dim: PF_LABELS[k] || k, before: row._pf[k] || '空', after: row[k] || '空' })
+  // 某行对象的 G–J 关联类型串(是=纳入),基线用 _pf、当前用 row;空则「无」
+  const gjOf = (o) => relationOpts.filter(r => (o[r.v.toLowerCase() + 'Flag'] || '') === '是').map(r => `${r.v} ${r.t}`).join('、') || '无'
+  const add = (name, dim, b, a) => out.push({ tableName: name, dim, before: b || '空', after: a || '空', changed: (a || '') !== (b || '') })
+  for (const row of tableItems.value) {
+    if (!row._pf) continue
+    const name = row.tableName || row.tableCode
+    if (keepSourceCluster.value) {
+      add(name, PF_LABELS.sourceType, row._pf.sourceType, row.sourceType)                // 来源类型恒显示(未改=维持)
+      if ((row.sourceSubject || '') !== (row._pf.sourceSubject || '')) add(name, PF_LABELS.sourceSubject, row._pf.sourceSubject, row.sourceSubject)
+      if ((row.sourceDesc || '') !== (row._pf.sourceDesc || '')) add(name, PF_LABELS.sourceDesc, row._pf.sourceDesc, row.sourceDesc)
+    }
+    if (keepRelationCluster.value) {
+      add(name, '信息关联类型(G–J)', gjOf(row._pf), gjOf(row))                            // 信息关联类型恒显示(基线→当前,对称于来源)
+      for (const k of ['gSubject', 'hSubject', 'iSubject', 'jSubject']) {                 // 关联主体说明改动补行
+        if (row._pf[k] !== undefined && (row[k] || '') !== (row._pf[k] || '')) add(name, PF_LABELS[k], row._pf[k], row[k])
       }
     }
   }
@@ -1691,10 +1710,10 @@ const changedTableDetail = computed(() => {
 const changeSummary = computed(() => {
   if (form.registerType !== '确权变更' || !changeBaseline.value) return ''
   const sys = changeDiff.value
-  const tblN = changedTableRows.value.length
+  // 口径对齐:逐表改动数 = 明细表中「已修订」行涉及的去重库表数(与下方明细同源,杜绝"说改了却不显")
+  const tblN = new Set(changedTableDetail.value.filter(r => r.changed).map(r => r.tableName)).size
   if (!sys.length && !tblN) return `确权变更(触发:${form.changeTrigger || '未选'})—— 暂未检测到与原确权结论的差异,请核对是否确需变更`
   const segs = sys.map(d => `${d.key}「${d.before || '空'}→${d.after || '空'}」`)
-  // 逐表来源/关联改动计入总数(系统级簇已抑制并集对照,改动以逐表留痕为准),避免误报"无差异"
   if (tblN) segs.push(`${tblN} 张库表来源/关联要素逐表调整(前后留痕见「编辑表2」)`)
   return `本次确权变更(触发:${form.changeTrigger || '未选'})共修改 ${sys.length + tblN} 项:` + segs.join('、')
 })
@@ -2249,7 +2268,7 @@ async function next2() {
   } finally { submitting.value = false }
 }
 
-function goProgress() { router.push('/dpr/confirm/history') }
+function goProgress() { router.push('/dpr/workbench/my') }
 function reset() {
   step.value = 0; applyId.value = ''; applyNo.value = ''; quality.value = null
   checklist.value = []; materials.value = []

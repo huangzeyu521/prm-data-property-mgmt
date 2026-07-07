@@ -76,6 +76,7 @@ import { confirmAsync } from '@/utils/confirmAsync'
 import { Grid, Monitor, Folder, Document } from '@element-plus/icons-vue'
 import { fullCatalogTree } from '@/api/assetCard'
 import { pageConfirmApply } from '@/api/confirm'
+import { currentRole } from '@/lib/roles'
 
 const router = useRouter()
 const IN_PROGRESS = ['草稿', '人工预审中', '合规审核中', '主管复核中', '经理终审中']
@@ -164,7 +165,8 @@ function onConfirm(data) {
     async () => { await router.push({ path: '/dpr/confirm/wizard' }) },
     { type: 'info', confirmButtonText: '前往初始确权' }).catch(() => {})
 }
-function goHistory() { router.push({ path: '/dpr/confirm/history' }) }
+// 申报人查询进度走「我的申请」发件箱(其确权申请查询已从申报人菜单移除);其他角色仍去确权申请查询台。
+function goHistory() { router.push({ path: currentRole() === 'apply' ? '/dpr/workbench/my' : '/dpr/confirm/history' }) }
 
 onMounted(load)
 </script>
